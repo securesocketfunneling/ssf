@@ -1,0 +1,25 @@
+#ifndef SSF_VERSIONS_H_
+#define SSF_VERSIONS_H_
+
+#include <cstdint>
+
+#include <string>
+
+namespace ssf { 
+namespace versions {
+
+enum Versions : uint8_t {
+  major = @SSF_VERSION_MAJOR@,
+  minor = @SSF_VERSION_MINOR@,
+  security = @SSF_VERSION_SECURITY@,
+  bounce = @SSF_VERSION_BOUNCE@,
+  transport = @SSF_VERSION_TRANSPORT@
+};
+
+const std::string boost_version = "@SSF_VERSION_BOOST@";
+const std::string openssl_version = "@SSF_VERSION_OPENSSL@";
+
+}  // versions
+}  // ssf
+
+#endif  // SSF_VERSIONS_H_

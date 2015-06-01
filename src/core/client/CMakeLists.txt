@@ -1,0 +1,46 @@
+cmake_minimum_required(VERSION 2.8)
+
+set(project_NAME "SSF_Client")
+project(${project_NAME})
+
+set(CLIENT_FILES
+      main.cpp
+      client.h
+      client.ipp)
+
+include_directories(
+  ${OpenSSL_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS})
+
+add_target(${project_NAME}
+  TYPE
+    executable ${EXEC_FLAG}
+  FILES
+	${VERSIONS_FILES}
+    ${CLIENT_FILES}
+    ${CORE_INIT_PACKETS}
+    ${CORE_NETWORK_VIRTUAL_LAYER_POLICY}
+    ${CORE_FACTORIES_FILES}
+    ${COMMON_BOOST_HEADER_FILES}
+    ${COMMON_NETWORK_HEADER_FILES}
+    ${COMMON_UTILS_HEADER_FILES}
+    ${COMMON_COMMAND_LINE_FILES}
+    ${COMMON_CONFIG_FILES}
+    ${COMMON_ERROR_FILES}
+    ${SERVICES_SOCKS_FILES}
+    ${SERVICES_USER_SERVICES_FILES}
+    ${SERVICES_SOCKETS_TO_FIBERS_FILES}
+    ${SERVICES_DATAGRAMS_TO_FIBERS_FILES}
+    ${SERVICES_FIBERS_TO_SOCKETS_FILES}
+    ${SERVICES_FIBERS_TO_DATAGRAMS_FILES}
+    ${SERVICES_ADMIN_SERVICE_FILES}
+    ${ICON_RC}
+  PREFIX_SKIP
+    ${project_SRC_DIR})
+
+if (APPLE)
+  set_source_files_properties(${ICON_RC} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+  set_target_properties(${project_NAME} PROPERTIES MACOSX_BUNDLE_ICON_FILE ${ICON_NAME})
+endif (APPLE)
+
+target_link_libraries(${project_NAME} ${Boost_LIBRARIES} ${OpenSSL_LIBRARIES} ${PLATFORM_SPECIFIC_LIB_DEP})
