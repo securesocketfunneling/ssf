@@ -1,0 +1,137 @@
+body {
+    padding-top: 65px;
+}
+
+p {
+    text-align: justify;
+}
+
+a, a:focus, a:hover, a: {
+    outline: 0;
+}
+
+pre {
+    word-wrap: normal;
+}
+
+.btn-lg {
+    font-size: 15px;
+}
+
+.ssf-action-button {
+    width: 220px;
+}
+
+.ssf-action-button .fa {
+    padding-left: 10px;
+}
+
+#navigation {
+    min-height: 40px;
+    border-color: #ffffff;
+}
+
+.navbar-brand {
+    height: auto;
+    padding-top: 15px;
+    padding-bottom: 11px;
+    margin-right: 40px;
+    cursor: pointer;
+}
+
+.navbar-button {
+    margin: 0;
+    padding: 0;
+}
+
+.navbar-nav > li > a
+{
+    outline: 0;
+    border-color: #ffffff;
+    border-bottom-color: #93c54b;
+    border-bottom-width: 2px;
+    padding-top: 10px;
+    padding-bottom: 9px;
+}
+
+.nav-tabs > li {
+    margin-top: -3px;
+}
+
+.nav-tabs > li > a {
+    margin-top: 9px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+#logo {
+    width: 100%;
+}
+
+#menu > .nav-tabs {
+    border-width: 0px;
+}
+
+#menu > .navbar-right {
+    border-width: 0px;
+}
+
+.navbar-collapse.collapse.in > .navbar-nav, .navbar-collapse.collapsing > .navbar-nav {
+    margin: 0;
+}
+
+.navbar-inverse .navbar-nav>.active>a, .navbar-inverse .navbar-nav>.active>a:hover, .navbar-inverse .navbar-nav>.active>a:focus, .navbar-inverse .navbar-nav>li>a:hover, .navbar-inverse .navbar-nav>li>a:focus {
+    background-color: #ffffff;
+    border-color: #ffffff;
+    color: #89be3d;
+}
+
+.navbar-inverse .navbar-nav>li>a {
+    color: #ffffff;
+    border-color: #93c54b;
+    border-bottom-width: 1px;
+    background-color: #93c54b;
+}
+
+.bs-callout {
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #eee;
+    border-left-width: 5px;
+    border-radius: 3px;
+}
+
+.bs-callout > h1, .bs-callout > h2, .bs-callout > h3, .bs-callout > h4, .bs-callout > h5{
+    margin-top: 0px;
+}
+
+.bs-callout-info {
+    border-left-color: #81b33a;
+}
+
+.bs-callout-warning {
+    border-left-color: #244363;
+}
+
+.bs-callout-danger {
+    border-left-color: #244363;
+}
+
+.bs-callout p:last-child {
+    margin-bottom: 0;
+}
+
+#performances-graph {
+    margin-top: 20px;
+}
+
+#forkongithub a{background:#244363;color:#fff;text-decoration:none;font-family:arial,sans-serif;text-align:center;font-weight:bold;padding:5px 40px;font-size:1rem;line-height:2rem;position:relative;transition:0.5s;}
+#forkongithub a:hover{background:#81b33a;color:#fff;}
+#forkongithub a::before,#forkongithub a::after{content:"";width:100%;display:block;position:absolute;bottom:1px;left:0;height:1px;background:#fff;}
+#forkongithub a::after{bottom:1px;top:auto;}
+
+#forkongithub{display:none}
+@media screen and (min-width:1000px){
+    #forkongithub{display: inline; position:fixed;display:block;top:-37px;right:0;width:200px;overflow:hidden;height:200px;z-index:0;}
+    #forkongithub a{width:200px;position:absolute;bottom:60px;right:-60px;transform:rotate(45deg);-webkit-transform:rotate(45deg);-ms-transform:rotate(45deg);-moz-transform:rotate(45deg);-o-transform:rotate(45deg);}
+}
