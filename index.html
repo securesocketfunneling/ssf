@@ -76,7 +76,7 @@
 
         
         <span id="forkongithub">
-            <a href="https://github.com/securesocketfunneling/ssf">Fork me on Github</a>
+            <a href="https://github.com/securesocketfunneling/ssf">Fork me on GitHub</a>
         </span>
         
         <div class="container" id="top">
@@ -319,6 +319,16 @@
                                It is therefore essential that the relay servers have to be secure and controlled by the owner of the data.</p>
                             <p>If users express the need, future versions could add a second cryptographic layer between the client and the destination server so that the data remained encrypted by this layer on every relay.</p>
                 
+                            <div class="row">
+                              <div class="col-md-offset-2 col-md-8">
+                                <p>
+                                  <img class="active" width="100%" src="./img/bouncing/bouncing.gif"/>
+                                  <br/>
+                                  <br/>
+                                </p>
+                              </div>
+                            </div>
+                            
                             <h2>The bounce file</h2>
                             <div class="col-md-12">
                                 <p>In order to route an SSF client connection through a list of relay servers, the option <strong>-b</strong> must be added to the command line to specify the bounce file.
@@ -361,37 +371,71 @@ SERVER3:PORT3</pre>
                     <div role="tabpanel" id="how-to-use-socks" class="tab-pane fade">
                         <h1 id="socks">How to use the SOCKS feature</h1>
                         <div class="col-md-12">
-                            <h2>No bounce feature</h2>
+                          <h2>Local SOCKS</h2>
                             <div class="col-md-12">
-                                <ul>
-                                    <li>Launch SSF_SERVER on a port (10000 in this example)
-                                        <pre>./SSF_Server -p 10000</pre>
-                                    </li>
-                                    <li>Connect SSF_CLIENT to SSF_SERVER, initialize a SOCKS server on SSF_SERVER side and open port 9000 on SSF_CLIENT side to communicate to SOCKS server
-                                        <pre>./SSF_Client -D 9000 -p 10000 127.0.0.1</pre>
-                                        Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER side
-                                    </li>
-                                </ul>
+                              <p class="col-md-12">
+                                The SSF Client <strong>-D <mark>port</mark></strong> option opens the given <mark>port</mark> on the SSF Client machine and forward SOCKS requests to the target SSF Server.<br/>
+                                The SSF Server will act as the SOCKS server.
+                              </p>
+                              <div class="col-md-offset-2 col-md-8">
+                                <p>
+                                  <img class="active" width="100%" src="./img/socks/socks.gif"/>
+                                  <br/>
+                                  <br/>
+                                </p>
+                              </div>
                             </div>
-                            
-                            <h2>With bounce feature</h2>
+
+                            <h2>Remote SOCKS</h2>
                             <div class="col-md-12">
-                                <ul>
-                                    <li>Launch SSF_SERVER_1 on a port (10000 in this example)
-                                        <pre>./SSF_Server -p 10000</pre>
-                                    </li>
-                                    <li>Launch SSF_SERVER_2 on a port (10001 in this example)
-                                        <pre>./SSF_Server -p 10001</pre>
-                                    </li>
-                                    <li>Create the bounce file bounce.txt
-                                        <pre>127.0.0.1:10000</pre>
-                                        The client will connect to SSF_SERVER_2 with a bounce on SSF_SERVER_1
-                                    </li>
-                                    <li>Connect SSF_CLIENT to SSF_SERVER_2 with one bounce, initialize a SOCKS server on SSF_SERVER_2 and open port 9000 on client side to communicate to SOCKS server
-                                        <pre>./SSF_Client -b bounce.txt -D 9000 -p 10001 127.0.0.1</pre>        
-                                        Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
-                                    </li>
-                                </ul>
+                              <p class="col-md-12">
+                                The SSF Client <strong>-F <mark>port</mark></strong> option opens the given <mark>port</mark> on the target SSF Server machine and forward SOCKS requests to the SSF Client.<br/>
+                                The SSF Client will act as the SOCKS server.
+                              </p>
+                              <div class="col-md-offset-2 col-md-8">
+                                <p>
+                                  <img class="active" width="100%" src="./img/socks/remote-socks.gif"/>
+                                  <br/>
+                                  <br/>
+                                </p>
+                              </div>
+                            </div>
+                        
+                            <h2>Command line</h2>
+                            
+                            <div class="col-md-12">
+                              <h3>No bounce feature</h3>
+                              <div class="col-md-12">
+                                  <ul>
+                                      <li>Launch SSF_SERVER on a port (10000 in this example)
+                                          <pre>./SSF_Server -p 10000</pre>
+                                      </li>
+                                      <li>Connect SSF_CLIENT to SSF_SERVER, initialize a SOCKS server on SSF_SERVER side and open port 9000 on SSF_CLIENT side to communicate to SOCKS server
+                                          <pre>./SSF_Client -D 9000 -p 10000 127.0.0.1</pre>
+                                          Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER side
+                                      </li>
+                                  </ul>
+                              </div>
+                              
+                              <h3>With bounce feature</h3>
+                              <div class="col-md-12">
+                                  <ul>
+                                      <li>Launch SSF_SERVER_1 on a port (10000 in this example)
+                                          <pre>./SSF_Server -p 10000</pre>
+                                      </li>
+                                      <li>Launch SSF_SERVER_2 on a port (10001 in this example)
+                                          <pre>./SSF_Server -p 10001</pre>
+                                      </li>
+                                      <li>Create the bounce file bounce.txt
+                                          <pre>127.0.0.1:10000</pre>
+                                          The client will connect to SSF_SERVER_2 with a bounce on SSF_SERVER_1
+                                      </li>
+                                      <li>Connect SSF_CLIENT to SSF_SERVER_2 with one bounce, initialize a SOCKS server on SSF_SERVER_2 and open port 9000 on client side to communicate to SOCKS server
+                                          <pre>./SSF_Client -b bounce.txt -D 9000 -p 10001 127.0.0.1</pre>        
+                                          Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
+                                      </li>
+                                  </ul>
+                              </div>
                             </div>
                         </div>
                     </div>
@@ -490,6 +534,17 @@ SERVER3:PORT3</pre>
                                     <li>the server side: running, connected to Internet (for example, your home machine, running Windows, or Linux, or Mac)</li>
                                     <li>the client side: running on your laptop when you want to browse Internet while being locally connected to an untrusted network (e.g. public wifi networks)</li>
                                 </ul>
+                        
+                                
+                                <div class="row">
+                                  <div class="col-md-offset-2 col-md-8">
+                                    <p>
+                                      <img class="active" width="100%" src="./img/untrusted/untrusted.gif"/>
+                                      <br/>
+                                      <br/>
+                                    </p>
+                                  </div>
+                                </div>
                         
                                 <h3>Configuring the server side (e.g. your home machine, up and running, connected to internet, even when you are not at home)</h3>
                                 <div class="col-md-12">

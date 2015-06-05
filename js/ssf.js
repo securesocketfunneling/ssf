@@ -62,11 +62,7 @@
                       {
                           name: 'SSF',
                           data: [ 600 ]
-                      }/*,
-                      {
-                          name: 'SSF - No cipher',
-                          data: [ 1000 ]
-                      }*/
+                      }
                   ]
               });
             }
