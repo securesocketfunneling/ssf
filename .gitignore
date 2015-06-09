@@ -1,2 +1,3 @@
-./build
-./build64
+/build
+/build64
+/third_party
