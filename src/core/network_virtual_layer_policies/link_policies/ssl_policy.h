@@ -26,6 +26,7 @@
 #include "common/config/config.h"
 #include "common/error/error.h"
 #include "common/boost/fiber/detail/io_ssl_read_op.hpp"
+#include "common/utils/cleaner.h"
 
 namespace ssf {
 
@@ -469,33 +470,42 @@ public:
       // If a new CA is provided, use it
       if (auth_cert.size()) {
         X509 *x509_ca = NULL;
+        ScopeCleaner cleaner([&x509_ca]() {
+          X509_free(x509_ca);
+          x509_ca = NULL;
+        });
+
         auto p_auth_cert = auth_cert.data();
         d2i_X509(&x509_ca, (const unsigned char **)&p_auth_cert,
                  (uint32_t)auth_cert.size());
         X509_STORE *store = X509_STORE_new();
         SSL_CTX_set_cert_store(p_ctx->native_handle(), store);
         X509_STORE_add_cert(store, x509_ca);
-        X509_free(x509_ca);
-        x509_ca = NULL;
       }
 
       {
         X509 *x509_cert = NULL;
+        ScopeCleaner cleaner([&x509_cert]() {
+          X509_free(x509_cert);
+          x509_cert = NULL;
+        });
+
         auto p_cert = cert.data();
         d2i_X509(&x509_cert, (const unsigned char **)&p_cert, (uint32_t)cert.size());
         SSL_CTX_use_certificate(p_ctx->native_handle(), x509_cert);
-        X509_free(x509_cert);
-        x509_cert = NULL;
       }
 
       {
         EVP_PKEY *RSA_key = NULL;
+        ScopeCleaner cleaner([&RSA_key]() {
+          EVP_PKEY_free(RSA_key);
+          RSA_key = NULL;
+        });
+
         auto p_key = key.data();
         d2i_PrivateKey(EVP_PKEY_RSA, &RSA_key, (const unsigned char **)&p_key,
                        (uint32_t)key.size());
         SSL_CTX_use_PrivateKey(p_ctx->native_handle(), RSA_key);
-        EVP_PKEY_free(RSA_key);
-        RSA_key = NULL;
       }
     }
 
