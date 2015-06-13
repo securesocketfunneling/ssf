@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 set(project_name "SSF")
 project(${project_name})
 
-set(SSF_VERSION_MAJOR 1)
+set(SSF_VERSION_MAJOR 2)
 set(SSF_VERSION_MINOR 0)
 set(SSF_VERSION_BOUNCE 1)
 set(SSF_VERSION_TRANSPORT 1)
@@ -54,6 +54,9 @@ set(CORE_FACTORIES_FILES
       "${project_SRC_DIR}/core/factories/service_option_factory.h"
       "${project_SRC_DIR}/core/service_manager/service_manager.h")
 
+file(GLOB_RECURSE CORE_VIRTUAL_NETWORK_FILES
+      "${project_SRC_DIR}/core/virtual_network/*.h")
+      
 set(COMMON_BOOST_HEADER_FILES
       "${project_SRC_DIR}/common/boost/fiber/detail/fiber_id.hpp"
       "${project_SRC_DIR}/common/boost/fiber/detail/fiber_buffer.hpp"
@@ -83,18 +86,15 @@ set(COMMON_CONFIG_FILES
       "${project_SRC_DIR}/common/config/config.h"
       "${project_SRC_DIR}/common/config/config.cpp")
 
+file(GLOB_RECURSE COMMON_IO_FILES
+      "${project_SRC_DIR}/common/io/*.h")
+	  
 set(COMMON_ERROR_FILES
       "${project_SRC_DIR}/common/error/error.h"
       "${project_SRC_DIR}/common/error/error.cpp")
 
-set(COMMON_NETWORK_HEADER_FILES
-      "${project_SRC_DIR}/common/network/base_session.h"
-      "${project_SRC_DIR}/common/network/datagram_link.h"
-      "${project_SRC_DIR}/common/network/datagram_link_operator.h"
-      "${project_SRC_DIR}/common/network/manager.h"
-      "${project_SRC_DIR}/common/network/network_policy_traits.h"
-      "${project_SRC_DIR}/common/network/session_forwarder.h"
-      "${project_SRC_DIR}/common/network/socket_link.h")
+file(GLOB_RECURSE COMMON_NETWORK_HEADER_FILES
+      "${project_SRC_DIR}/common/network/*.h")
 
 set(SERVICES_ADMIN_SERVICE_FILES
       "${project_SRC_DIR}/services/initialisation.h"
@@ -239,22 +239,6 @@ if (BUILD_UNIT_TESTS)
   
   # --- Add src test 
   add_subdirectory("${project_SRC_DIR}/tests")
-
-  # Group all tests in one directory
-  project_group(
-    "Unit tests"
-    load_config_tests
-    fiber_asio_tests
-    ssf_client_server_tests
-    ssf_client_server_cipher_suites_tests
-    socks_tests
-    remote_socks_tests
-    stream_forward_tests
-    remote_stream_forward_tests
-    udp_forward_tests
-    remote_udp_forward_tests
-    bouncing_tests
-  )
 endif (BUILD_UNIT_TESTS)
 
 add_subdirectory("${project_SRC_DIR}/core")
