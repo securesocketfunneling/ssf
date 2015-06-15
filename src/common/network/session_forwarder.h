@@ -8,6 +8,7 @@
 #include <boost/asio/ssl.hpp>
 
 #include "common/network/base_session.h"  // NOLINT
+#include "common/network/socket_link.h"
 #include "common/network/manager.h"
 
 namespace ssf {

@@ -3,6 +3,7 @@
 
 #include <boost/tuple/tuple.hpp>  // NOLINT
 
+#include <boost/asio/coroutine.hpp>
 #include <boost/asio/buffer.hpp>  // NOLINT
 #include <boost/system/error_code.hpp>   // NOLINT
 
@@ -126,6 +127,7 @@ void AsyncEstablishHDLink(ReadFrom rf, WriteTo wt,
 
   AsyncTransfer(boost::system::error_code(), 0);
 }
+
 }  // ssf
 
 #endif  // SSF_COMMON_NETWORK_SOCKET_LINK_H_

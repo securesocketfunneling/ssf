@@ -10,14 +10,17 @@ include_directories(
   ${GTEST_ROOT_DIR}/include
 )
 
+set(LAYER_TEST_FEATURES_FILES
+      "${project_SRC_DIR}/tests/virtual_network_helpers.h"
+      "${project_SRC_DIR}/tests/stream_protocol_helpers.h"
+      "${project_SRC_DIR}/tests/datagram_protocol_helpers.h")
+ 
 # --- Load config test
 set(load_config_test_source_files
   "load_config_tests.cpp"
   ${COMMON_CONFIG_FILES}
   ${COMMON_ERROR_FILES}
 )
-
-source_group ("Test Files" FILES ${load_config_test_source_files})
 
 add_target("load_config_tests"
   TYPE
@@ -41,8 +44,6 @@ set(fiber_asio_test_source_files
   "fiber_asio_tests.cpp"
   ${COMMON_ERROR_FILES}
 )
-
-source_group ("Test Files" FILES ${fiber_asio_test_source_files})
 
 add_target("fiber_asio_tests"
   TYPE
@@ -71,8 +72,6 @@ set(ssf_client_server_source_files
   ${SERVICES_SOCKS_FILES}
 )
 
-source_group ("Test Files" FILES ${ssf_client_server_source_files})
-
 add_target("ssf_client_server_tests"
   TYPE
     executable
@@ -99,8 +98,6 @@ set(ssf_client_server_cipher_suites_source_files
   ${CORE_INIT_PACKETS}
   ${SERVICES_SOCKS_FILES}
 )
-
-source_group ("Test Files" FILES ${ssf_client_server_cipher_suites_source_files})
 
 add_target("ssf_client_server_cipher_suites_tests"
   TYPE
@@ -129,8 +126,6 @@ set(socks_test_source_files
   ${SERVICES_SOCKS_FILES}
 )
 
-source_group ("Test Files" FILES ${socks_test_source_files})
-
 add_target("socks_tests"
   TYPE
     executable
@@ -157,8 +152,6 @@ set(remote_socks_test_source_files
   ${CORE_INIT_PACKETS}
   ${SERVICES_SOCKS_FILES}
 )
-
-source_group ("Test Files" FILES ${remote_socks_test_source_files})
 
 add_target("remote_socks_tests"
   TYPE
@@ -187,8 +180,6 @@ set(stream_forwarding_test_source_files
   ${SERVICES_SOCKS_FILES}
 )
 
-source_group ("Test Files" FILES ${stream_forwarding_test_source_files})
-
 add_target("stream_forward_tests"
   TYPE
     executable
@@ -215,8 +206,6 @@ set(remote_stream_forwarding_test_source_files
   ${CORE_INIT_PACKETS}
   ${SERVICES_SOCKS_FILES}
 )
-
-source_group ("Test Files" FILES ${remote_stream_forwarding_test_source_files})
 
 add_target("remote_stream_forward_tests"
   TYPE
@@ -245,8 +234,6 @@ set(udp_test_source_files
   ${SERVICES_SOCKS_FILES}
 )
 
-source_group ("Test Files" FILES ${udp_test_source_files})
-
 add_target("udp_forward_tests"
   TYPE
     executable
@@ -273,8 +260,6 @@ set(remote_udp_test_source_files
   ${CORE_INIT_PACKETS}
   ${SERVICES_SOCKS_FILES}
 )
-
-source_group ("Test Files" FILES ${remote_udp_test_source_files})
 
 add_target("remote_udp_forward_tests"
   TYPE
@@ -303,8 +288,6 @@ set(bouncing_test_source_files
   ${SERVICES_SOCKS_FILES}
 )
 
-source_group ("Test Files" FILES ${bouncing_test_source_files})
-
 add_target("bouncing_tests"
   TYPE
     executable
@@ -321,3 +304,51 @@ target_link_libraries(bouncing_tests gtest gtest_main)
 add_test(
 	NAME bouncing_tests 
 	COMMAND $<TARGET_FILE:bouncing_tests>)
+
+# --- Physical layer tests
+set(physical_layer_source_files
+  "physical_layer_tests.cpp"
+  ${VERSIONS_FILES}
+  ${COMMON_CONFIG_FILES}
+  ${COMMON_ERROR_FILES}
+  ${COMMON_IO_FILES}
+  ${CORE_INIT_PACKETS}
+  ${CORE_VIRTUAL_NETWORK_FILES}
+  ${SERVICES_SOCKS_FILES}
+  ${LAYER_TEST_FEATURES_FILES}
+)
+
+add_target("physical_layer_tests"
+  TYPE
+    executable
+  LINKS 
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    PREFIX_SKIP     .*/src
+    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+  FILES
+    ${physical_layer_source_files}
+)
+target_link_libraries(physical_layer_tests gtest gtest_main)
+add_test(
+	NAME physical_layer_tests 
+	COMMAND $<TARGET_FILE:physical_layer_tests>)
+  
+
+# Group all tests in one directory
+  project_group(
+    "Unit tests"
+    load_config_tests
+    fiber_asio_tests
+    ssf_client_server_tests
+    ssf_client_server_cipher_suites_tests
+    socks_tests
+    remote_socks_tests
+    stream_forward_tests
+    remote_stream_forward_tests
+    udp_forward_tests
+    remote_udp_forward_tests
+    bouncing_tests
+    physical_layer_tests
+  )
