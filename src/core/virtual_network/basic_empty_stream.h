@@ -25,8 +25,8 @@
 
 #include "core/virtual_network/protocol_attributes.h"
 
-#include "common/io/composed_op.h"
 #include "core/virtual_network/accept_op.h"
+#include "core/virtual_network/connect_op.h"
 
 namespace virtual_network {
 
@@ -59,8 +59,6 @@ class VirtualEmptyStreamProtocol {
       VirtualEmptyStreamProtocol,
       VirtualEmptyStreamAcceptor_service<VirtualEmptyStreamProtocol>> acceptor;
 
-  typedef std::map<std::string, std::string> raw_endpoint_parameters;
-
  public:
   template <class Container>
   static endpoint make_endpoint(
@@ -83,6 +81,7 @@ class VirtualEmptyStreamSocket_service
   typedef Protocol protocol_type;
   /// The endpoint type.
   typedef typename protocol_type::endpoint endpoint_type;
+  typedef typename protocol_type::endpoint_context_type endpoint_context_type;
 
   typedef basic_socket_impl<protocol_type> implementation_type;
   typedef implementation_type& native_handle_type;
@@ -220,27 +219,26 @@ class VirtualEmptyStreamSocket_service
         init(std::forward<ConnectHandler>(handler));
 
     impl.p_remote_endpoint = std::make_shared<endpoint_type>(peer_endpoint);
+    impl.p_local_endpoint = std::make_shared<endpoint_type>(0);
 
-    auto fill_local_endpoint_lambda =
-        [&impl, init](const boost::system::error_code& ec) mutable {
-      if (!ec) {
-        boost::system::error_code local_ec;
-        impl.p_local_endpoint = std::make_shared<endpoint_type>(
-            impl.p_next_layer_socket->local_endpoint(local_ec));
-      }
-
-      init.handler(ec);
-    };
-
-    impl.p_next_layer_socket->async_connect(
-        peer_endpoint.next_layer_endpoint(),
-        io::ComposedOp<decltype(fill_local_endpoint_lambda),
-                       typename boost::asio::handler_type<
-                           ConnectHandler, void(boost::system::error_code)>::
-                           type>(std::move(fill_local_endpoint_lambda),
-                                 init.handler));
+    detail::ConnectOp<
+        protocol_type, next_socket_type, endpoint_type,
+        typename boost::asio::handler_type<
+            ConnectHandler,
+            void(boost::system::error_code)>::type>(*impl.p_next_layer_socket,
+                                                    impl.p_local_endpoint.get(),
+                                                    peer_endpoint,
+                                                    init.handler)();
 
     return init.result.get();
+  }
+
+  template <typename ConstBufferSequence>
+  std::size_t send(implementation_type& impl,
+                   const ConstBufferSequence& buffers,
+                   boost::asio::socket_base::message_flags flags,
+                   boost::system::error_code& ec) {
+    return impl.p_next_layer_socket->send(buffers, flags, ec);
   }
 
   template <typename ConstBufferSequence, typename WriteHandler>
@@ -251,6 +249,14 @@ class VirtualEmptyStreamSocket_service
                  WriteHandler&& handler) {
     return impl.p_next_layer_socket->async_send(
         buffers, std::forward<WriteHandler>(handler));
+  }
+
+  template <typename MutableBufferSequence>
+  std::size_t receive(implementation_type& impl,
+                      const MutableBufferSequence& buffers,
+                      boost::asio::socket_base::message_flags flags,
+                      boost::system::error_code& ec) {
+    return impl.p_next_layer_socket->receive(buffers, flags, ec);
   }
 
   template <typename MutableBufferSequence, typename ReadHandler>
@@ -379,17 +385,22 @@ class VirtualEmptyStreamAcceptor_service
       endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
       typename std::enable_if<boost::thread_detail::is_convertible<
           protocol_type, Protocol1>::value>::type* = 0) {
+    auto& peer_impl = peer.native_handle();
+    peer_impl.p_remote_endpoint = std::make_shared<typename Protocol1::endpoint>();
+
     impl.p_next_layer_acceptor->accept(
         *peer.native_handle().p_next_layer_socket,
-        p_peer_endpoint->next_layer_endpoint(), ec);
+        peer_impl.p_remote_endpoint->next_layer_endpoint(), ec);
 
     if (!ec) {
-      auto& peer_impl = peer.native_handle();
       peer_impl.p_local_endpoint = impl.p_local_endpoint;
+
       // Add current layer endpoint context here (if necessary)
-      p_peer_endpoint->set();
-      peer_impl.p_remote_endpoint =
-          std::make_shared<Protocol1::endpoint>(*p_peer_endpoint);
+      peer_impl.p_remote_endpoint->set();
+
+      if (p_peer_endpoint) {
+        *p_peer_endpoint = *(peer_impl.p_remote_endpoint);
+      }
     }
 
     return ec;
@@ -407,16 +418,19 @@ class VirtualEmptyStreamAcceptor_service
         init(std::forward<AcceptHandler>(handler));
 
     auto& peer_impl = peer.native_handle();
-    peer_impl.p_local_endpoint = impl.p_local_endpoint;
-    peer_impl.p_remote_endpoint = std::make_shared<typename Protocol1::endpoint>();
+    peer_impl.p_local_endpoint =
+        std::make_shared<typename Protocol1::endpoint>();
+    peer_impl.p_remote_endpoint =
+        std::make_shared<typename Protocol1::endpoint>();
 
     detail::AcceptOp<
         protocol_type, next_acceptor_type,
-        typename boost::asio::basic_socket<Protocol1, SocketService>::native_handle_type,
+        typename std::remove_reference<typename boost::asio::basic_socket<
+            Protocol1, SocketService>::native_handle_type>::type,
         endpoint_type,
         typename boost::asio::
             handler_type<AcceptHandler, void(boost::system::error_code)>::type>(
-        *impl.p_next_layer_acceptor, peer_impl, p_peer_endpoint,
+        *impl.p_next_layer_acceptor, &peer_impl, p_peer_endpoint,
         init.handler)();
 
     return init.result.get();

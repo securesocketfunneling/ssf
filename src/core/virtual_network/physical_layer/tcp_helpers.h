@@ -14,19 +14,19 @@
 #include "common/error/error.h"
 #include "common/utils/map_helpers.h"
 
+#include "core/virtual_network/parameters.h"
+
 namespace virtual_network {
 namespace physical_layer {
 namespace detail {
 
-typedef std::map<std::string, std::string> parameters;
-
 boost::asio::ip::tcp::endpoint make_tcp_endpoint(
-    boost::asio::io_service& io_service, const parameters& parameters,
+    boost::asio::io_service& io_service, const LayerParameters& parameters,
     boost::system::error_code& ec);
 
-boost::asio::ip::tcp::endpoint
-make_tcp_endpoint(boost::asio::io_service &io_service,
-                  const parameters &parameters, boost::system::error_code& ec) {
+boost::asio::ip::tcp::endpoint make_tcp_endpoint(
+    boost::asio::io_service& io_service, const LayerParameters& parameters,
+    boost::system::error_code& ec) {
   auto addr = helpers::GetField<std::string>("addr", parameters);
   auto port = helpers::GetField<std::string>("port", parameters);
 

@@ -30,8 +30,6 @@ class udp {
   typedef boost::asio::ip::udp::resolver resolver;
   typedef boost::asio::ip::udp::endpoint endpoint;
 
-  typedef std::map<std::string, std::string> raw_endpoint_parameters;
-
  public:
   operator boost::asio::ip::udp() { return boost::asio::ip::udp::v4(); }
 

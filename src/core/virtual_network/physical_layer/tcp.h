@@ -33,8 +33,6 @@ class tcp {
   typedef boost::asio::ip::tcp::resolver resolver;
   typedef boost::asio::ip::tcp::endpoint endpoint;
 
-  typedef std::map<std::string, std::string> raw_endpoint_parameters;
-
  public:
   operator boost::asio::ip::tcp() { return boost::asio::ip::tcp::v4(); }
 

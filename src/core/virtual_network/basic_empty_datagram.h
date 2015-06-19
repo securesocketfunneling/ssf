@@ -10,6 +10,7 @@
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/basic_datagram_socket.hpp>
+#include <boost/asio/socket_base.hpp>
 #include <boost/asio/io_service.hpp>
 
 #include <boost/system/error_code.hpp>
@@ -22,6 +23,9 @@
 #include "core/virtual_network/basic_endpoint.h"
 
 #include "core/virtual_network/protocol_attributes.h"
+
+#include "core/virtual_network/connect_op.h"
+#include "core/virtual_network/receive_from_op.h"
 
 namespace virtual_network {
 
@@ -48,14 +52,12 @@ class VirtualEmptyDatagramProtocol {
       VirtualEmptyDatagramProtocol,
       VirtualEmptyDatagramSocket_service<VirtualEmptyDatagramProtocol>> socket;
 
-  typedef std::map<std::string, std::string> raw_endpoint_parameters;
-
  public:
   template <class Container>
   static endpoint make_endpoint(
       boost::asio::io_service& io_service,
       typename Container::const_iterator parameters_it, uint32_t,
-                boost::system::error_code& ec) {
+      boost::system::error_code& ec) {
     return endpoint(next_layer_protocol::template make_endpoint<Container>(
         io_service, parameters_it, id, ec));
   }
@@ -210,25 +212,16 @@ class VirtualEmptyDatagramSocket_service
         init(std::forward<ConnectHandler>(handler));
 
     impl.p_remote_endpoint = std::make_shared<endpoint_type>(peer_endpoint);
+    impl.p_local_endpoint = std::make_shared<endpoint_type>(0);
 
-    auto fill_local_endpoint_lambda =
-        [&impl, init](const boost::system::error_code& ec) mutable {
-      if (!ec) {
-        boost::system::error_code local_ec;
-        impl.p_local_endpoint = std::make_shared<endpoint_type>(
-            impl.p_next_layer_socket->local_endpoint(local_ec));
-      }
-
-      init.handler(ec);
-    };
-
-    impl.p_next_layer_socket->async_connect(
-        peer_endpoint.next_layer_endpoint(),
-        io::ComposedOp<decltype(fill_local_endpoint_lambda),
-                       typename boost::asio::handler_type<
-                           ConnectHandler, void(boost::system::error_code)>::
-                           type>(std::move(fill_local_endpoint_lambda),
-                                 init.handler));
+    detail::ConnectOp<
+        protocol_type, next_socket_type, endpoint_type,
+        typename boost::asio::handler_type<
+            ConnectHandler,
+            void(boost::system::error_code)>::type>(*impl.p_next_layer_socket,
+                                                    impl.p_local_endpoint.get(),
+                                                    peer_endpoint,
+                                                    init.handler)();
 
     return init.result.get();
   }
@@ -279,23 +272,12 @@ class VirtualEmptyDatagramSocket_service
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
 
-    auto set_endpoint_wrapper = [init, &sender_endpoint](
-        const boost::system::error_code &ec, std::size_t length) {
-      if (!ec) {
-        sender_endpoint.set();
-      }
-
-      init.handler(ec, length);
-    };
-
-    impl.p_next_layer_socket->async_receive_from(
-        buffers, sender_endpoint.next_layer_endpoint(),
-        io::ComposedOp<
-            decltype(set_endpoint_wrapper),
-            typename boost::asio::handler_type<
-                ReadHandler, void(boost::system::error_code,
-                                  std::size_t)>::type>(set_endpoint_wrapper,
-                                                       init.handler));
+    detail::ReceiveFromOp<
+        protocol_type, next_socket_type, endpoint_type, MutableBufferSequence,
+        typename boost::asio::
+            handler_type<ReadHandler, void(boost::system::error_code)>::type>(
+        *impl.p_next_layer_socket, &sender_endpoint, buffers, flags,
+        init.handler)();
 
     return init.result.get();
   }
