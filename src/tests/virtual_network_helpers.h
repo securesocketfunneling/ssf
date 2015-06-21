@@ -39,9 +39,6 @@ struct virtual_network_helpers {
   typedef std::function<void(const boost::system::error_code&)> ConnectHandler;
   typedef std::function<void(const boost::system::error_code&)> AcceptHandler;
 
-  typedef std::map<std::string, std::string> Parameters;
-  typedef std::list<Parameters> ParametersList;
-
   template <class Buffer>
   static void ResetBuffer(Buffer* p_buffer, typename Buffer::value_type value) {
     for (size_t i = 0; i < p_buffer->size(); ++i) {

@@ -10,8 +10,13 @@
 
 namespace io {
 
-template <class CompHandler, class ContextHandler>
+template <class CompHandlerT, class ContextHandlerT>
 struct ComposedOp {
+ private:
+  typedef typename std::remove_reference<CompHandlerT>::type CompHandler;
+  typedef typename std::remove_reference<ContextHandlerT>::type ContextHandler;
+
+ public:
   ComposedOp(CompHandler h, ContextHandler c)
       : handler(std::move(h)), context(std::move(c)) {}
 

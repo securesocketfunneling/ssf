@@ -49,7 +49,7 @@ void AsyncSendDatagram(
 
 template <class Socket, class Datagram, class Endpoint, class Handler>
 void AsyncReceiveDatagram(
-    Socket& socket, std::shared_ptr<Datagram> p_datagram, Endpoint& source,
+    Socket& socket, Datagram* p_datagram, Endpoint& source,
     Handler handler,
     typename std::enable_if<IsStream<Socket>::value, Socket>::type* = nullptr) {
   source = socket.remote_endpoint();
@@ -58,7 +58,7 @@ void AsyncReceiveDatagram(
 
 template <class Socket, class Datagram, class Handler>
 void AsyncReceiveDatagram(
-    Socket& socket, std::shared_ptr<Datagram> p_datagram,
+    Socket& socket, Datagram* p_datagram,
     const Handler& handler,
     typename std::enable_if<IsStream<Socket>::value, Socket>::type* = nullptr) {
   auto footer_received_lambda = [p_datagram, handler](
@@ -81,7 +81,7 @@ void AsyncReceiveDatagram(
   auto header_received_lambda = [&socket, p_datagram, payload_received_lambda](
     const boost::system::error_code& ec, std::size_t length) {
     if (!ec) {
-      p_datagram->payload().SetSize(p_datagram->header().data_size());
+      p_datagram->payload().SetSize(p_datagram->header().payload_length());
       boost::asio::async_read(
         socket, p_datagram->payload().GetMutableBuffers(),
         std::move(boost::bind<void>(std::move(payload_received_lambda),
@@ -114,7 +114,7 @@ void AsyncSendDatagram(
 
 template <class Socket, class Datagram, class Endpoint, class Handler>
 void AsyncReceiveDatagram(
-    Socket& socket, std::shared_ptr<Datagram> p_datagram, Endpoint& source,
+    Socket& socket, Datagram* p_datagram, Endpoint& source,
     const Handler& handler,
     typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* = nullptr) {
   auto p_buffer = std::make_shared<std::vector<uint8_t>>(
@@ -134,7 +134,7 @@ void AsyncReceiveDatagram(
 
 template <class Socket, class Datagram, class Handler>
 void AsyncReceiveDatagram(
-    Socket& socket, std::shared_ptr<Datagram> p_datagram,
+    Socket& socket, Datagram* p_datagram,
     const Handler& handler,
     typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* = nullptr) {
   auto p_buffer = std::make_shared<std::vector<uint8_t>>(

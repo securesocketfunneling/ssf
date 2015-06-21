@@ -28,8 +28,8 @@ namespace io {
 class basic_pending_read_stream_operation
     : public basic_pending_sized_io_operation {
  protected:
-  typedef size_t (*fill_buffer_func_type)(basic_pending_read_stream_operation*,
-                                          boost::asio::streambuf&);
+  typedef size_t (*fill_buffer_func_type)(
+      basic_pending_read_stream_operation*, boost::asio::streambuf&);
 
  protected:
   /// Constructor
@@ -43,7 +43,7 @@ class basic_pending_read_stream_operation
         fill_buffer_func_(fill_buffer_func) {}
 
  public:
-  size_t fill_buffer(boost::asio::streambuf& stream) {
+   size_t fill_buffer(boost::asio::streambuf& stream) {
     return fill_buffer_func_(this, stream);
   }
 
@@ -114,7 +114,7 @@ class pending_read_stream_operation
   }
 
   static size_t do_fill_buffer(basic_pending_read_stream_operation* base,
-                               boost::asio::streambuf& stream) {
+                                 boost::asio::streambuf& stream) {
     pending_read_stream_operation* o(
         static_cast<pending_read_stream_operation*>(base));
 

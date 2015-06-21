@@ -71,9 +71,10 @@ template <typename Handler, typename Protocol>
 class pending_accept_operation
     : public basic_pending_accept_operation<Protocol> {
 private:
-  typedef typename basic_pending_accept_operation::socket_type
+  typedef typename basic_pending_accept_operation<Protocol>::socket_type
     socket_type;
- typedef typename basic_pending_accept_operation::endpoint_type endpoint_type;
+ typedef typename basic_pending_accept_operation<Protocol>::endpoint_type
+    endpoint_type;
 
  public:
   BOOST_ASIO_DEFINE_HANDLER_PTR(pending_accept_operation);

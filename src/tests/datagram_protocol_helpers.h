@@ -13,14 +13,16 @@
 
 #include <boost/system/error_code.hpp>
 
+#include "core/virtual_network/parameters.h"
+
 #include "virtual_network_helpers.h"
 
 /// Bind two sockets to the endpoints resolved by given parameters
 /// Send data in ping pong mode
 template <class DatagramProtocol>
 void TestNoConnectionDatagramProtocol(
-    tests::virtual_network_helpers::ParametersList socket1_parameters,
-    tests::virtual_network_helpers::ParametersList socket2_parameters,
+    virtual_network::ParameterStack socket1_parameters,
+    virtual_network::ParameterStack socket2_parameters,
     uint64_t max_packets) {
   typedef std::array<uint8_t, DatagramProtocol::mtu> Buffer;
   boost::asio::io_service io_service;
@@ -146,8 +148,8 @@ void TestNoConnectionDatagramProtocol(
 /// async_send_to, async_receive_from on socket2
 template <class DatagramProtocol>
 void TestConnectionDatagramProtocol(
-    tests::virtual_network_helpers::ParametersList socket1_d_parameters,
-    tests::virtual_network_helpers::ParametersList socket2_parameters,
+    virtual_network::ParameterStack socket1_d_parameters,
+    virtual_network::ParameterStack socket2_parameters,
     uint64_t max_packets) {
   typedef std::array<uint8_t, DatagramProtocol::mtu> Buffer;
   boost::asio::io_service io_service;
@@ -277,8 +279,8 @@ void TestConnectionDatagramProtocol(
 
 template <class DatagramProtocol>
 void TestBindSendLocalDatagramProtocol(
-    tests::virtual_network_helpers::ParametersList socket1_parameters,
-    tests::virtual_network_helpers::ParametersList socket2_parameters,
+    virtual_network::ParameterStack socket1_parameters,
+    virtual_network::ParameterStack socket2_parameters,
     uint64_t max_packets) {
   typedef std::array<uint8_t, DatagramProtocol::mtu> Buffer;
   boost::asio::io_service io_service;
