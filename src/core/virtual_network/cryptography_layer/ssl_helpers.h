@@ -16,31 +16,54 @@
 #include "common/utils/map_helpers.h"
 #include "common/utils/cleaner.h"
 
+#include "core/virtual_network/parameters.h"
+
 namespace virtual_network {
 namespace cryptography_layer {
 namespace detail {
 
-typedef std::map<std::string, std::string> parameters;
+struct ExtendedSSLContext {
+  ExtendedSSLContext() : p_ctx_(nullptr) {}
 
-std::shared_ptr<boost::asio::ssl::context> make_ssl_context(
-    boost::asio::io_service& io_service, const parameters& parameters);
-bool SetCtxCipher(boost::asio::ssl::context& ctx, const parameters& parameters);
-bool SetCtxCa(boost::asio::ssl::context& ctx, const parameters& parameters);
-bool SetCtxCrt(boost::asio::ssl::context& ctx, const parameters& parameters,
+  explicit ExtendedSSLContext(std::shared_ptr<boost::asio::ssl::context> p_ctx)
+      : p_ctx_(std::move(p_ctx)) {}
+
+  boost::asio::ssl::context& operator*() { return *p_ctx_; }
+  std::shared_ptr<boost::asio::ssl::context> operator->() { return p_ctx_; }
+
+  bool operator==(const ExtendedSSLContext&) const { return true; }
+  bool operator!=(const ExtendedSSLContext&) const { return false; }
+  bool operator<(const ExtendedSSLContext& other) const {
+    return p_ctx_ < other.p_ctx_;
+  }
+  bool operator!() const { return !p_ctx_; }
+
+  std::shared_ptr<boost::asio::ssl::context> p_ctx_;
+};
+
+ExtendedSSLContext make_ssl_context(boost::asio::io_service& io_service,
+                                    const LayerParameters& parameters);
+bool SetCtxCipher(boost::asio::ssl::context& ctx,
+                  const LayerParameters& parameters);
+bool SetCtxCa(boost::asio::ssl::context& ctx,
+              const LayerParameters& parameters);
+bool SetCtxCrt(boost::asio::ssl::context& ctx,
+               const LayerParameters& parameters,
                boost::system::error_code& ec);
-bool SetCtxKey(boost::asio::ssl::context& ctx, const parameters& parameters,
+bool SetCtxKey(boost::asio::ssl::context& ctx,
+               const LayerParameters& parameters,
                boost::system::error_code& ec);
-bool SetCtxDhparam(boost::asio::ssl::context& ctx, const parameters& parameters,
+bool SetCtxDhparam(boost::asio::ssl::context& ctx,
+                   const LayerParameters& parameters,
                    boost::system::error_code& ec);
 bool verify_certificate(bool preverified,
                         boost::asio::ssl::verify_context& ctx);
 std::vector<uint8_t> get_deserialized_vector(const std::string& serialized);
-std::vector<uint8_t> get_value_in_vector(const parameters& parameters,
+std::vector<uint8_t> get_value_in_vector(const LayerParameters& parameters,
                                          const std::string& key);
 
-
-std::shared_ptr<boost::asio::ssl::context> make_ssl_context(
-    boost::asio::io_service& io_service, const parameters& parameters) {
+ExtendedSSLContext make_ssl_context(boost::asio::io_service& io_service,
+                                    const LayerParameters& parameters) {
   auto p_ctx = std::make_shared<boost::asio::ssl::context>(
       boost::asio::ssl::context::tlsv12);
 
@@ -67,7 +90,7 @@ std::shared_ptr<boost::asio::ssl::context> make_ssl_context(
   ctx.set_verify_callback(&verify_certificate, ec);
 
   if (ec) {
-    return nullptr;
+    return ExtendedSSLContext(nullptr);
   }
 
   // Set various security options
@@ -93,14 +116,14 @@ std::shared_ptr<boost::asio::ssl::context> make_ssl_context(
   success |= SetCtxDhparam(ctx, parameters, ec);
 
   if (!success) {
-    return nullptr;
+    return ExtendedSSLContext(nullptr);
   }
 
-  return p_ctx;
+  return ExtendedSSLContext(p_ctx);
 }
 
 bool SetCtxCipher(boost::asio::ssl::context& ctx,
-                  const parameters& parameters) {
+                  const LayerParameters& parameters) {
   if (helpers::GetField<std::string>("set_cipher_suit", parameters) != "") {
     return !!SSL_CTX_set_cipher_list(ctx.native_handle(),
                                      "DHE-RSA-AES256-GCM-SHA384");
@@ -109,7 +132,8 @@ bool SetCtxCipher(boost::asio::ssl::context& ctx,
   return false;
 }
 
-bool SetCtxCa(boost::asio::ssl::context& ctx, const parameters& parameters) {
+bool SetCtxCa(boost::asio::ssl::context& ctx,
+              const LayerParameters& parameters) {
   if (helpers::GetField<std::string>("ca_src", parameters) == "file") {
     // Load the file containing the trusted certificate authorities
     return !!SSL_CTX_load_verify_locations(
@@ -150,12 +174,13 @@ bool SetCtxCa(boost::asio::ssl::context& ctx, const parameters& parameters) {
   return false;
 }
 
-bool SetCtxCrt(boost::asio::ssl::context& ctx, const parameters& parameters,
-  boost::system::error_code& ec) {
+bool SetCtxCrt(boost::asio::ssl::context& ctx,
+               const LayerParameters& parameters,
+               boost::system::error_code& ec) {
   if (helpers::GetField<std::string>("crt_src", parameters) == "file") {
     // The certificate used by the local peer
     ctx.use_certificate_chain_file(
-      helpers::GetField<std::string>("crt_file", parameters), ec);
+        helpers::GetField<std::string>("crt_file", parameters), ec);
 
     return !ec;
   }
@@ -198,7 +223,8 @@ bool SetCtxCrt(boost::asio::ssl::context& ctx, const parameters& parameters,
   return true;
 }
 
-bool SetCtxKey(boost::asio::ssl::context& ctx, const parameters& parameters,
+bool SetCtxKey(boost::asio::ssl::context& ctx,
+               const LayerParameters& parameters,
                boost::system::error_code& ec) {
   if (helpers::GetField<std::string>("key_src", parameters) == "file") {
     // The private key used by the local peer
@@ -248,11 +274,13 @@ bool SetCtxKey(boost::asio::ssl::context& ctx, const parameters& parameters,
   return true;
 }
 
-bool SetCtxDhparam(boost::asio::ssl::context& ctx, const parameters& parameters,
+bool SetCtxDhparam(boost::asio::ssl::context& ctx,
+                   const LayerParameters& parameters,
                    boost::system::error_code& ec) {
   if (helpers::GetField<std::string>("dhparam_src", parameters) == "file") {
     // The Diffie-Hellman parameter file
-    ctx.use_tmp_dh_file(helpers::GetField<std::string>("dhparam_file", parameters), ec);
+    ctx.use_tmp_dh_file(
+        helpers::GetField<std::string>("dhparam_file", parameters), ec);
 
     return !ec;
   } else {
@@ -290,7 +318,7 @@ std::vector<uint8_t> get_deserialized_vector(const std::string& serialized) {
   return deserialized;
 }
 
-std::vector<uint8_t> get_value_in_vector(const parameters& parameters,
+std::vector<uint8_t> get_value_in_vector(const LayerParameters& parameters,
                                          const std::string& key) {
   if (parameters.count(key)) {
     auto serialized = parameters.find(key)->second;

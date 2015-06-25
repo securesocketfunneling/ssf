@@ -12,6 +12,10 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/strand.hpp>
+#include <boost/asio/detail/config.hpp>
+#include <boost/asio/async_result.hpp>
+#include <boost/asio/socket_base.hpp>
+#include <boost/asio/use_future.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/detail/handler_type_requirements.hpp>
 
@@ -42,7 +46,7 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
  private:
   typedef boost::asio::ssl::stream<NextLayerStreamSocket> ssl_stream_type;
   typedef std::shared_ptr<ssl_stream_type> p_ssl_stream_type;
-  typedef std::shared_ptr<boost::asio::ssl::context> p_context_type;
+  typedef detail::ExtendedSSLContext p_context_type;
   typedef boost::asio::io_service::strand strand_type;
   typedef std::shared_ptr<strand_type> p_strand_type;
 
@@ -77,18 +81,26 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
   }
 
   /// User interface for receiving some data
-  template <typename MutableBufferSequence, typename Handler>
-  void async_read_some(MutableBufferSequence& buffers, Handler& handler) {
+  template <typename MutableBufferSequence, typename ReadHandler>
+  BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
+                                void(boost::system::error_code, std::size_t))
+      async_read_some(const MutableBufferSequence& buffers,
+                      ReadHandler&& handler) {
+    boost::asio::detail::async_result_init<
+        ReadHandler, void(boost::system::error_code, std::size_t)>
+        init(std::forward<ReadHandler>(handler));
+
     auto buffer_size = boost::asio::buffer_size(buffers);
 
     if (buffer_size) {
-      typedef io::pending_read_stream_operation<MutableBufferSequence, Handler>
-          op;
+      typedef io::pending_read_stream_operation<MutableBufferSequence,
+                                                decltype(init.handler)> op;
       typename op::ptr p = {
-          boost::asio::detail::addressof(handler),
-          boost_asio_handler_alloc_helpers::allocate(sizeof(op), handler), 0};
+          boost::asio::detail::addressof(init.handler),
+          boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),
+          0};
 
-      p.p = new (p.v) op(buffers, handler);
+      p.p = new (p.v) op(buffers, init.handler);
 
       {
         boost::recursive_mutex::scoped_lock lock(op_queue_mutex_);
@@ -97,14 +109,14 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
 
       p.v = p.p = 0;
 
-      io_service_.dispatch(boost::bind(&SSLStreamBufferer::handle_data_n_ops,
-                                       this->shared_from_this()));
+      io_service_.post(boost::bind(&SSLStreamBufferer::handle_data_n_ops,
+                                   this->shared_from_this()));
     } else {
-      auto lambda = [handler]() mutable {
-        handler(boost::system::error_code(), 0);
-      };
-      io_service_.post(lambda);
+      io_service_.post(
+          boost::bind<void>(init.handler, boost::system::error_code(), 0));
     }
+
+    return init.result.get();
   }
 
  private:
@@ -243,7 +255,7 @@ class basic_buffered_ssl_socket {
  private:
   typedef boost::asio::ssl::stream<NextLayerStreamSocket> ssl_stream_type;
   typedef std::shared_ptr<ssl_stream_type> p_ssl_stream_type;
-  typedef std::shared_ptr<boost::asio::ssl::context> p_context_type;
+  typedef detail::ExtendedSSLContext p_context_type;
   typedef std::shared_ptr<boost::asio::streambuf> p_streambuf;
   typedef detail::SSLStreamBufferer<NextLayerStreamSocket> puller_type;
   typedef std::shared_ptr<puller_type> p_puller_type;
@@ -300,8 +312,8 @@ class basic_buffered_ssl_socket {
   lowest_layer_type& lowest_layer() { return socket_.get().lowest_layer(); }
   next_layer_type& next_layer() { return socket_.get().next_layer(); }
 
-  boost::system::error_code handshake(handshake_type type) {
-    boost::system::error_code ec;
+  boost::system::error_code handshake(handshake_type type,
+                                      boost::system::error_code& ec) {
     socket_.get().handshake(type, ec);
 
     if (!ec) {
@@ -315,8 +327,8 @@ class basic_buffered_ssl_socket {
   /// completion
   template <typename Handler>
   void async_handshake(handshake_type type, Handler handler) {
-    auto do_user_handler = [this, handler](
-        const boost::system::error_code& ec) mutable {
+    auto do_user_handler =
+        [this, handler](const boost::system::error_code& ec) mutable {
       if (!ec) {
         this->p_puller_->start_pulling();
       }
@@ -330,22 +342,54 @@ class basic_buffered_ssl_socket {
     p_strand_->dispatch(lambda);
   }
 
+  template <typename MutableBufferSequence>
+  std::size_t read_some(const MutableBufferSequence& buffers,
+                        boost::system::error_code& ec) {
+    try {
+      auto read = async_read_some(buffers, boost::asio::use_future);
+      ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+      return read.get();
+    }
+    catch (const std::exception&) {
+      ec.assign(ssf::error::io_error, ssf::error::get_ssf_category());
+      return 0;
+    }
+  }
+
   /// Forward the call to the SSLStreamBufferer object
   template <typename MutableBufferSequence, typename ReadHandler>
-  void async_read_some(const MutableBufferSequence& buffers,
-                       ReadHandler&& handler) {
-    p_puller_->async_read_some(buffers, std::forward<ReadHandler>(handler));
+  BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
+                                void(boost::system::error_code, std::size_t))
+      async_read_some(const MutableBufferSequence& buffers,
+                      ReadHandler&& handler) {
+
+    return p_puller_->async_read_some(buffers,
+                                      std::forward<ReadHandler>(handler));
+  }
+
+  template <typename ConstBufferSequence>
+  std::size_t write_some(const ConstBufferSequence& buffers,
+                         boost::system::error_code& ec) {
+    return socket_.get().write_some(buffers, ec);
   }
 
   /// Forward the call directly to the ssl stream (wrapped in an strand)
   template <typename ConstBufferSequence, typename WriteHandler>
-  void async_write_some(const ConstBufferSequence& buffers,
-                        WriteHandler&& handler) {
-    auto lambda = [this, buffers, handler]() {
+  BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
+                                void(boost::system::error_code, std::size_t))
+      async_write_some(const ConstBufferSequence& buffers,
+                       WriteHandler&& handler) {
+    boost::asio::detail::async_result_init<
+        WriteHandler, void(boost::system::error_code, std::size_t)>
+        init(std::forward<WriteHandler>(handler));
+
+    auto lambda = [this, buffers, init]() {
       this->socket_.get().async_write_some(buffers,
-                                           this->p_strand_->wrap(handler));
+                                           this->p_strand_->wrap(init.handler));
     };
     p_strand_->dispatch(lambda);
+
+    return init.result.get();
   }
 
   /// Forward the call to the lowest layer of the ssl stream
@@ -392,7 +436,7 @@ class basic_ssl_socket {
  private:
   typedef boost::asio::ssl::stream<NextLayerStreamSocket> ssl_stream_type;
   typedef std::shared_ptr<ssl_stream_type> p_ssl_stream_type;
-  typedef std::shared_ptr<boost::asio::ssl::context> p_context_type;
+  typedef detail::ExtendedSSLContext p_context_type;
   typedef std::shared_ptr<boost::asio::streambuf> p_streambuf;
   typedef boost::asio::io_service::strand strand_type;
   typedef std::shared_ptr<strand_type> p_strand_type;
@@ -438,8 +482,8 @@ class basic_ssl_socket {
   lowest_layer_type& lowest_layer() { return socket_.get().lowest_layer(); }
   next_layer_type& next_layer() { return socket_.get().next_layer(); }
 
-  boost::system::error_code handshake(handshake_type type) {
-    boost::system::error_code ec;
+  boost::system::error_code handshake(handshake_type type,
+                                      boost::system::error_code ec) {
     socket_.get().handshake(type, ec);
     return ec;
   }
@@ -455,6 +499,12 @@ class basic_ssl_socket {
     p_strand_->dispatch(lambda);
   }
 
+  template <typename MutableBufferSequence>
+  std::size_t read_some(const MutableBufferSequence& buffers,
+                        boost::system::error_code& ec) {
+    return socket_.get().read_some(buffers, ec);
+  }
+
   /// Forward the call to the SSLStreamBufferer object
   template <typename MutableBufferSequence, typename ReadHandler>
   void async_read_some(const MutableBufferSequence& buffers,
@@ -466,10 +516,15 @@ class basic_ssl_socket {
     p_strand_->dispatch(lambda);
   }
 
+  template <typename ConstBufferSequence>
+  std::size_t write_some(const ConstBufferSequence& buffers,
+                         boost::system::error_code& ec) {
+    return socket_.get().write_some(buffers, ec);
+  }
+
   /// Forward the call directly to the ssl stream (wrapped in an strand)
   template <typename ConstBufferSequence, typename Handler>
-  void async_write_some(const ConstBufferSequence& buffers,
-                        Handler&& handler) {
+  void async_write_some(const ConstBufferSequence& buffers, Handler&& handler) {
     auto lambda = [this, buffers, handler]() {
       this->socket_.get().async_write_some(buffers,
                                            this->p_strand_->wrap(handler));
@@ -527,20 +582,18 @@ class basic_ssl {
   typedef int socket_context;
   typedef int acceptor_context;
   typedef NextLayer next_layer_protocol;
-  typedef std::shared_ptr<boost::asio::ssl::context> endpoint_context_type;
+  typedef detail::ExtendedSSLContext endpoint_context_type;
   typedef virtual_network::basic_VirtualLink_endpoint<basic_ssl> endpoint;
   typedef SSLStreamSocket<typename NextLayer::socket> socket;
   typedef typename next_layer_protocol::acceptor acceptor;
   typedef typename next_layer_protocol::resolver resolver;
 
-  typedef std::map<std::string, std::string> raw_endpoint_parameters;
-
  public:
-   template <class Container>
-   static endpoint
-   make_endpoint(boost::asio::io_service &io_service,
-                 typename Container::const_iterator parameters_it,
-                 uint32_t lower_id, boost::system::error_code& ec) {
+  template <class Container>
+  static endpoint make_endpoint(
+      boost::asio::io_service& io_service,
+      typename Container::const_iterator parameters_it, uint32_t lower_id,
+      boost::system::error_code& ec) {
     auto p_next_layer_ctx =
         detail::make_ssl_context(io_service, *parameters_it);
 

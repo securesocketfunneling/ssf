@@ -59,14 +59,12 @@ class VirtualEmptySSLStreamProtocol {
       VirtualEmptySSLStreamAcceptor_service<VirtualEmptySSLStreamProtocol>>
       acceptor;
 
-  typedef std::map<std::string, std::string> raw_endpoint_parameters;
-
  public:
-   template <class Container>
-   static endpoint
-   make_endpoint(boost::asio::io_service &io_service,
-                 typename Container::const_iterator parameters_it, uint32_t,
-                 boost::system::error_code& ec) {
+  template <class Container>
+  static endpoint make_endpoint(
+      boost::asio::io_service& io_service,
+      typename Container::const_iterator parameters_it, uint32_t,
+      boost::system::error_code& ec) {
     return endpoint(next_layer_protocol::template make_endpoint<Container>(
         io_service, parameters_it, id, ec));
   }
@@ -96,8 +94,8 @@ class VirtualEmptySSLStreamSocket_service
  public:
   explicit VirtualEmptySSLStreamSocket_service(
       boost::asio::io_service& io_service)
-      : boost::asio::detail::service_base<
-            VirtualEmptySSLStreamSocket_service>(io_service) {}
+      : boost::asio::detail::service_base<VirtualEmptySSLStreamSocket_service>(
+            io_service) {}
 
   virtual ~VirtualEmptySSLStreamSocket_service() {}
 
@@ -171,13 +169,9 @@ class VirtualEmptySSLStreamSocket_service
     return impl.p_next_layer_socket->close(ec);
   }
 
-  native_type native(implementation_type& impl) {
-    return impl;
-  }
+  native_type native(implementation_type& impl) { return impl; }
 
-  native_handle_type native_handle(implementation_type& impl) {
-    return impl;
-  }
+  native_handle_type native_handle(implementation_type& impl) { return impl; }
 
   boost::system::error_code cancel(implementation_type& impl,
                                    boost::system::error_code& ec) {
@@ -243,7 +237,7 @@ class VirtualEmptySSLStreamSocket_service
 
     if (!ec) {
       impl.p_local_endpoint = std::make_shared<endpoint_type>(
-        impl.p_next_layer_socket->local_endpoint(ec));
+          impl.p_next_layer_socket->next_layer().local_endpoint(ec));
     }
 
     if (!ec) {
@@ -271,7 +265,7 @@ class VirtualEmptySSLStreamSocket_service
         peer_endpoint.next_layer_endpoint().endpoint_context());
 
     impl.p_remote_endpoint = std::make_shared<endpoint_type>(peer_endpoint);
-    impl.p_local_endpoint = std::make_shared<endpoint_type>();
+    impl.p_local_endpoint = std::make_shared<endpoint_type>(0);
 
     detail::SSLConnectOp<
         protocol_type, next_socket_type, endpoint_type,
@@ -283,6 +277,14 @@ class VirtualEmptySSLStreamSocket_service
                                                     init.handler)();
 
     return init.result.get();
+  }
+
+  template <typename ConstBufferSequence>
+  std::size_t send(implementation_type& impl,
+                   const ConstBufferSequence& buffers,
+                   boost::asio::socket_base::message_flags flags,
+                   boost::system::error_code& ec) {
+    return impl.p_next_layer_socket->write_some(buffers, ec);
   }
 
   template <typename ConstBufferSequence, typename WriteHandler>
@@ -306,6 +308,14 @@ class VirtualEmptySSLStreamSocket_service
     impl.p_next_layer_socket->async_write_some(buffers, init.handler);
 
     return init.result.get();
+  }
+
+  template <typename MutableBufferSequence>
+  std::size_t receive(implementation_type& impl,
+                      const MutableBufferSequence& buffers,
+                      boost::asio::socket_base::message_flags flags,
+                      boost::system::error_code& ec) {
+    return impl.p_next_layer_socket->read_some(buffers, ec);
   }
 
   template <typename MutableBufferSequence, typename ReadHandler>
@@ -354,7 +364,7 @@ class VirtualEmptySSLStreamAcceptor_service
           VirtualEmptySSLStreamAcceptor_service<Protocol>> {
  public:
   /// The protocol type.
-   typedef Protocol protocol_type;
+  typedef Protocol protocol_type;
   /// The endpoint type.
   typedef typename protocol_type::endpoint endpoint_type;
 
@@ -365,7 +375,7 @@ class VirtualEmptySSLStreamAcceptor_service
  private:
   typedef typename protocol_type::next_layer_protocol::acceptor
       next_acceptor_type;
-   typedef typename protocol_type::next_layer_protocol::socket next_socket_type;
+  typedef typename protocol_type::next_layer_protocol::socket next_socket_type;
 
  public:
   explicit VirtualEmptySSLStreamAcceptor_service(
@@ -414,7 +424,7 @@ class VirtualEmptySSLStreamAcceptor_service
   }
 
   endpoint_type local_endpoint(const implementation_type& impl,
-    boost::system::error_code& ec) const {
+                               boost::system::error_code& ec) const {
     if (impl.p_local_endpoint) {
       ec.assign(ssf::error::success, ssf::error::get_ssf_category());
       return *impl.p_local_endpoint;
@@ -429,13 +439,9 @@ class VirtualEmptySSLStreamAcceptor_service
     return impl.p_next_layer_acceptor->close(ec);
   }
 
-  native_type native(implementation_type& impl) {
-    return impl;
-  }
+  native_type native(implementation_type& impl) { return impl; }
 
-  native_handle_type native_handle(implementation_type& impl) {
-    return impl;
-  }
+  native_handle_type native_handle(implementation_type& impl) { return impl; }
 
   // boost::system::error_code cancel(implementation_type& impl,
   //                                 boost::system::error_code& ec) {
@@ -467,16 +473,27 @@ class VirtualEmptySSLStreamAcceptor_service
         this->get_io_service(),
         impl.p_local_endpoint->next_layer_endpoint().endpoint_context());
     peer_impl.p_local_endpoint = impl.p_local_endpoint;
+    peer_impl.p_remote_endpoint = std::make_shared<typename Protocol1::endpoint>();
 
     impl.p_next_layer_acceptor->accept(
-        *peer.native_handle().p_next_layer_socket,
-        p_peer_endpoint->next_layer_endpoint().next_layer_endpoint(), ec);
+        peer_impl.p_next_layer_socket->next_layer(),
+        peer_impl.p_remote_endpoint->next_layer_endpoint()
+            .next_layer_endpoint(),
+        ec);
 
     if (!ec) {
+      peer_impl.p_local_endpoint = impl.p_local_endpoint;
+
       // Add current layer endpoint context here (if necessary)
-      p_peer_endpoint->set();
-      peer_impl.p_remote_endpoint =
-        std::make_shared<Protocol1::endpoint>(*p_peer_endpoint);
+      peer_impl.p_remote_endpoint->next_layer_endpoint().set();
+      peer_impl.p_remote_endpoint->set();
+
+      if (p_peer_endpoint) {
+        *p_peer_endpoint = *(peer_impl.p_remote_endpoint);
+      }
+
+      peer_impl.p_next_layer_socket->handshake(
+          Protocol::next_layer_protocol::socket::handshake_type::server, ec);
     }
 
     return ec;
@@ -486,8 +503,7 @@ class VirtualEmptySSLStreamAcceptor_service
   BOOST_ASIO_INITFN_RESULT_TYPE(AcceptHandler, void(boost::system::error_code))
       async_accept(implementation_type& impl,
                    boost::asio::basic_socket<Protocol1, SocketService>& peer,
-                   endpoint_type* p_peer_endpoint,
-                   AcceptHandler&& handler,
+                   endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
                    typename std::enable_if<boost::thread_detail::is_convertible<
                        protocol_type, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
@@ -498,16 +514,19 @@ class VirtualEmptySSLStreamAcceptor_service
     peer_impl.p_next_layer_socket = std::make_shared<next_socket_type>(
         this->get_io_service(),
         impl.p_local_endpoint->next_layer_endpoint().endpoint_context());
-    peer_impl.p_local_endpoint = impl.p_local_endpoint;
-    peer_impl.p_remote_endpoint = std::make_shared<typename Protocol1::endpoint>();
+    peer_impl.p_local_endpoint =
+        std::make_shared<typename Protocol1::endpoint>();
+    peer_impl.p_remote_endpoint =
+        std::make_shared<typename Protocol1::endpoint>();
 
     detail::SSLAcceptOp<
         protocol_type, next_acceptor_type,
-        typename boost::asio::basic_socket<Protocol1, SocketService>::native_handle_type,
+        typename std::remove_reference<typename boost::asio::basic_socket<
+            Protocol1, SocketService>::native_handle_type>::type,
         endpoint_type,
         typename boost::asio::
             handler_type<AcceptHandler, void(boost::system::error_code)>::type>(
-        *impl.p_next_layer_acceptor, peer_impl , p_peer_endpoint,
+        *impl.p_next_layer_acceptor, &peer_impl, p_peer_endpoint,
         init.handler)();
 
     return init.result.get();
