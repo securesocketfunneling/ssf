@@ -334,6 +334,36 @@ target_link_libraries(physical_layer_tests gtest gtest_main)
 add_test(
 	NAME physical_layer_tests 
 	COMMAND $<TARGET_FILE:physical_layer_tests>)
+	
+# --- Link layer tests
+set(link_layer_source_files
+  "link_layer_tests.cpp"
+  ${VERSIONS_FILES}
+  ${COMMON_CONFIG_FILES}
+  ${COMMON_IO_FILES}
+  ${COMMON_ERROR_FILES}
+  ${CORE_INIT_PACKETS}
+  ${CORE_VIRTUAL_NETWORK_FILES}
+  ${SERVICES_SOCKS_FILES}
+  ${LAYER_TEST_FIXTURES_FILES}
+)
+
+add_target("link_layer_tests"
+  TYPE
+    executable
+  LINKS 
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    PREFIX_SKIP     .*/src
+    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+  FILES
+    ${link_layer_source_files}
+)
+target_link_libraries(link_layer_tests gtest gtest_main)
+add_test(
+	NAME link_layer_tests 
+	COMMAND $<TARGET_FILE:link_layer_tests>)
   
 
 # Group all tests in one directory
@@ -351,4 +381,5 @@ add_test(
     remote_udp_forward_tests
     bouncing_tests
     physical_layer_tests
+    link_layer_tests
   )

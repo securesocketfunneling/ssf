@@ -1,0 +1,672 @@
+#ifndef SSF_CORE_VIRTUAL_NETWORK_DATA_LINK_LAYER_BASIC_CIRCUIT_ACCEPTOR_SERVICE_H_
+#define SSF_CORE_VIRTUAL_NETWORK_DATA_LINK_LAYER_BASIC_CIRCUIT_ACCEPTOR_SERVICE_H_
+
+#include <utility>
+#include <memory>
+#include <map>
+#include <set>
+#include <queue>
+
+#include <boost/system/error_code.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/detail/op_queue.hpp>
+
+#include "common/network/manager.h"
+#include "common/network/base_session.h"
+#include "common/network/session_forwarder.h"
+
+#include "common/io/accept_op.h"
+
+#include "core/virtual_network/data_link_layer/helpers.h"
+
+#include "core/virtual_network/basic_impl.h"
+
+#include "core/virtual_network/data_link_layer/circuit_op.h"
+
+#include "common/io/handler_helpers.h"
+#include "common/error/error.h"
+
+namespace virtual_network {
+namespace data_link_layer {
+
+#include <boost/asio/detail/push_options.hpp>
+
+template <class Prococol>
+class basic_CircuitAcceptor_service
+    : public boost::asio::detail::service_base<
+          basic_CircuitAcceptor_service<Prococol>> {
+ public:
+  typedef Prococol protocol_type;
+
+  typedef typename protocol_type::endpoint endpoint_type;
+  typedef typename protocol_type::resolver resolver_type;
+
+  typedef std::shared_ptr<endpoint_type> p_endpoint_type;
+
+  typedef basic_acceptor_impl<protocol_type> implementation_type;
+  typedef implementation_type& native_handle_type;
+  typedef native_handle_type native_type;
+
+ private:
+  typedef typename protocol_type::circuit_policy circuit_policy;
+  typedef ssf::ItemManager<ssf::BaseSessionPtr> Manager;
+  typedef typename protocol_type::socket socket_type;
+  typedef typename protocol_type::next_layer_protocol::acceptor
+      next_acceptor_type;
+  typedef typename protocol_type::next_layer_protocol::socket next_socket_type;
+  typedef typename protocol_type::next_layer_protocol::endpoint
+      next_endpoint_type;
+  typedef std::shared_ptr<socket_type> p_socket_type;
+  typedef std::shared_ptr<next_acceptor_type> p_next_acceptor_type;
+  typedef std::shared_ptr<next_socket_type> p_next_socket_type;
+  typedef std::shared_ptr<next_endpoint_type> p_next_endpoint_type;
+
+  typedef std::pair<p_next_socket_type, p_endpoint_type> pending_connection;
+  typedef std::queue<pending_connection> connection_queue;
+  typedef boost::asio::detail::op_queue<
+      io::basic_pending_accept_operation<protocol_type>> op_queue;
+
+ public:
+  explicit basic_CircuitAcceptor_service(boost::asio::io_service& io_service)
+      : boost::asio::detail::service_base<basic_CircuitAcceptor_service>(
+            io_service),
+        next_acceptors_(),
+        next_local_endpoints_() {}
+
+  virtual ~basic_CircuitAcceptor_service() {}
+
+  void construct(implementation_type& impl) {
+    impl.p_next_layer_acceptor =
+        std::make_shared<next_acceptor_type>(this->get_io_service());
+  }
+
+  void destroy(implementation_type& impl) {
+    impl.p_local_endpoint.reset();
+    impl.p_remote_endpoint.reset();
+    impl.p_next_layer_acceptor.reset();
+  }
+
+  void move_construct(implementation_type& impl, implementation_type& other) {
+    impl = std::move(other);
+  }
+
+  void move_assign(implementation_type& impl, implementation_type& other) {
+    impl = std::move(other);
+  }
+
+  boost::system::error_code open(implementation_type& impl,
+                                 const protocol_type& protocol,
+                                 boost::system::error_code& ec) {
+    return impl.p_next_layer_acceptor->open(
+        typename protocol_type::next_layer_protocol(), ec);
+  }
+
+  boost::system::error_code assign(implementation_type& impl,
+                                   const protocol_type& protocol,
+                                   const native_handle_type& native_socket,
+                                   boost::system::error_code& ec) {
+    impl = native_socket;
+    return ec;
+  }
+
+  bool is_open(const implementation_type& impl) const {
+    return impl.p_next_layer_acceptor->is_open();
+  }
+
+  endpoint_type remote_endpoint(const implementation_type& impl,
+                                boost::system::error_code& ec) const {
+    if (impl.p_remote_endpoint) {
+      return *impl.p_remote_endpoint;
+    } else {
+      return endpoint_type();
+    }
+  }
+
+  endpoint_type local_endpoint(const implementation_type& impl,
+                               boost::system::error_code& ec) const {
+    if (impl.p_local_endpoint) {
+      ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+      return *impl.p_local_endpoint;
+    } else {
+      ec.assign(ssf::error::no_link, ssf::error::get_ssf_category());
+      return endpoint_type();
+    }
+  }
+
+  boost::system::error_code close(implementation_type& impl,
+                                  boost::system::error_code& ec) {
+
+    {
+      boost::recursive_mutex::scoped_lock lock(bind_mutex_);
+
+      endpoint_type input_endpoint;
+      for (const auto& pair : input_bindings_) {
+        if (pair.second == &impl) {
+          input_endpoint = pair.first;
+
+          {
+            boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+            pending_connections_.erase(
+                impl.p_local_endpoint->next_layer_endpoint());
+          }
+
+          break;
+        }
+      }
+      input_bindings_.erase(input_endpoint);
+
+      endpoint_type forward_endpoint;
+      for (const auto& pair : forward_bindings_) {
+        if (pair.second == &impl) {
+          forward_endpoint = pair.first;
+          break;
+        }
+      }
+      forward_bindings_.erase(forward_endpoint);
+
+      p_next_acceptor_type p_input_next_acceptor;
+      auto input_next_acceptor_it =
+          next_acceptors_.find(input_endpoint.next_layer_endpoint());
+      if (input_next_acceptor_it != std::end(next_acceptors_)) {
+        p_input_next_acceptor = input_next_acceptor_it->second;
+        next_acceptors_.erase(input_endpoint.next_layer_endpoint());
+      }
+
+      p_next_acceptor_type p_forward_next_acceptor;
+      auto forward_next_acceptor_it =
+          next_acceptors_.find(forward_endpoint.next_layer_endpoint());
+      if (forward_next_acceptor_it != std::end(next_acceptors_)) {
+        p_forward_next_acceptor = forward_next_acceptor_it->second;
+        next_acceptors_.erase(forward_endpoint.next_layer_endpoint());
+      }
+
+      next_local_endpoints_.erase(p_input_next_acceptor);
+      next_local_endpoints_.erase(p_forward_next_acceptor);
+
+      listening_.erase(p_input_next_acceptor);
+      listening_.erase(p_forward_next_acceptor);
+
+      if (p_input_next_acceptor) {
+        p_input_next_acceptor->close(ec);
+      }
+
+      if (p_forward_next_acceptor) {
+        p_forward_next_acceptor->close(ec);
+      }
+    }
+
+    if (impl.p_local_endpoint) {
+      boost::recursive_mutex::scoped_lock lock_accept(accept_mutex_);
+      pending_accepts_.erase(impl.p_local_endpoint->next_layer_endpoint());
+    }
+
+    return ec;
+  }
+
+  native_type native(implementation_type& impl) { return impl; }
+
+  native_handle_type native_handle(implementation_type& impl) { return impl; }
+
+  /// Register given endpoint if not already provided
+  ///   Create connection queue if not a forward endpoint
+  ///   Bind the acceptor of the next layer to the next layer endpoint
+  ///   Link the acceptor of the next layer to the current impl
+  boost::system::error_code bind(implementation_type& impl,
+                                 const endpoint_type& endpoint,
+                                 boost::system::error_code& ec) {
+    boost::recursive_mutex::scoped_lock lock(bind_mutex_);
+
+    auto is_forward = detail::is_endpoint_forwarding(endpoint);
+
+    bool binding_insertion = false;
+
+    if (is_forward) {
+      // If the endpoint only forwards, the acceptor will not be able
+      //   to accept connections (pending_connections_ not filled)
+      auto forward_bind =
+          forward_bindings_.emplace(std::make_pair(endpoint, &impl));
+      binding_insertion = forward_bind.second;
+    } else {
+      auto input_bind =
+          input_bindings_.emplace(std::make_pair(endpoint, &impl));
+      binding_insertion = input_bind.second;
+
+      boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+      pending_connections_.emplace(
+          std::make_pair(endpoint.next_layer_endpoint(), connection_queue()));
+    }
+
+    if (!binding_insertion) {
+      ec.assign(ssf::error::address_in_use, ssf::error::get_ssf_category());
+      return ec;
+    }
+
+    impl.p_local_endpoint = std::make_shared<endpoint_type>(endpoint);
+
+    auto inserted = next_acceptors_.emplace(
+        std::make_pair(impl.p_local_endpoint->next_layer_endpoint(),
+                       impl.p_next_layer_acceptor));
+
+    if (!inserted.second) {
+      impl.p_next_layer_acceptor = inserted.first->second;
+      return boost::system::error_code();
+    }
+
+    next_local_endpoints_.emplace(
+        std::make_pair(impl.p_next_layer_acceptor,
+                       impl.p_local_endpoint->next_layer_endpoint()));
+
+    return impl.p_next_layer_acceptor->bind(
+        impl.p_local_endpoint->next_layer_endpoint(), ec);
+  }
+
+  /// Wait for new connections from next layer if not already listening
+  boost::system::error_code listen(implementation_type& impl, int backlog,
+                                   boost::system::error_code& ec) {
+    boost::recursive_mutex::scoped_lock lock(bind_mutex_);
+    if (listening_.count(impl.p_next_layer_acceptor)) {
+      return ec;
+    }
+
+    listening_.insert(impl.p_next_layer_acceptor);
+    auto listening_ec = impl.p_next_layer_acceptor->listen(backlog, ec);
+
+    if (!ec) {
+      start_accepting(impl.p_next_layer_acceptor);
+    }
+
+    return listening_ec;
+  }
+
+  template <typename Protocol1, typename SocketService>
+  boost::system::error_code accept(
+      implementation_type& impl,
+      boost::asio::basic_socket<Protocol1, SocketService>& peer,
+      endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
+      typename std::enable_if<boost::thread_detail::is_convertible<
+          protocol_type, Protocol1>::value>::type* = 0) {
+
+    auto& next_layer_local_endpoint =
+        impl.p_local_endpoint->next_layer_endpoint();
+    connection_queue* p_queue = nullptr;
+
+    {
+      boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+      auto queue_it = pending_connections_.find(next_layer_local_endpoint);
+
+      if (queue_it == std::end(pending_connections_)) {
+        ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
+        return ec;
+      }
+
+      p_queue = &queue_it->second;
+    }
+
+    /// Waiting for new connections from next layer (p_queue is populated
+    /// asynchronously)
+    while (true) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+      boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+      if (p_queue->empty()) {
+        continue;
+      }
+
+      auto connection = std::move(p_queue->front());
+      p_queue->pop();
+      impl.p_next_layer_socket = connection.first;
+      impl.p_remote_endpoint = std::move(connection.second);
+      break;
+    }
+
+    return ec;
+  }
+
+  template <typename Protocol1, typename SocketService, typename AcceptHandler>
+  BOOST_ASIO_INITFN_RESULT_TYPE(AcceptHandler, void(boost::system::error_code))
+      async_accept(implementation_type& impl,
+                   boost::asio::basic_socket<Protocol1, SocketService>& peer,
+                   endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
+                   typename std::enable_if<boost::thread_detail::is_convertible<
+                       protocol_type, Protocol1>::value>::type* = 0) {
+    boost::asio::detail::async_result_init<AcceptHandler,
+                                           void(boost::system::error_code)>
+        init(std::forward<AcceptHandler>(handler));
+
+    if (!impl.p_local_endpoint) {
+      io::PostHandler(
+          this->get_io_service(), init.handler,
+          boost::system::error_code(ssf::error::identifier_removed,
+                                    ssf::error::get_ssf_category()));
+      return init.result.get();
+    }
+
+    auto& peer_impl = peer.native_handle();
+    peer_impl.p_local_endpoint = impl.p_local_endpoint;
+    peer_impl.p_remote_endpoint =
+        std::make_shared<typename Protocol1::endpoint>();
+    peer_impl.p_remote_endpoint->set();
+
+    typedef detail::CircuitAcceptOp<
+        typename boost::asio::basic_socket<Protocol1,
+                                           SocketService>::native_handle_type,
+        endpoint_type,
+        typename boost::asio::handler_type<
+            AcceptHandler, void(boost::system::error_code)>::type>
+        CircuitAcceptOp;
+    CircuitAcceptOp op_handler(peer_impl, p_peer_endpoint, init.handler);
+
+    {
+      boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+      // Create and save a new op_queue at
+      // [impl.p_local_endpoint->next_layer_endpoint()] index
+      // in pending_accepts
+      auto& op_queue =
+          pending_accepts_[impl.p_local_endpoint->next_layer_endpoint()];
+
+      typedef io::pending_accept_operation<CircuitAcceptOp, protocol_type> op;
+      typename op::ptr p = {
+          boost::asio::detail::addressof(op_handler),
+          boost_asio_handler_alloc_helpers::allocate(sizeof(op), op_handler),
+          0};
+
+      p.p = new (p.v)
+          op(peer, peer_impl.p_remote_endpoint.get(), std::move(op_handler));
+      op_queue.push(p.p);
+      p.v = p.p = 0;
+    }
+    connection_queue_handler();
+
+    return init.result.get();
+  }
+
+ private:
+  /// Start async accepting new connection on the next layer
+  void start_accepting(p_next_acceptor_type p_next_layer_acceptor,
+                       p_next_socket_type p_next_layer_socket = nullptr,
+                       p_next_endpoint_type p_next_layer_endpoint = nullptr) {
+    if (p_next_layer_acceptor->is_open()) {
+
+      if (!p_next_layer_socket) {
+        p_next_layer_socket = std::make_shared<
+            typename protocol_type::next_layer_protocol::socket>(
+            this->get_io_service());
+      }
+
+      if (!p_next_layer_endpoint) {
+        p_next_layer_endpoint = std::make_shared<
+            typename protocol_type::next_layer_protocol::endpoint>();
+      }
+
+      p_next_layer_acceptor->async_accept(
+          *p_next_layer_socket, *p_next_layer_endpoint,
+          boost::bind(&basic_CircuitAcceptor_service::accepted, this,
+                      p_next_layer_acceptor, p_next_layer_socket,
+                      p_next_layer_endpoint, _1));
+    }
+  }
+
+  /// New connection was accepted by the next layer
+  void accepted(p_next_acceptor_type p_next_layer_acceptor,
+                p_next_socket_type p_next_layer_socket,
+                p_next_endpoint_type p_next_layer_endpoint,
+                const boost::system::error_code& ec) {
+    if (!ec) {
+      {
+        boost::recursive_mutex::scoped_lock lock2(bind_mutex_);
+        boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+
+        auto next_local_endpoint_it =
+            next_local_endpoints_.find(p_next_layer_acceptor);
+
+        if (next_local_endpoint_it == std::end(next_local_endpoints_)) {
+          return;
+        }
+
+        auto& next_local_endpoint = next_local_endpoint_it->second;
+
+        // Create empty endpoint to store the future remote endpoint received by
+        // the protocol
+        auto p_remote_endpoint =
+            std::make_shared<endpoint_type>(*p_next_layer_endpoint);
+
+        auto p_received_endpoint = std::make_shared<endpoint_type>();
+
+        circuit_policy::AsyncInitConnection(
+            *p_next_layer_socket, p_received_endpoint.get(),
+            circuit_policy::server,
+            boost::bind(
+                &basic_CircuitAcceptor_service::connection_initiated_handler,
+                this, p_next_layer_socket, std::move(p_remote_endpoint),
+                p_received_endpoint, next_local_endpoint, _1));
+      }
+    }
+
+    start_accepting(p_next_layer_acceptor);
+  }
+
+  void connection_initiated_handler(p_next_socket_type p_next_layer_socket,
+                                    p_endpoint_type p_remote_endpoint,
+                                    p_endpoint_type p_received_endpoint,
+                                    next_endpoint_type next_local_endpoint,
+                                    const boost::system::error_code& ec) {
+    if (!ec) {
+      if (detail::is_endpoint_forwarding(*p_received_endpoint)) {
+        // Received endpoint is not the final destination :
+        //   create and connect a new socket to the next endpoint
+        //   and forward its data
+        do_connection_forward(std::move(p_next_layer_socket),
+                              std::move(p_received_endpoint));
+      } else {
+        p_remote_endpoint->endpoint_context() =
+            p_received_endpoint->endpoint_context();
+
+        p_remote_endpoint->endpoint_context().id =
+            p_remote_endpoint->endpoint_context().details;
+
+        boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+
+        // Connection is only accepted if there is a binding
+        // of a non forward endpoint link to this next local endpoint
+        if (pending_connections_.count(next_local_endpoint)) {
+          circuit_policy::AsyncValidateConnection(
+              *p_next_layer_socket, p_remote_endpoint.get(), ec.value(),
+              boost::bind(
+                  &basic_CircuitAcceptor_service::connection_validated_handler,
+                  this, std::move(next_local_endpoint), p_next_layer_socket,
+                  p_remote_endpoint, _1));
+        } else {
+          boost::system::error_code close_ec;
+          p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                                        close_ec);
+          p_next_layer_socket->close(close_ec);
+        }
+      }
+    }
+  }
+
+  void connection_validated_handler(next_endpoint_type next_local_endpoint,
+                                    p_next_socket_type p_next_layer_socket,
+                                    p_endpoint_type p_remote_endpoint,
+                                    const boost::system::error_code& ec) {
+    if (!ec) {
+      this->do_connection_accept(next_local_endpoint,
+                                 std::make_pair(std::move(p_next_layer_socket),
+                                                std::move(p_remote_endpoint)));
+    }
+  }
+
+  /// Create and connect a new socket to the remote endpoint
+  ///   and forward its data
+  void do_connection_forward(p_next_socket_type p_next_socket,
+                             p_endpoint_type p_remote_endpoint) {
+    auto p_forward_socket =
+        std::make_shared<socket_type>(this->get_io_service());
+
+    p_forward_socket->async_connect(
+        *p_remote_endpoint,
+        boost::bind(&basic_CircuitAcceptor_service::connected_handler, this,
+                    p_remote_endpoint, std::move(p_next_socket),
+                    p_forward_socket, _1));
+  }
+
+  void connected_handler(p_endpoint_type p_remote_endpoint,
+                         p_next_socket_type p_next_socket,
+                         p_socket_type p_forward_socket,
+                         const boost::system::error_code& ec) {
+    if (!ec) {
+      circuit_policy::AsyncValidateConnection(
+          *p_next_socket, p_remote_endpoint.get(), ec.value(),
+          boost::bind(
+              &basic_CircuitAcceptor_service::connection_forwarded_handler,
+              this, p_next_socket, std::move(p_forward_socket), _1));
+    } else {
+      circuit_policy::AsyncValidateConnection(
+          *p_next_socket, p_remote_endpoint.get(), ec.value(),
+          [](const boost::system::error_code&) {});
+
+      boost::system::error_code close_ec;
+      p_next_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                              close_ec);
+      p_next_socket->close(close_ec);
+      p_forward_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                                 close_ec);
+      p_forward_socket->close(close_ec);
+    }
+  }
+
+  void connection_forwarded_handler(p_next_socket_type p_next_socket,
+                                    p_socket_type p_forward_socket,
+                                    const boost::system::error_code& ec) {
+    if (!ec) {
+      auto p_session =
+          ssf::SessionForwarder<next_socket_type, next_socket_type>::create(
+              &this->manager_,
+              std::move(*p_forward_socket->native_handle().p_next_layer_socket),
+              std::move(*p_next_socket));
+
+      boost::system::error_code start_ec;
+      this->manager_.start(p_session, start_ec);
+    } else {
+      boost::system::error_code close_ec;
+      p_next_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                              close_ec);
+      p_next_socket->close(close_ec);
+      p_forward_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                                 close_ec);
+      p_forward_socket->close(close_ec);
+    }
+  }
+
+  /// Unqueue accept operation after accepting connection
+  void do_connection_accept(const next_endpoint_type& next_local_endpoint,
+                            pending_connection connection) {
+    boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+
+    auto connection_queue_it = pending_connections_.find(next_local_endpoint);
+
+    // Connection is only accepted if there is a binding
+    // of a non forward endpoint link to this next local endpoint
+    if (connection_queue_it == std::end(pending_connections_)) {
+      boost::system::error_code ec;
+      connection.first->shutdown(boost::asio::socket_base::shutdown_both, ec);
+      connection.first->close(ec);
+      return;
+    }
+
+    auto& connection_queue = connection_queue_it->second;
+    connection_queue.emplace(std::move(connection));
+
+    connection_queue_handler();
+  }
+
+  void close_next_layer_acceptor(p_next_acceptor_type p_acceptor) {
+    auto endpoint_it = next_local_endpoints_.find(p_acceptor);
+
+    if (endpoint_it == std::end(next_local_endpoints_)) {
+      return;
+    }
+
+    auto acceptor_it = next_acceptors_.find(endpoint_it->second);
+
+    if (acceptor_it != std::end(next_acceptors_)) {
+      boost::system::error_code ec;
+      acceptor_it->second->close(ec);
+    }
+
+    next_local_endpoints_.erase(endpoint_it);
+    next_acceptors_.erase(acceptor_it);
+
+    return;
+  }
+
+  /// Execute accept handler after peer connection
+  void connection_queue_handler(
+      const boost::system::error_code& ec = boost::system::error_code()) {
+    boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+
+    for (auto& connection_pair : pending_connections_) {
+      if (!connection_pair.second.size()) {
+        continue;
+      }
+
+      auto accept_queue_it = pending_accepts_.find(connection_pair.first);
+
+      if (accept_queue_it == std::end(pending_accepts_)) {
+        continue;
+      }
+
+      auto& connection_queue = connection_pair.second;
+      auto& accept_queue = accept_queue_it->second;
+      // auto next_local_endpoint = connection_pair.first;
+
+      if (!connection_queue.empty() && !accept_queue.empty()) {
+        auto connection = std::move(connection_queue.front());
+        connection_queue.pop();
+        auto accept_op = std::move(accept_queue.front());
+        accept_queue.pop();
+
+        if (!ec) {
+          accept_op->set_p_endpoint(*connection.second);
+          auto& peer = accept_op->peer();
+          auto& native_handle = peer.native_handle();
+          native_handle.p_next_layer_socket = std::move(connection.first);
+          native_handle.p_remote_endpoint = connection.second;
+        }
+
+        auto do_complete = [accept_op, ec]() { accept_op->complete(ec); };
+        this->get_io_service().post(do_complete);
+
+        this->get_io_service().post(boost::bind(
+            &basic_CircuitAcceptor_service::connection_queue_handler, this,
+            ec));
+      }
+    }
+  }
+
+  void shutdown_service() { manager_.stop_all(); }
+
+ private:
+  boost::recursive_mutex bind_mutex_;
+  std::map<next_endpoint_type, p_next_acceptor_type> next_acceptors_;
+  std::map<p_next_acceptor_type, next_endpoint_type> next_local_endpoints_;
+  std::map<endpoint_type, implementation_type*> input_bindings_;
+  std::map<endpoint_type, implementation_type*> forward_bindings_;
+  std::set<p_next_acceptor_type> listening_;
+
+  boost::recursive_mutex accept_mutex_;
+  std::map<next_endpoint_type, op_queue> pending_accepts_;
+  std::map<next_endpoint_type, connection_queue> pending_connections_;
+
+  Manager manager_;
+};
+
+#include <boost/asio/detail/pop_options.hpp>
+
+}  // data_link_layer
+}  // virtual_network
+
+#endif  // SSF_CORE_VIRTUAL_NETWORK_DATA_LINK_LAYER_BASIC_CIRCUIT_ACCEPTOR_SERVICE_H_

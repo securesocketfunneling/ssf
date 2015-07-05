@@ -48,7 +48,6 @@ class basic_VirtualLink_resolver {
   };
 
  public:
-  typedef typename Protocol::raw_endpoint_parameters parameters_type;
   typedef typename Protocol::endpoint endpoint_type;
   typedef EndpointIterator iterator;
 
@@ -59,7 +58,7 @@ class basic_VirtualLink_resolver {
   template <class Container>
   iterator resolve(
       const Container& parameters_list,
-      boost::system::error_code& ec = boost::system::error_code()) {
+      boost::system::error_code& ec) {
     if (parameters_list.size() < Protocol::endpoint_stack_size) {
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
       return iterator();

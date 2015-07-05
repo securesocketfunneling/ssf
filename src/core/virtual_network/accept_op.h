@@ -18,26 +18,26 @@ template <class Protocol, class Acceptor, class PeerImpl, class Endpoint,
           class AcceptHandler>
 class AcceptOp {
  public:
-  AcceptOp(Acceptor& acceptor, typename std::remove_reference<PeerImpl>::type& peer_impl,
-           Endpoint* p_peer_endpoint, AcceptHandler handler)
+  AcceptOp(Acceptor& acceptor, PeerImpl* p_peer_impl, Endpoint* p_peer_endpoint,
+           AcceptHandler handler)
       : coro_(),
         acceptor_(acceptor),
-        peer_impl_(peer_impl),
-        p_peer_endpoint_(std::move(p_peer_endpoint)),
+        p_peer_impl_(p_peer_impl),
+        p_peer_endpoint_(p_peer_endpoint),
         handler_(std::move(handler)) {}
 
   AcceptOp(const AcceptOp& other)
       : coro_(other.coro_),
         acceptor_(other.acceptor_),
-        peer_impl_(other.peer_impl_),
+        p_peer_impl_(other.p_peer_impl_),
         p_peer_endpoint_(other.p_peer_endpoint_),
         handler_(other.handler_) {}
 
   AcceptOp(AcceptOp&& other)
       : coro_(std::move(other.coro_)),
         acceptor_(other.acceptor_),
-        peer_impl_(other.peer_impl_),
-        p_peer_endpoint_(std::move(other.p_peer_endpoint_)),
+        p_peer_impl_(other.p_peer_impl_),
+        p_peer_endpoint_(other.p_peer_endpoint_),
         handler_(std::move(other.handler_)) {}
 
 #include <boost/asio/yield.hpp>
@@ -46,14 +46,18 @@ class AcceptOp {
     if (!ec) {
       reenter(coro_) {
         yield acceptor_.async_accept(
-            *peer_impl_.p_next_layer_socket,
-            peer_impl_.p_remote_endpoint->next_layer_endpoint(),
+            *p_peer_impl_->p_next_layer_socket,
+            p_peer_impl_->p_remote_endpoint->next_layer_endpoint(),
             std::move(*this));
 
-        peer_impl_.p_remote_endpoint->set();
+        p_peer_impl_->p_remote_endpoint->set();
+
+        auto& local_endpoint = *p_peer_impl_->p_local_endpoint;
+        local_endpoint =
+            Endpoint(0, p_peer_impl_->p_next_layer_socket->local_endpoint());
 
         if (p_peer_endpoint_) {
-          *p_peer_endpoint_ = *peer_impl_.p_remote_endpoint;
+          *p_peer_endpoint_ = *p_peer_impl_->p_remote_endpoint;
         }
 
         handler_(ec);
@@ -70,7 +74,7 @@ class AcceptOp {
  private:
   boost::asio::coroutine coro_;
   Acceptor& acceptor_;
-  PeerImpl& peer_impl_;
+  PeerImpl* p_peer_impl_;
   Endpoint* p_peer_endpoint_;
   AcceptHandler handler_;
 };
