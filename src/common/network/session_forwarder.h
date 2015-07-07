@@ -5,7 +5,8 @@
 #include <memory>
 
 #include <boost/system/error_code.hpp>
-#include <boost/asio/ssl.hpp>
+
+#include <boost/asio/socket_base.hpp>
 
 #include "common/network/base_session.h"  // NOLINT
 #include "common/network/socket_link.h"
@@ -16,60 +17,63 @@ namespace ssf {
 /// Create a Full Duplex Forwarding Link
 template <typename InwardStream, typename ForwardStream>
 class SessionForwarder : public ssf::BaseSession {
-private:
+ private:
   /// Buffer type for the transiting data
   typedef std::array<char, 50 * 1024> buffer_type;
 
   /// Type for the class managing the different forwarding links
   typedef ItemManager<BaseSessionPtr> SessionManager;
 
-public:
+ public:
   typedef std::shared_ptr<SessionForwarder> p_SessionForwarder;
 
-
-public:
+ public:
   /// Return a shared pointer to a new SessionForwarder object
-  template <typename ... Args>
-  static p_SessionForwarder create(Args&& ... args) {
+  template <typename... Args>
+  static p_SessionForwarder create(Args&&... args) {
     return std::shared_ptr<SessionForwarder>(
         new SessionForwarder(std::forward<Args>(args)...));
   }
 
+  virtual ~SessionForwarder() {}
+
   /// Start forwarding
-  virtual void start(boost::system::error_code&) {
-    DoForward();
-  }
+  virtual void start(boost::system::error_code&) { DoForward(); }
 
   /// Stop forwarding
   virtual void stop(boost::system::error_code&) {
     boost::system::error_code ec;
-    inbound_.lowest_layer().shutdown(
-        boost::asio::ip::tcp::socket::shutdown_both, ec);
-    inbound_.lowest_layer().close();
-    outbound_.lowest_layer().shutdown(
-        boost::asio::ip::tcp::socket::shutdown_both, ec);
-    outbound_.lowest_layer().close();
+    if (inbound_.lowest_layer().is_open()) {
+      inbound_.lowest_layer().shutdown(boost::asio::socket_base::shutdown_both,
+                                       ec);
+      inbound_.lowest_layer().close(ec);
+    }
+
+    if (outbound_.lowest_layer().is_open()) {
+      outbound_.lowest_layer().shutdown(boost::asio::socket_base::shutdown_both,
+                                        ec);
+      outbound_.lowest_layer().close(ec);
+    }
   }
 
-private:
+ private:
   /// Function taking a member function and returning a handler
   /**
-  * Function taking a memeber function and returning a handler including 
+  * Function taking a memeber function and returning a handler including
   * reference counting functionality.
-  * 
+  *
   * @param handler A member function with one argument.
   */
 
-  //template <typename Handler, typename This>
-  //auto Then(Handler handler, This me) 
+  // template <typename Handler, typename This>
+  // auto Then(Handler handler, This me)
   //  -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
   //  return boost::bind(handler, me->SelfFromThis(), _1);
   //}
 
   template <typename Handler, typename This>
-  auto Then(Handler handler, This me) -> decltype(boost::bind(handler,
-                                        me->SelfFromThis(),
-                                        _1)) {
+  auto Then(Handler handler, This me)
+      -> decltype(boost::bind(handler, me -> SelfFromThis(), _1)) {
     return boost::bind(handler, me->SelfFromThis(), _1);
   }
 
@@ -79,33 +83,35 @@ private:
     return std::static_pointer_cast<SessionForwarder>(this->shared_from_this());
   }
 
-private:
- /// The constructor is made private to ensure users only use create()
- SessionForwarder(SessionManager* manager, InwardStream inbound,
-                  ForwardStream outbound)
-     : inbound_(std::move(inbound)),
-       outbound_(std::move(outbound)),
-       manager_(manager) {}
-  
+ private:
+  /// The constructor is made private to ensure users only use create()
+  SessionForwarder(SessionManager* manager, InwardStream inbound,
+                   ForwardStream outbound)
+      : inbound_(std::move(inbound)),
+        outbound_(std::move(outbound)),
+        manager_(manager) {}
+
   /// Start forwarding
   void DoForward() {
     // Make two Half Duplex links to have a Full Duplex Link
-    AsyncEstablishHDLink(ReadFrom(inbound_), WriteTo(outbound_),
-      boost::asio::buffer(inwardBuffer_),
-      Then(&SessionForwarder::StopHandler, this->SelfFromThis()));
+    AsyncEstablishHDLink(
+        ReadFrom(inbound_), WriteTo(outbound_),
+        boost::asio::buffer(inwardBuffer_),
+        Then(&SessionForwarder::StopHandler, this->SelfFromThis()));
 
-    AsyncEstablishHDLink(ReadFrom(outbound_), WriteTo(inbound_),
-      boost::asio::buffer(forwardBuffer_),
-      Then(&SessionForwarder::StopHandler, this->SelfFromThis()));
+    AsyncEstablishHDLink(
+        ReadFrom(outbound_), WriteTo(inbound_),
+        boost::asio::buffer(forwardBuffer_),
+        Then(&SessionForwarder::StopHandler, this->SelfFromThis()));
   }
 
   /// Stop forwarding
   void StopHandler(const boost::system::error_code& ec) {
     boost::system::error_code e;
-    manager_->stop(SelfFromThis(), e);
+    manager_->stop(this->SelfFromThis(), e);
   }
 
-private:
+ private:
   // The streams to forward to each other
   InwardStream inbound_;
   ForwardStream outbound_;
@@ -116,7 +122,6 @@ private:
   // One buffer for each Half Duplex Link
   buffer_type inwardBuffer_;
   buffer_type forwardBuffer_;
-  
 };
 }  // ssf
 
