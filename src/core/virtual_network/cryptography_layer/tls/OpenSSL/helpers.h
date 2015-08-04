@@ -1,20 +1,21 @@
-#ifndef SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_SSL_HELPERS_H_
-#define SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_SSL_HELPERS_H_
+#ifndef SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_TLS_OPENSSL_HELPERS_H_
+#define SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_TLS_OPENSSL_HELPERS_H_
 
 #include <cstdint>
 
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
 
-#include <boost/serialization/vector.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include <boost/serialization/vector.hpp>
+
+#include "common/utils/cleaner.h"
 #include "common/error/error.h"
 #include "common/utils/map_helpers.h"
-#include "common/utils/cleaner.h"
 
 #include "core/virtual_network/parameters.h"
 
@@ -22,18 +23,18 @@ namespace virtual_network {
 namespace cryptography_layer {
 namespace detail {
 
-struct ExtendedSSLContext {
-  ExtendedSSLContext() : p_ctx_(nullptr) {}
+struct ExtendedTLSContext {
+  ExtendedTLSContext() : p_ctx_(nullptr) {}
 
-  explicit ExtendedSSLContext(std::shared_ptr<boost::asio::ssl::context> p_ctx)
+  explicit ExtendedTLSContext(std::shared_ptr<boost::asio::ssl::context> p_ctx)
       : p_ctx_(std::move(p_ctx)) {}
 
   boost::asio::ssl::context& operator*() { return *p_ctx_; }
   std::shared_ptr<boost::asio::ssl::context> operator->() { return p_ctx_; }
 
-  bool operator==(const ExtendedSSLContext&) const { return true; }
-  bool operator!=(const ExtendedSSLContext&) const { return false; }
-  bool operator<(const ExtendedSSLContext& other) const {
+  bool operator==(const ExtendedTLSContext&) const { return true; }
+  bool operator!=(const ExtendedTLSContext&) const { return false; }
+  bool operator<(const ExtendedTLSContext& other) const {
     return p_ctx_ < other.p_ctx_;
   }
   bool operator!() const { return !p_ctx_; }
@@ -41,7 +42,7 @@ struct ExtendedSSLContext {
   std::shared_ptr<boost::asio::ssl::context> p_ctx_;
 };
 
-ExtendedSSLContext make_ssl_context(boost::asio::io_service& io_service,
+ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
                                     const LayerParameters& parameters);
 bool SetCtxCipher(boost::asio::ssl::context& ctx,
                   const LayerParameters& parameters);
@@ -62,7 +63,7 @@ std::vector<uint8_t> get_deserialized_vector(const std::string& serialized);
 std::vector<uint8_t> get_value_in_vector(const LayerParameters& parameters,
                                          const std::string& key);
 
-ExtendedSSLContext make_ssl_context(boost::asio::io_service& io_service,
+ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
                                     const LayerParameters& parameters) {
   auto p_ctx = std::make_shared<boost::asio::ssl::context>(
       boost::asio::ssl::context::tlsv12);
@@ -71,7 +72,6 @@ ExtendedSSLContext make_ssl_context(boost::asio::io_service& io_service,
 
   // Set the callback to decipher the private key
   auto password = helpers::GetField<std::string>("password", parameters);
-
   auto password_lambda = [password](
       std::size_t size, boost::asio::ssl::context::password_purpose purpose)
       ->std::string {
@@ -90,7 +90,7 @@ ExtendedSSLContext make_ssl_context(boost::asio::io_service& io_service,
   ctx.set_verify_callback(&verify_certificate, ec);
 
   if (ec) {
-    return ExtendedSSLContext(nullptr);
+    return ExtendedTLSContext(nullptr);
   }
 
   // Set various security options
@@ -116,10 +116,10 @@ ExtendedSSLContext make_ssl_context(boost::asio::io_service& io_service,
   success |= SetCtxDhparam(ctx, parameters, ec);
 
   if (!success) {
-    return ExtendedSSLContext(nullptr);
+    return ExtendedTLSContext(nullptr);
   }
 
-  return ExtendedSSLContext(p_ctx);
+  return ExtendedTLSContext(p_ctx);
 }
 
 bool SetCtxCipher(boost::asio::ssl::context& ctx,
@@ -296,12 +296,12 @@ bool verify_certificate(bool preverified,
 
   char subject_name[256];
   X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-  std::cout << "Verifying " << subject_name << "\n";
+  //std::cout << "Verifying " << subject_name << "\n";
 
   X509* issuer = cts->current_issuer;
   if (issuer) {
     X509_NAME_oneline(X509_get_subject_name(issuer), subject_name, 256);
-    std::cout << "Issuer " << subject_name << "\n";
+    //std::cout << "Issuer " << subject_name << "\n";
   }
 
   // More checking ?
@@ -333,4 +333,4 @@ std::vector<uint8_t> get_value_in_vector(const LayerParameters& parameters,
 }  // cryptography_layer
 }  // virtual_network
 
-#endif  // SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_SSL_HELPERS_H_
+#endif  // SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_TLS_OPENSSL_HELPERS_H_

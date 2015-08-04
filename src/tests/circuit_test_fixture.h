@@ -11,46 +11,34 @@
 
 #include <boost/thread.hpp>
 
-#include "virtual_network_helpers.h"
+#include "tests/virtual_network_helpers.h"
 
 #include "core/virtual_network/parameters.h"
+
 #include "core/virtual_network/data_link_layer/circuit_helpers.h"
-
-#include "core/virtual_network/physical_layer/tcp.h"
-
-#include "core/virtual_network/basic_empty_stream.h"
-#include "core/virtual_network/cryptography_layer/ssl.h"
-#include "core/virtual_network/cryptography_layer/basic_empty_ssl_stream.h"
-
 #include "core/virtual_network/data_link_layer/basic_circuit_protocol.h"
 #include "core/virtual_network/data_link_layer/simple_circuit_policy.h"
+#include "core/virtual_network/physical_layer/tcp.h"
+#include "core/virtual_network/physical_layer/tlsotcp.h"
 
-virtual_network::LayerParameters ssl_circuit_parameters = {
-    {"ca_src", "file"},
-    {"crt_src", "file"},
-    {"key_src", "file"},
-    {"dhparam_src", "file"},
-    {"ca_file", "./certs/trusted/ca.crt"},
-    {"crt_file", "./certs/certificate.crt"},
-    {"key_file", "./certs/private.key"},
-    {"dhparam_file", "./certs/dh4096.pem"}};
+#include "tests/virtual_network_helpers.h"
 
 class CircuitTestFixture : public ::testing::Test {
  public:
-  typedef tests::virtual_network_helpers::SSLPhysicalProtocol
-      SSLPhysicalProtocol;
+  typedef virtual_network::physical_layer::TLSboTCPPhysicalLayer
+      TLSPhysicalProtocol;
   typedef virtual_network::data_link_layer::basic_CircuitProtocol<
-      SSLPhysicalProtocol, virtual_network::data_link_layer::CircuitPolicy>
-      SSLCircuitProtocol;
+      TLSPhysicalProtocol, virtual_network::data_link_layer::CircuitPolicy>
+      TLSCircuitProtocol;
 
-  typedef tests::virtual_network_helpers::TCPPhysicalProtocol PhysicalProtocol;
+  typedef virtual_network::physical_layer::TCPPhysicalLayer PhysicalProtocol;
   typedef virtual_network::data_link_layer::basic_CircuitProtocol<
       PhysicalProtocol, virtual_network::data_link_layer::CircuitPolicy>
       CircuitProtocol;
 
  protected:
-  typedef std::map<uint32_t, SSLCircuitProtocol::acceptor> SSLAcceptorsMap;
-  typedef SSLCircuitProtocol::resolver SSLResolver;
+  typedef std::map<uint32_t, TLSCircuitProtocol::acceptor> TLSAcceptorsMap;
+  typedef TLSCircuitProtocol::resolver TLSResolver;
 
   typedef std::map<uint32_t, CircuitProtocol::acceptor> AcceptorsMap;
   typedef CircuitProtocol::resolver Resolver;
@@ -66,7 +54,7 @@ class CircuitTestFixture : public ::testing::Test {
         p_work_(new boost::asio::io_service::work((io_service_))) {}
 
   virtual void SetUp() {
-    InitSSLCircuitNodes();
+    InitTLSCircuitNodes();
     InitCircuitNodes();
     auto lambda = [this]() { this->io_service_.run(); };
 
@@ -90,14 +78,16 @@ class CircuitTestFixture : public ::testing::Test {
   }
 
   virtual_network::data_link_layer::NodeParameterList
-  GetClientSSLNodes() {
+  GetClientTLSNodes() {
     virtual_network::data_link_layer::NodeParameterList nodes;
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode({{"addr", "127.0.0.1"}, {"port", "8000"}});
-    nodes.AddTopLayerToBackNode(ssl_circuit_parameters);
+    nodes.AddTopLayerToBackNode(
+        tests::virtual_network_helpers::tls_client_parameters);
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode({{"addr", "127.0.0.1"}, {"port", "8001"}});
-    nodes.AddTopLayerToBackNode(ssl_circuit_parameters);
+    nodes.AddTopLayerToBackNode(
+        tests::virtual_network_helpers::tls_client_parameters);
 
     return nodes;
   }
@@ -113,15 +103,16 @@ class CircuitTestFixture : public ::testing::Test {
   }
 
  private:
-  void InitSSLCircuitNodes() {
+  void InitTLSCircuitNodes() {
     boost::system::error_code ec;
-    // SSL Circuit node listening on 8000
+    // TLS Circuit node listening on 8000
     virtual_network::LayerParameters hop1_physical_parameters;
     hop1_physical_parameters["port"] = "8000";
 
     virtual_network::ParameterStack hop1_next_layers_parameters;
     hop1_next_layers_parameters.push_front(hop1_physical_parameters);
-    hop1_next_layers_parameters.push_front(ssl_circuit_parameters);
+    hop1_next_layers_parameters.push_front(
+        tests::virtual_network_helpers::tls_server_parameters);
 
     virtual_network::ParameterStack hop1_parameters(
         virtual_network::data_link_layer::
@@ -129,15 +120,16 @@ class CircuitTestFixture : public ::testing::Test {
                 "ssl_hop1", hop1_next_layers_parameters));
 
     auto hop1_endpoint_it = ssl_resolver_.resolve(hop1_parameters, ec);
-    SSLCircuitProtocol::endpoint hop1_endpoint(*hop1_endpoint_it);
+    TLSCircuitProtocol::endpoint hop1_endpoint(*hop1_endpoint_it);
 
-    // SSL Circuit node listening on 8001
+    // TLS Circuit node listening on 8001
     virtual_network::LayerParameters hop2_physical_parameters;
     hop2_physical_parameters["port"] = "8001";
 
     virtual_network::ParameterStack hop2_next_layers_parameters;
     hop2_next_layers_parameters.push_front(hop2_physical_parameters);
-    hop2_next_layers_parameters.push_front(ssl_circuit_parameters);
+    hop2_next_layers_parameters.push_front(
+        tests::virtual_network_helpers::tls_server_parameters);
 
     virtual_network::ParameterStack hop2_parameters(
         virtual_network::data_link_layer::
@@ -145,19 +137,23 @@ class CircuitTestFixture : public ::testing::Test {
                 "ssl_hop2", hop2_next_layers_parameters));
 
     auto hop2_endpoint_it = ssl_resolver_.resolve(hop2_parameters, ec);
-    SSLCircuitProtocol::endpoint hop2_endpoint(*hop2_endpoint_it);
+    TLSCircuitProtocol::endpoint hop2_endpoint(*hop2_endpoint_it);
 
     auto hop1_it = ssl_circuit_acceptors_.emplace(
-        1, SSLCircuitProtocol::acceptor(io_service_));
+        1, TLSCircuitProtocol::acceptor(io_service_));
     boost::system::error_code hop1_ec;
     hop1_it.first->second.open();
+    hop1_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
+                                     ec);
     hop1_it.first->second.bind(hop1_endpoint, hop1_ec);
     hop1_it.first->second.listen(100, hop1_ec);
 
     auto hop2_it = ssl_circuit_acceptors_.emplace(
-        2, SSLCircuitProtocol::acceptor(io_service_));
+        2, TLSCircuitProtocol::acceptor(io_service_));
     boost::system::error_code hop2_ec;
     hop2_it.first->second.open();
+    hop2_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
+                                     ec);
     hop2_it.first->second.bind(hop2_endpoint, hop2_ec);
     hop2_it.first->second.listen(100, hop2_ec);
   }
@@ -198,6 +194,8 @@ class CircuitTestFixture : public ::testing::Test {
         circuit_acceptors_.emplace(1, CircuitProtocol::acceptor(io_service_));
     boost::system::error_code hop1_ec;
     hop1_it.first->second.open();
+    hop1_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
+                                     ec);
     hop1_it.first->second.bind(hop1_endpoint, hop1_ec);
     hop1_it.first->second.listen(100, hop1_ec);
 
@@ -205,15 +203,17 @@ class CircuitTestFixture : public ::testing::Test {
         circuit_acceptors_.emplace(2, CircuitProtocol::acceptor(io_service_));
     boost::system::error_code hop2_ec;
     hop2_it.first->second.open();
+    hop2_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
+                                     ec);
     hop2_it.first->second.bind(hop2_endpoint, hop2_ec);
     hop2_it.first->second.listen(100, hop2_ec);
   }
 
  protected:
   boost::asio::io_service io_service_;
-  SSLAcceptorsMap ssl_circuit_acceptors_;
+  TLSAcceptorsMap ssl_circuit_acceptors_;
   AcceptorsMap circuit_acceptors_;
-  SSLResolver ssl_resolver_;
+  TLSResolver ssl_resolver_;
   Resolver resolver_;
   boost::thread_group threads_;
   std::unique_ptr<boost::asio::io_service::work> p_work_;

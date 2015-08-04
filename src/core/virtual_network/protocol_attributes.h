@@ -122,10 +122,14 @@ void AsyncReceiveDatagram(
 
   auto datagram_received_lambda = [p_buffer, p_datagram, handler](
       const boost::system::error_code& ec, std::size_t length) {
-    p_datagram->payload().SetSize(length - Datagram::size);
-    boost::asio::buffer_copy(p_datagram->GetMutableBuffers(),
-                             boost::asio::buffer(*p_buffer));
-    handler(ec, length);
+    if (!ec) {
+      p_datagram->payload().SetSize(length - Datagram::size);
+      boost::asio::buffer_copy(p_datagram->GetMutableBuffers(),
+        boost::asio::buffer(*p_buffer));
+      handler(ec, length);
+    } else {
+      handler(ec, 0);
+    }
   };
 
   socket.async_receive_from(boost::asio::buffer(*p_buffer), source,
@@ -142,10 +146,14 @@ void AsyncReceiveDatagram(
 
   auto datagram_received_lambda = [p_buffer, p_datagram, handler](
       const boost::system::error_code& ec, std::size_t length) {
-    p_datagram->payload().SetSize(length - Datagram::size);
-    boost::asio::buffer_copy(p_datagram->GetMutableBuffers(),
-      boost::asio::buffer(*p_buffer));
-    handler(ec, length);
+    if (!ec) {
+      p_datagram->payload().SetSize(length - Datagram::size);
+      boost::asio::buffer_copy(p_datagram->GetMutableBuffers(),
+        boost::asio::buffer(*p_buffer));
+      handler(ec, length);
+    } else {
+      handler(ec, 0);
+    }
   };
 
   socket.async_receive(boost::asio::buffer(*p_buffer),

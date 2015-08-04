@@ -9,8 +9,17 @@ class basic_VirtualLink_endpoint {
   typedef Protocol protocol_type;
 
   typedef typename protocol_type::endpoint_context_type internal_context_type;
-  typedef typename protocol_type::next_layer_protocol::endpoint
-      next_layer_endpoint_type;
+  using next_layer_endpoint_type = typename protocol_type::next_endpoint_type;
+
+ public:
+  class basic_address {
+   public:
+    basic_address(const std::string& address) : address_(address) {}
+    std::string to_string() const { return address_; }
+
+   private:
+    std::string address_;
+  };
 
  public:
   template <class... Args>
@@ -53,6 +62,10 @@ class basic_VirtualLink_endpoint {
            (next_layer_endpoint_ == rhs.next_layer_endpoint_);
   }
 
+  bool operator!=(const basic_VirtualLink_endpoint& rhs) const {
+    return !(rhs == *this);
+  }
+
   bool operator<(const basic_VirtualLink_endpoint& rhs) const {
     if (set_ != rhs.set_) {
       return !set_;
@@ -86,6 +99,10 @@ class basic_VirtualLink_endpoint {
   }
 
   protocol_type protocol() const { return protocol_type(); }
+
+  basic_address address() const {
+    return basic_address(protocol_type::get_address(*this));
+  }
 
  private:
   bool set_;

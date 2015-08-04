@@ -1,64 +1,39 @@
-#include "stream_protocol_helpers.h"
-#include "datagram_protocol_helpers.h"
+#include <gtest/gtest.h>
 
-#include <boost/system/error_code.hpp>
-
-#include "virtual_network_helpers.h"
+#include "tests/datagram_protocol_helpers.h"
+#include "tests/stream_protocol_helpers.h"
+#include "tests/virtual_network_helpers.h"
 
 #include "core/virtual_network/parameters.h"
 
 #include "core/virtual_network/physical_layer/tcp.h"
+#include "core/virtual_network/physical_layer/tlsotcp.h"
 #include "core/virtual_network/physical_layer/udp.h"
 
-#include "core/virtual_network/cryptography_layer/ssl.h"
+virtual_network::LayerParameters tcp_server_parameters = {{"port", "9000"}};
 
-#include "core/virtual_network/basic_empty_stream.h"
-#include "core/virtual_network/basic_empty_datagram.h"
-#include "core/virtual_network/cryptography_layer/basic_empty_ssl_stream.h"
+virtual_network::LayerParameters tcp_client_parameters = {{"addr", "127.0.0.1"},
+                                                          {"port", "9000"}};
 
-virtual_network::LayerParameters ssl_server_parameters = {
-    {"ca_src", "file"},
-    {"crt_src", "file"},
-    {"key_src", "file"},
-    {"dhparam_src", "file"},
-    {"ca_file", "./certs/trusted/ca.crt"},
-    {"crt_file", "./certs/certificate.crt"},
-    {"key_file", "./certs/private.key"},
-    {"dhparam_file", "./certs/dh4096.pem"}};
-
-virtual_network::LayerParameters ssl_client_parameters = {
-    {"ca_src", "file"},
-    {"crt_src", "file"},
-    {"key_src", "file"},
-    {"ca_file", "./certs/trusted/ca.crt"},
-    {"crt_file", "./certs/certificate.crt"},
-    {"key_file", "./certs/private.key"}};
-
-template <class NextLayer>
-using Layer = virtual_network::VirtualEmptyStreamProtocol<NextLayer>;
-
-template <class NextLayer>
-using DatagramLayer = virtual_network::VirtualEmptyDatagramProtocol<NextLayer>;
-
-template <class NextLayer>
-using SSLLayer =
-    virtual_network::cryptography_layer::VirtualEmptySSLStreamProtocol<
-        virtual_network::cryptography_layer::buffered_ssl<NextLayer>>;
-
-TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
-  typedef Layer<Layer<Layer<Layer<virtual_network::physical_layer::tcp>>>>
-      StreamStackProtocol;
-
-  virtual_network::LayerParameters acceptor_tcp_parameters;
-  acceptor_tcp_parameters["port"] = "9000";
+TEST(PhysicalLayerTest, TCPBaseLine) {
   virtual_network::ParameterStack acceptor_parameters;
-  acceptor_parameters.push_back(acceptor_tcp_parameters);
+  acceptor_parameters.push_back(tcp_server_parameters);
 
-  virtual_network::LayerParameters client_tcp_parameters;
-  client_tcp_parameters["addr"] = "127.0.0.1";
-  client_tcp_parameters["port"] = "9000";
   virtual_network::ParameterStack client_parameters;
-  client_parameters.push_back(client_tcp_parameters);
+  client_parameters.push_back(tcp_client_parameters);
+
+  TCPPerfTestHalfDuplex(client_parameters, acceptor_parameters, 200);
+}
+
+ TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
+   typedef virtual_network::physical_layer::TCPPhysicalLayer
+       StreamStackProtocol;
+
+  virtual_network::ParameterStack acceptor_parameters;
+  acceptor_parameters.push_back(tcp_server_parameters);
+
+  virtual_network::ParameterStack client_parameters;
+  client_parameters.push_back(tcp_client_parameters);
 
   virtual_network::LayerParameters client_error_tcp_parameters;
   client_error_tcp_parameters["addr"] = "127.0.0.1";
@@ -69,7 +44,7 @@ TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
   virtual_network::ParameterStack client_wrong_number_parameters;
 
   TestStreamProtocol<StreamStackProtocol>(client_parameters,
-                                          acceptor_parameters, 100);
+                                          acceptor_parameters, 1024);
 
   TestStreamProtocolFuture<StreamStackProtocol>(client_parameters,
                                                 acceptor_parameters);
@@ -78,76 +53,73 @@ TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
   TestStreamProtocolSpawn<StreamStackProtocol>(client_parameters,
                                                acceptor_parameters);*/
 
-  TestStreamProtocolSynchronous<StreamStackProtocol>(
-      std::move(client_parameters), std::move(acceptor_parameters));
+  TestStreamProtocolSynchronous<StreamStackProtocol>(client_parameters,
+                                                     acceptor_parameters);
 
   TestStreamErrorConnectionProtocol<StreamStackProtocol>(
-      std::move(client_error_connection_parameters));
+      client_error_connection_parameters);
 
   TestEndpointResolverError<StreamStackProtocol>(
       client_wrong_number_parameters);
+
+  PerfTestStreamProtocolHalfDuplex<StreamStackProtocol>(
+      client_parameters, acceptor_parameters, 200);
+
+  PerfTestStreamProtocolFullDuplex<StreamStackProtocol>(
+      client_parameters, acceptor_parameters, 200);
 }
 
-TEST(PhysicalLayerTest, SSLLayerProtocolStackOverTCPTest) {
-  typedef SSLLayer<SSLLayer<Layer<Layer<virtual_network::physical_layer::tcp>>>>
-      SSLStackProtocol;
+TEST(PhysicalLayerTest, TLSLayerProtocolStackOverTCPTest) {
+  typedef virtual_network::physical_layer::TLSboTCPPhysicalLayer
+      TLSStackProtocol;
 
-  virtual_network::LayerParameters acceptor_ssl_parameters =
-      ssl_server_parameters;
-  virtual_network::LayerParameters acceptor_tcp_parameters;
-  acceptor_tcp_parameters["port"] = "9000";
   virtual_network::ParameterStack acceptor_parameters;
-  acceptor_parameters.push_back(acceptor_ssl_parameters);
-  acceptor_parameters.push_back(acceptor_ssl_parameters);
-  acceptor_parameters.push_back(acceptor_tcp_parameters);
+  acceptor_parameters.push_back(
+      tests::virtual_network_helpers::tls_server_parameters);
+  acceptor_parameters.push_back(tcp_server_parameters);
 
-  virtual_network::LayerParameters client_ssl_parameters =
-      ssl_client_parameters;
-  virtual_network::LayerParameters client_tcp_parameters;
-  client_tcp_parameters["addr"] = "127.0.0.1";
-  client_tcp_parameters["port"] = "9000";
   virtual_network::ParameterStack client_parameters;
-  client_parameters.push_back(ssl_client_parameters);
-  client_parameters.push_back(ssl_client_parameters);
-  client_parameters.push_back(client_tcp_parameters);
+  client_parameters.push_back(
+      tests::virtual_network_helpers::tls_client_parameters);
+  client_parameters.push_back(tcp_client_parameters);
 
   virtual_network::LayerParameters client_error_tcp_parameters;
   client_error_tcp_parameters["addr"] = "127.0.0.1";
   client_error_tcp_parameters["port"] = "9001";
   virtual_network::ParameterStack client_error_parameters;
-  client_error_parameters.push_back(ssl_client_parameters);
-  client_error_parameters.push_back(ssl_client_parameters);
+  client_error_parameters.push_back(
+      tests::virtual_network_helpers::tls_client_parameters);
   client_error_parameters.push_back(client_error_tcp_parameters);
 
-  virtual_network::LayerParameters client_correct_tcp_parameters;
-  client_correct_tcp_parameters["addr"] = "127.0.0.1";
-  client_correct_tcp_parameters["port"] = "9000";
   virtual_network::ParameterStack client_wrong_number_parameters;
-  client_wrong_number_parameters.push_back(ssl_client_parameters);
-  client_wrong_number_parameters.push_back(client_correct_tcp_parameters);
+  client_wrong_number_parameters.push_back(tcp_client_parameters);
 
-  TestStreamProtocol<SSLStackProtocol>(client_parameters, acceptor_parameters,
-                                       100);
+  TestStreamProtocol<TLSStackProtocol>(client_parameters, acceptor_parameters,
+                                       1024);
 
-  TestStreamProtocolFuture<SSLStackProtocol>(client_parameters,
+  TestStreamProtocolFuture<TLSStackProtocol>(client_parameters,
                                              acceptor_parameters);
 
   /* Uncomment after fix on boost build system
-  TestStreamProtocolSpawn<SSLStackProtocol>(client_parameters,
+  TestStreamProtocolSpawn<TLSStackProtocol>(client_parameters,
                                             acceptor_parameters);*/
 
-  TestStreamProtocolSynchronous<SSLStackProtocol>(
-      std::move(client_parameters), std::move(acceptor_parameters));
+  TestStreamProtocolSynchronous<TLSStackProtocol>(client_parameters,
+                                                  acceptor_parameters);
 
-  TestStreamErrorConnectionProtocol<SSLStackProtocol>(
-      std::move(client_error_parameters));
+  TestStreamErrorConnectionProtocol<TLSStackProtocol>(client_error_parameters);
 
-  TestEndpointResolverError<SSLStackProtocol>(client_wrong_number_parameters);
+  TestEndpointResolverError<TLSStackProtocol>(client_wrong_number_parameters);
+
+  PerfTestStreamProtocolHalfDuplex<TLSStackProtocol>(client_parameters,
+                                                     acceptor_parameters, 200);
+
+  PerfTestStreamProtocolFullDuplex<TLSStackProtocol>(client_parameters,
+                                                     acceptor_parameters, 200);
 }
 
 TEST(PhysicalLayerTest, EmptyDatagramProtocolStackOverUDPTest) {
-  typedef DatagramLayer<DatagramLayer<
-      DatagramLayer<DatagramLayer<virtual_network::physical_layer::udp>>>>
+  typedef virtual_network::physical_layer::UDPPhysicalLayer
       DatagramStackProtocol;
 
   virtual_network::LayerParameters socket1_udp_parameters;
@@ -162,8 +134,11 @@ TEST(PhysicalLayerTest, EmptyDatagramProtocolStackOverUDPTest) {
   virtual_network::ParameterStack socket2_parameters;
   socket2_parameters.push_back(socket2_udp_parameters);
 
-  TestNoConnectionDatagramProtocol<DatagramStackProtocol>(
-      socket1_parameters, socket2_parameters, 100);
+  TestDatagramProtocolPerfHalfDuplex<DatagramStackProtocol>(
+    socket1_parameters, socket2_parameters, 100000);
+
+  TestDatagramProtocolPerfFullDuplex<DatagramStackProtocol>(
+      socket1_parameters, socket2_parameters, 100000);
 
   TestConnectionDatagramProtocol<DatagramStackProtocol>(
       socket1_parameters, socket1_parameters, 100);

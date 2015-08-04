@@ -1,107 +1,139 @@
-#ifndef SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_BASIC_EMPTY_SSL_STREAM_H_
-#define SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_BASIC_EMPTY_SSL_STREAM_H_
+#ifndef SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_BASIC_CRYPTO_STREAM_H_
+#define SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_BASIC_CRYPTO_STREAM_H_
 
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
 
-#include <boost/system/error_code.hpp>
-
-#include <boost/asio/detail/config.hpp>
 #include <boost/asio/async_result.hpp>
-#include <boost/asio/handler_type.hpp>
 #include <boost/asio/basic_stream_socket.hpp>
+#include <boost/asio/detail/config.hpp>
+#include <boost/asio/handler_type.hpp>
 #include <boost/asio/io_service.hpp>
 
-#include "core/virtual_network/basic_impl.h"
-#include "core/virtual_network/basic_resolver.h"
-#include "core/virtual_network/basic_endpoint.h"
-
-#include "core/virtual_network/protocol_attributes.h"
-
-#include "core/virtual_network/cryptography_layer/ssl_op.h"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/system/error_code.hpp>
 
 #include "common/io/handler_helpers.h"
 #include "common/error/error.h"
 
+#include "core/virtual_network/basic_endpoint.h"
+#include "core/virtual_network/basic_impl.h"
+#include "core/virtual_network/basic_resolver.h"
+
+#include "core/virtual_network/cryptography_layer/crypto_stream_op.h"
+
+#include "core/virtual_network/parameters.h"
+#include "core/virtual_network/protocol_attributes.h"
+
 namespace virtual_network {
 namespace cryptography_layer {
 
-template <class Protocol>
-class VirtualEmptySSLStreamSocket_service;
-template <class Protocol>
-class VirtualEmptySSLStreamAcceptor_service;
+template <class Protocol, class CryptoProtocol>
+class basic_CryptoStreamSocket_service;
+template <class Protocol, class CryptoProtocol>
+class basic_CryptoStreamAcceptor_service;
 
-template <class NextLayer>
-class VirtualEmptySSLStreamProtocol {
+template <class NextLayer, template <class> class Crypto>
+class basic_CryptoStreamProtocol {
  public:
+  using CryptoProtocol = Crypto<NextLayer>;
+
   enum {
-    id = 4,
-    overhead = 0,
+    id = CryptoProtocol::id,
+    overhead = CryptoProtocol::overhead,
     facilities = virtual_network::facilities::stream,
-    mtu = NextLayer::mtu - overhead
+    mtu = CryptoProtocol::mtu
   };
-  enum { endpoint_stack_size = NextLayer::endpoint_stack_size };
+  enum { endpoint_stack_size = CryptoProtocol::endpoint_stack_size };
 
   typedef NextLayer next_layer_protocol;
-  typedef int socket_context;
-  typedef int acceptor_context;
-  typedef int endpoint_context_type;
-  typedef basic_VirtualLink_endpoint<VirtualEmptySSLStreamProtocol<NextLayer>>
-      endpoint;
-  typedef basic_VirtualLink_resolver<VirtualEmptySSLStreamProtocol<NextLayer>>
-      resolver;
+  typedef char socket_context;
+  typedef char acceptor_context;
+  using endpoint_context_type = typename CryptoProtocol::endpoint_context_type;
+  using next_endpoint_type = typename next_layer_protocol::endpoint;
+
+  typedef basic_VirtualLink_endpoint<basic_CryptoStreamProtocol> endpoint;
+  typedef basic_VirtualLink_resolver<basic_CryptoStreamProtocol> resolver;
   typedef boost::asio::basic_stream_socket<
-      VirtualEmptySSLStreamProtocol, VirtualEmptySSLStreamSocket_service<
-                                         VirtualEmptySSLStreamProtocol>> socket;
+      basic_CryptoStreamProtocol,
+      basic_CryptoStreamSocket_service<basic_CryptoStreamProtocol,
+                                       CryptoProtocol>> socket;
   typedef boost::asio::basic_socket_acceptor<
-      VirtualEmptySSLStreamProtocol,
-      VirtualEmptySSLStreamAcceptor_service<VirtualEmptySSLStreamProtocol>>
-      acceptor;
+      basic_CryptoStreamProtocol,
+      basic_CryptoStreamAcceptor_service<basic_CryptoStreamProtocol,
+                                         CryptoProtocol>> acceptor;
+
+ private:
+  using query = typename resolver::query;
 
  public:
-  template <class Container>
-  static endpoint make_endpoint(
-      boost::asio::io_service& io_service,
-      typename Container::const_iterator parameters_it, uint32_t,
-      boost::system::error_code& ec) {
-    return endpoint(next_layer_protocol::template make_endpoint<Container>(
-        io_service, parameters_it, id, ec));
+  static std::string get_name() {
+    std::string name =
+        CryptoProtocol::get_name() + "_" + next_layer_protocol::get_name();
+    return name;
+  }
+
+  static endpoint make_endpoint(boost::asio::io_service& io_service,
+                                typename query::const_iterator parameters_it,
+                                uint32_t, boost::system::error_code& ec) {
+    auto endpoint_context = CryptoProtocol::make_endpoint_context(
+        io_service, parameters_it, id, ec);
+    auto next_endpoint =
+        next_layer_protocol::make_endpoint(io_service, ++parameters_it, id, ec);
+
+    return endpoint(std::move(endpoint_context), std::move(next_endpoint));
+  }
+
+  static void add_params_from_property_tree(
+      query* p_query, const boost::property_tree::ptree& property_tree,
+      bool connect, boost::system::error_code& ec) {
+    auto sublayer = property_tree.get_child_optional("sublayer");
+    if (!sublayer) {
+      ec.assign(ssf::error::missing_config_parameters,
+                ssf::error::get_ssf_category());
+      return;
+    }
+
+    CryptoProtocol::add_params_from_property_tree(p_query, property_tree,
+                                                  connect, ec);
+    next_layer_protocol::add_params_from_property_tree(p_query, *sublayer,
+                                                       connect, ec);
   }
 };
 
 //----------------------------------------------------------------------------
 #include <boost/asio/detail/push_options.hpp>
 
-template <class Protocol>
-class VirtualEmptySSLStreamSocket_service
+template <class Protocol, class CryptoProtocol>
+class basic_CryptoStreamSocket_service
     : public boost::asio::detail::service_base<
-          VirtualEmptySSLStreamSocket_service<Protocol>> {
+          basic_CryptoStreamSocket_service<Protocol, CryptoProtocol>> {
+ public:
+  using protocol_type = Protocol;
+
+  using crypto_stream_type = typename CryptoProtocol::Stream;
+
+  using socket_context = typename protocol_type::socket_context;
+  using endpoint_type = typename protocol_type::endpoint;
+
+  using implementation_type =
+      basic_socket_impl_ex<socket_context, endpoint_type, crypto_stream_type>;
+
+  using native_handle_type = implementation_type&;
+  using native_type = native_handle_type;
 
  public:
-  /// The protocol type.
-  typedef Protocol protocol_type;
-  /// The endpoint type.
-  typedef typename protocol_type::endpoint endpoint_type;
-
-  typedef basic_socket_impl<protocol_type> implementation_type;
-  typedef implementation_type& native_handle_type;
-  typedef native_handle_type native_type;
-
- private:
-  typedef typename protocol_type::next_layer_protocol::socket next_socket_type;
-
- public:
-  explicit VirtualEmptySSLStreamSocket_service(
-      boost::asio::io_service& io_service)
-      : boost::asio::detail::service_base<VirtualEmptySSLStreamSocket_service>(
+  explicit basic_CryptoStreamSocket_service(boost::asio::io_service& io_service)
+      : boost::asio::detail::service_base<basic_CryptoStreamSocket_service>(
             io_service) {}
 
-  virtual ~VirtualEmptySSLStreamSocket_service() {}
+  virtual ~basic_CryptoStreamSocket_service() {}
 
   void construct(implementation_type& impl) {}
 
   void destroy(implementation_type& impl) {
+    impl.p_socket_context.reset();
     impl.p_local_endpoint.reset();
     impl.p_remote_endpoint.reset();
     impl.p_next_layer_socket.reset();
@@ -134,7 +166,7 @@ class VirtualEmptySSLStreamSocket_service
       return false;
     }
 
-    return impl.p_next_layer_socket->is_open();
+    return impl.p_next_layer_socket->next_layer().is_open();
   }
 
   endpoint_type remote_endpoint(const implementation_type& impl,
@@ -166,7 +198,8 @@ class VirtualEmptySSLStreamSocket_service
       return ec;
     }
 
-    return impl.p_next_layer_socket->close(ec);
+    // impl.p_next_layer_socket->shutdown(ec);
+    return impl.p_next_layer_socket->next_layer().close(ec);
   }
 
   native_type native(implementation_type& impl) { return impl; }
@@ -205,17 +238,17 @@ class VirtualEmptySSLStreamSocket_service
   boost::system::error_code bind(implementation_type& impl,
                                  const endpoint_type& endpoint,
                                  boost::system::error_code& ec) {
-    impl.p_next_layer_socket = std::make_shared<next_socket_type>(
-        this->get_io_service(), endpoint.next_layer_endpoint().endpoint_context());
+    impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
+        this->get_io_service(), endpoint.endpoint_context());
 
     impl.p_local_endpoint = std::make_shared<endpoint_type>(endpoint);
 
     auto result = impl.p_next_layer_socket->next_layer().open(
-        protocol_type::next_layer_protocol::next_layer_protocol(), ec);
+        protocol_type::next_layer_protocol(), ec);
 
     if (!ec) {
       result = impl.p_next_layer_socket->next_layer().bind(
-          endpoint.next_layer_endpoint().next_layer_endpoint(), ec);
+          endpoint.next_layer_endpoint(), ec);
     }
 
     return result;
@@ -226,24 +259,23 @@ class VirtualEmptySSLStreamSocket_service
   boost::system::error_code connect(implementation_type& impl,
                                     const endpoint_type& peer_endpoint,
                                     boost::system::error_code& ec) {
-    impl.p_next_layer_socket = std::make_shared<next_socket_type>(
-        this->get_io_service(),
-        peer_endpoint.next_layer_endpoint().endpoint_context());
+    impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
+        this->get_io_service(), peer_endpoint.endpoint_context());
 
     impl.p_remote_endpoint = std::make_shared<endpoint_type>(peer_endpoint);
 
     impl.p_next_layer_socket->next_layer().connect(
-        peer_endpoint.next_layer_endpoint().next_layer_endpoint(), ec);
+        peer_endpoint.next_layer_endpoint(), ec);
 
     if (!ec) {
       impl.p_local_endpoint = std::make_shared<endpoint_type>(
+          peer_endpoint.endpoint_context(),
           impl.p_next_layer_socket->next_layer().local_endpoint(ec));
     }
 
     if (!ec) {
       impl.p_next_layer_socket->handshake(
-          protocol_type::next_layer_protocol::socket::handshake_type::client,
-          ec);
+          CryptoProtocol::handshake_type::client, ec);
     }
 
     return ec;
@@ -260,21 +292,18 @@ class VirtualEmptySSLStreamSocket_service
                                            void(boost::system::error_code)>
         init(std::forward<ConnectHandler>(handler));
 
-    impl.p_next_layer_socket = std::make_shared<next_socket_type>(
-        this->get_io_service(),
-        peer_endpoint.next_layer_endpoint().endpoint_context());
+    impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
+        this->get_io_service(), peer_endpoint.endpoint_context());
 
     impl.p_remote_endpoint = std::make_shared<endpoint_type>(peer_endpoint);
-    impl.p_local_endpoint = std::make_shared<endpoint_type>(0);
+    impl.p_local_endpoint =
+        std::make_shared<endpoint_type>(peer_endpoint.endpoint_context());
 
-    detail::SSLConnectOp<
-        protocol_type, next_socket_type, endpoint_type,
-        typename boost::asio::handler_type<
-            ConnectHandler,
-            void(boost::system::error_code)>::type>(*impl.p_next_layer_socket,
-                                                    impl.p_local_endpoint.get(),
-                                                    peer_endpoint,
-                                                    init.handler)();
+    detail::CryptoStreamConnectOp<
+        CryptoProtocol, crypto_stream_type, endpoint_type,
+          decltype(init.handler)> (
+        *impl.p_next_layer_socket, impl.p_local_endpoint.get(), peer_endpoint,
+        init.handler)();
 
     return init.result.get();
   }
@@ -284,6 +313,11 @@ class VirtualEmptySSLStreamSocket_service
                    const ConstBufferSequence& buffers,
                    boost::asio::socket_base::message_flags flags,
                    boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+      return 0;
+    }
+
     return impl.p_next_layer_socket->write_some(buffers, ec);
   }
 
@@ -315,6 +349,11 @@ class VirtualEmptySSLStreamSocket_service
                       const MutableBufferSequence& buffers,
                       boost::asio::socket_base::message_flags flags,
                       boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+      return 0;
+    }
+
     return impl.p_next_layer_socket->read_some(buffers, ec);
   }
 
@@ -350,40 +389,38 @@ class VirtualEmptySSLStreamSocket_service
       return ec;
     }
 
-    impl.p_next_layer_socket->shutdown(what, ec);
-    return ec;
+    return impl.p_next_layer_socket->next_layer().shutdown(what, ec);
   }
 
  private:
   void shutdown_service() {}
 };
 
-template <class Protocol>
-class VirtualEmptySSLStreamAcceptor_service
+template <class Protocol, class CryptoProtocol>
+class basic_CryptoStreamAcceptor_service
     : public boost::asio::detail::service_base<
-          VirtualEmptySSLStreamAcceptor_service<Protocol>> {
+          basic_CryptoStreamAcceptor_service<Protocol, CryptoProtocol>> {
  public:
-  /// The protocol type.
-  typedef Protocol protocol_type;
-  /// The endpoint type.
-  typedef typename protocol_type::endpoint endpoint_type;
+  using protocol_type = Protocol;
 
-  typedef basic_acceptor_impl<protocol_type> implementation_type;
-  typedef implementation_type& native_handle_type;
-  typedef native_handle_type native_type;
+  using endpoint_type = typename protocol_type::endpoint;
+
+  using implementation_type = basic_acceptor_impl<protocol_type>;
+  using native_handle_type = implementation_type&;
+  using native_type = native_handle_type;
 
  private:
-  typedef typename protocol_type::next_layer_protocol::acceptor
-      next_acceptor_type;
-  typedef typename protocol_type::next_layer_protocol::socket next_socket_type;
+  using next_acceptor_type =
+      typename protocol_type::next_layer_protocol::acceptor;
+  using crypto_stream_type = typename CryptoProtocol::Stream;
 
  public:
-  explicit VirtualEmptySSLStreamAcceptor_service(
+  explicit basic_CryptoStreamAcceptor_service(
       boost::asio::io_service& io_service)
-      : boost::asio::detail::service_base<
-            VirtualEmptySSLStreamAcceptor_service>(io_service) {}
+      : boost::asio::detail::service_base<basic_CryptoStreamAcceptor_service>(
+            io_service) {}
 
-  virtual ~VirtualEmptySSLStreamAcceptor_service() {}
+  virtual ~basic_CryptoStreamAcceptor_service() {}
 
   void construct(implementation_type& impl) {
     impl.p_next_layer_acceptor =
@@ -391,6 +428,7 @@ class VirtualEmptySSLStreamAcceptor_service
   }
 
   void destroy(implementation_type& impl) {
+    impl.p_acceptor_context.reset();
     impl.p_local_endpoint.reset();
     impl.p_remote_endpoint.reset();
     impl.p_next_layer_acceptor.reset();
@@ -408,7 +446,7 @@ class VirtualEmptySSLStreamAcceptor_service
                                  const protocol_type& protocol,
                                  boost::system::error_code& ec) {
     return impl.p_next_layer_acceptor->open(
-        typename protocol_type::next_layer_protocol::next_layer_protocol(), ec);
+        typename protocol_type::next_layer_protocol(), ec);
   }
 
   boost::system::error_code assign(implementation_type& impl,
@@ -443,17 +481,27 @@ class VirtualEmptySSLStreamAcceptor_service
 
   native_handle_type native_handle(implementation_type& impl) { return impl; }
 
-  // boost::system::error_code cancel(implementation_type& impl,
-  //                                 boost::system::error_code& ec) {
-  //  return impl.p_next_layer_acceptor->cancel(ec);
-  //}
+  /// Set a socket option.
+  template <typename SettableSocketOption>
+  boost::system::error_code set_option(implementation_type& impl,
+      const SettableSocketOption& option, boost::system::error_code& ec)
+  {
+    if (impl.p_next_layer_acceptor) {
+      return impl.p_next_layer_acceptor->set_option(option, ec);
+    }
+    return ec;
+  }
+
+  boost::system::error_code cancel(implementation_type& impl,
+                                   boost::system::error_code& ec) {
+    return impl.p_next_layer_acceptor->cancel(ec);
+  }
 
   boost::system::error_code bind(implementation_type& impl,
                                  const endpoint_type& endpoint,
                                  boost::system::error_code& ec) {
     impl.p_local_endpoint = std::make_shared<endpoint_type>(endpoint);
-    return impl.p_next_layer_acceptor->bind(
-        endpoint.next_layer_endpoint().next_layer_endpoint(), ec);
+    return impl.p_next_layer_acceptor->bind(endpoint.next_layer_endpoint(), ec);
   }
 
   boost::system::error_code listen(implementation_type& impl, int backlog,
@@ -469,23 +517,18 @@ class VirtualEmptySSLStreamAcceptor_service
       typename std::enable_if<boost::thread_detail::is_convertible<
           protocol_type, Protocol1>::value>::type* = 0) {
     auto& peer_impl = peer.native_handle();
-    peer_impl.p_next_layer_socket = std::make_shared<next_socket_type>(
-        this->get_io_service(),
-        impl.p_local_endpoint->next_layer_endpoint().endpoint_context());
+    peer_impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
+        this->get_io_service(), impl.p_local_endpoint->endpoint_context());
     peer_impl.p_local_endpoint = impl.p_local_endpoint;
-    peer_impl.p_remote_endpoint = std::make_shared<typename Protocol1::endpoint>();
+    peer_impl.p_remote_endpoint =
+        std::make_shared<typename Protocol1::endpoint>(
+            impl.p_local_endpoint->endpoint_context());
 
     impl.p_next_layer_acceptor->accept(
         peer_impl.p_next_layer_socket->next_layer(),
-        peer_impl.p_remote_endpoint->next_layer_endpoint()
-            .next_layer_endpoint(),
-        ec);
+        peer_impl.p_remote_endpoint->next_layer_endpoint(), ec);
 
     if (!ec) {
-      peer_impl.p_local_endpoint = impl.p_local_endpoint;
-
-      // Add current layer endpoint context here (if necessary)
-      peer_impl.p_remote_endpoint->next_layer_endpoint().set();
       peer_impl.p_remote_endpoint->set();
 
       if (p_peer_endpoint) {
@@ -493,7 +536,7 @@ class VirtualEmptySSLStreamAcceptor_service
       }
 
       peer_impl.p_next_layer_socket->handshake(
-          Protocol::next_layer_protocol::socket::handshake_type::server, ec);
+          CryptoProtocol::handshake_type::server, ec);
     }
 
     return ec;
@@ -511,21 +554,20 @@ class VirtualEmptySSLStreamAcceptor_service
         init(std::forward<AcceptHandler>(handler));
 
     auto& peer_impl = peer.native_handle();
-    peer_impl.p_next_layer_socket = std::make_shared<next_socket_type>(
-        this->get_io_service(),
-        impl.p_local_endpoint->next_layer_endpoint().endpoint_context());
-    peer_impl.p_local_endpoint =
-        std::make_shared<typename Protocol1::endpoint>();
+    peer_impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
+        this->get_io_service(), impl.p_local_endpoint->endpoint_context());
+    peer_impl.p_local_endpoint = std::make_shared<typename Protocol1::endpoint>(
+        impl.p_local_endpoint->endpoint_context());
     peer_impl.p_remote_endpoint =
-        std::make_shared<typename Protocol1::endpoint>();
+        std::make_shared<typename Protocol1::endpoint>(
+            impl.p_local_endpoint->endpoint_context());
 
-    detail::SSLAcceptOp<
-        protocol_type, next_acceptor_type,
+    detail::CryptoStreamAcceptOp<
+        CryptoProtocol, next_acceptor_type,
         typename std::remove_reference<typename boost::asio::basic_socket<
             Protocol1, SocketService>::native_handle_type>::type,
         endpoint_type,
-        typename boost::asio::
-            handler_type<AcceptHandler, void(boost::system::error_code)>::type>(
+        decltype(init.handler)> (
         *impl.p_next_layer_acceptor, &peer_impl, p_peer_endpoint,
         init.handler)();
 
@@ -538,20 +580,7 @@ class VirtualEmptySSLStreamAcceptor_service
 
 #include <boost/asio/detail/pop_options.hpp>
 
-template <class NextLayer>
-using VirtualEmptySSLStreamLayer_endpoint =
-    typename VirtualEmptySSLStreamProtocol<NextLayer>::endpoint;
-template <class NextLayer>
-using VirtualEmptySSLStreamLayer_socket =
-    typename VirtualEmptySSLStreamProtocol<NextLayer>::socket;
-template <class NextLayer>
-using VirtualEmptySSLStreamLayer_acceptor =
-    typename VirtualEmptySSLStreamProtocol<NextLayer>::acceptor;
-template <class NextLayer>
-using VirtualEmptySSLStreamLayer_resolver =
-    typename VirtualEmptySSLStreamProtocol<NextLayer>::resolver;
-
 }  // cryptography_layer
 }  // virtual_network
 
-#endif  // SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_BASIC_EMPTY_SSL_STREAM_H_
+#endif  // SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_BASIC_CRYPTO_STREAM_H_

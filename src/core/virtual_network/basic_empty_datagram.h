@@ -1,17 +1,16 @@
 #ifndef SSF_CORE_VIRTUAL_NETWORK_BASIC_EMPTY_DATAGRAM_H_
 #define SSF_CORE_VIRTUAL_NETWORK_BASIC_EMPTY_DATAGRAM_H_
+
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
 
-#include <boost/system/error_code.hpp>
-
-#include <boost/asio/detail/config.hpp>
 #include <boost/asio/async_result.hpp>
-#include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/basic_datagram_socket.hpp>
-#include <boost/asio/socket_base.hpp>
+#include <boost/asio/detail/config.hpp>
+#include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/socket_base.hpp>
 
 #include <boost/system/error_code.hpp>
 
@@ -23,6 +22,7 @@
 #include "core/virtual_network/basic_endpoint.h"
 
 #include "core/virtual_network/protocol_attributes.h"
+#include "core/virtual_network/parameters.h"
 
 #include "core/virtual_network/connect_op.h"
 #include "core/virtual_network/receive_from_op.h"
@@ -46,20 +46,27 @@ class VirtualEmptyDatagramProtocol {
   typedef NextLayer next_layer_protocol;
   typedef int socket_context;
   typedef int endpoint_context_type;
+  using next_endpoint_type = typename next_layer_protocol::endpoint;
+
   typedef basic_VirtualLink_endpoint<VirtualEmptyDatagramProtocol> endpoint;
   typedef basic_VirtualLink_resolver<VirtualEmptyDatagramProtocol> resolver;
   typedef boost::asio::basic_datagram_socket<
       VirtualEmptyDatagramProtocol,
       VirtualEmptyDatagramSocket_service<VirtualEmptyDatagramProtocol>> socket;
 
+private:
+ using query = typename resolver::query;
+
  public:
-  template <class Container>
-  static endpoint make_endpoint(
-      boost::asio::io_service& io_service,
-      typename Container::const_iterator parameters_it, uint32_t,
-      boost::system::error_code& ec) {
-    return endpoint(next_layer_protocol::template make_endpoint<Container>(
+  static endpoint make_endpoint(boost::asio::io_service& io_service,
+                                typename query::const_iterator parameters_it,
+                                uint32_t, boost::system::error_code& ec) {
+    return endpoint(next_layer_protocol::make_endpoint(
         io_service, parameters_it, id, ec));
+  }
+
+  static std::string get_address(const endpoint& endpoint) {
+    return endpoint.next_layer_endpoint().address().to_string();  
   }
 };
 

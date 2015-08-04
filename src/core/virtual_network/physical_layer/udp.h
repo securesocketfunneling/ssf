@@ -8,6 +8,8 @@
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/io_service.hpp>
 
+#include "core/virtual_network/basic_empty_datagram.h"
+#include "core/virtual_network/parameters.h"
 #include "core/virtual_network/physical_layer/udp_helpers.h"
 #include "core/virtual_network/protocol_attributes.h"
 
@@ -30,18 +32,25 @@ class udp {
   typedef boost::asio::ip::udp::resolver resolver;
   typedef boost::asio::ip::udp::endpoint endpoint;
 
+private:
+ using query = ParameterStack;
+
  public:
   operator boost::asio::ip::udp() { return boost::asio::ip::udp::v4(); }
 
-  template <class Container>
-  static endpoint
-  make_endpoint(boost::asio::io_service &io_service,
-                typename Container::const_iterator parameters_it, uint32_t,
-                boost::system::error_code& ec) {
+  static endpoint make_endpoint(boost::asio::io_service& io_service,
+                                query::const_iterator parameters_it, uint32_t,
+                                boost::system::error_code& ec) {
     return endpoint(virtual_network::physical_layer::detail::make_udp_endpoint(
         io_service, *parameters_it, ec));
   }
+
+  static std::string get_address(const endpoint& endpoint) {
+    return endpoint.address().to_string();  
+  }
 };
+
+using UDPPhysicalLayer = VirtualEmptyDatagramProtocol<udp>;
 
 }  // physical_layer
 }  // virtual_network

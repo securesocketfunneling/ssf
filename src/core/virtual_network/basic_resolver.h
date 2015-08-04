@@ -2,11 +2,14 @@
 #define SSF_CORE_VIRTUAL_NETWORK_BASIC_RESOLVER_H_
 
 #include <vector>
-#include <list>
 
 #include <boost/asio/io_service.hpp>
 
 #include <boost/system/error_code.hpp>
+
+#include "common/error/error.h"
+
+#include "core/virtual_network/parameters.h"
 
 namespace virtual_network {
 
@@ -50,22 +53,21 @@ class basic_VirtualLink_resolver {
  public:
   typedef typename Protocol::endpoint endpoint_type;
   typedef EndpointIterator iterator;
+  using query = ParameterStack;
 
  public:
   basic_VirtualLink_resolver(boost::asio::io_service& io_service)
       : io_service_(io_service) {}
 
-  template <class Container>
-  iterator resolve(
-      const Container& parameters_list,
-      boost::system::error_code& ec) {
+  iterator resolve(const query& parameters_list,
+                   boost::system::error_code& ec) {
     if (parameters_list.size() < Protocol::endpoint_stack_size) {
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
       return iterator();
     }
 
     std::vector<endpoint_type> result;
-    result.emplace_back(Protocol::template make_endpoint<Container>(
+    result.emplace_back(Protocol::make_endpoint(
         io_service_, std::begin(parameters_list), 0, ec));
 
     if (ec) {

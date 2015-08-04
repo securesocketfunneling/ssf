@@ -1,41 +1,42 @@
-#ifndef SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_SSL_H_
-#define SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_SSL_H_
+#ifndef SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_TLS_OPENSSL_IMPL_H_
+#define SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_TLS_OPENSSL_IMPL_H_
 
 #include <cstdint>
 
 #include <memory>
 
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/system/error_code.hpp>
+#include <boost/asio/async_result.hpp>
+#include <boost/asio/detail/config.hpp>
+#include <boost/asio/detail/handler_type_requirements.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/socket_base.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/use_future.hpp>
+
 #include <boost/bind.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/strand.hpp>
-#include <boost/asio/detail/config.hpp>
-#include <boost/asio/async_result.hpp>
-#include <boost/asio/socket_base.hpp>
-#include <boost/asio/use_future.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/asio/detail/handler_type_requirements.hpp>
-
-#include "core/virtual_network/cryptography_layer/ssl_helpers.h"
+#include "core/virtual_network/cryptography_layer/tls/OpenSSL/helpers.h"
 
 #include "common/error/error.h"
 #include "common/io/read_stream_op.h"
 
 #include "core/virtual_network/basic_endpoint.h"
 #include "core/virtual_network/protocol_attributes.h"
+#include "core/virtual_network/parameters.h"
 
 namespace virtual_network {
 namespace cryptography_layer {
 
 namespace detail {
 
-/// The class in charge of receiving data from an ssl stream into a buffer
+/// The class in charge of receiving data from an TLS stream into a buffer
 template <typename NextLayerStreamSocket>
-class SSLStreamBufferer : public std::enable_shared_from_this<
-                              SSLStreamBufferer<NextLayerStreamSocket>> {
+class TLSStreamBufferer : public std::enable_shared_from_this<
+                              TLSStreamBufferer<NextLayerStreamSocket>> {
  private:
   enum {
     lower_queue_size_bound = 1 * 1024 * 1024,
@@ -44,25 +45,25 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
   };
 
  private:
-  typedef boost::asio::ssl::stream<NextLayerStreamSocket> ssl_stream_type;
-  typedef std::shared_ptr<ssl_stream_type> p_ssl_stream_type;
-  typedef detail::ExtendedSSLContext p_context_type;
+  typedef boost::asio::ssl::stream<NextLayerStreamSocket> tls_stream_type;
+  typedef std::shared_ptr<tls_stream_type> p_tls_stream_type;
+  typedef detail::ExtendedTLSContext p_context_type;
   typedef boost::asio::io_service::strand strand_type;
   typedef std::shared_ptr<strand_type> p_strand_type;
 
  public:
-  typedef SSLStreamBufferer<NextLayerStreamSocket> puller_type;
+  typedef TLSStreamBufferer<NextLayerStreamSocket> puller_type;
   typedef std::shared_ptr<puller_type> p_puller_type;
   typedef boost::asio::detail::op_queue<io::basic_pending_read_stream_operation>
       op_queue_type;
 
  public:
-  SSLStreamBufferer(const SSLStreamBufferer&) = delete;
-  SSLStreamBufferer& operator=(const SSLStreamBufferer&) = delete;
+  TLSStreamBufferer(const TLSStreamBufferer&) = delete;
+  TLSStreamBufferer& operator=(const TLSStreamBufferer&) = delete;
 
-  ~SSLStreamBufferer() {}
+  ~TLSStreamBufferer() {}
 
-  static p_puller_type create(p_ssl_stream_type p_socket,
+  static p_puller_type create(p_tls_stream_type p_socket,
                               p_strand_type p_strand, p_context_type p_ctx) {
     return p_puller_type(new puller_type(p_socket, p_strand, p_ctx));
   }
@@ -74,7 +75,7 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
       if (!pulling_) {
         pulling_ = true;
         BOOST_LOG_TRIVIAL(debug) << "pulling";
-        io_service_.post(boost::bind(&SSLStreamBufferer::async_pull_packets,
+        io_service_.post(boost::bind(&TLSStreamBufferer::async_pull_packets,
                                      this->shared_from_this()));
       }
     }
@@ -109,7 +110,7 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
 
       p.v = p.p = 0;
 
-      io_service_.post(boost::bind(&SSLStreamBufferer::handle_data_n_ops,
+      io_service_.post(boost::bind(&TLSStreamBufferer::handle_data_n_ops,
                                    this->shared_from_this()));
     } else {
       io_service_.post(
@@ -119,8 +120,27 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
     return init.result.get();
   }
 
+  boost::system::error_code cancel(boost::system::error_code& ec) {
+    boost::recursive_mutex::scoped_lock lock1(data_queue_mutex_);
+    boost::recursive_mutex::scoped_lock lock2(op_queue_mutex_);
+    data_queue_.consume(data_queue_.size());
+    while (!op_queue_.empty()) {
+      auto op = op_queue_.front();
+      op_queue_.pop();
+      auto self = this->shared_from_this();
+      auto do_complete = [op, this, self]() {
+        op->complete(boost::asio::error::make_error_code(
+                         boost::asio::error::basic_errors::operation_aborted),
+                     0);
+      };
+      io_service_.post(do_complete);
+    }
+
+    return ec;
+  }
+
  private:
-  SSLStreamBufferer(p_ssl_stream_type p_socket, p_strand_type p_strand,
+  TLSStreamBufferer(p_tls_stream_type p_socket, p_strand_type p_strand,
                     p_context_type p_ctx)
       : socket_(*p_socket),
         p_socket_(p_socket),
@@ -149,12 +169,11 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
 
         size_t copied = op->fill_buffer(data_queue_);
 
-        auto do_complete = [=]() {
-          op->complete(boost::system::error_code(), copied);
-        };
+        auto do_complete =
+            [=]() { op->complete(boost::system::error_code(), copied); };
         io_service_.post(do_complete);
 
-        io_service_.dispatch(boost::bind(&SSLStreamBufferer::handle_data_n_ops,
+        io_service_.dispatch(boost::bind(&TLSStreamBufferer::handle_data_n_ops,
                                          this->shared_from_this()));
       }
     } else {
@@ -164,12 +183,11 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
         auto op = op_queue_.front();
         op_queue_.pop();
         auto self = this->shared_from_this();
-        auto do_complete = [op, this, self]() {
-          op->complete(this->status_, 0);
-        };
+        auto do_complete =
+            [op, this, self]() { op->complete(this->status_, 0); };
         io_service_.post(do_complete);
 
-        io_service_.dispatch(boost::bind(&SSLStreamBufferer::handle_data_n_ops,
+        io_service_.dispatch(boost::bind(&TLSStreamBufferer::handle_data_n_ops,
                                          this->shared_from_this()));
       }
     }
@@ -189,16 +207,21 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
 
         if (!this->status_) {
           this->io_service_.dispatch(
-              boost::bind(&SSLStreamBufferer::async_pull_packets,
+              boost::bind(&TLSStreamBufferer::async_pull_packets,
                           this->shared_from_this()));
         }
       } else {
-        this->status_ = ec;
-        BOOST_LOG_TRIVIAL(info) << "SSL connection terminated";
+        if (ec.value() == boost::asio::error::operation_aborted) {
+          boost::system::error_code cancel_ec;
+          cancel(cancel_ec);
+        } else {
+          this->status_ = ec;
+          BOOST_LOG_TRIVIAL(info) << "TLS connection terminated";
+        }
       }
 
       this->io_service_.dispatch(boost::bind(
-          &SSLStreamBufferer::handle_data_n_ops, this->shared_from_this()));
+          &TLSStreamBufferer::handle_data_n_ops, this->shared_from_this()));
     };
 
     {
@@ -218,9 +241,9 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
     }
   }
 
-  /// The ssl stream to receive from
-  ssl_stream_type& socket_;
-  p_ssl_stream_type p_socket_;
+  /// The TLS stream to receive from
+  tls_stream_type& socket_;
+  p_tls_stream_type p_socket_;
 
   /// The strand to insure that read and writes are not concurrent
   strand_type& strand_;
@@ -248,49 +271,50 @@ class SSLStreamBufferer : public std::enable_shared_from_this<
 
 }  // detail
 
-/// The class wrapping an ssl stream to allow buffer optimization, non
+/// The class wrapping a TLS stream to allow buffer optimization, non
 /// concurrent io and move operations
 template <typename NextLayerStreamSocket>
-class basic_buffered_ssl_socket {
+class basic_buffered_tls_socket {
  private:
-  typedef boost::asio::ssl::stream<NextLayerStreamSocket> ssl_stream_type;
-  typedef std::shared_ptr<ssl_stream_type> p_ssl_stream_type;
-  typedef detail::ExtendedSSLContext p_context_type;
+  typedef boost::asio::ssl::stream<NextLayerStreamSocket> tls_stream_type;
+  typedef std::shared_ptr<tls_stream_type> p_tls_stream_type;
+  typedef detail::ExtendedTLSContext p_context_type;
   typedef std::shared_ptr<boost::asio::streambuf> p_streambuf;
-  typedef detail::SSLStreamBufferer<NextLayerStreamSocket> puller_type;
+  typedef detail::TLSStreamBufferer<NextLayerStreamSocket> puller_type;
   typedef std::shared_ptr<puller_type> p_puller_type;
   typedef boost::asio::io_service::strand strand_type;
   typedef std::shared_ptr<strand_type> p_strand_type;
 
  public:
-  typedef typename ssl_stream_type::next_layer_type next_layer_type;
-  typedef typename ssl_stream_type::lowest_layer_type lowest_layer_type;
-  typedef typename ssl_stream_type::handshake_type handshake_type;
+  typedef typename tls_stream_type::next_layer_type next_layer_type;
+  typedef typename tls_stream_type::lowest_layer_type lowest_layer_type;
+  typedef typename tls_stream_type::handshake_type handshake_type;
 
  public:
-  basic_buffered_ssl_socket()
+  basic_buffered_tls_socket()
       : p_ctx_(nullptr),
         p_socket_(nullptr),
         socket_(),
         p_strand_(nullptr),
         p_puller_(nullptr) {}
 
-  basic_buffered_ssl_socket(p_ssl_stream_type p_socket, p_context_type p_ctx)
+  basic_buffered_tls_socket(p_tls_stream_type p_socket, p_context_type p_ctx)
       : p_ctx_(p_ctx),
         p_socket_(p_socket),
         socket_(*p_socket_),
-        p_strand_(std::make_shared<strand_type>(socket_.get().lowest_layer().get_io_service())),
+        p_strand_(std::make_shared<strand_type>(
+            socket_.get().lowest_layer().get_io_service())),
         p_puller_(puller_type::create(p_socket_, p_strand_, p_ctx_)) {}
 
-  basic_buffered_ssl_socket(boost::asio::io_service& io_service,
+  basic_buffered_tls_socket(boost::asio::io_service& io_service,
                             p_context_type p_ctx)
       : p_ctx_(p_ctx),
-        p_socket_(new ssl_stream_type(io_service, *p_ctx)),
+        p_socket_(new tls_stream_type(io_service, *p_ctx)),
         socket_(*p_socket_),
         p_strand_(std::make_shared<strand_type>(io_service)),
         p_puller_(puller_type::create(p_socket_, p_strand_, p_ctx_)) {}
 
-  basic_buffered_ssl_socket(basic_buffered_ssl_socket&& other)
+  basic_buffered_tls_socket(basic_buffered_tls_socket&& other)
       : p_ctx_(std::move(other.p_ctx_)),
         p_socket_(std::move(other.p_socket_)),
         socket_(*p_socket_),
@@ -299,10 +323,10 @@ class basic_buffered_ssl_socket {
     other.socket_ = *(other.p_socket_);
   }
 
-  ~basic_buffered_ssl_socket() {}
+  ~basic_buffered_tls_socket() {}
 
-  basic_buffered_ssl_socket(const basic_buffered_ssl_socket&) = delete;
-  basic_buffered_ssl_socket& operator=(const basic_buffered_ssl_socket&) =
+  basic_buffered_tls_socket(const basic_buffered_tls_socket&) = delete;
+  basic_buffered_tls_socket& operator=(const basic_buffered_tls_socket&) =
       delete;
 
   boost::asio::io_service& get_io_service() {
@@ -323,17 +347,17 @@ class basic_buffered_ssl_socket {
     return ec;
   }
 
-  /// Forward the call to the ssl stream and start pulling packets on
+  /// Forward the call to the TLS stream and start pulling packets on
   /// completion
   template <typename Handler>
   void async_handshake(handshake_type type, Handler handler) {
     auto do_user_handler =
         [this, handler](const boost::system::error_code& ec) mutable {
-      if (!ec) {
-        this->p_puller_->start_pulling();
-      }
-      handler(ec);
-    };
+          if (!ec) {
+            this->p_puller_->start_pulling();
+          }
+          handler(ec);
+        };
 
     auto lambda = [this, type, do_user_handler]() {
       this->socket_.get().async_handshake(type,
@@ -349,20 +373,18 @@ class basic_buffered_ssl_socket {
       auto read = async_read_some(buffers, boost::asio::use_future);
       ec.assign(ssf::error::success, ssf::error::get_ssf_category());
       return read.get();
-    }
-    catch (const std::exception&) {
+    } catch (const std::exception&) {
       ec.assign(ssf::error::io_error, ssf::error::get_ssf_category());
       return 0;
     }
   }
 
-  /// Forward the call to the SSLStreamBufferer object
+  /// Forward the call to the TLSStreamBufferer object
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
       async_read_some(const MutableBufferSequence& buffers,
                       ReadHandler&& handler) {
-
     return p_puller_->async_read_some(buffers,
                                       std::forward<ReadHandler>(handler));
   }
@@ -373,7 +395,7 @@ class basic_buffered_ssl_socket {
     return socket_.get().write_some(buffers, ec);
   }
 
-  /// Forward the call directly to the ssl stream (wrapped in an strand)
+  /// Forward the call directly to the TLS stream (wrapped in an strand)
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
@@ -392,7 +414,7 @@ class basic_buffered_ssl_socket {
     return init.result.get();
   }
 
-  /// Forward the call to the lowest layer of the ssl stream
+  /// Forward the call to the lowest layer of the TLS stream
   bool is_open() { return socket_.get().lowest_layer().is_open(); }
 
   void close() {
@@ -410,59 +432,60 @@ class basic_buffered_ssl_socket {
   }
 
   boost::asio::ssl::context& context() { return *p_ctx_; }
-  ssl_stream_type& socket() { return socket_; }
+  tls_stream_type& socket() { return socket_; }
   strand_type& strand() { return *p_strand_; }
 
  private:
-  /// The ssl ctx in a shared_ptr to be able to move it
+  /// The TLS ctx in a shared_ptr to be able to move it
   p_context_type p_ctx_;
 
-  /// The ssl stream in a shared_ptr to be able to move it
-  p_ssl_stream_type p_socket_;
+  /// The TLS stream in a shared_ptr to be able to move it
+  p_tls_stream_type p_socket_;
 
-  /// A reference to the ssl stream to avoid dereferencing a pointer
-  std::reference_wrapper<ssl_stream_type> socket_;
+  /// A reference to the tls stream to avoid dereferencing a pointer
+  std::reference_wrapper<tls_stream_type> socket_;
 
   /// The strand in a shared_ptr to be able to move it
   p_strand_type p_strand_;
 
-  /// The SSLStreamBufferer in a shared_ptr to be able to move it
+  /// The TLSStreamBufferer in a shared_ptr to be able to move it
   p_puller_type p_puller_;
 };
 
 //----------------------------------------------------------------------------
 template <typename NextLayerStreamSocket>
-class basic_ssl_socket {
+class basic_tls_socket {
  private:
-  typedef boost::asio::ssl::stream<NextLayerStreamSocket> ssl_stream_type;
-  typedef std::shared_ptr<ssl_stream_type> p_ssl_stream_type;
-  typedef detail::ExtendedSSLContext p_context_type;
+  typedef boost::asio::ssl::stream<NextLayerStreamSocket> tls_stream_type;
+  typedef std::shared_ptr<tls_stream_type> p_tls_stream_type;
+  typedef detail::ExtendedTLSContext p_context_type;
   typedef std::shared_ptr<boost::asio::streambuf> p_streambuf;
   typedef boost::asio::io_service::strand strand_type;
   typedef std::shared_ptr<strand_type> p_strand_type;
 
  public:
-  typedef typename ssl_stream_type::next_layer_type next_layer_type;
-  typedef typename ssl_stream_type::lowest_layer_type lowest_layer_type;
-  typedef typename ssl_stream_type::handshake_type handshake_type;
+  typedef typename tls_stream_type::next_layer_type next_layer_type;
+  typedef typename tls_stream_type::lowest_layer_type lowest_layer_type;
+  typedef typename tls_stream_type::handshake_type handshake_type;
 
  public:
-  basic_ssl_socket()
+  basic_tls_socket()
       : p_ctx_(nullptr), p_socket_(nullptr), socket_(), p_strand_(nullptr) {}
 
-  basic_ssl_socket(p_ssl_stream_type p_socket, p_context_type p_ctx)
+  basic_tls_socket(p_tls_stream_type p_socket, p_context_type p_ctx)
       : p_ctx_(p_ctx),
         p_socket_(p_socket),
         socket_(*p_socket_),
-        p_strand_(std::make_shared<strand_type>(socket_.get().lowest_layer().get_io_service())) {}
+        p_strand_(std::make_shared<strand_type>(
+            socket_.get().lowest_layer().get_io_service())) {}
 
-  basic_ssl_socket(boost::asio::io_service& io_service, p_context_type p_ctx)
+  basic_tls_socket(boost::asio::io_service& io_service, p_context_type p_ctx)
       : p_ctx_(p_ctx),
-        p_socket_(new ssl_stream_type(io_service, *p_ctx)),
+        p_socket_(new tls_stream_type(io_service, *p_ctx)),
         socket_(*p_socket_),
         p_strand_(std::make_shared<strand_type>(io_service)) {}
 
-  basic_ssl_socket(basic_ssl_socket&& other)
+  basic_tls_socket(basic_tls_socket&& other)
       : p_ctx_(std::move(other.p_ctx_)),
         p_socket_(std::move(other.p_socket_)),
         socket_(*p_socket_),
@@ -470,10 +493,10 @@ class basic_ssl_socket {
     other.socket_ = *(other.p_socket_);
   }
 
-  ~basic_ssl_socket() {}
+  ~basic_tls_socket() {}
 
-  basic_ssl_socket(const basic_ssl_socket&) = delete;
-  basic_ssl_socket& operator=(const basic_ssl_socket&) = delete;
+  basic_tls_socket(const basic_tls_socket&) = delete;
+  basic_tls_socket& operator=(const basic_tls_socket&) = delete;
 
   boost::asio::io_service& get_io_service() {
     return socket_.get().lowest_layer().get_io_service();
@@ -488,7 +511,7 @@ class basic_ssl_socket {
     return ec;
   }
 
-  /// Forward the call to the ssl stream and start pulling packets on
+  /// Forward the call to the TLS stream and start pulling packets on
   /// completion
   template <typename Handler>
   void async_handshake(handshake_type type, Handler handler) {
@@ -505,7 +528,7 @@ class basic_ssl_socket {
     return socket_.get().read_some(buffers, ec);
   }
 
-  /// Forward the call to the SSLStreamBufferer object
+  /// Forward the call to the TLSStreamBufferer object
   template <typename MutableBufferSequence, typename ReadHandler>
   void async_read_some(const MutableBufferSequence& buffers,
                        ReadHandler&& handler) {
@@ -522,7 +545,7 @@ class basic_ssl_socket {
     return socket_.get().write_some(buffers, ec);
   }
 
-  /// Forward the call directly to the ssl stream (wrapped in an strand)
+  /// Forward the call directly to the TLS stream (wrapped in an strand)
   template <typename ConstBufferSequence, typename Handler>
   void async_write_some(const ConstBufferSequence& buffers, Handler&& handler) {
     auto lambda = [this, buffers, handler]() {
@@ -532,7 +555,7 @@ class basic_ssl_socket {
     p_strand_->dispatch(lambda);
   }
 
-  /// Forward the call to the lowest layer of the ssl stream
+  /// Forward the call to the lowest layer of the TLS stream
   bool is_open() { return socket_.get().lowest_layer().is_open(); }
 
   void close() {
@@ -550,26 +573,26 @@ class basic_ssl_socket {
   }
 
   boost::asio::ssl::context& context() { return *p_ctx_; }
-  ssl_stream_type& socket() { return socket_; }
+  tls_stream_type& socket() { return socket_; }
   strand_type& strand() { return *p_strand_; }
 
  private:
-  /// The ssl ctx in a shared_ptr to be able to move it
+  /// The TLS ctx in a shared_ptr to be able to move it
   p_context_type p_ctx_;
 
-  /// The ssl stream in a shared_ptr to be able to move it
-  p_ssl_stream_type p_socket_;
+  /// The TLS stream in a shared_ptr to be able to move it
+  p_tls_stream_type p_socket_;
 
-  /// A reference to the ssl stream to avoid dereferencing a pointer
-  std::reference_wrapper<ssl_stream_type> socket_;
+  /// A reference to the TLS stream to avoid dereferencing a pointer
+  std::reference_wrapper<tls_stream_type> socket_;
 
   /// The strand in a shared_ptr to be able to move it
   p_strand_type p_strand_;
 };
 //----------------------------------------------------------------------------
 
-template <class NextLayer, template <class> class SSLStreamSocket>
-class basic_ssl {
+template <class NextLayer, template <class> class TLSStreamSocket>
+class basic_tls {
  public:
   enum {
     id = 2,
@@ -577,45 +600,106 @@ class basic_ssl {
     facilities = virtual_network::facilities::stream,
     mtu = NextLayer::mtu - overhead
   };
+
+  static const char* NAME;
+
   enum { endpoint_stack_size = 1 + NextLayer::endpoint_stack_size };
 
-  typedef int socket_context;
-  typedef int acceptor_context;
-  typedef NextLayer next_layer_protocol;
-  typedef detail::ExtendedSSLContext endpoint_context_type;
-  typedef virtual_network::basic_VirtualLink_endpoint<basic_ssl> endpoint;
-  typedef SSLStreamSocket<typename NextLayer::socket> socket;
-  typedef typename next_layer_protocol::acceptor acceptor;
-  typedef typename next_layer_protocol::resolver resolver;
+  using handshake_type = boost::asio::ssl::stream_base::handshake_type;
+
+  using endpoint_context_type = detail::ExtendedTLSContext;
+  using Stream = TLSStreamSocket<typename NextLayer::socket>;
+
+ private:
+  using query = ParameterStack;
 
  public:
-  template <class Container>
-  static endpoint make_endpoint(
-      boost::asio::io_service& io_service,
-      typename Container::const_iterator parameters_it, uint32_t lower_id,
-      boost::system::error_code& ec) {
-    auto p_next_layer_ctx =
-        detail::make_ssl_context(io_service, *parameters_it);
+  static std::string get_name() {
+    return NAME;
+  }
 
-    if (!p_next_layer_ctx) {
-      ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
-      return endpoint();
+  static endpoint_context_type make_endpoint_context(
+      boost::asio::io_service& io_service,
+      typename query::const_iterator parameters_it, uint32_t lower_id,
+      boost::system::error_code& ec) {
+    return detail::make_tls_context(io_service, *parameters_it);
+  }
+
+  static void add_params_from_property_tree(
+      query* p_query, const boost::property_tree::ptree& property_tree,
+      bool connect, boost::system::error_code& ec) {
+    LayerParameters params;
+    auto layer_name = property_tree.get_child_optional("layer");
+    if (!layer_name || layer_name.get().data() != NAME) {
+      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+      return;
     }
 
-    auto next_layer_endpoint = next_layer_protocol::template make_endpoint<Container>(
-        io_service, ++parameters_it, lower_id, ec);
+    auto layer_parameters = property_tree.get_child_optional("parameters");
+    if (!layer_parameters) {
+      ec.assign(ssf::error::missing_config_parameters,
+                ssf::error::get_ssf_category());
+      return;
+    }
 
-    return endpoint(p_next_layer_ctx, next_layer_endpoint);
+    virtual_network::ptree_entry_to_query(*layer_parameters, "ca_file",
+                                          &params);
+    virtual_network::ptree_entry_to_query(*layer_parameters, "ca_buffer",
+                                          &params);
+    if (params.count("ca_file") == 1) {
+      params["ca_src"] = "file";
+    } 
+    if (params.count("ca_buffer") == 1) {
+      params["ca_src"] = "buffer";
+    }
+
+    virtual_network::ptree_entry_to_query(*layer_parameters, "crt_file",
+                                          &params);
+    virtual_network::ptree_entry_to_query(*layer_parameters, "crt_buffer",
+                                          &params);
+    if (params.count("crt_file") == 1) {
+      params["crt_src"] = "file";
+    }
+    if (params.count("crt_buffer") == 1) {
+      params["crt_src"] = "buffer";
+    }
+
+    virtual_network::ptree_entry_to_query(*layer_parameters, "key_file",
+                                          &params);
+    virtual_network::ptree_entry_to_query(*layer_parameters, "key_buffer",
+                                          &params);
+    if (params.count("key_file") == 1) {
+      params["key_src"] = "file";
+    } 
+    if (params.count("key_buffer") == 1) {
+      params["key_src"] = "buffer";
+    }
+
+    virtual_network::ptree_entry_to_query(*layer_parameters, "dh_param_file",
+                                          &params);
+    virtual_network::ptree_entry_to_query(*layer_parameters, "dh_param_buffer",
+                                          &params);
+    if (params.count("dh_param_file") == 1) {
+      params["dh_param_src"] = "file";
+    }
+    if (params.count("dh_param_buffer") == 1) {
+      params["dh_param_src"] = "buffer";
+    }
+
+    p_query->push_back(params);
   }
 };
 
-template <class NextLayer>
-using buffered_ssl = basic_ssl<NextLayer, basic_buffered_ssl_socket>;
+template <class NextLayer, template <class> class TLSStreamSocket>
+const char* basic_tls<NextLayer, TLSStreamSocket>::NAME = "TLS";
 
 template <class NextLayer>
-using ssl = basic_ssl<NextLayer, basic_ssl_socket>;
+using buffered_tls = basic_tls<NextLayer, basic_buffered_tls_socket>;
+
+template <class NextLayer>
+using tls = basic_tls<NextLayer, basic_tls_socket>;
 
 }  // cryptography_layer
 }  // virtual_network
 
-#endif  // SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_SSL_H_
+#endif  // SSF_CORE_VIRTUAL_NETWORK_CRYPTOGRAPHY_LAYER_TLS_OPENSSL_IMPL_H_
