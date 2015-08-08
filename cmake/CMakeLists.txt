@@ -1,19 +1,18 @@
 # ------------------------------------------------------------------------------
-# This script makes all helpers for external packages available from caller.
+# This script makes all CMakeCommon's helpers available for caller
 #
-# An external package is a package normally found through 'find_package()'
-# CMake's function. The helpers, here, are to allow possibility to embed these
-# external packages in the source tree of a project.
+# For more information about available helpers, please have a look to the
+# script packages in this source tree.
 #
-# The idea will be to store the source code of the (handled) external projects
-# in the source of the main project and then to call the CMake's function
-# 'find_package()' with the corresponding package's name.
+# Usage:
+#   add_subdirectory("/path/to/cmake-common")
 #
 # ------------------------------------------------------------------------------
 
-#
-# Update parent's search path for CMake Modules
-#list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+# ==============================================================================
+# =============== U p d a t e   c m a k e   m o d u l e   p a t h ============== 
+# ==============================================================================
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 file(GLOB _dirs_list *)
 foreach(_dir ${_dirs_list})
   if(IS_DIRECTORY "${_dir}")

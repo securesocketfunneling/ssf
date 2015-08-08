@@ -833,7 +833,6 @@ function(externals_select_build_dir _var)
     list(APPEND _build_dir "${PKG_NAME_LOWER}")
   else()
     string(SHA1 _build_dir "${CMAKE_CURRENT_LIST_DIR}")
-    string(SUBSTRING "${_build_dir}" 0 5 _build_dir)
   endif()
   list_join(_build_dir "/" _build_dir)
 
