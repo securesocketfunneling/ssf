@@ -8,12 +8,13 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/async_result.hpp>
 
-#include "core/virtual_network/basic_impl.h"
-
-#include "core/virtual_network/data_link_layer/circuit_op.h"
-
 #include "common/io/handler_helpers.h"
 #include "common/error/error.h"
+
+#include "core/virtual_network/basic_impl.h"
+
+#include "core/virtual_network/data_link_layer/circuit_helpers.h"
+#include "core/virtual_network/data_link_layer/circuit_op.h"
 
 namespace virtual_network {
 namespace data_link_layer {

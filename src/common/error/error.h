@@ -46,7 +46,9 @@ enum errors {
   set_key_error = 10006,
   no_key_error = 10007,
   no_dh_param_error = 10008,
-  buffer_is_full_error = 11000
+  buffer_is_full_error = 11000,
+  missing_config_parameters = 12000,
+  cannot_resolve_endpoint = 12001
 };
 
 namespace detail {

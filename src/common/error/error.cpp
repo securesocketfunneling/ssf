@@ -82,5 +82,9 @@ std::string ssf::error::detail::ssf_category::message(int value) const {
     return "no dh parameter found";
   if (value == error::buffer_is_full_error)
     return "buffer is full";
+  if (value == error::missing_config_parameters)
+    return "missing config parameters";
+  if (value == error::cannot_resolve_endpoint)
+    return "cannot resolve endpoint";
   return "ssf error";
 }

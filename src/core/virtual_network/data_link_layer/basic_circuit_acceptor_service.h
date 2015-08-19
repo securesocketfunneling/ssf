@@ -1,19 +1,19 @@
 #ifndef SSF_CORE_VIRTUAL_NETWORK_DATA_LINK_LAYER_BASIC_CIRCUIT_ACCEPTOR_SERVICE_H_
 #define SSF_CORE_VIRTUAL_NETWORK_DATA_LINK_LAYER_BASIC_CIRCUIT_ACCEPTOR_SERVICE_H_
 
-#include <utility>
-#include <memory>
 #include <map>
-#include <set>
+#include <memory>
 #include <queue>
-
-#include <boost/system/error_code.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/recursive_mutex.hpp>
+#include <set>
+#include <utility>
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/detail/op_queue.hpp>
+
+#include <boost/bind.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
 #include "common/network/manager.h"
 #include "common/network/base_session.h"
@@ -191,6 +191,10 @@ class basic_CircuitAcceptor_service
       listening_.erase(p_forward_next_acceptor);
 
       if (p_input_next_acceptor) {
+        clean_pending_accepts(
+            input_endpoint.next_layer_endpoint(),
+            boost::system::error_code(ssf::error::interrupted,
+                                      ssf::error::get_ssf_category()));
         p_input_next_acceptor->close(ec);
       }
 
@@ -211,6 +215,17 @@ class basic_CircuitAcceptor_service
 
   native_handle_type native_handle(implementation_type& impl) { return impl; }
 
+  /// Set a socket option.
+  template <typename SettableSocketOption>
+  boost::system::error_code set_option(implementation_type& impl,
+      const SettableSocketOption& option, boost::system::error_code& ec)
+  {
+    if (impl.p_next_layer_acceptor) {
+      return impl.p_next_layer_acceptor->set_option(option, ec);
+    }
+    return ec;
+  }
+
   /// Register given endpoint if not already provided
   ///   Create connection queue if not a forward endpoint
   ///   Bind the acceptor of the next layer to the next layer endpoint
@@ -230,7 +245,9 @@ class basic_CircuitAcceptor_service
       auto forward_bind =
           forward_bindings_.emplace(std::make_pair(endpoint, &impl));
       binding_insertion = forward_bind.second;
-    } else {
+    }
+
+    if (!is_forward || binding_insertion) {
       auto input_bind =
           input_bindings_.emplace(std::make_pair(endpoint, &impl));
       binding_insertion = input_bind.second;
@@ -241,6 +258,9 @@ class basic_CircuitAcceptor_service
     }
 
     if (!binding_insertion) {
+      if (is_forward && forward_bindings_.find(endpoint) != forward_bindings_.end()) {
+        forward_bindings_.erase(endpoint);
+      }
       ec.assign(ssf::error::address_in_use, ssf::error::get_ssf_category());
       return ec;
     }
@@ -644,6 +664,24 @@ class basic_CircuitAcceptor_service
             &basic_CircuitAcceptor_service::connection_queue_handler, this,
             ec));
       }
+    }
+  }
+
+  void clean_pending_accepts(const next_endpoint_type& next_layer_endpoint,
+                             const boost::system::error_code& ec) {
+    boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+    auto accept_queue_it = pending_accepts_.find(next_layer_endpoint);
+
+    if (accept_queue_it == std::end(pending_accepts_)) {
+      return;
+    }
+    
+    auto& accept_queue = accept_queue_it->second;
+    while (!accept_queue.empty()) {
+      auto accept_op = std::move(accept_queue.front());
+      accept_queue.pop();
+      auto do_complete = [accept_op, ec]() { accept_op->complete(ec); };
+      this->get_io_service().post(do_complete);
     }
   }
 

@@ -1,16 +1,19 @@
 #ifndef SSF_CORE_VIRTUAL_NETWORK_DATA_LINK_CIRCUIT_HELPERS_H_
 #define SSF_CORE_VIRTUAL_NETWORK_DATA_LINK_CIRCUIT_HELPERS_H_
 
-#include <string>
 #include <list>
 #include <sstream>
+#include <string>
 
 #include <boost/asio/io_service.hpp>
 
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/map.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+
+#include <boost/property_tree/ptree.hpp>
+
+#include <boost/serialization/list.hpp>
+#include <boost/serialization/map.hpp>
 
 #include "common/utils/map_helpers.h"
 
@@ -45,8 +48,7 @@ ParameterStack make_parameter_stack(
     ar >> deserialized;
 
     return deserialized;
-  }
-  catch (const std::exception &) {
+  } catch (const std::exception &) {
     return ParameterStack();
   }
 }
@@ -83,8 +85,7 @@ CircuitEndpointContext make_circuit_context(boost::asio::io_service &io_service,
 
   try {
     forward = !!std::stoul(forward_str);
-  }
-  catch (const std::exception &) {
+  } catch (const std::exception &) {
     forward = false;
   }
 
@@ -183,6 +184,30 @@ ParameterStack make_client_full_circuit_parameter_stack(
   next_node_stack.front()["circuit_id"] = std::move(remote_id);
 
   return next_node_stack;
+}
+
+template <class NodeProtocol>
+NodeParameterList nodes_property_tree_to_node_list(
+    const boost::property_tree::ptree &nodes_tree, bool connect,
+    boost::system::error_code &ec) {
+  NodeParameterList nodes;
+
+  for (auto &node : nodes_tree) {
+    ParameterStack node_stack;
+    NodeProtocol::add_params_from_property_tree(&node_stack, node.second,
+                                                connect, ec);
+    if (ec) {
+      return nodes;
+    }
+    nodes.PushBackNode();
+    auto node_stack_end_it = node_stack.rend();
+    for (auto param_node_it = node_stack.rbegin();
+         param_node_it != node_stack_end_it; ++param_node_it) {
+      nodes.AddTopLayerToBackNode(*param_node_it);
+    }
+  }
+
+  return nodes;
 }
 
 }  // data_link_layer
