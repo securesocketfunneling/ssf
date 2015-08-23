@@ -279,3 +279,25 @@ add_target("link_layer_tests"
     ${SERVICES_SOCKS_FILES}
     ${LAYER_TEST_FIXTURES_FILES}
 )
+
+# --- Interface layer tests
+add_target("interface_layer_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS 
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    PREFIX_SKIP     .*/src
+    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+  FILES
+    "interface_layer_tests.cpp"
+    ${VERSIONS_FILES}
+    ${COMMON_CONFIG_FILES}
+    ${COMMON_IO_FILES}
+    ${COMMON_ERROR_FILES}
+    ${CORE_INIT_PACKETS}
+    ${CORE_VIRTUAL_NETWORK_FILES}
+    ${SERVICES_SOCKS_FILES}
+    ${LAYER_TEST_FIXTURES_FILES}
+)
