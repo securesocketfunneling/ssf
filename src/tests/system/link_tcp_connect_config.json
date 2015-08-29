@@ -1,0 +1,18 @@
+{
+  "interface": "link_tcp_connect",
+  "type": "CONNECT",
+  "layer_stack": {
+    "layer": "CIRCUIT",
+    "parameters": {
+      "remote_id": "server",
+      "nodes": []
+    },
+    "sublayer": {
+      "layer": "TCP",
+      "parameters": {
+        "addr": "127.0.0.1",
+        "port": "9000"
+      }
+    }
+  }
+}

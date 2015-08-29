@@ -1,0 +1,27 @@
+{
+  "interface": "link_tlsotcp_connect",
+  "type": "CONNECT",
+  "layer_stack": {
+    "layer": "CIRCUIT",
+    "parameters": {
+      "remote_id": "server",
+      "nodes": []
+    },
+    "sublayer": {
+      "layer": "TLS",
+      "parameters": {
+        "ca_file": "./certs/trusted/ca.crt",
+        "crt_file": "./certs/certificate.crt",
+        "key_file": "./certs/private.key",
+        "dhparam_file": "./certs/dh4096.pem"
+      },
+      "sublayer": {
+        "layer": "TCP",
+        "parameters": {
+          "addr": "127.0.0.1",
+          "port": "9000"
+        }
+      }
+    }
+  }
+}

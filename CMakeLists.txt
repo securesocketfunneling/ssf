@@ -125,6 +125,11 @@ set(SERVICES_FIBERS_TO_DATAGRAMS_FILES
       "${project_SRC_DIR}/services/fibers_to_datagrams/fibers_to_datagrams.h"
       "${project_SRC_DIR}/services/fibers_to_datagrams/fibers_to_datagrams.ipp")
 
+file(GLOB_RECURSE SYSTEM_FILES
+      "${project_SRC_DIR}/core/system/*.h"
+      "${project_SRC_DIR}/core/system/*.cpp"
+      "${project_SRC_DIR}/core/system/*.ipp")
+
 set(BOOST_ROOT
       "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
 message("** BOOST_ROOT: ${BOOST_ROOT}")
@@ -132,6 +137,7 @@ message("** BOOST_ROOT: ${BOOST_ROOT}")
 set(OPENSSL_ROOT_DIR
       "${project_THIRDPARTY_DIR}/openssl" CACHE PATH "Path of openssl library")
 message("** OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR}")
+
       
 # --- Include platform specific CMakeList
 
@@ -216,10 +222,15 @@ if (BUILD_UNIT_TESTS)
   set(CERT_TEST_TRUSTED_FILES
       "${project_ROOT_DIR}/certs/trusted/ca.crt"
   )
-
+      
+  file(GLOB_RECURSE SYSTEM_CONFIG_TEST_FILES
+      "${project_SRC_DIR}/tests/system/*.json")
+      
+  file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/system)
   file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/certs)
   file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/certs/trusted)
       
+  file(COPY ${SYSTEM_CONFIG_TEST_FILES} DESTINATION ${project_BINARY_DIR}/src/tests/system)
   file(COPY ${CERT_TEST_ROOT_FILES} DESTINATION ${project_BINARY_DIR}/src/tests/certs)
   file(COPY ${CERT_TEST_TRUSTED_FILES} DESTINATION ${project_BINARY_DIR}/src/tests/certs/trusted)
   

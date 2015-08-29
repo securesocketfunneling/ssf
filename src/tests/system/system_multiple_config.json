@@ -1,0 +1,154 @@
+[
+  {
+    "interface": "circuit_tlsotcp_accept",
+    "type": "ACCEPT",
+    "ttl": 5,
+    "delay": 500,
+    "layer_stack": {
+      "layer": "CIRCUIT",
+      "parameters": {
+        "local_id": "server",
+        "forward": true,
+        "nodes": []
+      },
+      "sublayer": {
+        "layer": "TLS",
+        "parameters": {
+          "ca_file": "./certs/trusted/ca.crt",
+          "crt_file": "./certs/certificate.crt",
+          "key_file": "./certs/private.key",
+          "dhparam_file": "./certs/dh4096.pem"
+        },
+        "sublayer": {
+          "layer": "TCP",
+          "parameters": {
+            "port": "6000"
+          }
+        }
+      }
+    }
+  },
+  {
+    "interface": "circuit_tlsotcp_connect",
+    "type": "CONNECT",
+    "layer_stack": {
+      "layer": "CIRCUIT",
+      "parameters": {
+        "remote_id": "server",
+        "nodes": []
+      },
+      "sublayer": {
+        "layer": "TLS",
+        "parameters": {
+          "ca_file": "./certs/trusted/ca.crt",
+          "crt_file": "./certs/certificate.crt",
+          "key_file": "./certs/private.key",
+          "dhparam_file": "./certs/dh4096.pem"
+        },
+        "sublayer": {
+          "layer": "TCP",
+          "parameters": {
+            "addr": "127.0.0.1",
+            "port": "6000"
+          }
+        }
+      }
+    }
+  },
+  {
+    "interface": "circuit_tcp_accept",
+    "type": "ACCEPT",
+    "layer_stack": {
+      "layer": "CIRCUIT",
+      "parameters": {
+        "local_id": "server",
+        "forward": true,
+        "nodes": []
+      },
+      "sublayer": {
+        "layer": "TCP",
+        "parameters": {
+          "port": "7000"
+        }
+      }
+    }
+  },
+  {
+    "interface": "circuit_tcp_connect",
+    "type": "CONNECT",
+    "layer_stack": {
+      "layer": "CIRCUIT",
+      "parameters": {
+        "remote_id": "server",
+        "nodes": []
+      },
+      "sublayer": {
+        "layer": "TCP",
+        "parameters": {
+          "addr": "127.0.0.1",
+          "port": "7000"
+        }
+      }
+    }
+  },
+  {
+    "interface": "tcp_accept",
+    "type": "ACCEPT",
+    "layer_stack": {
+      "layer": "TCP",
+      "parameters": {
+        "port": "8000"
+      }
+    }
+  },
+  {
+    "interface": "tcp_connect",
+    "type": "CONNECT",
+    "layer_stack": {
+      "layer": "TCP",
+      "parameters": {
+        "port": "8000",
+        "addr": "127.0.0.1"
+      }
+    }
+  },
+  {
+    "interface": "tlsotcp_accept",
+    "type": "ACCEPT",
+    "layer_stack": {
+      "layer": "TLS",
+      "parameters": {
+        "ca_file": "./certs/trusted/ca.crt",
+        "crt_file": "./certs/certificate.crt",
+        "key_file": "./certs/private.key",
+        "dhparam_file": "./certs/dh4096.pem"
+      },
+      "sublayer": {
+        "layer": "TCP",
+        "parameters": {
+          "port": "9000"
+        }
+      }
+    }
+  },
+  {
+    "interface": "tlsotcp_connect",
+    "type": "CONNECT",
+    "layer_stack": {
+      "layer": "TLS",
+      "parameters": {
+        "ca_file": "./certs/trusted/ca.crt",
+        "crt_file": "./certs/certificate.crt",
+        "key_file": "./certs/private.key",
+        "dhparam_file": "./certs/dh4096.pem"
+      },
+      "sublayer": {
+        "layer": "TCP",
+        "parameters": {
+          "port": "9000",
+          "addr": "127.0.0.1"
+        }
+      }
+    }
+  }
+]
