@@ -633,7 +633,7 @@ SERVER3:PORT3</pre>
                                     <li>Generate project
 <pre>mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -G "GENERATOR" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
+cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
@@ -699,7 +699,7 @@ cmake --build `pwd` --config Debug|Release</pre>
                                     <li>Generate project
 <pre>mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
+cmake -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
@@ -754,7 +754,7 @@ cmake --build `pwd` -- -j</pre>
                                     <li>Generate project
 <pre>mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
+cmake -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
