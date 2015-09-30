@@ -1,9 +1,10 @@
 #ifndef SSF_COMMON_ERROR_ERROR_H_
 #define SSF_COMMON_ERROR_ERROR_H_
 
-#include <boost/system/error_code.hpp>
-#include <boost/asio/error.hpp>
 #include <string>
+
+#include <boost/asio/error.hpp>
+#include <boost/system/error_code.hpp>
 
 namespace ssf {
 namespace error {
@@ -30,9 +31,7 @@ enum errors {
 };
 
 namespace detail {
-class ssf_category : public boost::system::error_category
-{
-
+class ssf_category : public boost::system::error_category {
  public:
   const char* name() const BOOST_SYSTEM_NOEXCEPT;
 
@@ -40,8 +39,7 @@ class ssf_category : public boost::system::error_category
 };
 }  // detail
 
-inline const boost::system::error_category& get_ssf_category()
-{
+inline const boost::system::error_category& get_ssf_category() {
   static detail::ssf_category instance;
   return instance;
 }
