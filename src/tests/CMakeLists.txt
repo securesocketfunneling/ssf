@@ -39,6 +39,7 @@ add_test(
 # --- Fiber asio tests
 set(fiber_asio_test_source_files
   "fiber_asio_tests.cpp"
+  ${COMMON_BOOST_FIBER_FILES}
   ${COMMON_ERROR_FILES}
 )
 
@@ -64,11 +65,7 @@ add_test(
 # --- SSF Client Server tests
 set(ssf_client_server_source_files
   "ssf_client_server_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${ssf_client_server_source_files})
@@ -93,11 +90,7 @@ add_test(
 # --- SSF Client Server cipher suites tests
 set(ssf_client_server_cipher_suites_source_files
   "ssf_client_server_cipher_suites_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${ssf_client_server_cipher_suites_source_files})
@@ -122,11 +115,7 @@ add_test(
 # --- Socks test
 set(socks_test_source_files
   "socks_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${socks_test_source_files})
@@ -151,11 +140,7 @@ add_test(
 # --- Remote socks test
 set(remote_socks_test_source_files
   "remote_socks_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${remote_socks_test_source_files})
@@ -180,11 +165,7 @@ add_test(
 # --- Stream forward test
 set(stream_forwarding_test_source_files
   "stream_forwarding_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${stream_forwarding_test_source_files})
@@ -209,11 +190,7 @@ add_test(
 # --- Remote stream forward test
 set(remote_stream_forwarding_test_source_files
   "remote_stream_forwarding_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${remote_stream_forwarding_test_source_files})
@@ -238,11 +215,7 @@ add_test(
 # --- UDP forward test
 set(udp_test_source_files
   "udp_forwarding_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${udp_test_source_files})
@@ -267,11 +240,7 @@ add_test(
 # --- Remote UDP forward test
 set(remote_udp_test_source_files
   "remote_udp_forwarding_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${remote_udp_test_source_files})
@@ -296,11 +265,7 @@ add_test(
 # --- Bouncing chain test
 set(bouncing_test_source_files
   "bouncing_tests.cpp"
-  ${VERSIONS_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${CORE_INIT_PACKETS}
-  ${SERVICES_SOCKS_FILES}
+  ${SSF_SOURCES}
 )
 
 source_group ("Test Files" FILES ${bouncing_test_source_files})
