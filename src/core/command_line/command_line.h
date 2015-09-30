@@ -40,7 +40,8 @@ class CommandLine {
 
  private:
   std::map<std::string, std::vector<std::string>> InternalParsing(
-     const boost::program_options::variables_map& vm);
+      const boost::program_options::variables_map& vm,
+      boost::system::error_code& ec);
 
   uint16_t port_;
   std::string addr_;

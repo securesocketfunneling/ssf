@@ -33,7 +33,8 @@ int main(int argc, char **argv){
                          ssf::BounceProtocolPolicy,
                          ssf::TransportProtocolPolicy> Server;
 #endif
-      init();
+
+  init();
 
   // The object used to parse the command line
   ssf::CommandLine cmd(true);
@@ -45,7 +46,7 @@ int main(int argc, char **argv){
 
   if (ec) {
     BOOST_LOG_TRIVIAL(error) << "server: wrong arguments" << std::endl;
-    return 0;
+    return 1;
   }
 
   // Load SSF config if any
@@ -54,7 +55,7 @@ int main(int argc, char **argv){
 
   if (ec_config) {
     BOOST_LOG_TRIVIAL(error) << "server: invalid config file format" << std::endl;
-    return 0;
+    return 1;
   }
 
   // Starting the asynchronous engine
@@ -74,6 +75,8 @@ int main(int argc, char **argv){
 
     threads.create_thread(lambda);
   }
+
+  BOOST_LOG_TRIVIAL(info) << "Start SSF server on port " << cmd.port();
 
   // Initiating and starting the server
   Server server(io_service, ssf_config, cmd.port());

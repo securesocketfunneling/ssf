@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 
   if (ec) {
     BOOST_LOG_TRIVIAL(error) << "client: wrong arguments" << std::endl;
-    return 0;
+    return 1;
   }
 
   for (const auto& parameter : parameters) {
@@ -119,8 +119,13 @@ int main(int argc, char** argv) {
   }
 
   if (!cmd.IsAddrSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no host address provided -- Exiting" << std::endl;
-    return 0;
+    BOOST_LOG_TRIVIAL(error) << "client: no hostname provided -- Exiting";
+    return 1;
+  }
+
+  if (!cmd.IsPortSet()) {
+    BOOST_LOG_TRIVIAL(error) << "client: no host port provided -- Exiting";
+    return 1;
   }
 
   // Load SSF config if any
