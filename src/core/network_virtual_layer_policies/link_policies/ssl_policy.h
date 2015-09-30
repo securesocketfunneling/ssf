@@ -515,8 +515,19 @@ public:
       boost::asio::ip::tcp::resolver resolver(io_service_);
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(),
                                                   addr, port);
-      boost::asio::ip::tcp::resolver::iterator iterator(
-          resolver.resolve(query));
+      
+      boost::system::error_code resolve_ec;
+      auto iterator = resolver.resolve(query, resolve_ec);
+
+      if (resolve_ec) {
+        BOOST_LOG_TRIVIAL(error) << "link: could not resolve " << addr << ":"
+                                 << port;
+        boost::system::error_code ec(ssf::error::invalid_argument,
+                                     ssf::error::get_ssf_category());
+        this->to_next_layer_handler(p_socket_type(nullptr), connect_callback,
+                                    ec);
+        return;
+      }
 
       auto p_socket = std::make_shared<socket_type>(io_service_, p_ctx);
 
