@@ -53,7 +53,7 @@ Copy [the diff from OpenSSL Github](https://github.com/openssl/openssl/commit/77
  ```bash
  mkdir PROJECT_PATH/build
  cd PROJECT_PATH/build
- cmake -G "GENERATOR" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+ cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
  ```
 
  * Build project
@@ -94,7 +94,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 ```bash
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
 ```
 
 * Build project
@@ -134,7 +134,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 ```bash
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
 ```
 
 * Build project
