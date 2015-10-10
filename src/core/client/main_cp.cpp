@@ -1,3 +1,4 @@
+#include <future>
 #include <stdexcept>
 
 #include <boost/asio/io_service.hpp>
@@ -10,7 +11,7 @@
 
 #include "core/client/client.h"
 
-#include "core/command_line/standard/command_line.h"
+#include "core/command_line/copy/command_line.h"
 #include "core/parser/bounce_parser.h"
 #include "core/factories/service_option_factory.h"
 #include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
@@ -21,12 +22,7 @@
 
 #include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
-#include "services/user_services/socks.h"
-#include "services/user_services/remote_socks.h"
-#include "services/user_services/port_forwarding.h"
-#include "services/user_services/remote_port_forwarding.h"
-#include "services/user_services/udp_port_forwarding.h"
-#include "services/user_services/udp_remote_port_forwarding.h"
+#include "services/user_services/copy_file_service.h"
 
 void Init() {
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
@@ -44,58 +40,41 @@ int main(int argc, char** argv) {
                      ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
 #endif
 
-  using demux = Client::demux;
+  using Demux = Client::demux;
   using BaseUserServicePtr =
-      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
+      ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
   using BounceParser = ssf::parser::BounceParser;
 
   Init();
 
-  // Register user services supported
-  ssf::services::Socks<demux>::RegisterToServiceOptionFactory();
-  ssf::services::RemoteSocks<demux>::RegisterToServiceOptionFactory();
-  ssf::services::PortForwading<demux>::RegisterToServiceOptionFactory();
-  ssf::services::RemotePortForwading<demux>::RegisterToServiceOptionFactory();
-  ssf::services::UdpPortForwading<demux>::RegisterToServiceOptionFactory();
-  ssf::services::UdpRemotePortForwading<
-      demux>::RegisterToServiceOptionFactory();
-
-  boost::program_options::options_description options =
-      ssf::ServiceOptionFactory<demux>::GetOptionDescriptions();
-
   // Parse the command line
-  ssf::command_line::standard::CommandLine cmd;
+  ssf::command_line::copy::CommandLine cmd;
   std::vector<BaseUserServicePtr> user_services;
 
   boost::system::error_code ec;
-  auto parameters = cmd.parse(argc, argv, options, ec);
+
+  cmd.parse(argc, argv, ec);
 
   if (ec) {
     BOOST_LOG_TRIVIAL(error) << "client: wrong command line arguments";
     return 1;
   }
 
-  // Initialize requested user services (socks, port forwarding)
-  for (const auto& parameter : parameters) {
-    for (const auto& single_parameter : parameter.second) {
-      boost::system::error_code ec;
+  // Create and initialize copy user service
+  auto p_copy_service =
+      ssf::services::CopyFileService<Demux>::CreateServiceFromParams(
+          cmd.from_stdin(), cmd.from_local_to_remote(), cmd.input_pattern(),
+          cmd.output_pattern(), ec);
 
-      auto p_service_options =
-          ssf::ServiceOptionFactory<demux>::ParseServiceLine(
-              parameter.first, single_parameter, ec);
-
-      if (!ec) {
-        user_services.push_back(p_service_options);
-      } else {
-        BOOST_LOG_TRIVIAL(error) << "client: wrong parameter "
-                                 << parameter.first << " : " << single_parameter
-                                 << " : " << ec.message();
-      }
-    }
+  if (ec) {
+    BOOST_LOG_TRIVIAL(error) << "client: copy service could not be created";
+    return 1;
   }
 
+  user_services.push_back(p_copy_service);
+
   if (!cmd.IsAddrSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no hostname provided -- Exiting";
+    BOOST_LOG_TRIVIAL(error) << "client: no remote host provided -- Exiting";
     return 1;
   }
 
@@ -116,8 +95,10 @@ int main(int argc, char** argv) {
 
   // Initialize the asynchronous engine
   boost::asio::io_service io_service;
-  boost::asio::io_service::work worker(io_service);
+  std::unique_ptr<boost::asio::io_service::work> p_worker(
+      new boost::asio::io_service::work(io_service));
   boost::thread_group threads;
+  std::promise<bool> closed;
 
   for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
     auto lambda = [&]() {
@@ -133,10 +114,16 @@ int main(int argc, char** argv) {
     threads.create_thread(lambda);
   }
 
-  auto callback = [](ssf::services::initialisation::type, BaseUserServicePtr,
-                     const boost::system::error_code&) {};
+  auto callback =
+      [&closed](ssf::services::initialisation::type type, BaseUserServicePtr,
+                const boost::system::error_code&) {
+        if (type == ssf::services::initialisation::CLOSE) {
+          closed.set_value(true);
+          return;
+        }
+      };
 
-  // Initiate and start client
+  // Initiating and starting the client
   Client client(io_service, cmd.addr(), std::to_string(cmd.port()), ssf_config,
                 user_services, callback);
 
@@ -164,10 +151,14 @@ int main(int argc, char** argv) {
 
   client.run(params);
 
-  getchar();
+  // wait end transfer
+  closed.get_future().get();
+
+  p_worker.reset();
+
+  threads.join_all();
 
   client.stop();
-  threads.join_all();
   io_service.stop();
 
   return 0;

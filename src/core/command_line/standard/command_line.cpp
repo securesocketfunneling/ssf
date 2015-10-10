@@ -1,4 +1,4 @@
-#include "command_line.h"
+#include "core/command_line/standard/command_line.h"
 
 #include <cstdint>
 
@@ -14,19 +14,23 @@
 
 #include "common/error/error.h"
 
-ssf::CommandLine::CommandLine(bool is_server)
+namespace ssf {
+namespace command_line {
+namespace standard {
+
+CommandLine::CommandLine(bool is_server)
     : bounce_file_(""),
       addr_set_(false),
       port_set_(false),
       is_server_(is_server) {}
 
-std::map<std::string, std::vector<std::string>> ssf::CommandLine::parse(
+std::map<std::string, std::vector<std::string>> CommandLine::parse(
     int argc, char* argv[], boost::system::error_code& ec) {
   boost::program_options::options_description services;
   return parse(argc, argv, services, ec);
 }
 
-std::map<std::string, std::vector<std::string>> ssf::CommandLine::parse(
+std::map<std::string, std::vector<std::string>> CommandLine::parse(
     int ac, char* av[],
     const boost::program_options::options_description& services,
     boost::system::error_code& ec) {
@@ -94,20 +98,19 @@ std::map<std::string, std::vector<std::string>> ssf::CommandLine::parse(
   }
 }
 
-uint16_t ssf::CommandLine::port() { return port_; }
+uint16_t CommandLine::port() { return port_; }
 
-std::string ssf::CommandLine::addr() { return addr_; }
+std::string CommandLine::addr() { return addr_; }
 
-std::string ssf::CommandLine::bounce_file() { return bounce_file_; }
+std::string CommandLine::bounce_file() { return bounce_file_; }
 
-std::string ssf::CommandLine::config_file() { return config_file_; }
+std::string CommandLine::config_file() { return config_file_; }
 
-bool ssf::CommandLine::IsPortSet() { return port_set_; }
+bool CommandLine::IsPortSet() { return port_set_; }
 
-bool ssf::CommandLine::IsAddrSet() { return addr_set_; }
+bool CommandLine::IsAddrSet() { return addr_set_; }
 
-std::map<std::string, std::vector<std::string>>
-ssf::CommandLine::InternalParsing(
+std::map<std::string, std::vector<std::string>> CommandLine::InternalParsing(
     const boost::program_options::variables_map& vm,
     boost::system::error_code& ec) {
   std::map<std::string, std::vector<std::string>> result;
@@ -137,3 +140,7 @@ ssf::CommandLine::InternalParsing(
 
   return result;
 }
+
+}  // standard
+}  // command_line
+}  // ssf
