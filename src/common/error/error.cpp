@@ -58,6 +58,9 @@ std::string ssf::error::detail::ssf_category::message(int value) const {
     case error::service_not_found:
       return "service not found";
       break;
+    case error::service_not_started:
+      return "service not started";
+      break;
     case error::out_of_range:
       return "out of range";
       break;

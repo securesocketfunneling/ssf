@@ -90,8 +90,8 @@ public:
 
   virtual bool StartLocalServices(Demux& demux) {
     services::admin::CreateServiceRequest<Demux> l_forward(
-       services::sockets_to_fibers::LocalForwarderService<
-           Demux>::GetCreateRequest(local_port_, local_port_));
+        services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+            local_port_, local_port_));
 
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);

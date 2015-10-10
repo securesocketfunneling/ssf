@@ -26,7 +26,7 @@ class TransportProtocolPolicy {
  public:
    TransportProtocolPolicy(callback_type callback) : callback_(callback) {}
 
-  void do_ssf_initiate(p_socket_type p_socket) {
+  void DoSSFInitiate(p_socket_type p_socket) {
     BOOST_LOG_TRIVIAL(info) << "transport: starting SSF protocol";
 
     uint32_t version = GetVersion();
@@ -34,19 +34,19 @@ class TransportProtocolPolicy {
 
     boost::asio::async_write(
         *p_socket, p_ssf_request->const_buffer(),
-        boost::bind(&TransportProtocolPolicy<Socket>::do_ssf_valid_receive, this,
+        boost::bind(&TransportProtocolPolicy<Socket>::DoSSFValidReceive, this,
                     p_ssf_request, p_socket, _1, _2));
   }
 
-  void do_ssf_initiate_receive(p_socket_type p_socket) {
+  void DoSSFInitiateReceive(p_socket_type p_socket) {
     auto p_ssf_request = std::make_shared<SSFRequest>();
     boost::asio::async_read(
         *p_socket, p_ssf_request->buffer(),
-        boost::bind(&TransportProtocolPolicy<Socket>::do_ssf_valid, this,
+        boost::bind(&TransportProtocolPolicy<Socket>::DoSSFValid, this,
                     p_ssf_request, p_socket, _1, _2));
   }
 
-  void do_ssf_valid(SSFRequestPtr p_ssf_request, p_socket_type p_socket,
+  void DoSSFValid(SSFRequestPtr p_ssf_request, p_socket_type p_socket,
                    const boost::system::error_code& ec, size_t length) {
     if (!ec) {
       uint32_t version = p_ssf_request->version();
@@ -58,7 +58,7 @@ class TransportProtocolPolicy {
         boost::asio::async_write(
             *p_socket, p_ssf_reply->const_buffer(),
             boost::bind(
-            &TransportProtocolPolicy<Socket>::do_ssf_protocol_finished, this,
+            &TransportProtocolPolicy<Socket>::DoSSFProtocolFinished, this,
                 p_ssf_reply, p_socket, _1, _2));
       } else {
         BOOST_LOG_TRIVIAL(error) << "transport: SSF version NOT supported " << version;
@@ -72,7 +72,7 @@ class TransportProtocolPolicy {
     }
   }
 
-  void do_ssf_valid_receive(SSFRequestPtr p_ssf_request, p_socket_type p_socket,
+  void DoSSFValidReceive(SSFRequestPtr p_ssf_request, p_socket_type p_socket,
                            const boost::system::error_code& ec, size_t length) {
     if (!ec) {
       BOOST_LOG_TRIVIAL(info) << "transport: SSF request sent";
@@ -81,7 +81,7 @@ class TransportProtocolPolicy {
 
       boost::asio::async_read(
           *p_socket, p_ssf_reply->buffer(),
-          boost::bind(&TransportProtocolPolicy<Socket>::do_ssf_protocol_finished,
+          boost::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
                       this, p_ssf_reply, p_socket, _1, _2));
     } else {
       BOOST_LOG_TRIVIAL(error) << "transport: could NOT send the SSF request "
@@ -90,7 +90,7 @@ class TransportProtocolPolicy {
     }
   }
 
-  void do_ssf_protocol_finished(SSFReplyPtr p_ssf_reply, p_socket_type p_socket,
+  void DoSSFProtocolFinished(SSFReplyPtr p_ssf_reply, p_socket_type p_socket,
                                const boost::system::error_code& ec,
                                size_t length) {
     if (!ec) {

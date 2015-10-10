@@ -25,8 +25,8 @@ private:
 
   typedef std::function<BaseServicePtr (boost::asio::io_service&,
                                         Demux&,
-                                        Parameters)> ServiceCreatorType;
-  typedef std::map <uint32_t, ServiceCreatorType> ServiceCreatorMap;  
+                                        Parameters)> ServiceCreator;
+  typedef std::map<uint32_t, ServiceCreator> ServiceCreatorMap;
 
   typedef std::shared_ptr<ServiceManager<Demux>> ServiceManagerPtr;
 
@@ -47,8 +47,7 @@ public:
 
  ~ServiceFactory() {}
 
-  bool RegisterServiceCreator(uint32_t index, 
-                              ServiceCreatorType creator) {
+ bool RegisterServiceCreator(uint32_t index, ServiceCreator creator) {
     boost::recursive_mutex::scoped_lock lock(service_creators_mutex_);
     if (service_creators_.count(index)) {
       return false;
@@ -71,11 +70,16 @@ public:
                                        demux_,
                                        parameters);
       if (p_service) {
-        return p_service_manager_->start(p_service, ec);
+        auto service_id = p_service_manager_->start(p_service, ec);
+        p_service->set_local_id(service_id);
+
+        return service_id;
       } else {
+        ec.assign(ssf::error::service_not_started, ssf::error::get_ssf_category());
         return 0;
       }
     } else {
+      ec.assign(ssf::error::service_not_found, ssf::error::get_ssf_category());
       return 0;
     }
   }

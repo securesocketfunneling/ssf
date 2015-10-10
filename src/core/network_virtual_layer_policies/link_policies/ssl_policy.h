@@ -10,12 +10,14 @@
 #include <map>
 #include <queue>
 
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/system/error_code.hpp>
+#include <boost/asio/connect.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/bind.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/asio/connect.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/basic_stream_socket.hpp>
@@ -63,14 +65,14 @@ public:
   }
 
   /// Start receiving data
-  void start_pulling() {
+  void StartPulling() {
     {
       boost::recursive_mutex::scoped_lock lock(pulling_mutex_);
       if (!pulling_) {
         pulling_ = true;
         BOOST_LOG_TRIVIAL(debug) << "link: SSLWrapperPuller pulling";
         io_service_.post(
-            boost::bind(&SSLWrapperPuller<Stream>::async_pull_packets,
+            boost::bind(&SSLWrapperPuller<Stream>::AsyncPullPackets,
                         this->shared_from_this()));
       }
     }
@@ -99,7 +101,7 @@ public:
       p.v = p.p = 0;
 
       io_service_.dispatch(
-          boost::bind(&SSLWrapperPuller<Stream>::handle_data_n_ops,
+          boost::bind(&SSLWrapperPuller<Stream>::HandleDataNOps,
                       this->shared_from_this()));
     } else {
       auto lambda =
@@ -114,12 +116,12 @@ private:
         pulling_(false) {}
 
   /// Check if data is available for user requests
-  void handle_data_n_ops() {
+  void HandleDataNOps() {
     if (!status_) {
       {
         boost::recursive_mutex::scoped_lock lock(pulling_mutex_);
         if ((data_queue_.size() < lower_queue_size_bound) && !pulling_) {
-          this->start_pulling();
+          this->StartPulling();
         }
       }
 
@@ -136,7 +138,7 @@ private:
         io_service_.post(do_complete);
 
         io_service_.dispatch(
-            boost::bind(&SSLWrapperPuller<Stream>::handle_data_n_ops,
+            boost::bind(&SSLWrapperPuller<Stream>::HandleDataNOps,
                         this->shared_from_this()));
       }
     } else {
@@ -151,19 +153,19 @@ private:
         io_service_.post(do_complete);
 
         io_service_.dispatch(
-            boost::bind(&SSLWrapperPuller<Stream>::handle_data_n_ops,
+            boost::bind(&SSLWrapperPuller<Stream>::HandleDataNOps,
                         this->shared_from_this()));
       }
     }
   }
 
   /// Receive some data
-  void async_pull_packets() {
-    BOOST_LOG_TRIVIAL(trace) << "link: SSLWrapperPuller async_pull_packets";
+  void AsyncPullPackets() {
+    BOOST_LOG_TRIVIAL(trace) << "link: SSLWrapperPuller AsyncPullPackets";
     auto self = this->shared_from_this();
     auto handler = [this, self](const boost::system::error_code &ec,
                                 size_t length) {
-      BOOST_LOG_TRIVIAL(trace) << "link: SSLWrapperPuller async_pull_packets handler";
+      BOOST_LOG_TRIVIAL(trace) << "link: SSLWrapperPuller AsyncPullPackets handler";
       if (!ec) {
         {
           boost::recursive_mutex::scoped_lock lock1(this->data_queue_mutex_);
@@ -171,7 +173,7 @@ private:
         }
 
         this->io_service_.dispatch(
-            boost::bind(&SSLWrapperPuller<Stream>::async_pull_packets,
+            boost::bind(&SSLWrapperPuller<Stream>::AsyncPullPackets,
                         this->shared_from_this()));
       } else {
         this->status_ = ec;
@@ -180,7 +182,7 @@ private:
       }
 
       this->io_service_.dispatch(
-          boost::bind(&SSLWrapperPuller<Stream>::handle_data_n_ops,
+          boost::bind(&SSLWrapperPuller<Stream>::HandleDataNOps,
                       this->shared_from_this()));
     };
 
@@ -277,7 +279,7 @@ public:
     auto do_user_handler =
         [this, handler](const boost::system::error_code &ec) {
           if (!ec) {
-            this->p_puller_->start_pulling();
+            this->p_puller_->StartPulling();
           }
           handler(ec);
         };
@@ -378,11 +380,11 @@ public:
       : io_service_(io_service), config_(ssf_config) {}
 
 private:
-  bool init_ssl_context(boost::asio::ssl::context &ctx, bool is_server) {
+  bool InitTLSContext(boost::asio::ssl::context &ctx, bool is_server) {
     // Set the callback to decipher the private key
     if (is_server || (config_.tls.key_password != "")) {
       ctx.set_password_callback(
-        boost::bind(&BaseSSLPolicy::get_password, this, _1, _2));
+        boost::bind(&BaseSSLPolicy::GetPassword, this, _1, _2));
     }
 
     // Set the mutual authentication
@@ -440,13 +442,13 @@ private:
 
 public:
   /// Connect to a remote server
-  void establish_link(const Parameters &parameters,
+  void EstablishLink(const Parameters &parameters,
                       const connect_callback_type &connect_callback) {
-    auto addr = get_remote_addr(parameters);
-    auto port = get_remote_port(parameters);
-    auto auth_cert = get_auth_cert_in_vector(parameters);
-    auto cert = get_cert_in_vector(parameters);
-    auto key = get_key_in_vector(parameters);
+    auto addr = GetRemoteAddr(parameters);
+    auto port = GetRemotePort(parameters);
+    auto auth_cert = GetAuthCertInVector(parameters);
+    auto cert = GetCertInVector(parameters);
+    auto key = GetKeyInVector(parameters);
 
     BOOST_LOG_TRIVIAL(info) << "link: connecting to " << addr << ":" << port;
 
@@ -454,12 +456,14 @@ public:
         boost::asio::ssl::context::tlsv12);
 
     // Initialize the ssl context with enhanced security parameters
-    auto ctx_set = this->init_ssl_context(*p_ctx, false);
+    auto ctx_set = this->InitTLSContext(*p_ctx, false);
 
     if (!ctx_set) {
+      BOOST_LOG_TRIVIAL(error) << "TLS context not initialized";
+      BOOST_LOG_TRIVIAL(error) << "Check your configuration";
       boost::system::error_code ec(ssf::error::invalid_argument,
                                    ssf::error::get_ssf_category());
-      this->to_next_layer_handler(p_socket_type(nullptr), connect_callback, ec);
+      this->ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
       return;
     }
 
@@ -524,7 +528,7 @@ public:
                                  << port;
         boost::system::error_code ec(ssf::error::invalid_argument,
                                      ssf::error::get_ssf_category());
-        this->to_next_layer_handler(p_socket_type(nullptr), connect_callback,
+        this->ToNextLayerHandler(p_socket_type(nullptr), connect_callback,
                                     ec);
         return;
       }
@@ -532,19 +536,19 @@ public:
       auto p_socket = std::make_shared<socket_type>(io_service_, p_ctx);
 
       boost::asio::async_connect(p_socket->lowest_layer(), iterator,
-                                 boost::bind(&BaseSSLPolicy::connected_handler,
+                                 boost::bind(&BaseSSLPolicy::ConnectedHandler,
                                              this, p_socket, connect_callback,
                                              _1));
     } else {
       boost::system::error_code ec(ssf::error::invalid_argument,
                                    ssf::error::get_ssf_category());
-      this->to_next_layer_handler(p_socket_type(nullptr), connect_callback, ec);
+      this->ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
       return;
     }
   }
 
   /// Accept a new connection
-  void accept_links(p_acceptor_type p_acceptor,
+  void AcceptLinks(p_acceptor_type p_acceptor,
                     const accept_callback_type &accept_callback) {
 
     if (!p_acceptor->is_open()) {
@@ -555,10 +559,12 @@ public:
         boost::asio::ssl::context::tlsv12);
 
     // Initialize the ssl context with enhanced security parameters
-    auto ctx_set = this->init_ssl_context(*p_ctx, true);
+    auto ctx_set = this->InitTLSContext(*p_ctx, true);
 
     if (!ctx_set) {
-      this->to_next_layer_handler(nullptr, accept_callback);
+      BOOST_LOG_TRIVIAL(error) << "TLS context not initialized";
+      BOOST_LOG_TRIVIAL(error) << "Check your configuration";
+      this->ToNextLayerHandler(nullptr, accept_callback);
       return;
     }
 
@@ -570,12 +576,12 @@ public:
 
     BOOST_LOG_TRIVIAL(trace) << "link: accepting";
     p_acceptor->async_accept(p_socket->lowest_layer(),
-                             boost::bind(&BaseSSLPolicy::accepted_handler, this,
+                             boost::bind(&BaseSSLPolicy::AcceptedHandler, this,
                                          p_acceptor, p_socket, accept_callback,
                                          _1));
   }
 
-  void close_link(socket_type &socket) {
+  void CloseLink(socket_type &socket) {
     boost::system::error_code ec;
     socket.socket().shutdown(ec);
     socket.lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -584,7 +590,7 @@ public:
   }
 
 private:
-  void connected_handler(p_socket_type p_socket,
+  void ConnectedHandler(p_socket_type p_socket,
                          const connect_callback_type &connect_callback,
                          const boost::system::error_code &ec) {
     // Send version
@@ -592,18 +598,18 @@ private:
       std::shared_ptr<uint32_t> p_version = std::make_shared<uint32_t>(GetVersion());
       /*boost::asio::async_write(p_socket->socket().next_layer(),
                                boost::asio::buffer(p_version.get(), sizeof(*p_version)),
-                               boost::bind(&BaseSSLPolicy::handshake_handler, this,
+                               boost::bind(&BaseSSLPolicy::HandshakeHandler, this,
                                p_socket, p_version, connect_callback, _1, _2));*/
-      handshake_handler(p_socket, p_version, connect_callback, ec, 0);
+      HandshakeHandler(p_socket, p_version, connect_callback, ec, 0);
     } else {
       BOOST_LOG_TRIVIAL(error) << "link: connection failed "
         << ec.message();
-      this->close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, connect_callback, ec);
+      this->CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, connect_callback, ec);
     }
   }
 
-  void handshake_handler(p_socket_type p_socket,
+  void HandshakeHandler(p_socket_type p_socket,
                          std::shared_ptr<uint32_t> p_version,
                          const connect_callback_type &connect_callback,
                          const boost::system::error_code &ec, size_t length) {
@@ -611,37 +617,37 @@ private:
       BOOST_LOG_TRIVIAL(trace) << "link: connected";
       p_socket->async_handshake(
           boost::asio::ssl::stream_base::client,
-          boost::bind(&BaseSSLPolicy::handshaked_connect_handler, this,
+          boost::bind(&BaseSSLPolicy::HandshakedConnectHandler, this,
                       p_socket, connect_callback, _1));
     } else {
       BOOST_LOG_TRIVIAL(error) << "link: exchange version failed "
                                << ec.message();
-      this->close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, connect_callback, ec);
+      this->CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, connect_callback, ec);
     }
   }
 
-  void handshaked_connect_handler(p_socket_type p_socket,
+  void HandshakedConnectHandler(p_socket_type p_socket,
                                   const connect_callback_type &connect_callback,
                                   const boost::system::error_code &ec) {
     if (!ec) {
       BOOST_LOG_TRIVIAL(trace) << "link: authenticated";
-      this->to_next_layer_handler(p_socket, connect_callback, ec);
+      this->ToNextLayerHandler(p_socket, connect_callback, ec);
     } else {
       BOOST_LOG_TRIVIAL(error) << "link: no handshake " << ec.message();
-      this->close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, connect_callback, ec);
+      this->CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, connect_callback, ec);
     }
   }
 
-  void to_next_layer_handler(p_socket_type p_socket,
-                             const connect_callback_type &connect_callback,
-                             const boost::system::error_code &ec) {
+  void ToNextLayerHandler(p_socket_type p_socket,
+                          const connect_callback_type &connect_callback,
+                          const boost::system::error_code &ec) {
     io_service_.post(boost::bind(connect_callback, p_socket, ec));
   }
 
   /// Read ssl version
-  void accepted_handler(p_acceptor_type p_acceptor, p_socket_type p_socket,
+  void AcceptedHandler(p_acceptor_type p_acceptor, p_socket_type p_socket,
                         const accept_callback_type &accept_callback,
                         const boost::system::error_code &ec) {
     if (!ec) {
@@ -649,30 +655,30 @@ private:
       /*std::shared_ptr<uint32_t> p_version = std::make_shared<uint32_t>();
       boost::asio::async_read(p_socket->socket().next_layer(),
                               boost::asio::buffer(p_version.get(), sizeof(*p_version)),
-                              boost::bind(&BaseSSLPolicy::accepted_handshake_handler, this,
+                              boost::bind(&BaseSSLPolicy::AcceptedHandshakeHandler, this,
                                           p_socket, p_version, accept_callback, _1, _2));*/
       std::shared_ptr<uint32_t> p_version =
           std::make_shared<uint32_t>(GetVersion());
-      accepted_handshake_handler(p_socket, p_version, accept_callback, ec, 0);
-      this->accept_links(p_acceptor, accept_callback);
+      AcceptedHandshakeHandler(p_socket, p_version, accept_callback, ec, 0);
+      this->AcceptLinks(p_acceptor, accept_callback);
     } else {
-      this->close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, accept_callback);
+      this->CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, accept_callback);
     }
   }
 
   /// Operate the ssl handshake if version supported and no error
-  void accepted_handshake_handler(p_socket_type p_socket,
-                                  std::shared_ptr<uint32_t> p_version,
-                                  const accept_callback_type &accept_callback,
-                                  const boost::system::error_code &ec,
-                                  size_t bytes_transferred) {
+  void AcceptedHandshakeHandler(p_socket_type p_socket,
+                                std::shared_ptr<uint32_t> p_version,
+                                const accept_callback_type &accept_callback,
+                                const boost::system::error_code &ec,
+                                size_t bytes_transferred) {
     auto version_supported = IsVersionSupported(*p_version);
     if (!ec && version_supported) {
       BOOST_LOG_TRIVIAL(trace) << "link: version supported";
       p_socket->async_handshake(
           boost::asio::ssl::stream_base::server,
-          boost::bind(&BaseSSLPolicy::handshaked_accept_handler, this, p_socket,
+          boost::bind(&BaseSSLPolicy::HandshakedAcceptHandler, this, p_socket,
                       accept_callback, _1));
     } else {
       if (!version_supported) {
@@ -683,12 +689,12 @@ private:
         BOOST_LOG_TRIVIAL(error) << "link: error on read version "
                                  << "ec : " << ec.message();
       }
-      this->close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, accept_callback);
+      this->CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, accept_callback);
     }
   }
 
-  void handshaked_accept_handler(p_socket_type p_socket,
+  void HandshakedAcceptHandler(p_socket_type p_socket,
                                  const accept_callback_type &accept_callback,
                                  const boost::system::error_code &ec) {
     if (!ec) {
@@ -698,16 +704,16 @@ private:
             << "link: cipher suite "
             << SSL_get_cipher(p_socket->socket().native_handle());
       }
-      this->to_next_layer_handler(p_socket, accept_callback);
+      this->ToNextLayerHandler(p_socket, accept_callback);
     } else {
       BOOST_LOG_TRIVIAL(error) << "link: NOT Authenticated " << ec.message();
-      this->close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, accept_callback);
+      this->CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, accept_callback);
     }
   }
 
-  void to_next_layer_handler(p_socket_type p_socket,
-                             const accept_callback_type &accept_callback) {
+  void ToNextLayerHandler(p_socket_type p_socket,
+                          const accept_callback_type &accept_callback) {
     io_service_.post(boost::bind(accept_callback, p_socket));
   }
 
@@ -745,8 +751,8 @@ private:
       (serialization == boost::archive::BOOST_ARCHIVE_VERSION());
   }
 
-  std::string get_password(std::size_t,
-                           boost::asio::ssl::context::password_purpose) const {
+  std::string GetPassword(std::size_t,
+                          boost::asio::ssl::context::password_purpose) const {
     return config_.tls.key_password;
   }
 
@@ -770,7 +776,7 @@ private:
     return preverified;
   }
 
-  std::string get_remote_addr(const Parameters &parameters) {
+  std::string GetRemoteAddr(const Parameters &parameters) {
     if (parameters.count("remote_addr")) {
       return parameters.find("remote_addr")->second;
     } else {
@@ -778,7 +784,7 @@ private:
     }
   }
 
-  std::string get_remote_port(const Parameters &parameters) {
+  std::string GetRemotePort(const Parameters &parameters) {
     if (parameters.count("remote_port")) {
       return parameters.find("remote_port")->second;
     } else {
@@ -786,7 +792,7 @@ private:
     }
   }
 
-  std::vector<uint8_t> get_deserialized_vector(const std::string &serialized) {
+  std::vector<uint8_t> GetDeserializedVector(const std::string &serialized) {
     std::istringstream istrs(serialized);
     boost::archive::text_iarchive ar(istrs);
     std::vector<uint8_t> deserialized;
@@ -799,30 +805,30 @@ private:
     }
   }
 
-  std::vector<uint8_t> get_auth_cert_in_vector(const Parameters &parameters) {
+  std::vector<uint8_t> GetAuthCertInVector(const Parameters &parameters) {
     if (parameters.count("auth_cert_in_vector")) {
       auto serialized = parameters.find("auth_cert_in_vector")->second;
-      auto deserialized = get_deserialized_vector(serialized);
+      auto deserialized = GetDeserializedVector(serialized);
       return deserialized;
     } else {
       return std::vector<uint8_t>();
     }
   }
 
-  std::vector<uint8_t> get_cert_in_vector(const Parameters &parameters) {
+  std::vector<uint8_t> GetCertInVector(const Parameters &parameters) {
     if (parameters.count("cert_in_vector")) {
       auto serialized = parameters.find("cert_in_vector")->second;
-      auto deserialized = get_deserialized_vector(serialized);
+      auto deserialized = GetDeserializedVector(serialized);
       return deserialized;
     } else {
       return std::vector<uint8_t>();
     }
   }
 
-  std::vector<uint8_t> get_key_in_vector(const Parameters &parameters) {
+  std::vector<uint8_t> GetKeyInVector(const Parameters &parameters) {
     if (parameters.count("key_in_vector")) {
       auto serialized = parameters.find("key_in_vector")->second;
-      auto deserialized = get_deserialized_vector(serialized);
+      auto deserialized = GetDeserializedVector(serialized);
       return deserialized;
     } else {
       return std::vector<uint8_t>();

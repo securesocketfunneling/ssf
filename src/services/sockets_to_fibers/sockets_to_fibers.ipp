@@ -8,9 +8,9 @@
 namespace ssf { namespace services { namespace sockets_to_fibers {
 
 template <typename Demux>
-LocalForwarderService<Demux>::LocalForwarderService(
-    boost::asio::io_service& io_service, demux& fiber_demux,
-    uint16_t local_port, remote_port_type remote_port)
+SocketsToFibers<Demux>::SocketsToFibers(boost::asio::io_service& io_service,
+                                        demux& fiber_demux, uint16_t local_port,
+                                        remote_port_type remote_port)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
       local_port_(local_port),
       remote_port_(remote_port),
@@ -19,9 +19,10 @@ LocalForwarderService<Demux>::LocalForwarderService(
       fiber_(io_service) {}
 
 template <typename Demux>
-void LocalForwarderService<Demux>::start(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "service sockets to fibers: starting relay on local port tcp " 
-                          << local_port_;
+void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
+  BOOST_LOG_TRIVIAL(info)
+      << "service sockets to fibers: starting relay on local port tcp "
+      << local_port_;
 
   boost::system::error_code close_ec;
   // Accept on all local interfaces
@@ -58,23 +59,25 @@ void LocalForwarderService<Demux>::start(boost::system::error_code& ec) {
 }
 
 template <typename Demux>
-void LocalForwarderService<Demux>::stop(boost::system::error_code& ec) {
+void SocketsToFibers<Demux>::stop(boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(info) << "service sockets to fibers: stopping";
   socket_acceptor_.close(ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(debug) << "service sockets to fibers: " << ec.message() << std::endl;
+    BOOST_LOG_TRIVIAL(debug) << "service sockets to fibers: " << ec.message()
+                             << std::endl;
   }
   manager_.stop_all();
 }
 
 template <typename Demux>
-uint32_t LocalForwarderService<Demux>::service_type_id() {
+uint32_t SocketsToFibers<Demux>::service_type_id() {
   return factory_id;
 }
 
 template <typename Demux>
-void LocalForwarderService<Demux>::StartAcceptSockets() {
-  BOOST_LOG_TRIVIAL(trace) << "service sockets to fibers: accepting new clients";
+void SocketsToFibers<Demux>::StartAcceptSockets() {
+  BOOST_LOG_TRIVIAL(trace)
+      << "service sockets to fibers: accepting new clients";
 
   if (!socket_acceptor_.is_open()) {
     return;
@@ -82,11 +85,12 @@ void LocalForwarderService<Demux>::StartAcceptSockets() {
 
   socket_acceptor_.async_accept(
       socket_,
-      Then(&LocalForwarderService::SocketAcceptHandler, this->SelfFromThis()));
+      Then(&SocketsToFibers::SocketAcceptHandler, this->SelfFromThis()));
 }
 
 template <typename Demux>
-void LocalForwarderService<Demux>::SocketAcceptHandler(const boost::system::error_code& ec) {
+void SocketsToFibers<Demux>::SocketAcceptHandler(
+    const boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(trace) << "service sockets to fibers: accept handler";
 
   if (!socket_acceptor_.is_open()) {
@@ -97,18 +101,18 @@ void LocalForwarderService<Demux>::SocketAcceptHandler(const boost::system::erro
     endpoint ep(this->get_demux(), remote_port_);
     fiber_.async_connect(
       ep,
-      Then(&LocalForwarderService::FiberConnectHandler, this->SelfFromThis()));
+      Then(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis()));
   }
 }
 
 template <typename Demux>
-void LocalForwarderService<Demux>::FiberConnectHandler(const boost::system::error_code& ec) {
+void SocketsToFibers<Demux>::FiberConnectHandler(
+    const boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(trace) << "service sockets to fibers: connect handler";
 
   if (!ec) {
-    auto session = SessionForwarder<socket, fiber>::create(&manager_,
-                                                           std::move(socket_),
-                                                           std::move(fiber_));
+    auto session = SessionForwarder<socket, fiber>::create(
+        &manager_, std::move(socket_), std::move(fiber_));
     boost::system::error_code e;
     manager_.start(session, e);
   }

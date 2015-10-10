@@ -17,8 +17,6 @@ set(load_config_test_source_files
   ${COMMON_ERROR_FILES}
 )
 
-source_group ("Test Files" FILES ${load_config_test_source_files})
-
 add_target("load_config_tests"
   TYPE
     executable
@@ -43,8 +41,6 @@ set(fiber_asio_test_source_files
   ${COMMON_ERROR_FILES}
 )
 
-source_group ("Test Files" FILES ${fiber_asio_test_source_files})
-
 add_target("fiber_asio_tests"
   TYPE
     executable
@@ -67,8 +63,6 @@ set(ssf_client_server_source_files
   "ssf_client_server_tests.cpp"
   ${SSF_SOURCES}
 )
-
-source_group ("Test Files" FILES ${ssf_client_server_source_files})
 
 add_target("ssf_client_server_tests"
   TYPE
@@ -93,8 +87,6 @@ set(ssf_client_server_cipher_suites_source_files
   ${SSF_SOURCES}
 )
 
-source_group ("Test Files" FILES ${ssf_client_server_cipher_suites_source_files})
-
 add_target("ssf_client_server_cipher_suites_tests"
   TYPE
     executable
@@ -117,8 +109,6 @@ set(socks_test_source_files
   "socks_tests.cpp"
   ${SSF_SOURCES}
 )
-
-source_group ("Test Files" FILES ${socks_test_source_files})
 
 add_target("socks_tests"
   TYPE
@@ -143,8 +133,6 @@ set(remote_socks_test_source_files
   ${SSF_SOURCES}
 )
 
-source_group ("Test Files" FILES ${remote_socks_test_source_files})
-
 add_target("remote_socks_tests"
   TYPE
     executable
@@ -167,8 +155,6 @@ set(stream_forwarding_test_source_files
   "stream_forwarding_tests.cpp"
   ${SSF_SOURCES}
 )
-
-source_group ("Test Files" FILES ${stream_forwarding_test_source_files})
 
 add_target("stream_forward_tests"
   TYPE
@@ -193,8 +179,6 @@ set(remote_stream_forwarding_test_source_files
   ${SSF_SOURCES}
 )
 
-source_group ("Test Files" FILES ${remote_stream_forwarding_test_source_files})
-
 add_target("remote_stream_forward_tests"
   TYPE
     executable
@@ -217,8 +201,6 @@ set(udp_test_source_files
   "udp_forwarding_tests.cpp"
   ${SSF_SOURCES}
 )
-
-source_group ("Test Files" FILES ${udp_test_source_files})
 
 add_target("udp_forward_tests"
   TYPE
@@ -243,8 +225,6 @@ set(remote_udp_test_source_files
   ${SSF_SOURCES}
 )
 
-source_group ("Test Files" FILES ${remote_udp_test_source_files})
-
 add_target("remote_udp_forward_tests"
   TYPE
     executable
@@ -268,8 +248,6 @@ set(bouncing_test_source_files
   ${SSF_SOURCES}
 )
 
-source_group ("Test Files" FILES ${bouncing_test_source_files})
-
 add_target("bouncing_tests"
   TYPE
     executable
@@ -286,3 +264,55 @@ target_link_libraries(bouncing_tests gtest gtest_main)
 add_test(
 	NAME bouncing_tests 
 	COMMAND $<TARGET_FILE:bouncing_tests>)
+  
+  
+# --- File copy from client test
+
+file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/files_to_copy)
+file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/files_copied)
+
+FILE(GLOB_RECURSE TEST_FILES_TO_COPY
+  "${project_SRC_DIR}/tests/files_to_copy/*"
+)
+
+file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${project_BINARY_DIR}/src/tests/files_to_copy)
+
+set(file_copy_from_client_files
+  "file_copy_from_client_tests.cpp"
+  ${SSF_SOURCES}
+)
+
+add_target("file_copy_from_client_tests"
+  TYPE
+    executable
+  LINKS 
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    PREFIX_SKIP     .*/src
+    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+  FILES
+    ${file_copy_from_client_files}
+)
+target_link_libraries(file_copy_from_client_tests gtest gtest_main)
+add_test(
+	NAME file_copy_from_client_tests 
+	COMMAND $<TARGET_FILE:file_copy_from_client_tests>)
+
+
+# --- Unit tests list
+project_group(
+  "Unit tests"
+  load_config_tests
+  fiber_asio_tests
+  ssf_client_server_tests
+  ssf_client_server_cipher_suites_tests
+  socks_tests
+  remote_socks_tests
+  stream_forward_tests
+  remote_stream_forward_tests
+  udp_forward_tests
+  remote_udp_forward_tests
+  bouncing_tests
+  file_copy_from_client_tests
+)

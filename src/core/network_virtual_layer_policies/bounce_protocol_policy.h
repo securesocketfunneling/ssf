@@ -11,7 +11,6 @@
 #include <map>
 #include <list>
 
-
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/list.hpp>
@@ -36,8 +35,9 @@
 #include "common/network/base_session.h"
 #include "common/network/session_forwarder.h"
 
-#include "versions.h"
+#include "core/parser/bounce_parser.h"
 
+#include "versions.h"
 
 namespace ssf {
 
@@ -53,6 +53,7 @@ public:
   typedef std::map<std::string, std::string> Parameters;
 
 private:
+  using BounceParser = ssf::parser::BounceParser;
   typedef std::shared_ptr<uint32_t> p_uint32_t;
   typedef std::shared_ptr<std::vector<uint32_t>> p_vector_uint32_t;
   typedef std::vector<boost::system::error_code> vector_error_code_type;
@@ -75,8 +76,8 @@ public:
       : LinkPolicy(io_service, ssf_config),
         io_service_(io_service) {}
 
-  void add_route(Parameters& parameters, callback_type callback) {
-    std::list<std::string> bouncing_nodes = this->get_bouncing_nodes(parameters);
+  void AddRoute(Parameters& parameters, callback_type callback) {
+    std::list<std::string> bouncing_nodes = this->GetBouncingNodes(parameters);
     parameters["local"] = "true";
 
     size_t total_size = bouncing_nodes.size() + 1;
@@ -84,7 +85,7 @@ public:
 
     auto handler = [this, parameters, p_ec_values, total_size](
         p_uint32_t p_ec_value, p_socket_type p_socket, callback_type callback) {
-      this->get_all_ecs(parameters, p_ec_values, 0, (uint32_t)total_size, p_ec_value, p_socket,
+      this->GetAllEcs(parameters, p_ec_values, 0, (uint32_t)total_size, p_ec_value, p_socket,
                         callback);
     };
 
@@ -93,26 +94,26 @@ public:
         const boost::system::error_code& ec) {
       if (!ec) {
         BOOST_LOG_TRIVIAL(trace) << "network: do add route";
-        this->do_add_route(handler, parameters, callback);
+        this->DoAddRoute(handler, parameters, callback);
       } else {
         BOOST_LOG_TRIVIAL(trace) << "network: handler to add route end";
-        this->protocol_end(nullptr, ec, callback);
+        this->ProtocolEnd(nullptr, ec, callback);
       }
     };
 
-    this->get_credentials(parameters, handler_to_do_add_route, nullptr);
+    this->GetCredentials(parameters, handler_to_do_add_route, nullptr);
   }
 
-  void delete_route(socket_type& socket) {
+  void DeleteRoute(socket_type& socket) {
     BOOST_LOG_TRIVIAL(trace) << "network: delete route";
-    this->close_link(socket);
+    this->CloseLink(socket);
   }
 
-  void accept_new_routes(uint16_t port, callback_type callback) {
+  void AcceptNewRoutes(uint16_t port, callback_type callback) {
     auto p_acceptor = std::make_shared<acceptor_type>(io_service_);
 
     boost::system::error_code ec;
-    init_acceptor(*p_acceptor, port, ec);
+    InitAcceptor(*p_acceptor, port, ec);
 
     if (!ec) {
       {
@@ -120,17 +121,17 @@ public:
         acceptors_[port] = p_acceptor;
       }
 
-      this->accept_links(
+      this->AcceptLinks(
           p_acceptor,
-          boost::bind(&BounceProtocolPolicy::new_link_connected_handler, this,
+          boost::bind(&BounceProtocolPolicy::NewLinkConnectedHandler, this,
                       callback, _1));
     } else {
       auto p_socket = p_socket_type(nullptr);
-      this->protocol_end(p_socket, ec, callback);
+      this->ProtocolEnd(p_socket, ec, callback);
     }
   }
 
-  void stop_accepting_routes() {
+  void StopAcceptingRoutes() {
       boost::recursive_mutex::scoped_lock lock(acceptors_mutex_);
       for (auto& p_acceptor : acceptors_) {
         boost::system::error_code ec;
@@ -143,7 +144,7 @@ public:
   //-------------------------------------------------------
 
 private:
-  static void init_acceptor(acceptor_type& acceptor, uint16_t port,
+  static void InitAcceptor(acceptor_type& acceptor, uint16_t port,
                             boost::system::error_code& ec) {
     boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
     boost::asio::socket_base::reuse_address option(true);
@@ -173,7 +174,7 @@ private:
     }
   }
 
-  static void close_acceptor(acceptor_type& acceptor) {
+  static void CloseAcceptor(acceptor_type& acceptor) {
     boost::system::error_code ec;
     acceptor.cancel(ec);
     acceptor.close(ec);
@@ -185,17 +186,17 @@ private:
 
   //-------------------------------------------------------
   template <typename Handler>
-  void do_add_route(Handler handler, const Parameters& parameters,
+  void DoAddRoute(Handler handler, const Parameters& parameters,
                     callback_type callback) {
     BOOST_LOG_TRIVIAL(trace) << "network: establish link";
-    this->establish_link(
+    this->EstablishLink(
         parameters,
-        boost::bind(&BounceProtocolPolicy::link_established_handler<Handler>,
+        boost::bind(&BounceProtocolPolicy::LinkEstablishedHandler<Handler>,
                     this, handler, parameters, callback, _1, _2));
   }
 
   template <typename Handler>
-  void link_established_handler(Handler handler, const Parameters& parameters,
+  void LinkEstablishedHandler(Handler handler, const Parameters& parameters,
     callback_type callback, p_socket_type p_socket,
     const boost::system::error_code& ec) {  
       BOOST_LOG_TRIVIAL(trace) << "network: link established handler";
@@ -205,20 +206,20 @@ private:
         boost::asio::async_read(
             *p_socket, boost::asio::buffer(p_version.get(), sizeof(*p_version)),
             boost::bind(
-                &BounceProtocolPolicy::bounce_version_received_handler<Handler>,
+                &BounceProtocolPolicy::BounceVersionReceivedHandler<Handler>,
                 this, handler, parameters, callback, p_version, p_socket, _1,
                 _2));
       } else {
         if (p_socket) {
-          this->close_link(*p_socket);
+          this->CloseLink(*p_socket);
         }
-        this->protocol_end(nullptr, ec, callback);
+        this->ProtocolEnd(nullptr, ec, callback);
         return;
       }
   }
 
   template <typename Handler>
-  void bounce_version_received_handler(
+  void BounceVersionReceivedHandler(
       Handler handler, const Parameters& parameters, callback_type callback,
       std::shared_ptr<uint32_t> p_version, p_socket_type p_socket,
       const boost::system::error_code& ec, size_t length) {
@@ -230,7 +231,7 @@ private:
         boost::asio::async_write(
             *p_socket, boost::asio::buffer(p_answer.get(), sizeof(*p_answer)),
             boost::bind(
-                &BounceProtocolPolicy::bounce_answer_sent_handler<Handler>,
+                &BounceProtocolPolicy::BounceAnswerSentHandler<Handler>,
                 this, handler, parameters, callback, p_answer, p_socket, _1,
                 _2));
       } else {
@@ -238,21 +239,21 @@ private:
                                  << *p_version;
         boost::system::error_code result_ec(ssf::error::wrong_protocol_type,
                                             ssf::error::get_ssf_category());
-        this->close_link(*p_socket);
-        this->protocol_end(nullptr, result_ec, callback);
+        this->CloseLink(*p_socket);
+        this->ProtocolEnd(nullptr, result_ec, callback);
         return;
       }
     } else {
       BOOST_LOG_TRIVIAL(error) << "network: bounce version NOT received "
                                << ec.message();
-      this->close_link(*p_socket);
-      this->protocol_end(nullptr, ec, callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(nullptr, ec, callback);
       return;
     }
   }
 
   template <typename Handler>
-  void bounce_answer_sent_handler(Handler handler, const Parameters& parameters,
+  void BounceAnswerSentHandler(Handler handler, const Parameters& parameters,
                                   callback_type callback,
                                   std::shared_ptr<uint32_t> p_answer,
                                   p_socket_type p_socket,
@@ -263,7 +264,7 @@ private:
 
       if (*p_answer) {
         BOOST_LOG_TRIVIAL(info) << "network: bounce answer OK";
-        std::list<std::string> bouncing_nodes = this->get_bouncing_nodes(parameters);
+        std::list<std::string> bouncing_nodes = this->GetBouncingNodes(parameters);
 
         std::ostringstream ostrs;
         boost::archive::text_oarchive ar(ostrs);
@@ -278,7 +279,7 @@ private:
             *p_socket,
             boost::asio::buffer(p_bounce_size.get(), sizeof(*p_bounce_size)),
             boost::bind(
-                &BounceProtocolPolicy::sent_bounce_size_handler<Handler>, this,
+                &BounceProtocolPolicy::SentBounceSizeHandler<Handler>, this,
                 handler, result, bouncing_nodes.size(), p_bounce_size, p_socket,
                 callback, _1, _2));
       } else {
@@ -286,21 +287,21 @@ private:
           ssf::error::get_ssf_category());
         BOOST_LOG_TRIVIAL(error) << "network: bounce answer NOT ok "
                                  << result_ec.message();
-        this->close_link(*p_socket);
-        this->protocol_end(nullptr, result_ec, callback);
+        this->CloseLink(*p_socket);
+        this->ProtocolEnd(nullptr, result_ec, callback);
         return;
       }
     } else {
       BOOST_LOG_TRIVIAL(error) << "network: could NOT send Bounce answer "
                                << ec.message();
-      this->close_link(*p_socket);
-      this->protocol_end(nullptr, ec, callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(nullptr, ec, callback);
       return;
     }
   }
 
   template <typename Handler>
-  void sent_bounce_size_handler(Handler handler, std::string result,
+  void SentBounceSizeHandler(Handler handler, std::string result,
                                 size_t bounce_number, p_uint32_t p_bounce_size,
                                 p_socket_type p_socket, callback_type callback,
                                 const boost::system::error_code& ec,
@@ -313,56 +314,56 @@ private:
       boost::asio::async_write(
           *p_socket, p_buf->data(),
           boost::bind(
-              &BounceProtocolPolicy::sent_bouncing_nodes_handler<Handler>, this,
+              &BounceProtocolPolicy::SentBouncingNodesHandler<Handler>, this,
               handler, bounce_number, p_buf, p_socket, callback, _1, _2));
     } else {
-      this->close_link(*p_socket);
-      protocol_end(p_socket, ec, callback);
+      this->CloseLink(*p_socket);
+      ProtocolEnd(p_socket, ec, callback);
     }
   }
 
   template <typename Handler>
-  void sent_bouncing_nodes_handler(Handler handler, size_t bounce_number,
+  void SentBouncingNodesHandler(Handler handler, size_t bounce_number,
                                    p_streambuf p_buf, p_socket_type p_socket,
                                    callback_type callback,
                                    const boost::system::error_code& ec,
                                    size_t length) {
     if (!ec) {
-      this->receive_one_ec(handler, p_socket, callback);
+      this->ReceiveOneEc(handler, p_socket, callback);
     } else {
-      this->close_link(*p_socket);
-      this->protocol_end(p_socket, ec, callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(p_socket, ec, callback);
     }
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   template <typename Handler>
-  void receive_one_ec(Handler handler, p_socket_type p_socket,
+  void ReceiveOneEc(Handler handler, p_socket_type p_socket,
                       callback_type callback) {
     auto p_ec_value = std::make_shared<uint32_t>(0);
     BOOST_LOG_TRIVIAL(trace) << "network: bounce protocol receive one ec async read some";
     boost::asio::async_read(
         *p_socket, boost::asio::buffer(p_ec_value.get(), sizeof(*p_ec_value)),
-        boost::bind(&BounceProtocolPolicy::received_one_ec_handler<Handler>, this,
+        boost::bind(&BounceProtocolPolicy::ReceivedOneEcHandler<Handler>, this,
                     handler, p_ec_value, p_socket, callback, _1, _2));
   }
 
   template <typename Handler>
-  void received_one_ec_handler(Handler handler, p_uint32_t p_ec_value,
+  void ReceivedOneEcHandler(Handler handler, p_uint32_t p_ec_value,
                                p_socket_type p_socket, callback_type callback,
                                const boost::system::error_code& ec,
                                size_t length) {
     if (!ec) {
       handler(p_ec_value, p_socket, callback);
     } else {
-      this->close_link(*p_socket);
+      this->CloseLink(*p_socket);
       *p_ec_value = ec.value();
       handler(p_ec_value, p_socket_type(nullptr), callback);
     }
   }
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  void get_all_ecs(const Parameters& parameters, p_vector_uint32_t p_ec_values,
+  void GetAllEcs(const Parameters& parameters, p_vector_uint32_t p_ec_values,
                    uint32_t already_done, uint32_t total_size,
                    p_uint32_t p_ec_value, p_socket_type p_socket,
                    callback_type callback) {
@@ -378,15 +379,15 @@ private:
             const Parameters& parameters, p_socket_type p_socket,
             const boost::system::error_code& ec) {
           if (!ec) {
-            this->receive_one_ec<
+            this->ReceiveOneEc<
                 std::function<void(p_uint32_t, p_socket_type, callback_type)>>(
-                boost::bind(&BounceProtocolPolicy::get_all_ecs, this,
+                boost::bind(&BounceProtocolPolicy::GetAllEcs, this,
                             parameters, p_ec_values, already_done + 1,
                             total_size, _1, _2, _3),
                 p_socket, callback);
           } else {
             (*p_ec_values)[already_done] = ec.value();
-            this->protocol_end(p_socket, p_ec_values, callback);
+            this->ProtocolEnd(p_socket, p_ec_values, callback);
           }
         };
         
@@ -394,12 +395,12 @@ private:
         params["bouncing_nodes"] = parameters.find("bouncing_nodes")->second;
         params["node_id"] = std::to_string(already_done);
 
-        this->set_credentials(params, handler, p_socket);
+        this->SetCredentials(params, handler, p_socket);
       } else {
-        this->protocol_end(p_socket, p_ec_values, callback);
+        this->ProtocolEnd(p_socket, p_ec_values, callback);
       }
     } else {
-      this->protocol_end(p_socket, p_ec_values, callback);
+      this->ProtocolEnd(p_socket, p_ec_values, callback);
     }
   }
 
@@ -410,33 +411,33 @@ private:
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   template <typename Handler>
-  void send_one_ec(Handler handler, p_uint32_t p_ec_value,
+  void SendOneEc(Handler handler, p_uint32_t p_ec_value,
                    p_socket_type p_socket, callback_type callback) {
     boost::asio::async_write(
         *p_socket, boost::asio::buffer(p_ec_value.get(), sizeof(*p_ec_value)),
-        boost::bind(&BounceProtocolPolicy::sent_one_ec_handler<Handler>, this,
+        boost::bind(&BounceProtocolPolicy::SentOneEcHandler<Handler>, this,
                     p_ec_value, p_socket, handler, callback, _1, _2));
   }
 
   template <typename Handler>
-  void sent_one_ec_handler(p_uint32_t p_ec_value, p_socket_type p_socket,
+  void SentOneEcHandler(p_uint32_t p_ec_value, p_socket_type p_socket,
                            Handler handler, callback_type callback,
                            const boost::system::error_code& ec, size_t length) {
     if (!ec) {
       handler(p_socket, callback);
     } else {
-      this->close_link(*p_socket);
-      this->protocol_end(p_socket, ec, callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(p_socket, ec, callback);
     }
   }
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   //-------------------------------------------------------
-  void new_link_connected_handler(callback_type callback, p_socket_type p_socket) {
+  void NewLinkConnectedHandler(callback_type callback, p_socket_type p_socket) {
     if (!p_socket) {
       boost::system::error_code ec(ssf::error::not_a_socket,
                                    ssf::error::get_ssf_category());
-      this->protocol_end(nullptr, vector_error_code_type(1, ec), callback);
+      this->ProtocolEnd(nullptr, vector_error_code_type(1, ec), callback);
       return;
     }
 
@@ -446,11 +447,11 @@ private:
 
     boost::asio::async_write(
         *p_socket, boost::asio::buffer(p_version.get(), sizeof(*p_version)),
-        boost::bind(&BounceProtocolPolicy::bounce_version_sent_handler, this,
+        boost::bind(&BounceProtocolPolicy::BounceVersionSentHandler, this,
                     callback, p_version, p_socket, _1, _2));
   }
 
-  void bounce_version_sent_handler(callback_type callback,
+  void BounceVersionSentHandler(callback_type callback,
                                    std::shared_ptr<uint32_t> p_version,
                                    p_socket_type p_socket,
                                    const boost::system::error_code& ec,
@@ -462,18 +463,18 @@ private:
 
       boost::asio::async_read(
           *p_socket, boost::asio::buffer(p_answer.get(), sizeof(*p_answer)),
-          boost::bind(&BounceProtocolPolicy::bounce_anwser_received_handler,
+          boost::bind(&BounceProtocolPolicy::BounceAnwserReceivedHandler,
                       this, callback, p_answer, p_socket, _1, _2));
     } else {
       BOOST_LOG_TRIVIAL(error) << "network: could NOT send the Bounce request "
                                << ec.message();
-      this->close_link(*p_socket);
-      this->protocol_end(nullptr, vector_error_code_type(1, ec), callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(nullptr, vector_error_code_type(1, ec), callback);
       return;
     }
   }
 
-  void bounce_anwser_received_handler(callback_type callback,
+  void BounceAnwserReceivedHandler(callback_type callback,
                                       std::shared_ptr<uint32_t> p_answer,
                                       p_socket_type p_socket,
                                       const boost::system::error_code& ec,
@@ -488,27 +489,27 @@ private:
         boost::asio::async_read(
             *p_socket,
             boost::asio::buffer(p_bounce_size.get(), sizeof(*p_bounce_size)),
-            boost::bind(&BounceProtocolPolicy::received_bounce_size_handler,
+            boost::bind(&BounceProtocolPolicy::ReceivedBounceSizeHandler,
                         this, p_bounce_size, p_socket, callback, _1, _2));
       } else {
         boost::system::error_code result_ec(ssf::error::wrong_protocol_type,
           ssf::error::get_ssf_category());
         BOOST_LOG_TRIVIAL(error) << "network: bounce anwser NOT ok " << ec.message();
-        this->close_link(*p_socket);
-        this->protocol_end(nullptr, vector_error_code_type(1, result_ec),
+        this->CloseLink(*p_socket);
+        this->ProtocolEnd(nullptr, vector_error_code_type(1, result_ec),
                            callback);
         return;
       }
     } else {
       BOOST_LOG_TRIVIAL(error) << "network: could NOT receive the Bounce anwser "
                                << ec.message();
-      this->close_link(*p_socket);
-      this->protocol_end(nullptr, vector_error_code_type(1, ec), callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(nullptr, vector_error_code_type(1, ec), callback);
       return;
     }
   }
 
-  void received_bounce_size_handler(p_uint32_t p_bounce_size,
+  void ReceivedBounceSizeHandler(p_uint32_t p_bounce_size,
                                     p_socket_type p_socket,
                                     callback_type callback,
                                     const boost::system::error_code& ec,
@@ -521,15 +522,15 @@ private:
       BOOST_LOG_TRIVIAL(trace) << "network: bounce protocol receive bounce size";
       boost::asio::async_read(
           *p_socket, bufs,
-          boost::bind(&BounceProtocolPolicy::received_bouncing_nodes_handler,
+          boost::bind(&BounceProtocolPolicy::ReceivedBouncingNodesHandler,
                       this, p_buffer, p_socket, callback, _1, _2));
     } else {
-      this->close_link(*p_socket);
-      this->protocol_end(p_socket, vector_error_code_type(1, ec), callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(p_socket, vector_error_code_type(1, ec), callback);
     }
   }
 
-  void received_bouncing_nodes_handler(p_streambuf p_buf,
+  void ReceivedBouncingNodesHandler(p_streambuf p_buf,
                                        p_socket_type p_socket,
                                        callback_type callback,
                                        const boost::system::error_code& ec,
@@ -545,14 +546,14 @@ private:
 
         auto p_ec_value = std::make_shared<uint32_t>(ec.value());
 
-        send_one_ec<std::function<void(p_socket_type, callback_type)>>(
-          boost::bind(&BounceProtocolPolicy::establish_route, this,
+        SendOneEc<std::function<void(p_socket_type, callback_type)>>(
+          boost::bind(&BounceProtocolPolicy::EstablishRoute, this,
           bouncing_nodes, _1, _2),
           p_ec_value, p_socket, callback);
         return;
       } catch (const std::exception&) {
-        this->close_link(*p_socket);
-        this->protocol_end(
+        this->CloseLink(*p_socket);
+        this->ProtocolEnd(
             p_socket,
             vector_error_code_type(
                 1, boost::system::error_code(ssf::error::protocol_error,
@@ -561,31 +562,31 @@ private:
         return;
       }
     } else {
-      this->close_link(*p_socket);
-      this->protocol_end(p_socket, vector_error_code_type(1, ec), callback);
+      this->CloseLink(*p_socket);
+      this->ProtocolEnd(p_socket, vector_error_code_type(1, ec), callback);
       return;
     }
   }
 
-  void establish_route(const std::list<std::string>& bouncing_nodes,
+  void EstablishRoute(const std::list<std::string>& bouncing_nodes,
                        p_socket_type p_socket, callback_type callback) {
     if (!bouncing_nodes.size()) {
-      this->protocol_end(p_socket, 0, callback);
+      this->ProtocolEnd(p_socket, 0, callback);
     } else {
-      this->forward_link(bouncing_nodes, p_socket);
+      this->ForwardLink(bouncing_nodes, p_socket);
     }
   }
 
   //-------------------------------------------------------
 
-  void forward_link(std::list<std::string> bouncing_nodes,
+  void ForwardLink(std::list<std::string> bouncing_nodes,
                     p_socket_type p_socket_in) {
-    std::string remote_endpoint_string = this->pop_endpoint_string(bouncing_nodes);
-    std::string remote_addr = this->get_remote_addr(remote_endpoint_string);
-    std::string remote_port = this->get_remote_port(remote_endpoint_string);
+    std::string remote_endpoint_string = this->PopEndpointString(bouncing_nodes);
+    std::string remote_addr = BounceParser::GetRemoteAddress(remote_endpoint_string);
+    std::string remote_port = BounceParser::GetRemotePort(remote_endpoint_string);
 
     if (remote_addr == "" || remote_port == "") {
-      this->close_link(*p_socket_in);
+      this->CloseLink(*p_socket_in);
       return;
     }
     BOOST_LOG_TRIVIAL(trace) << "network: forward link " << remote_addr << ":" << remote_port;
@@ -603,7 +604,7 @@ private:
     auto callback = [this, p_socket_in](p_socket_type p_socket_out,
                                         vector_error_code_type v_ec) {
       if (v_ec[0]) {
-        this->close_link(*p_socket_in);
+        this->CloseLink(*p_socket_in);
       }
     };
 
@@ -612,9 +613,9 @@ private:
                                               p_socket_type p_socket_in,
                                               callback_type) {
       if (p_socket_in && p_socket_out) {
-        this->establish_session(p_socket_in, p_socket_out);
+        this->EstablishSession(p_socket_in, p_socket_out);
       } else {
-        this->close_link(*p_socket_in);
+        this->CloseLink(*p_socket_in);
       }
     };
 
@@ -622,7 +623,7 @@ private:
                                    handler_to_establish_session](
         p_uint32_t p_ec_value, p_socket_type p_socket_out,
         callback_type callback) {
-      this->send_one_ec<std::function<void(p_socket_type, callback_type)>>(
+      this->SendOneEc<std::function<void(p_socket_type, callback_type)>>(
           boost::bind(handler_to_establish_session, p_socket_out, _1, _2),
           p_ec_value, p_socket_in, callback);
     };
@@ -632,18 +633,18 @@ private:
         Parameters parameters, p_socket_type p_socket_in,
         const boost::system::error_code& ec) {
       if (!ec) {
-        this->do_add_route(handler_to_send_one_ec, parameters, callback);
+        this->DoAddRoute(handler_to_send_one_ec, parameters, callback);
       } else {
         auto p_ec_value = std::make_shared<uint32_t>(ec.value());
         handler_to_send_one_ec(p_ec_value, p_socket_type(nullptr), callback);
-        //this->protocol_end(p_socket_in, ec, callback);
+        //this->ProtocolEnd(p_socket_in, ec, callback);
       }
     };
 
-    this->get_credentials(parameters, handler_to_do_add_route, p_socket_in);
+    this->GetCredentials(parameters, handler_to_do_add_route, p_socket_in);
   }
 
-  void establish_session(p_socket_type p_socket_in, p_socket_type p_socket_out) {
+  void EstablishSession(p_socket_type p_socket_in, p_socket_type p_socket_out) {
     boost::system::error_code ec;
 
     // ! Can't std::move ssl stream ! //
@@ -653,19 +654,19 @@ private:
   }
 
   //-------------------------------------------------------
-  void protocol_end(p_socket_type p_socket, const boost::system::error_code& ec,
+  void ProtocolEnd(p_socket_type p_socket, const boost::system::error_code& ec,
                     callback_type callback) {
-    this->protocol_end(p_socket, vector_error_code_type(1, ec), callback);
+    this->ProtocolEnd(p_socket, vector_error_code_type(1, ec), callback);
   }
 
-  void protocol_end(p_socket_type p_socket, uint32_t ec_value,
+  void ProtocolEnd(p_socket_type p_socket, uint32_t ec_value,
                     callback_type callback) {
     boost::system::error_code ec(ec_value, boost::system::system_category());
 
-    this->protocol_end(p_socket, ec, callback);
+    this->ProtocolEnd(p_socket, ec, callback);
   }
 
-  void protocol_end(p_socket_type p_socket, p_vector_uint32_t p_status,
+  void ProtocolEnd(p_socket_type p_socket, p_vector_uint32_t p_status,
                     callback_type callback) {
     vector_error_code_type v_ec;
     for (size_t i = 0; i < p_status->size(); ++i) {
@@ -673,10 +674,10 @@ private:
           (*p_status)[i], boost::system::system_category()));
     }
 
-    this->protocol_end(p_socket, v_ec, callback);
+    this->ProtocolEnd(p_socket, v_ec, callback);
   }
 
-  void protocol_end(p_socket_type p_socket, vector_error_code_type v_ec,
+  void ProtocolEnd(p_socket_type p_socket, vector_error_code_type v_ec,
                     callback_type callback) {
     io_service_.post(boost::bind(callback, p_socket, v_ec));
   }
@@ -715,30 +716,6 @@ private:
            (bounce == versions::bounce) &&
            (serialization == boost::archive::BOOST_ARCHIVE_VERSION());
   }
-
-  //-------------------------------------------------------
-
-  std::string get_remote_addr(const std::string& remote_endpoint_string) {
-    size_t position = remote_endpoint_string.find(":");
-
-    if (position != std::string::npos) {
-      return remote_endpoint_string.substr(0, position);
-    } else {
-      return "";
-    }
-  }
-
-  std::string get_remote_port(const std::string& remote_endpoint_string) {
-    size_t position = remote_endpoint_string.find(":");
-
-    if (position != std::string::npos) {
-      return remote_endpoint_string.substr(position + 1);
-    } else {
-      return "";
-    }
-  }
-
-  //-------------------------------------------------------
 
 private:
   boost::asio::io_service& io_service_;

@@ -1,10 +1,10 @@
 #ifndef SSF_COMMON_NETWORK_SOCKET_LINK_H_
 #define SSF_COMMON_NETWORK_SOCKET_LINK_H_
 
-#include <boost/tuple/tuple.hpp>  // NOLINT
-
-#include <boost/asio/buffer.hpp>  // NOLINT
-#include <boost/system/error_code.hpp>   // NOLINT
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/coroutine.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <boost/system/error_code.hpp>
 
 namespace ssf {
 //-----------------------------------------------------------------------------

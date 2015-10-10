@@ -27,7 +27,8 @@ enum errors {
   wrong_protocol_type = boost::system::errc::wrong_protocol_type,
   operation_canceled = boost::system::errc::operation_canceled,
   service_not_found = 10000,
-  out_of_range = 10001,
+  service_not_started = 10001,
+  out_of_range = 10002
 };
 
 namespace detail {

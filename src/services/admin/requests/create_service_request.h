@@ -64,8 +64,7 @@ public:
       ServiceFactoryManager<Demux>::GetServiceFactory(p_demux);
 
     auto id = p_service_factory->CreateRunNewService(request.service_id(),
-                                           request.parameters(),
-                                           ec);
+                                                     request.parameters(), ec);
 
     BOOST_LOG_TRIVIAL(debug) << "service status: create "
       << "service unique id " << id
@@ -87,7 +86,7 @@ public:
     CreateServiceRequest<Demux> request;
 
     try {
-    ar >> request;
+      ar >> request;
     } catch (const std::exception&) {
       return std::string();
     }

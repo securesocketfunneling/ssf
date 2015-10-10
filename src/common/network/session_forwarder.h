@@ -9,6 +9,7 @@
 
 #include "common/network/base_session.h"  // NOLINT
 #include "common/network/manager.h"
+#include "common/network/socket_link.h"
 
 namespace ssf {
 
@@ -80,11 +81,11 @@ private:
 
 private:
  /// The constructor is made private to ensure users only use create()
- SessionForwarder(SessionManager* manager, InwardStream inbound,
+ SessionForwarder(SessionManager* p_manager, InwardStream inbound,
                   ForwardStream outbound)
      : inbound_(std::move(inbound)),
        outbound_(std::move(outbound)),
-       manager_(manager) {}
+       p_manager_(p_manager) {}
   
   /// Start forwarding
   void DoForward() {
@@ -101,7 +102,7 @@ private:
   /// Stop forwarding
   void StopHandler(const boost::system::error_code& ec) {
     boost::system::error_code e;
-    manager_->stop(SelfFromThis(), e);
+    p_manager_->stop(SelfFromThis(), e);
   }
 
 private:
@@ -110,7 +111,7 @@ private:
   ForwardStream outbound_;
 
   /// The manager handling multiple SessionForwarder
-  SessionManager* manager_;
+  SessionManager* p_manager_;
 
   // One buffer for each Half Duplex Link
   buffer_type inwardBuffer_;
