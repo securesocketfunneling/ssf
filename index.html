@@ -262,7 +262,7 @@
                         <div class="col-md-12">
                             <h2>Command line options</h2>
                             <div class="col-md-12">
-                                <pre>SSF_[Server|Client][.exe] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]</pre>
+                                <pre>ssf&lt;s|c&gt;[.exe] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]</pre>
                                 <dl class="dl-horizontal">
                                     <dt>host</dt>
                                     <dd>the IP address or the name of the remote server to connect to</dd>
@@ -301,9 +301,9 @@
                           <h2>Command line examples</h2>
                           <div class="col-md-12">
                             <p>For instance, this command line will start SSF as a server on default port 8011:</p>
-                            <pre>./SSF_Server</pre>
+                            <pre>./ssfs</pre>
                             <p>And this command will connect SSF client to the server listening on localhost and port 8011 and start a SOCKS server listening on port 10000 of the client side: </p>
-                            <pre>./SSF_Client -D 10000 127.0.0.1</pre>
+                            <pre>./ssfc -D 10000 127.0.0.1</pre>
                           </div>
                         </div>
                     </div>
@@ -349,7 +349,7 @@ SERVER3:PORT3</pre>
                                    Therefore, to reach <mark>10.0.6.1</mark>, the client has to go through <mark>10.0.1.1</mark>, <mark>10.0.2.1</mark>, ... and <mark>10.0.6.1</mark>.</p>
                                 <ul>
                                   <li>It is expected that an SSF server is running on each of the six addresses on port <mark>5000</mark> using a command line similar to:
-                                  <pre>./SSF_Server -p 5000</pre>
+                                  <pre>./ssfs -p 5000</pre>
                                   </li>
                                   <li>Use the following bounce.txt file:
 <pre>
@@ -360,7 +360,7 @@ SERVER3:PORT3</pre>
 10.0.5.1:5000</pre>
                                   </li>
                                   <li>Connect the SSF client to <mark>10.0.6.1:5000</mark> through all the relay servers using the following command line:
-                                      <pre>./SSF_Client -b bounce.txt -p 5000 10.0.6.1</pre>        
+                                      <pre>./ssfc -b bounce.txt -p 5000 10.0.6.1</pre>        
                                   </li>
                               </ul>
                             </div>
@@ -409,10 +409,10 @@ SERVER3:PORT3</pre>
                               <div class="col-md-12">
                                   <ul>
                                       <li>Launch SSF_SERVER on a port (10000 in this example)
-                                          <pre>./SSF_Server -p 10000</pre>
+                                          <pre>./ssfs -p 10000</pre>
                                       </li>
                                       <li>Connect SSF_CLIENT to SSF_SERVER, initialize a SOCKS server on SSF_SERVER side and open port 9000 on SSF_CLIENT side to communicate to SOCKS server
-                                          <pre>./SSF_Client -D 9000 -p 10000 127.0.0.1</pre>
+                                          <pre>./ssfc -D 9000 -p 10000 127.0.0.1</pre>
                                           Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER side
                                       </li>
                                   </ul>
@@ -422,17 +422,17 @@ SERVER3:PORT3</pre>
                               <div class="col-md-12">
                                   <ul>
                                       <li>Launch SSF_SERVER_1 on a port (10000 in this example)
-                                          <pre>./SSF_Server -p 10000</pre>
+                                          <pre>./ssfs -p 10000</pre>
                                       </li>
                                       <li>Launch SSF_SERVER_2 on a port (10001 in this example)
-                                          <pre>./SSF_Server -p 10001</pre>
+                                          <pre>./ssfs -p 10001</pre>
                                       </li>
                                       <li>Create the bounce file bounce.txt
                                           <pre>127.0.0.1:10000</pre>
                                           The client will connect to SSF_SERVER_2 with a bounce on SSF_SERVER_1
                                       </li>
                                       <li>Connect SSF_CLIENT to SSF_SERVER_2 with one bounce, initialize a SOCKS server on SSF_SERVER_2 and open port 9000 on client side to communicate to SOCKS server
-                                          <pre>./SSF_Client -b bounce.txt -D 9000 -p 10001 127.0.0.1</pre>        
+                                          <pre>./ssfc -b bounce.txt -D 9000 -p 10001 127.0.0.1</pre>        
                                           Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
                                       </li>
                                   </ul>
@@ -450,10 +450,10 @@ SERVER3:PORT3</pre>
                             <div class="col-md-12">
                                 <ul>
                                     <li>Launch  SSF_SERVER on a port (10000 in this example)
-                                        <pre>./SSF_Server -p 10000</pre>
+                                        <pre>./ssfs -p 10000</pre>
                                     </li>
                                     <li>Connect SSF_CLIENT to SSF_SERVER
-                                        <pre>./SSF_Client -L 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
+                                        <pre>./ssfc -L 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
 										Use <strong>-R</strong> instead of <strong>-L</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER side
                                     </li>
                                 </ul>
@@ -463,17 +463,17 @@ SERVER3:PORT3</pre>
                             <div class="col-md-12">
                                 <ul>
                                     <li>Launch SSF_SERVER_1 on a port (10000 in this example)
-                                        <pre>./SSF_Server -p 10000</pre>
+                                        <pre>./ssfs -p 10000</pre>
                                     </li>
                                     <li>Launch SSF_SERVER_2 on a port (10001 in this example)
-                                        <pre>./SSF_Server -p 10001</pre>
+                                        <pre>./ssfs -p 10001</pre>
                                     </li>
                                     <li>Create the bounce file bounce.txt
                                         <pre>127.0.0.1:10000</pre>
                                         The SSF_CLIENT will connect to  SSF_SERVER_2 with a bounce on SSF_SERVER_1
                                     </li>
                                     <li>
-                                        <pre>./SSF_Client -b bounce.txt -L 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
+                                        <pre>./ssfc -b bounce.txt -L 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
 										Use <strong>-R</strong> instead of <strong>-L</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
                                     </li>
                                 </ul>
@@ -490,10 +490,10 @@ SERVER3:PORT3</pre>
                             <div class="col-md-12">
                                 <ul>
                                     <li>Launch  SSF_SERVER on a port (10000 in this example)
-                                        <pre>./SSF_Server -p 10000</pre>
+                                        <pre>./ssfs -p 10000</pre>
                                     </li>
                                     <li>Connect SSF_CLIENT to SSF_SERVER
-                                        <pre>./SSF_Client -U 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
+                                        <pre>./ssfc -U 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
 										Use <strong>-V</strong> instead of <strong>-U</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER side
                                     </li>
                                 </ul>
@@ -503,17 +503,17 @@ SERVER3:PORT3</pre>
                             <div class="col-md-12">
                                 <ul>
                                     <li>Launch SSF_SERVER_1 on a port (10000 in this example)
-                                        <pre>./SSF_Server -p 10000</pre>
+                                        <pre>./ssfs -p 10000</pre>
                                     </li>
                                     <li>Launch SSF_SERVER_2 on a port (10001 in this example)
-                                        <pre>./SSF_Server -p 10001</pre>
+                                        <pre>./ssfs -p 10001</pre>
                                     </li>
                                     <li>Create the bounce file bounce.txt
                                         <pre>127.0.0.1:10000</pre>
                                         The SSF_CLIENT will connect to  SSF_SERVER_2 with a bounce on SSF_SERVER_1
                                     </li>
                                     <li>
-                                        <pre>./SSF_Client -b bounce.txt -U 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
+                                        <pre>./ssfc -b bounce.txt -U 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
 										Use <strong>-V</strong> instead of <strong>-U</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
                                     </li>
                                 </ul>
@@ -549,13 +549,13 @@ SERVER3:PORT3</pre>
                         
                                 <h3>Configuring the server side (e.g. your home machine, up and running, connected to internet, even when you are not at home)</h3>
                                 <div class="col-md-12">
-                                    <pre>./SSF_Server -p port 10000</pre>
+                                    <pre>./ssfs -p port 10000</pre>
                                     <p>Now, your home server is listening on port 10000, and is waiting for an authenticated client. For this example, let's say that the public IP address of your server is "SERVER_IP"</p>
                                 </div>
 
                                 <h3>Configuring the client side (e.g. your laptop): the simple way</h3>
                                 <div class="col-md-12">
-                                    <pre>./SSF_Client -D 9000 -p 10000 SERVER_IP</pre>
+                                    <pre>./ssfc -D 9000 -p 10000 SERVER_IP</pre>
                                     <p>Simply run this command, and configure your browser (firefox, IE, Chrome, Safari...), to use a socks server on address 127.0.0.1 port 9000</p>
                                     <div class="bs-callout bs-callout-info"> 
                                         <p>This command uses <strong>-D</strong> (server side socks resolution) option.</p>
@@ -564,7 +564,7 @@ SERVER3:PORT3</pre>
 
                                 <h3>Advanced : Secure DNS resolution</h3>
                                 <div class="col-md-12">
-                                    <pre>./SSF_Client -D 9000 -U 53:208.67.222.222:53 -p 10000 SERVER_IP</pre>
+                                    <pre>./ssfc -D 9000 -U 53:208.67.222.222:53 -p 10000 SERVER_IP</pre>
                                     <p>Someone in the wifi network could fake DNS resolution, and redirect you to malicious websites.</p>
                                     <p>Change your DNS interface settings to 127.0.0.1, and, thanks to this command, every DNS request will go througt the secure SSF funnel, and public OpenDNS DNS server (208.67.222.222) will resolve them.<br/>
                                        No DNS request will leak on the network (wifi) you're connected to, and from DNS server view (OpenDNS provider for this example), it's your Server (SERVER_IP) that is making the DNS request.</p>
@@ -771,13 +771,13 @@ cmake --build `pwd` -- -j</pre>
                         <h1>Download</h1>
                         <div class="col-md-4">
                             <div class="list-group">
-                                <a class="list-group-item" href="download/ssf-win-i386.zip"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 32bits</a>
-                                <a class="list-group-item" href="download/ssf-win-x86_64.zip"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 64bits</a>
+                                <a class="list-group-item" href="download/1.0.0/ssf-win-i386-1.0.0.zip"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 32bits (1.0.0)</a>
+                                <a class="list-group-item" href="download/1.0.0/ssf-win-x86_64-1.0.0.zip"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 64bits (1.0.0)</a>
                                 <a class="list-group-item disabled" href="#"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits</a>
-                                <!--<a class="list-group-item" href="download/ssf-linux-i386.zip"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits</a>-->
-                                <a class="list-group-item" href="download/ssf-linux-x86_64.zip"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 64bits</a>
+                                <!--<a class="list-group-item" href="download/1.0.0/ssf-linux-i386-1.0.0.zip"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits</a>-->
+                                <a class="list-group-item" href="download/1.0.0/ssf-linux-x86_64-1.0.0.zip"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 64bits (1.0.0)</a>
                                 <a class="list-group-item disabled" href="#"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits</a>
-                                <!--<a class="list-group-item" href="download/ssf-macosx-x86_64.zip"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits</a>-->
+                                <!--<a class="list-group-item" href="download/1.0.0/ssf-macosx-x86_64-1.0.0.zip"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits</a>-->
                                 <a class="list-group-item" href="https://github.com/securesocketfunneling/ssf"><i class="fa fa-cloud-download fa-2x fa-fw"></i> Sources</a>
                             </div>
                         </div>
