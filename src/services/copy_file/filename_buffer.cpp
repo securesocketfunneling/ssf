@@ -7,7 +7,7 @@ namespace copy_file {
 FilenameBuffer::FilenameBuffer() : filename_size_(0), filename_() {}
 
 FilenameBuffer::FilenameBuffer(const std::string& filename)
-    : filename_size_(filename.length()),
+    : filename_size_(static_cast<uint32_t>(filename.length())),
       filename_(filename.cbegin(), filename.cend()) {}
 
 std::string FilenameBuffer::GetFilename() const {
