@@ -260,9 +260,9 @@
                         <h1>How to use the command line</h1>
                 
                         <div class="col-md-12">
-                            <h2>Command line options</h2>
+                            <h2>Standard command line options</h2>
                             <div class="col-md-12">
-                                <pre>ssf&lt;s|c&gt;[.exe] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]</pre>
+                                <pre>ssf&lt;c|s&gt;[.exe] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]</pre>
                                 <dl class="dl-horizontal">
                                     <dt>host</dt>
                                     <dd>the IP address or the name of the remote server to connect to</dd>
@@ -295,16 +295,56 @@
                                     <dd><code>config_file</code> is the file containing configuration for SSF (TLS configuration)</dd>
                                 </dl>
                             </div>
+                            
+                            <h3>Examples</h3>
+                            <div class="col-md-12">
+                                <p>For instance, this command line will start SSF as a server on default port 8011:</p>
+                                <pre>./ssfs</pre>
+                                <p>And this command will connect SSF client to the server listening on localhost and port 8011 and start a SOCKS server listening on port 10000 of the client side: </p>
+                                <pre>./ssfc -D 10000 127.0.0.1</pre>
+                            </div>
                         </div>
-						
+                        
                         <div class="col-md-12">
-                          <h2>Command line examples</h2>
-                          <div class="col-md-12">
-                            <p>For instance, this command line will start SSF as a server on default port 8011:</p>
-                            <pre>./ssfs</pre>
-                            <p>And this command will connect SSF client to the server listening on localhost and port 8011 and start a SOCKS server listening on port 10000 of the client side: </p>
-                            <pre>./ssfc -D 10000 127.0.0.1</pre>
-                          </div>
+                            <h2>Copy command line options</h2>
+                            <div class="col-md-12">
+                                <pre>ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] [-t] [host@]path [[host@]path]</pre>
+                                <dl class="dl-horizontal">
+                                    <dt>-b</dt>
+                                    <dd><code>bounce_file</code> is the file containing the list of relays to use</dd>
+                                    
+                                    <dt>-c</dt>
+                                    <dd><code>config_file</code> is the file containing configuration for SSF (TLS configuration)</dd>
+                                    
+                                    <dt>-t</dt>
+                                    <dd>input data from stdin</dd>
+                                </dl>
+                            </div>
+                            
+                            <h3>Examples</h3>
+                            <div class="col-md-12">
+                                <h4>Copy local files to remote directory</h4>
+                                <div class="col-md-12">            
+                                    <p>This command will copy the file <strong>/tmp/test.txt</strong> in the remote directory <strong>D:\test</strong> of server 10.0.0.1</p>
+                                    <pre>ssfcp /tmp/test.txt 10.0.0.1@D:\\test</pre>
+                                    <p>This command will copy all local files matching the pattern <strong>/tmp/test*.txt</strong> in the remote directory <strong>D:\test</strong> of 10.0.0.1</p>
+                                    <pre>ssfcp /tmp/test*.txt 10.0.0.1@D:\\test</pre>
+                                </div>
+                                
+                                <h4>Copy client stdin into remote file</h4>
+                                <div class="col-md-12">            
+                                    <p>This command will pipe the resulting archive into the file <strong>D:\test\test.tar</strong> of 10.0.0.1</p>
+                                    <pre>tar cf - /tmp/test | ssfcp -t 10.0.0.1@D:\\test\\test.tar</pre>
+                                </div>
+                                
+                                <h4>Copy remote files to local directory</h4>
+                                <div class="col-md-12">
+                                    <p>This command will copy the file <strong>D:\test\test.txt</strong> of 10.0.0.1 into the local directory <strong>/tmp</strong></p>
+                                    <pre>ssfcp 10.0.0.1@D:\\test\\test.txt /tmp</pre>
+                                    <p>This command will copy all files of 10.0.0.1 matching <strong>D:\test\test*.txt</strong> into the local directory <strong>/tmp</strong></p>
+                                    <pre>ssfcp 10.0.0.1@D:\\test\\test*.txt /tmp</pre>
+                                </div>
+                            </div>                            
                         </div>
                     </div>
                     <!-- End how to use general -->
