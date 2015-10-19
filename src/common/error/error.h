@@ -1,9 +1,10 @@
 #ifndef SSF_COMMON_ERROR_ERROR_H_
 #define SSF_COMMON_ERROR_ERROR_H_
 
-#include <boost/system/error_code.hpp>
-#include <boost/asio/error.hpp>
 #include <string>
+
+#include <boost/asio/error.hpp>
+#include <boost/system/error_code.hpp>
 
 namespace ssf {
 namespace error {
@@ -26,13 +27,12 @@ enum errors {
   wrong_protocol_type = boost::system::errc::wrong_protocol_type,
   operation_canceled = boost::system::errc::operation_canceled,
   service_not_found = 10000,
-  out_of_range = 10001,
+  service_not_started = 10001,
+  out_of_range = 10002
 };
 
 namespace detail {
-class ssf_category : public boost::system::error_category
-{
-
+class ssf_category : public boost::system::error_category {
  public:
   const char* name() const BOOST_SYSTEM_NOEXCEPT;
 
@@ -40,8 +40,7 @@ class ssf_category : public boost::system::error_category
 };
 }  // detail
 
-inline const boost::system::error_category& get_ssf_category()
-{
+inline const boost::system::error_category& get_ssf_category() {
   static detail::ssf_category instance;
   return instance;
 }

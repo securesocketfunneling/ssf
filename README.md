@@ -53,7 +53,7 @@ Copy [the diff from OpenSSL Github](https://github.com/openssl/openssl/commit/77
  ```bash
  mkdir PROJECT_PATH/build
  cd PROJECT_PATH/build
- cmake -G "GENERATOR" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+ cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
  ```
 
  * Build project
@@ -94,7 +94,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 ```bash
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
 ```
 
 * Build project
@@ -134,7 +134,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 ```bash
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
 ```
 
 * Build project
@@ -227,10 +227,10 @@ The chain will be CLIENT -> SERVER1:PORT1 -> SERVER2:PORT2 -> SERVER3:PORT3 -> T
 
 ## How to use
 
-### Command line
+### Standard command line
 
 ```plaintext
-SSF_<Server|Client>[.exe] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]
+ssf<c|s>[.exe] [-h] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]
 ```
 
 * host : the IP address or the name of the remote server to connect to.
@@ -244,16 +244,52 @@ SSF_<Server|Client>[.exe] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] 
 * -b : *bounce_file* is the file containing the list of relays to use.
 * -c : *config_file* is the config file containing configuration for SSF (TLS configuration).
 
-#### File example
+### Copy command line
 
-##### Bounce file (relay servers)
+```plaintext
+ssfcp[.exe] [-h] [-b bounce_file] [-c config_file] [-p port] [-t] [host@]path [[host@]path]
+```
+
+* -b : *bounce_file* is the file containing the list of relays to use.
+* -c : *config_file* is the config file containing configuration for SSF (TLS configuration).
+* -t : input from stdin
+
+#### Copy from local to remote destination :
+
+```plaintext
+ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] path/to/file host@absolute/path/directory_destination
+```
+
+```plaintext
+ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] path/to/file* host@absolute/path/directory_destination
+```
+
+#### From stdin to remote destination
+
+```plaintext
+data_in_stdin | ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] -t host@path/to/destination/file_destination
+```
+
+#### Copy remote files to local destination :
+
+```plaintext
+ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file absolute/path/directory_destination
+```
+
+```plaintext
+ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/directory_destination
+```
+
+### File example
+
+#### Bounce file (relay servers)
 
 ```plaintext
 127.0.0.1:8002
 127.0.0.1:8003
 ```
 
-##### Config file
+#### Config file
 
 ```plaintext
 {

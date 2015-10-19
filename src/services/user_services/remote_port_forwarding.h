@@ -109,8 +109,8 @@ private:
       std::vector<admin::CreateServiceRequest<Demux>> result;
 
       services::admin::CreateServiceRequest<Demux> r_forward(
-        services::sockets_to_fibers::LocalForwarderService<
-        Demux>::GetCreateRequest(remote_port_, relay_fiber_port_));
+          services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+              remote_port_, relay_fiber_port_));
 
       result.push_back(r_forward);
 
@@ -132,7 +132,7 @@ private:
 
   virtual bool StartLocalServices(Demux& demux) {
     services::admin::CreateServiceRequest<Demux> l_forward(
-      services::fibers_to_sockets::RemoteForwarderService<
+      services::fibers_to_sockets::FibersToSockets<
       Demux>::GetCreateRequest(relay_fiber_port_, local_addr_,
       local_port_));
 
@@ -146,8 +146,8 @@ private:
 
   virtual uint32_t CheckRemoteServiceStatus(Demux& demux) {
     services::admin::CreateServiceRequest<Demux> r_forward(
-      services::sockets_to_fibers::LocalForwarderService<
-      Demux>::GetCreateRequest(remote_port_, relay_fiber_port_));
+        services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+            remote_port_, relay_fiber_port_));
     auto p_service_factory =
       ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     auto status = p_service_factory->GetStatus(r_forward.service_id(),
@@ -169,8 +169,8 @@ private:
       return remoteServiceId_;
     } else {
       services::admin::CreateServiceRequest<Demux> r_forward(
-        services::sockets_to_fibers::LocalForwarderService<
-        Demux>::GetCreateRequest(remote_port_, relay_fiber_port_));
+          services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+              remote_port_, relay_fiber_port_));
 
       auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);

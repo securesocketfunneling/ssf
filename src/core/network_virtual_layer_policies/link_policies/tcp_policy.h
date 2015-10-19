@@ -46,34 +46,43 @@ class TCPPolicy {
             const ssf::Config& ssf_config)
       : io_service_(io_service) { }
 
-  void establish_link(const Parameters& parameters,
-                      connect_callback_type connect_callback) {
-
-    auto addr = get_remote_addr(parameters);
-    auto port = get_remote_port(parameters);
+  void EstablishLink(const Parameters& parameters,
+                     connect_callback_type connect_callback) {
+    auto addr = GetRemoteAddr(parameters);
+    auto port = GetRemotePort(parameters);
 
     BOOST_LOG_TRIVIAL(info) << "link: connecting " << addr << " " << port;
     if (addr != "" && port != "") {
       boost::asio::ip::tcp::resolver resolver(io_service_);
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(),
         addr, port);
-      boost::asio::ip::tcp::resolver::iterator iterator(resolver.resolve(query));
+      boost::system::error_code resolve_ec;
+      auto iterator = resolver.resolve(query, resolve_ec);
+
+      if (resolve_ec) {
+        BOOST_LOG_TRIVIAL(error) << "link: could not resolve " << addr << ":"
+                                 << port;
+        boost::system::error_code ec(ssf::error::invalid_argument,
+                                     ssf::error::get_ssf_category());
+        ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
+        return;
+      }
 
       auto p_socket = std::make_shared<socket_type>(io_service_);
 
       boost::asio::async_connect(
         *p_socket, iterator,
-        boost::bind(&TCPPolicy::connected_handler, this, p_socket,
+        boost::bind(&TCPPolicy::ConnectedHandler, this, p_socket,
                     connect_callback, _1));
     } else {
       boost::system::error_code ec(ssf::error::invalid_argument,
                                    ssf::error::get_ssf_category());
-      to_next_layer_handler(p_socket_type(nullptr), connect_callback, ec);
+      ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
     }
   }
 
   /// Accept a new connection
-  void accept_links(p_acceptor_type p_acceptor,
+  void AcceptLinks(p_acceptor_type p_acceptor,
                     accept_callback_type accept_callback) {
 
     if (!p_acceptor->is_open()) {
@@ -84,11 +93,11 @@ class TCPPolicy {
 
     BOOST_LOG_TRIVIAL(trace) << "link: accepting";
     p_acceptor->async_accept(
-        *p_socket, boost::bind(&TCPPolicy::accepted_handler, this, p_acceptor,
+        *p_socket, boost::bind(&TCPPolicy::AcceptedHandler, this, p_acceptor,
                                p_socket, accept_callback, _1));
   }
 
-  void close_link(socket_type& socket) {
+  void CloseLink(socket_type& socket) {
     boost::system::error_code ec;
     socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     socket.close(ec);
@@ -96,73 +105,73 @@ class TCPPolicy {
 
  private:
   /// Write link version
-  void connected_handler(p_socket_type p_socket,
+  void ConnectedHandler(p_socket_type p_socket,
                           connect_callback_type connect_callback,
                           const boost::system::error_code& ec) {
     if (!ec) {
       auto p_version = std::make_shared<uint32_t>(GetVersion());
       /*boost::asio::async_write(*p_socket,
                                boost::asio::buffer(p_version.get(), sizeof(*p_version)),
-                               boost::bind(&TCPPolicy::write_version_handler, this,
+                               boost::bind(&TCPPolicy::WriteVersionHandler, this,
                                            p_socket, p_version, connect_callback, _1, _2));*/
-      write_version_handler(p_socket, p_version, connect_callback, ec, 0);
+      WriteVersionHandler(p_socket, p_version, connect_callback, ec, 0);
     } else {
       BOOST_LOG_TRIVIAL(error) << "link: connection failed " << ec.message();
-      close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, connect_callback, ec);
+      CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, connect_callback, ec);
     }
   }
 
-  void write_version_handler(p_socket_type p_socket,
+  void WriteVersionHandler(p_socket_type p_socket,
                              std::shared_ptr<uint32_t> p_version,
                              connect_callback_type connect_callback,
                              const boost::system::error_code& ec,
                              size_t bytes_transferred) {
     if (!ec) {
       BOOST_LOG_TRIVIAL(info) << "link: connected";
-      this->to_next_layer_handler(p_socket, connect_callback, ec);
+      this->ToNextLayerHandler(p_socket, connect_callback, ec);
     } else {
       BOOST_LOG_TRIVIAL(error) << "link: connection failed " << ec.message();
-      close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, connect_callback, ec);
+      CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, connect_callback, ec);
     }
   }
 
-  void to_next_layer_handler(p_socket_type p_socket,
-                             connect_callback_type connect_callback,
-                             const boost::system::error_code& ec) {
+  void ToNextLayerHandler(p_socket_type p_socket,
+                          connect_callback_type connect_callback,
+                          const boost::system::error_code& ec) {
     io_service_.post(boost::bind(connect_callback, p_socket, ec));
   }
 
   /// Read link version
-  void accepted_handler(p_acceptor_type p_acceptor, p_socket_type p_socket,
+  void AcceptedHandler(p_acceptor_type p_acceptor, p_socket_type p_socket,
                         accept_callback_type accept_callback,
                         const boost::system::error_code& ec) {
     if (!ec) {
       /*std::shared_ptr<uint32_t> p_version = std::make_shared<uint32_t>();
       boost::asio::async_read(*p_socket,
                               boost::asio::buffer(p_version.get(), sizeof(*p_version)),
-                              boost::bind(&TCPPolicy::read_version_handler, this,
+                              boost::bind(&TCPPolicy::ReadVersionHandler, this,
                                           p_socket, p_version, accept_callback, _1, _2));*/
       std::shared_ptr<uint32_t> p_version =
           std::make_shared<uint32_t>(GetVersion());
-      read_version_handler(p_socket, p_version, accept_callback, ec, 0);
-      this->accept_links(p_acceptor, accept_callback);
+      ReadVersionHandler(p_socket, p_version, accept_callback, ec, 0);
+      this->AcceptLinks(p_acceptor, accept_callback);
     } else {
       BOOST_LOG_TRIVIAL(error) << "link: NOT Authenticated " << ec.message();
-      this->close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, accept_callback);
+      this->CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, accept_callback);
     }
   }
 
-  void read_version_handler(p_socket_type p_socket,
+  void ReadVersionHandler(p_socket_type p_socket,
                             std::shared_ptr<uint32_t> p_version,
                             accept_callback_type accept_callback,
                             const boost::system::error_code& ec,
                             size_t bytes_transferred) {
     auto version_supported = IsVersionSupported(*p_version);
     if (!ec && version_supported) {
-      this->to_next_layer_handler(p_socket, accept_callback);
+      this->ToNextLayerHandler(p_socket, accept_callback);
       BOOST_LOG_TRIVIAL(trace) << "link: authenticated";
     } else {
       if (!version_supported) {
@@ -174,17 +183,17 @@ class TCPPolicy {
                                  << "ec : " << ec.message();
       }
       BOOST_LOG_TRIVIAL(error) << "link: NOT Authenticated ";
-      close_link(*p_socket);
-      this->to_next_layer_handler(nullptr, accept_callback);
+      CloseLink(*p_socket);
+      this->ToNextLayerHandler(nullptr, accept_callback);
     }
   }
 
-  void to_next_layer_handler(p_socket_type p_socket,
+  void ToNextLayerHandler(p_socket_type p_socket,
                              accept_callback_type accept_callback) {
     io_service_.post(boost::bind(accept_callback, p_socket));
   }
 
-  std::string get_remote_addr(const Parameters& parameters) {
+  std::string GetRemoteAddr(const Parameters& parameters) {
     if (parameters.count("remote_addr")) {
       return parameters.find("remote_addr")->second;
     } else {
@@ -192,7 +201,7 @@ class TCPPolicy {
     }
   }
 
-  std::string get_remote_port(const Parameters& parameters) {
+  std::string GetRemotePort(const Parameters& parameters) {
     if (parameters.count("remote_port")) {
       return parameters.find("remote_port")->second;
     } else {

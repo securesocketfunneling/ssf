@@ -21,11 +21,11 @@
 namespace ssf { namespace services { namespace fibers_to_sockets {
 
 template <typename Demux>
-class RemoteForwarderService : public BaseService<Demux> {
+class FibersToSockets : public BaseService<Demux> {
  private:
   typedef typename Demux::local_port_type local_port_type;
 
-  typedef std::shared_ptr<RemoteForwarderService> RemoteForwarderServicePtr;
+  typedef std::shared_ptr<FibersToSockets> FibersToSocketsPtr;
   typedef ItemManager<BaseSessionPtr> SessionManager;
   typedef typename ssf::BaseService<Demux>::Parameters Parameters;
   typedef typename ssf::BaseService<Demux>::demux demux;
@@ -36,21 +36,17 @@ class RemoteForwarderService : public BaseService<Demux> {
   typedef boost::asio::ip::tcp::socket socket;
 
  public:
-  static RemoteForwarderServicePtr create(boost::asio::io_service& io_service,
-                                          demux& fiber_demux,
-                                          Parameters parameters) {
+  static FibersToSocketsPtr create(boost::asio::io_service& io_service,
+                                   demux& fiber_demux, Parameters parameters) {
     if (!parameters.count("local_port") ||
         !parameters.count("remote_ip") ||
         !parameters.count("remote_port")) {
-      return RemoteForwarderServicePtr(nullptr);
+      return FibersToSocketsPtr(nullptr);
     } else {
-      return std::shared_ptr<RemoteForwarderService>(
-        new RemoteForwarderService(
-                      io_service,
-                      fiber_demux,
-                      std::stoul(parameters["local_port"]),
-                      parameters["remote_ip"],
-                      (uint16_t)std::stoul(parameters["remote_port"])));
+      return std::shared_ptr<FibersToSockets>(new FibersToSockets(
+          io_service, fiber_demux, std::stoul(parameters["local_port"]),
+          parameters["remote_ip"],
+          (uint16_t)std::stoul(parameters["remote_port"])));
     }
   }
 
@@ -61,7 +57,7 @@ class RemoteForwarderService : public BaseService<Demux> {
   static void RegisterToServiceFactory(
     std::shared_ptr<ServiceFactory<demux>> p_factory) {
     p_factory->RegisterServiceCreator(factory_id, 
-                                      &RemoteForwarderService::create);
+                                      &FibersToSockets::create);
   }
 
   virtual void start(boost::system::error_code& ec);
@@ -79,11 +75,9 @@ class RemoteForwarderService : public BaseService<Demux> {
   }
 
  private:
-  RemoteForwarderService(boost::asio::io_service& io_service, 
-                         demux& fiber_demux, 
-                         local_port_type local,
-                         const std::string& ip, 
-                         uint16_t remote_port);
+  FibersToSockets(boost::asio::io_service& io_service, demux& fiber_demux,
+                  local_port_type local, const std::string& ip,
+                  uint16_t remote_port);
 
  private:
   //No check on prioror presence implemented
@@ -94,12 +88,13 @@ class RemoteForwarderService : public BaseService<Demux> {
   void SocketConnectHandler(const boost::system::error_code& ec);
 
   template <typename Handler, typename This>
-  auto Then(Handler handler, This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
+  auto Then(Handler handler,
+            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
     return boost::bind(handler, me->SelfFromThis(), _1);
   }
 
-  std::shared_ptr<RemoteForwarderService> SelfFromThis() {
-    return std::static_pointer_cast<RemoteForwarderService>(this->shared_from_this());
+  std::shared_ptr<FibersToSockets> SelfFromThis() {
+    return std::static_pointer_cast<FibersToSockets>(this->shared_from_this());
   }
 
   uint16_t remote_port_;

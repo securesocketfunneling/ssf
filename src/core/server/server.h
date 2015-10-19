@@ -19,23 +19,24 @@
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
+#include "services/copy_file/file_to_fiber/file_to_fiber.h"
+#include "services/copy_file/fiber_to_file/fiber_to_file.h"
 
 #include "core/service_manager/service_manager.h"
 #include "services/base_service.h"
 
 #include "core/factories/service_factory.h"
 
-
 namespace ssf {
 template <typename PhysicalVirtualLayer,
           template <class> class LinkAuthenticationPolicy,
           template <class, template <class> class>
-            class NetworkVirtualLayerPolicy,
+          class NetworkVirtualLayerPolicy,
           template <class> class TransportVirtualLayerPolicy>
 class SSFServer : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
                                                    LinkAuthenticationPolicy>,
-                 public TransportVirtualLayerPolicy<
-                   typename PhysicalVirtualLayer::socket_type> {
+                  public TransportVirtualLayerPolicy<
+                      typename PhysicalVirtualLayer::socket_type> {
  private:
   typedef typename PhysicalVirtualLayer::socket_type socket_type;
   typedef typename PhysicalVirtualLayer::p_socket_type p_socket_type;
@@ -54,29 +55,22 @@ class SSFServer : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
   typedef std::map<p_demux, p_socket_type> socket_map;
   typedef std::map<p_demux, p_ServiceManager> service_manager_map;
 
-public:
-  SSFServer(boost::asio::io_service& io_service,
-            const ssf::Config& ssf_config,
+ public:
+  SSFServer(boost::asio::io_service& io_service, const ssf::Config& ssf_config,
             uint16_t local_port);
 
   void run();
   void stop();
 
-  void add_demux(p_demux p_fiber_demux,
-                 p_ServiceManager p_service_manager);
+ private:
+  void AddDemux(p_demux p_fiber_demux, p_ServiceManager p_service_manager);
+  void RemoveDemux(p_demux p_fiber_demux);
+  void RemoveAllDemuxes();
+  void DoSSFStart(p_socket_type p_socket, const boost::system::error_code& ec);
+  void DoFiberize(p_socket_type p_socket, boost::system::error_code& ec);
+  void NetworkToTransport(p_socket_type p_socket, vector_error_code_type v_ec);
 
-  void remove_demux(p_demux p_fiber_demux);
-  void remove_all_demuxes();
-
-  void do_ssf_start(p_socket_type p_socket, const boost::system::error_code& ec);
-
-private:
- void do_fiberize_(p_socket_type p_socket, boost::system::error_code& ec);
-
-private:
- void network_to_transport(p_socket_type p_socket, vector_error_code_type v_ec);
-
-private:
+ private:
   boost::asio::io_service& io_service_;
 
   uint16_t local_port_;
@@ -85,9 +79,8 @@ private:
   service_manager_map p_service_managers_;
 
   boost::recursive_mutex storage_mutex_;
-
-
 };
+
 }  // ssf
 
 #include "core/server/server.ipp"

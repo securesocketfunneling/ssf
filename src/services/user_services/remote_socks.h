@@ -23,7 +23,7 @@ template <typename Demux>
 class RemoteSocks : public BaseUserService<Demux> {
  private:
   RemoteSocks(uint16_t remote_port)
-    : remote_port_(remote_port), remoteServiceId_(0), localServiceId_(0) {}
+    : remote_port_(remote_port), remote_service_id_(0), local_service_id_(0) {}
 
  public:
   static std::string GetFullParseName() {
@@ -65,12 +65,12 @@ class RemoteSocks : public BaseUserService<Demux> {
   }
 
   virtual std::vector<admin::CreateServiceRequest<Demux>>
-     GetRemoteServiceCreateVector() {
+      GetRemoteServiceCreateVector() {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
     services::admin::CreateServiceRequest<Demux> r_forward(
-       services::sockets_to_fibers::LocalForwarderService<
-           Demux>::GetCreateRequest(remote_port_, remote_port_));
+        services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+            remote_port_, remote_port_));
 
     result.push_back(r_forward);
 
@@ -97,15 +97,15 @@ class RemoteSocks : public BaseUserService<Demux> {
     auto p_service_factory =
        ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     boost::system::error_code ec;
-    localServiceId_ = p_service_factory->CreateRunNewService(
+    local_service_id_ = p_service_factory->CreateRunNewService(
       l_socks.service_id(), l_socks.parameters(), ec);
     return !ec;
   }
 
   virtual uint32_t CheckRemoteServiceStatus(Demux& demux) {
     services::admin::CreateServiceRequest<Demux> r_forward(
-      services::sockets_to_fibers::LocalForwarderService<
-           Demux>::GetCreateRequest(remote_port_, remote_port_));
+        services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+            remote_port_, remote_port_));
     auto p_service_factory =
       ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     auto status = p_service_factory->GetStatus(r_forward.service_id(),
@@ -118,30 +118,30 @@ class RemoteSocks : public BaseUserService<Demux> {
   virtual void StopLocalServices(Demux& demux) {
     auto p_service_factory =
       ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
-    p_service_factory->StopService(localServiceId_);
+    p_service_factory->StopService(local_service_id_);
   }
 
  private:
   uint32_t GetRemoteServiceId(Demux& demux) {
-    if (remoteServiceId_) {
-      return remoteServiceId_;
+    if (remote_service_id_) {
+      return remote_service_id_;
     } else {
       services::admin::CreateServiceRequest<Demux> r_forward(
-          services::sockets_to_fibers::LocalForwarderService<
-              Demux>::GetCreateRequest(remote_port_, remote_port_));
+          services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+              remote_port_, remote_port_));
 
       auto p_service_factory =
           ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
       auto id = p_service_factory->GetIdFromParameters(r_forward.service_id(),
                                                       r_forward.parameters());
-      remoteServiceId_ = id;
+      remote_service_id_ = id;
       return id;
     }
   }
 
   uint16_t remote_port_;
-  uint32_t remoteServiceId_;
-  uint32_t localServiceId_;
+  uint32_t remote_service_id_;
+  uint32_t local_service_id_;
 };
 
 }  // services

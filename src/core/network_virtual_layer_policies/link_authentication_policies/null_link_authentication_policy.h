@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include <list>
 #include <memory>
 #include <map>
 #include <string>
@@ -28,33 +29,32 @@ class NullLinkAuthenticationPolicy {
       callback_type;
 
 public:
- void get_credentials(Parameters& parameters, callback_type callback,
-                      p_socket_type p_socket) {
+ void GetCredentials(Parameters& parameters, callback_type callback,
+                     p_socket_type p_socket) {
     auto p_value = std::make_shared<uint32_t>(0);
     if (parameters["local"] == "true") {
       callback(parameters, p_socket, boost::system::error_code());
     } else {
       boost::asio::async_write(
-        *p_socket,
-        boost::asio::buffer(p_value.get(), sizeof(*p_value)),
-        boost::bind(&NullLinkAuthenticationPolicy::
-                      remote_connection_established_handler,
-                    this, parameters, callback, p_value, p_socket, _1, _2));
+          *p_socket, boost::asio::buffer(p_value.get(), sizeof(*p_value)),
+          boost::bind(
+              &NullLinkAuthenticationPolicy::RemoteConnectionEstablishedHandler,
+              this, parameters, callback, p_value, p_socket, _1, _2));
     }
   }
 
-  void set_credentials(const Parameters& parameters, callback_type callback,
+  void SetCredentials(const Parameters& parameters, callback_type callback,
                        p_socket_type p_socket) {
     auto p_value = std::make_shared<uint32_t>(0);
 
     boost::asio::async_read(
         *p_socket, boost::asio::buffer(p_value.get(), sizeof(*p_value)),
         boost::bind(
-            &NullLinkAuthenticationPolicy::next_connection_established_handler,
+            &NullLinkAuthenticationPolicy::NextConnectionEstablishedHandler,
             this, parameters, callback, p_value, p_socket, _1, _2));
   }
 
-  std::list<std::string> get_bouncing_nodes(const Parameters& parameters) {
+  std::list<std::string> GetBouncingNodes(const Parameters& parameters) {
     if (parameters.count("bouncing_nodes")) {
       auto serialized_list = parameters.find("bouncing_nodes")->second;
 
@@ -73,7 +73,7 @@ public:
     }
   }
 
-  std::string pop_endpoint_string(std::list<std::string>& bouncing_nodes) {
+  std::string PopEndpointString(std::list<std::string>& bouncing_nodes) {
     if (bouncing_nodes.size()) {
       auto first = bouncing_nodes.front();
       bouncing_nodes.pop_front();
@@ -84,7 +84,7 @@ public:
   }
 
 private:
- void remote_connection_established_handler(const Parameters& parameters,
+ void RemoteConnectionEstablishedHandler(const Parameters& parameters,
                                             callback_type callback,
                                             p_uint32_t p_value,
                                             p_socket_type p_socket,
@@ -93,7 +93,7 @@ private:
     callback(parameters, p_socket, ec);
   }
 
-  void next_connection_established_handler(const Parameters& parameters,
+  void NextConnectionEstablishedHandler(const Parameters& parameters,
                                            callback_type callback,
                                            p_uint32_t p_value,
                                            p_socket_type p_socket,

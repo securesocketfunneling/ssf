@@ -33,123 +33,127 @@ set(project_THIRDPARTY_DIR "${project_ROOT_DIR}/third_party")
 # --- Project files declaration
 set(VERSIONS_FILES
       "${project_BINARY_DIR}/versions.h")
-	  
-set(CORE_INIT_PACKETS
-      "${project_SRC_DIR}/core/transport_virtual_layer_policies/transport_protocol_policy.h"
-      "${project_SRC_DIR}/core/transport_virtual_layer_policies/init_packets/ssf_reply.h"
-      "${project_SRC_DIR}/core/transport_virtual_layer_policies/init_packets/ssf_reply.cpp"
-      "${project_SRC_DIR}/core/transport_virtual_layer_policies/init_packets/ssf_request.h"
-      "${project_SRC_DIR}/core/transport_virtual_layer_policies/init_packets/ssf_request.cpp")
 
-set(CORE_NETWORK_VIRTUAL_LAYER_POLICY
-      "${project_SRC_DIR}/core/network_virtual_layer_policies/bounce_protocol_policy.h"
-      "${project_SRC_DIR}/core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-      "${project_SRC_DIR}/core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-      "${project_SRC_DIR}/core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h")
+FILE(GLOB_RECURSE COMMON_BOOST_FIBER_FILES
+      "${project_SRC_DIR}/common/boost/fiber/*.hpp"
+      "${project_SRC_DIR}/common/boost/fiber/*.cpp")
+      
+FILE(GLOB_RECURSE COMMON_CONFIG_FILES
+      "${project_SRC_DIR}/common/config/*.h"
+      "${project_SRC_DIR}/common/config/*.cpp")
 
-set(CORE_FACTORIES_FILES
-      "${project_SRC_DIR}/core/factories/command_factory.h"
-      "${project_SRC_DIR}/core/factory_manager/service_factory_manager.h"
-      "${project_SRC_DIR}/core/factories/service_factory.h"
-      "${project_SRC_DIR}/core/factories/service_option_factory.h"
-      "${project_SRC_DIR}/core/service_manager/service_manager.h")
+FILE(GLOB_RECURSE COMMON_ERROR_FILES
+      "${project_SRC_DIR}/common/error/*.h"
+      "${project_SRC_DIR}/common/error/*.cpp")
+      
+FILE(GLOB_RECURSE COMMON_NETWORK_FILES
+      "${project_SRC_DIR}/common/network/*.h"
+      "${project_SRC_DIR}/common/network/*.cpp")
 
-set(COMMON_BOOST_HEADER_FILES
-      "${project_SRC_DIR}/common/boost/fiber/detail/fiber_id.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/fiber_buffer.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/fiber_header.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/stream_fiber.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/basic_endpoint.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/stream_fiber_service.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/basic_fiber_impl.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/basic_fiber_demux.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/basic_fiber_demux_service.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/basic_fiber_demux_service.ipp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/basic_fiber_demux_impl.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/io_fiber_accept_op.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/io_fiber_read_op.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/io_fiber_dgr_read_op.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/io_ssl_read_op.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/detail/io_operation.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/fiber_acceptor_service.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/datagram_fiber_service.hpp"
-      "${project_SRC_DIR}/common/boost/fiber/datagram_fiber.hpp")
+FILE(GLOB_RECURSE COMMON_UTILS_FILES
+      "${project_SRC_DIR}/common/utils/*.h"
+      "${project_SRC_DIR}/common/utils/*.cpp"
+      "${project_SRC_DIR}/common/utils/*.ipp")
 
-set(COMMON_COMMAND_LINE_FILES
-      "${project_SRC_DIR}/core/command_line/command_line.h"
-      "${project_SRC_DIR}/core/command_line/command_line.cpp")
+FILE(GLOB CORE_COMMAND_LINE_STANDARD_FILES
+      "${project_SRC_DIR}/core/command_line/standard/*.h"
+      "${project_SRC_DIR}/core/command_line/standard/*.cpp")
 
-set(COMMON_CONFIG_FILES
-      "${project_SRC_DIR}/common/config/config.h"
-      "${project_SRC_DIR}/common/config/config.cpp")
+FILE(GLOB CORE_COMMAND_LINE_COPY_FILES
+      "${project_SRC_DIR}/core/command_line/copy/*.h"
+      "${project_SRC_DIR}/core/command_line/copy/*.cpp")
+      
+FILE(GLOB_RECURSE CORE_TRANSPORT_POLICIES_FILES
+      "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.h"
+      "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.cpp"
+      "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.ipp")
 
-set(COMMON_ERROR_FILES
-      "${project_SRC_DIR}/common/error/error.h"
-      "${project_SRC_DIR}/common/error/error.cpp")
+FILE(GLOB_RECURSE CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES
+      "${project_SRC_DIR}/core/network_virtual_layer_policies/*.h"
+      "${project_SRC_DIR}/core/network_virtual_layer_policies/*.cpp"
+      "${project_SRC_DIR}/core/network_virtual_layer_policies/*.ipp")
 
-set(COMMON_NETWORK_HEADER_FILES
-      "${project_SRC_DIR}/common/network/base_session.h"
-      "${project_SRC_DIR}/common/network/datagram_link.h"
-      "${project_SRC_DIR}/common/network/datagram_link_operator.h"
-      "${project_SRC_DIR}/common/network/manager.h"
-      "${project_SRC_DIR}/common/network/network_policy_traits.h"
-      "${project_SRC_DIR}/common/network/session_forwarder.h"
-      "${project_SRC_DIR}/common/network/socket_link.h")
+FILE(GLOB_RECURSE CORE_FACTORIES_FILES
+      "${project_SRC_DIR}/core/factories/*.h"
+      "${project_SRC_DIR}/core/factories/*.cpp"
+      "${project_SRC_DIR}/core/factories/*.ipp"
+      "${project_SRC_DIR}/core/factory_manager/*.h"
+      "${project_SRC_DIR}/core/factory_manager/*.cpp"
+      "${project_SRC_DIR}/core/factory_manager/*.ipp"
+      "${project_SRC_DIR}/core/service_manager/*.h"
+      "${project_SRC_DIR}/core/service_manager/*.cpp"
+      "${project_SRC_DIR}/core/service_manager/*.ipp")
 
-set(SERVICES_ADMIN_SERVICE_FILES
-      "${project_SRC_DIR}/services/initialisation.h"
-      "${project_SRC_DIR}/services/base_service.h"
-      "${project_SRC_DIR}/services/admin/admin.h"
-      "${project_SRC_DIR}/services/admin/admin_command.h"
-      "${project_SRC_DIR}/services/admin/admin.ipp"
-      "${project_SRC_DIR}/services/admin/requests/create_service_request.h"
-      "${project_SRC_DIR}/services/admin/requests/service_status.h"
-      "${project_SRC_DIR}/services/admin/requests/stop_service_request.h")
+FILE(GLOB BASE_SERVICE_FILES
+      "${project_SRC_DIR}/services/*.h"
+      "${project_SRC_DIR}/services/*.cpp"
+      "${project_SRC_DIR}/services/*.ipp")
 
-set(SERVICES_SOCKS_FILES
-      "${project_SRC_DIR}/services/socks/socks_server.h"
-      "${project_SRC_DIR}/services/socks/socks_version.h"
-      "${project_SRC_DIR}/services/socks/v4/reply.cpp"
-      "${project_SRC_DIR}/services/socks/v4/reply.h"
-      "${project_SRC_DIR}/services/socks/v4/request.cpp"
-      "${project_SRC_DIR}/services/socks/v4/request.h"
-      "${project_SRC_DIR}/services/socks/v4/session.h"
-      "${project_SRC_DIR}/services/socks/v4/session.ipp"
-      "${project_SRC_DIR}/services/socks/v5/reply.cpp"
-      "${project_SRC_DIR}/services/socks/v5/reply.h"
-      "${project_SRC_DIR}/services/socks/v5/request.cpp"
-      "${project_SRC_DIR}/services/socks/v5/request.h"
-      "${project_SRC_DIR}/services/socks/v5/reply_auth.cpp"
-      "${project_SRC_DIR}/services/socks/v5/reply_auth.h"
-      "${project_SRC_DIR}/services/socks/v5/request_auth.cpp"
-      "${project_SRC_DIR}/services/socks/v5/request_auth.h"
-      "${project_SRC_DIR}/services/socks/v5/session.h"
-      "${project_SRC_DIR}/services/socks/v5/session.ipp")
+FILE(GLOB_RECURSE ADMIN_SERVICE_FILES
+      "${project_SRC_DIR}/services/admin/*.h"
+      "${project_SRC_DIR}/services/admin/*.cpp"
+      "${project_SRC_DIR}/services/admin/*.ipp")
+      
+FILE(GLOB_RECURSE DATAGRAMS_TO_FIBERS_SERVICE_FILES
+      "${project_SRC_DIR}/services/datagrams_to_fibers/*.h"
+      "${project_SRC_DIR}/services/datagrams_to_fibers/*.cpp"
+      "${project_SRC_DIR}/services/datagrams_to_fibers/*.ipp")
+      
+FILE(GLOB_RECURSE FIBERS_TO_DATAGRAMS_SERVICE_FILES
+      "${project_SRC_DIR}/services/fibers_to_datagrams/*.h"
+      "${project_SRC_DIR}/services/fibers_to_datagrams/*.cpp"
+      "${project_SRC_DIR}/services/fibers_to_datagrams/*.ipp")
+      
+FILE(GLOB_RECURSE SOCKETS_TO_FIBERS_SERVICE_FILES
+      "${project_SRC_DIR}/services/datagrams_to_fibers/*.h"
+      "${project_SRC_DIR}/services/datagrams_to_fibers/*.cpp"
+      "${project_SRC_DIR}/services/datagrams_to_fibers/*.ipp")
+      
+FILE(GLOB_RECURSE FIBERS_TO_SOCKETS_SERVICE_FILES
+      "${project_SRC_DIR}/services/fibers_to_datagrams/*.h"
+      "${project_SRC_DIR}/services/fibers_to_datagrams/*.cpp"
+      "${project_SRC_DIR}/services/fibers_to_datagrams/*.ipp")
+      
+FILE(GLOB_RECURSE SOCKS_SERVICE_FILES
+      "${project_SRC_DIR}/services/socks/*.h"
+      "${project_SRC_DIR}/services/socks/*.cpp"
+      "${project_SRC_DIR}/services/socks/*.ipp")
+      
+FILE(GLOB COPY_FILE_SERVICE_FILES
+      "${project_SRC_DIR}/services/copy_file/*.h"
+      "${project_SRC_DIR}/services/copy_file/*.cpp"
+      "${project_SRC_DIR}/services/copy_file/*.ipp"
+      "${project_SRC_DIR}/services/copy_file/fiber_to_file/*.h"
+      "${project_SRC_DIR}/services/copy_file/fiber_to_file/*.cpp"
+      "${project_SRC_DIR}/services/copy_file/fiber_to_file/*.ipp"
+      "${project_SRC_DIR}/services/copy_file/file_to_fiber/*.h"
+      "${project_SRC_DIR}/services/copy_file/file_to_fiber/*.cpp"
+      "${project_SRC_DIR}/services/copy_file/file_to_fiber/*.ipp"
+      "${project_SRC_DIR}/services/copy_file/file_enquirer/*.h"
+      "${project_SRC_DIR}/services/copy_file/file_enquirer/*.cpp"
+      "${project_SRC_DIR}/services/copy_file/file_enquirer/*.ipp"
+      "${project_SRC_DIR}/services/copy_file/packet/*.h"
+      "${project_SRC_DIR}/services/copy_file/packet/*.cpp"
+      "${project_SRC_DIR}/services/copy_file/packet/*.ipp"
+      "${project_SRC_DIR}/services/copy_file/filesystem/*.h"
+      "${project_SRC_DIR}/services/copy_file/filesystem/*.cpp")
+      
+FILE(GLOB_RECURSE USER_SERVICE_FILES
+      "${project_SRC_DIR}/services/user_services/*.h"
+      "${project_SRC_DIR}/services/user_services/*.cpp"
+      "${project_SRC_DIR}/services/user_services/*.ipp")
 
-set(SERVICES_USER_SERVICES_FILES
-      "${project_SRC_DIR}/services/user_services/base_user_service.h"
-      "${project_SRC_DIR}/services/user_services/port_forwarding.h"
-      "${project_SRC_DIR}/services/user_services/remote_port_forwarding.h"
-      "${project_SRC_DIR}/services/user_services/remote_socks.h"
-      "${project_SRC_DIR}/services/user_services/socks.h"
-      "${project_SRC_DIR}/services/user_services/udp_port_forwarding.h"
-      "${project_SRC_DIR}/services/user_services/udp_remote_port_forwarding.h")
-
-set(SERVICES_SOCKETS_TO_FIBERS_FILES
-      "${project_SRC_DIR}/services/sockets_to_fibers/sockets_to_fibers.h"
-      "${project_SRC_DIR}/services/sockets_to_fibers/sockets_to_fibers.ipp")
-
-set(SERVICES_DATAGRAMS_TO_FIBERS_FILES
-      "${project_SRC_DIR}/services/datagrams_to_fibers/datagrams_to_fibers.h"
-      "${project_SRC_DIR}/services/datagrams_to_fibers/datagrams_to_fibers.ipp")
-
-set(SERVICES_FIBERS_TO_SOCKETS_FILES
-      "${project_SRC_DIR}/services/fibers_to_sockets/fibers_to_sockets.h"
-      "${project_SRC_DIR}/services/fibers_to_sockets/fibers_to_sockets.ipp")
-
-set(SERVICES_FIBERS_TO_DATAGRAMS_FILES
-      "${project_SRC_DIR}/services/fibers_to_datagrams/fibers_to_datagrams.h"
-      "${project_SRC_DIR}/services/fibers_to_datagrams/fibers_to_datagrams.ipp")
+set(PARSER_FILES
+    "${project_SRC_DIR}/core/parser/bounce_parser.h"
+    "${project_SRC_DIR}/core/parser/bounce_parser.cpp")
+      
+FILE(GLOB_RECURSE CLIENT_FILES
+      "${project_SRC_DIR}/core/client/*.h"
+      "${project_SRC_DIR}/core/client/*.ipp")
+      
+FILE(GLOB_RECURSE SERVER_FILES
+      "${project_SRC_DIR}/core/server/*.h"
+      "${project_SRC_DIR}/core/server/*.ipp")
 
 set(BOOST_ROOT
       "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
@@ -222,10 +226,40 @@ include_directories(${project_BINARY_DIR})
 # --- Include source directory
 include_directories(${project_SRC_DIR})
 
+
+# --- Set macro SSF service files 
+set(SERVICES_FILES
+      ${BASE_SERVICE_FILES}
+      ${ADMIN_SERVICE_FILES}
+      ${DATAGRAMS_TO_FIBERS_SERVICE_FILES}
+      ${FIBERS_TO_DATAGRAMS_SERVICE_FILES}
+      ${SOCKETS_TO_FIBERS_SERVICE_FILES}
+      ${FIBERS_TO_SOCKETS_SERVICE_FILES}
+      ${SOCKS_SERVICE_FILES}
+      ${USER_SERVICE_FILES}
+      ${COPY_FILE_SERVICE_FILES})
+
+# --- Set macro SSF source files
+set(SSF_SOURCES
+      ${VERSIONS_FILES}
+      ${COMMON_BOOST_FIBER_FILES}
+      ${COMMON_CONFIG_FILES}
+      ${COMMON_ERROR_FILES}
+      ${COMMON_NETWORK_FILES}
+      ${COMMON_UTILS_FILES}
+      ${CORE_TRANSPORT_POLICIES_FILES}
+      ${CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES}
+      ${CORE_FACTORIES_FILES}
+      ${SERVICES_FILES}
+      ${PARSER_FILES}
+      ${CLIENT_FILES}
+      ${SERVER_FILES}
+)
+
 set (BUILD_UNIT_TESTS ON)
 if (BUILD_UNIT_TESTS)
   include(GTest)
-  
+
   set(GTEST_ROOT_DIR 
         "${project_THIRDPARTY_DIR}/gtest" CACHE PATH "Path of gtest library")
 
@@ -236,25 +270,9 @@ if (BUILD_UNIT_TESTS)
 
   # --- Add GTest project 
   add_subdirectory(${GTEST_ROOT_DIR})
-  
+
   # --- Add src test 
   add_subdirectory("${project_SRC_DIR}/tests")
-
-  # Group all tests in one directory
-  project_group(
-    "Unit tests"
-    load_config_tests
-    fiber_asio_tests
-    ssf_client_server_tests
-    ssf_client_server_cipher_suites_tests
-    socks_tests
-    remote_socks_tests
-    stream_forward_tests
-    remote_stream_forward_tests
-    udp_forward_tests
-    remote_udp_forward_tests
-    bouncing_tests
-  )
 endif (BUILD_UNIT_TESTS)
 
 add_subdirectory("${project_SRC_DIR}/core")

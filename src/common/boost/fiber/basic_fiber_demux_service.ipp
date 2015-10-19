@@ -403,7 +403,7 @@ void basic_fiber_demux_service<S>::async_send_push(implementation_type impl,
       auto p_timer = std::make_shared<boost::asio::deadline_timer>(io_service_);
       p_timer->expires_from_now(boost::posix_time::milliseconds(10));
 
-      auto lambda = [handler](const boost::system::error_code&) mutable {
+      auto lambda = [handler, p_timer](const boost::system::error_code&) mutable {
         handler(boost::system::error_code(), 0);
       };
 
@@ -444,7 +444,7 @@ void basic_fiber_demux_service<S>::async_send_dgr(implementation_type impl,
       auto p_timer = std::make_shared<boost::asio::deadline_timer>(io_service_);
       p_timer->expires_from_now(boost::posix_time::milliseconds(10));
 
-      auto lambda = [handler](const boost::system::error_code&) mutable {
+      auto lambda = [handler, p_timer](const boost::system::error_code&) mutable {
         handler(boost::system::error_code(), 0);
       };
 
@@ -554,8 +554,8 @@ boost::asio::fiber::detail::fiber_id::local_port_type basic_fiber_demux_service<
                   rand_port = 0;
   boost::recursive_mutex::scoped_lock lock1(impl->used_ports_mutex);
 
-  boost::random::uniform_int_distribution<uint32_t> dist(new_port,
-                                                 std::numeric_limits<uint32_t>::max());
+  boost::random::uniform_int_distribution<uint32_t> dist(
+      new_port, std::numeric_limits<uint32_t>::max());
   for (uint32_t i = 0; i < 100; ++i) {
     rand_port = dist(gen_);
     if (impl->used_ports.count(rand_port) == 0) {

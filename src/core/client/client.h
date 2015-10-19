@@ -66,13 +66,14 @@ class SSFClient : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
   void stop();
 
  private:
-  void do_ssf_start(p_socket_type p_socket, const boost::system::error_code& ec);
+  void DoSSFStart(p_socket_type p_socket, const boost::system::error_code& ec);
 
-  void do_fiberize_(p_socket_type p_socket, boost::system::error_code& ec);
+  void DoFiberize(p_socket_type p_socket, boost::system::error_code& ec);
 
- private:
-  void network_to_transport(p_socket_type p_socket, vector_error_code_type v_ec);
-  bool print_ec_vector(vector_error_code_type v_ec);
+  void OnDemuxClose();
+
+  void NetworkToTransport(p_socket_type p_socket, vector_error_code_type v_ec);
+  bool PrintErrorVector(vector_error_code_type v_ec);
 
   void Notify(ssf::services::initialisation::type type,
               BaseUserServicePtr p_user_service,

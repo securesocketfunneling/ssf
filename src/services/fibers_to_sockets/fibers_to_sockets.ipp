@@ -9,9 +9,11 @@
 namespace ssf { namespace services { namespace fibers_to_sockets {
 
 template <typename Demux>
-RemoteForwarderService<Demux>::RemoteForwarderService(
-    boost::asio::io_service& io_service, demux& fiber_demux,
-    local_port_type local_port, const std::string& ip, uint16_t remote_port)
+FibersToSockets<Demux>::FibersToSockets(boost::asio::io_service& io_service,
+                                        demux& fiber_demux,
+                                        local_port_type local_port,
+                                        const std::string& ip,
+                                        uint16_t remote_port)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
       remote_port_(remote_port),
       ip_(ip),
@@ -21,9 +23,10 @@ RemoteForwarderService<Demux>::RemoteForwarderService(
       socket_(io_service) {}
 
 template <typename Demux>
-void RemoteForwarderService<Demux>::start(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "service fibers to sockets: starting relay on local port tcp "
-                          << local_port_;
+void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
+  BOOST_LOG_TRIVIAL(info)
+      << "service fibers to sockets: starting relay on local port tcp "
+      << local_port_;
 
   endpoint ep(this->get_demux(), local_port_);
   fiber_acceptor_.bind(ep, ec);
@@ -43,7 +46,7 @@ void RemoteForwarderService<Demux>::start(boost::system::error_code& ec) {
 }
 
 template <typename Demux>
-void RemoteForwarderService<Demux>::stop(boost::system::error_code& ec) {
+void FibersToSockets<Demux>::stop(boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(info) << "service fibers to sockets: stopping";
   ec.assign(ssf::error::success,
             ssf::error::get_ssf_category());
@@ -53,21 +56,21 @@ void RemoteForwarderService<Demux>::stop(boost::system::error_code& ec) {
 }
 
 template <typename Demux>
-uint32_t RemoteForwarderService<Demux>::service_type_id() {
+uint32_t FibersToSockets<Demux>::service_type_id() {
   return factory_id;
 }
 
 template <typename Demux>
-void RemoteForwarderService<Demux>::StartAcceptFibers() {
+void FibersToSockets<Demux>::StartAcceptFibers() {
   BOOST_LOG_TRIVIAL(trace) << "service fibers to sockets: accepting new clients";
 
   fiber_acceptor_.async_accept(
-      fiber_,
-      Then(&RemoteForwarderService::FiberAcceptHandler, this->SelfFromThis()));
+      fiber_, Then(&FibersToSockets::FiberAcceptHandler, this->SelfFromThis()));
 }
 
 template <typename Demux>
-void RemoteForwarderService<Demux>::FiberAcceptHandler(const boost::system::error_code& ec) {
+void FibersToSockets<Demux>::FiberAcceptHandler(
+    const boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(trace) << "service fibers to sockets: accept handler";
 
   if (!fiber_acceptor_.is_open()) {
@@ -75,14 +78,15 @@ void RemoteForwarderService<Demux>::FiberAcceptHandler(const boost::system::erro
   }
 
   if (!ec) {
-    socket_.async_connect(
-        endpoint_,
-        Then(&RemoteForwarderService::SocketConnectHandler, this->SelfFromThis()));
+    socket_.async_connect(endpoint_,
+                          Then(&FibersToSockets::SocketConnectHandler,
+                               this->SelfFromThis()));
   }
 }
 
 template <typename Demux>
-void RemoteForwarderService<Demux>::SocketConnectHandler(const boost::system::error_code& ec) {
+void FibersToSockets<Demux>::SocketConnectHandler(
+    const boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(trace) << "service fibers to sockets: connect handler";
 
   if (!ec) {

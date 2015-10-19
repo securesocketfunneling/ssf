@@ -27,14 +27,14 @@ class LoadConfigTest : public ::testing::Test {
 TEST_F(LoadConfigTest, loadNoFile) {
   boost::system::error_code ec;
   ssf::LoadConfig("", ec);
-  ASSERT_TRUE(ec.value() == 0) << "Success if no file given";
+  ASSERT_EQ(ec.value(), 0) << "Success if no file given";
 }
 
 //-----------------------------------------------------------------------------
 TEST_F(LoadConfigTest, loadNonExistantFile) {
   boost::system::error_code ec;
   ssf::LoadConfig(filename_, ec);
-  ASSERT_TRUE(ec.value() > 0) << "No success if file not existant";
+  ASSERT_NE(ec.value(), 0) << "No success if file not existant";
 }
 
 //-----------------------------------------------------------------------------
@@ -44,7 +44,7 @@ TEST_F(LoadConfigTest, loadEmptyFile) {
   file.open(filename_);
   file.close();
   ssf::LoadConfig(filename_, ec);
-  ASSERT_TRUE(ec.value() > 0) << "No success if file empty";
+  ASSERT_NE(ec.value(), 0) << "No success if file empty";
 }
 
 //-----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ TEST_F(LoadConfigTest, loadWrongFormatFile) {
   file.close();
   ssf::LoadConfig(filename_, ec);
   std::remove(filename_.c_str());
-  ASSERT_TRUE(ec.value() > 0) << "No success if wrong file format";
+  ASSERT_NE(ec.value(), 0) << "No success if wrong file format";
 }
 
 //-----------------------------------------------------------------------------
@@ -72,7 +72,7 @@ TEST_F(LoadConfigTest, loadPartialFile) {
   file.close();
   ssf::Config config;
   config = ssf::LoadConfig(filename_, ec);
-  ASSERT_TRUE(ec.value() == 0) << "Success if partial file format";
+  ASSERT_EQ(ec.value(), 0) << "Success if partial file format";
   ASSERT_EQ(config.tls.ca_cert_path, "test_ca_path");
   ASSERT_EQ(config.tls.cert_path, "./certs/certificate.crt");
   ASSERT_EQ(config.tls.key_path, "test_key_path");
@@ -97,7 +97,7 @@ TEST_F(LoadConfigTest, loadCompleteFile) {
   file.close();
   ssf::Config config;
   config = ssf::LoadConfig(filename_, ec);
-  ASSERT_TRUE(ec.value() == 0) << "Success if complete file format";
+  ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
   ASSERT_EQ(config.tls.ca_cert_path, "test_ca_path");
   ASSERT_EQ(config.tls.cert_path, "test_cert_path");
   ASSERT_EQ(config.tls.key_path, "test_key_path");

@@ -1,21 +1,23 @@
-#include "client.h"
-
 #include <stdexcept>
 
-#include <fstream>
-
-#include <boost/asio.hpp>
-
-#include <boost/program_options.hpp>
-#include <boost/system/error_code.hpp>
-
+#include <boost/asio/io_service.hpp>
 #include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/system/error_code.hpp>
 
 #include "common/config/config.h"
 
-#include "core/command_line/command_line.h"
+#include "core/client/client.h"
+
+#include "core/command_line/standard/command_line.h"
+#include "core/parser/bounce_parser.h"
+#include "core/factories/service_option_factory.h"
+#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
+#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
+#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
+#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
+#include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
@@ -26,55 +28,28 @@
 #include "services/user_services/udp_port_forwarding.h"
 #include "services/user_services/udp_remote_port_forwarding.h"
 
-#include "core/factories/service_option_factory.h"
-
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
-#include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
-
-void init() {
-  boost::log::core::get()->set_filter(
-    boost::log::trivial::severity >= boost::log::trivial::info);
-}
-
-std::string get_remote_addr(const std::string& remote_endpoint_string) {
-  size_t position = remote_endpoint_string.find(":");
-
-  if (position != std::string::npos) {
-    return remote_endpoint_string.substr(0, position);
-  } else {
-    return "";
-  }
-}
-
-std::string get_remote_port(const std::string& remote_endpoint_string) {
-  size_t position = remote_endpoint_string.find(":");
-
-  if (position != std::string::npos) {
-    return remote_endpoint_string.substr(position + 1);
-  } else {
-    return "";
-  }
+void Init() {
+  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
+                                      boost::log::trivial::info);
 }
 
 int main(int argc, char** argv) {
 #ifdef TLS_OVER_TCP_LINK
-  typedef ssf::SSFClient<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                         ssf::BounceProtocolPolicy,
-                         ssf::TransportProtocolPolicy> Client;
+  using Client =
+      ssf::SSFClient<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
+                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
 #elif TCP_ONLY_LINK
-  typedef ssf::SSFClient<ssf::TCPPolicy, ssf::NullLinkAuthenticationPolicy,
-    ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy> Client;
+  using Client =
+      ssf::SSFClient<ssf::TCPPolicy, ssf::NullLinkAuthenticationPolicy,
+                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
 #endif
 
-  typedef Client::demux demux;
+  using demux = Client::demux;
+  using BaseUserServicePtr =
+      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
+  using BounceParser = ssf::parser::BounceParser;
 
-  init();
-
-  typedef ssf::services::BaseUserService<demux>::BaseUserServicePtr
-      BaseUserServicePtr;
+  Init();
 
   // Register user services supported
   ssf::services::Socks<demux>::RegisterToServiceOptionFactory();
@@ -82,45 +57,51 @@ int main(int argc, char** argv) {
   ssf::services::PortForwading<demux>::RegisterToServiceOptionFactory();
   ssf::services::RemotePortForwading<demux>::RegisterToServiceOptionFactory();
   ssf::services::UdpPortForwading<demux>::RegisterToServiceOptionFactory();
-  ssf::services::UdpRemotePortForwading<demux>::RegisterToServiceOptionFactory();
+  ssf::services::UdpRemotePortForwading<
+      demux>::RegisterToServiceOptionFactory();
 
   boost::program_options::options_description options =
       ssf::ServiceOptionFactory<demux>::GetOptionDescriptions();
 
   // Parse the command line
-  ssf::CommandLine cmd;
-  std::vector<BaseUserServicePtr> userServicesOptions;
+  ssf::command_line::standard::CommandLine cmd;
+  std::vector<BaseUserServicePtr> user_services;
 
   boost::system::error_code ec;
   auto parameters = cmd.parse(argc, argv, options, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: wrong arguments" << std::endl;
-    return 0;
+    BOOST_LOG_TRIVIAL(error) << "client: wrong command line arguments";
+    return 1;
   }
 
+  // Initialize requested user services (socks, port forwarding)
   for (const auto& parameter : parameters) {
     for (const auto& single_parameter : parameter.second) {
       boost::system::error_code ec;
 
       auto p_service_options =
           ssf::ServiceOptionFactory<demux>::ParseServiceLine(
-            parameter.first, single_parameter, ec);
+              parameter.first, single_parameter, ec);
 
       if (!ec) {
-        userServicesOptions.push_back(p_service_options);
+        user_services.push_back(p_service_options);
       } else {
         BOOST_LOG_TRIVIAL(error) << "client: wrong parameter "
-                                 << parameter.first << " : "
-                                 << single_parameter << " "
-                                 << ec << " : " << ec.message();
+                                 << parameter.first << " : " << single_parameter
+                                 << " : " << ec.message();
       }
     }
   }
 
   if (!cmd.IsAddrSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no host address provided -- Exiting" << std::endl;
-    return 0;
+    BOOST_LOG_TRIVIAL(error) << "client: no hostname provided -- Exiting";
+    return 1;
+  }
+
+  if (!cmd.IsPortSet()) {
+    BOOST_LOG_TRIVIAL(error) << "client: no host port provided -- Exiting";
+    return 1;
   }
 
   // Load SSF config if any
@@ -128,7 +109,8 @@ int main(int argc, char** argv) {
   ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
 
   if (ec_config) {
-    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format" << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format"
+                             << std::endl;
     return 0;
   }
 
@@ -142,45 +124,32 @@ int main(int argc, char** argv) {
       boost::system::error_code ec;
       try {
         io_service.run(ec);
-      }
-      catch (std::exception e) {
-        BOOST_LOG_TRIVIAL(error) << "client: exception in io_service run " << e.what();
+      } catch (std::exception e) {
+        BOOST_LOG_TRIVIAL(error) << "client: exception in io_service run "
+                                 << e.what();
       }
     };
 
     threads.create_thread(lambda);
   }
 
-  auto callback = [](ssf::services::initialisation::type,
-                     BaseUserServicePtr,
+  auto callback = [](ssf::services::initialisation::type, BaseUserServicePtr,
                      const boost::system::error_code&) {};
 
-  // Initiating and starting the client
+  // Initiate and start client
   Client client(io_service, cmd.addr(), std::to_string(cmd.port()), ssf_config,
-                userServicesOptions, callback);
+                user_services, callback);
 
   std::map<std::string, std::string> params;
-  std::list<std::string> bouncers;
 
-  if (cmd.bounce_file() != "") {
-    std::ifstream infile(cmd.bounce_file());
-
-    if (infile.is_open()) {
-      std::string line;
-
-      while (std::getline(infile, line)) {
-        bouncers.push_back(line);
-      }
-
-      infile.close();
-    }
-  }
+  std::list<std::string> bouncers =
+      BounceParser::ParseBounceFile(cmd.bounce_file());
 
   if (bouncers.size()) {
     auto first = bouncers.front();
     bouncers.pop_front();
-    params["remote_addr"] = get_remote_addr(first);
-    params["remote_port"] = get_remote_port(first);
+    params["remote_addr"] = BounceParser::GetRemoteAddress(first);
+    params["remote_port"] = BounceParser::GetRemotePort(first);
     bouncers.push_back(cmd.addr() + ":" + std::to_string(cmd.port()));
   } else {
     params["remote_addr"] = cmd.addr();
@@ -196,9 +165,10 @@ int main(int argc, char** argv) {
   client.run(params);
 
   getchar();
+
   client.stop();
-  io_service.stop();
   threads.join_all();
+  io_service.stop();
 
   return 0;
 }

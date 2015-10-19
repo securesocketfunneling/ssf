@@ -69,9 +69,9 @@ public:
     return desc;
   }
 
-  static std::shared_ptr<ssf::services::BaseUserService<Demux>> ParseServiceLine(std::string option,
-                                                 std::string parameters,
-                                                 boost::system::error_code& ec) {
+  static std::shared_ptr<ssf::services::BaseUserService<Demux>>
+      ParseServiceLine(std::string option, std::string parameters,
+                       boost::system::error_code& ec) {
     boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
     auto it = service_options_.find(option);
 

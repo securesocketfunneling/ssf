@@ -5,6 +5,17 @@ if (WIN32)
   include(MSVCStaticRuntime)
   include(HelpersIdeTarget)
 
+  # --- Include windows impl
+  
+  # --- Filesystem globbing
+  FILE(GLOB_RECURSE COPY_FILE_SERVICE_WINDOWS_FILES
+      "${project_SRC_DIR}/services/copy_file/filesystem/windows/*.h"
+      "${project_SRC_DIR}/services/copy_file/filesystem/windows/*.cpp")
+      
+  set(COPY_FILE_SERVICE_FILES
+      ${COPY_FILE_SERVICE_FILES}
+      ${COPY_FILE_SERVICE_WINDOWS_FILES})
+
   # --- Icon path
   set(ICON_RC "${project_IMG_DIR}/icon.rc")
   set(EXEC_FLAG "")

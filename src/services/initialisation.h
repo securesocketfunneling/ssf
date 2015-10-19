@@ -9,7 +9,8 @@ namespace initialisation {
   {
     NETWORK = 1,
     TRANSPORT = 2,
-    SERVICE = 3
+    SERVICE = 3,
+    CLOSE = 4
   };
 
 }  // initialisation

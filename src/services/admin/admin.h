@@ -35,33 +35,29 @@ namespace ssf { namespace services { namespace admin {
 template <typename Demux>
 class Admin : public BaseService<Demux> {
 public:
-  typedef typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr
-    BaseUserServicePtr;
-  typedef std::function<
-    void(ssf::services::initialisation::type,
-         BaseUserServicePtr,
-         const boost::system::error_code&)>
-      AdminCallbackType;
+ typedef typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr
+     BaseUserServicePtr;
+ typedef std::function<void(
+     ssf::services::initialisation::type, BaseUserServicePtr,
+     const boost::system::error_code&)> AdminCallbackType;
 
  private:
   typedef typename Demux::local_port_type local_port_type;
 
   typedef std::shared_ptr<Admin> AdminPtr;
   typedef ItemManager<typename ssf::BaseService<Demux>::BaseServicePtr>
-    ServiceManager;
+      ServiceManager;
 
   typedef typename ssf::BaseService<Demux>::Parameters Parameters;
   typedef typename ssf::BaseService<Demux>::demux demux;
   typedef typename ssf::BaseService<Demux>::endpoint endpoint;
 
-  typedef std::function<void(const boost::system::error_code&)> HandlerType;
-  typedef std::map<uint32_t, HandlerType> IdToHandlerMapType;
+  typedef std::function<void(const boost::system::error_code&)> CommandHandler;
+  typedef std::map<uint32_t, CommandHandler> IdToCommandHandlerMap;
 
  public:
   static AdminPtr Create(boost::asio::io_service& io_service,
-                         Demux& fiber_demux,
-                         Parameters parameters) {
-
+                         Demux& fiber_demux, Parameters parameters) {
     return std::shared_ptr<Admin>(new Admin(io_service, fiber_demux));
   }
 
@@ -101,29 +97,40 @@ public:
         serial, request.command_id, (uint32_t)parameters_buff_to_send.size(),
         parameters_buff_to_send);
 
-    auto do_handler = [p_command](const boost::system::error_code& ec,
-                                           size_t length) {};
+    auto do_handler =
+        [p_command](const boost::system::error_code& ec, size_t length) {};
 
     async_SendCommand(*p_command, do_handler);
   }
 
-  void InsertHandler(uint32_t serial, HandlerType handler) {
-    boost::recursive_mutex::scoped_lock lock1(handlers_mutex_);
-    handlers[serial] = handler;
+  void InsertHandler(uint32_t serial, CommandHandler command_handler) {
+    boost::recursive_mutex::scoped_lock lock1(command_handlers_mutex_);
+    command_handlers_[serial] = command_handler;
+  }
+
+  // execute handler bound to the command serial id if exists
+  void ExecuteAndRemoveCommandHandler(uint32_t serial) {
+    if (command_handlers_.count(command_serial_received_)) {
+      this->get_io_service().post(boost::bind(
+          command_handlers_[command_serial_received_], boost::system::error_code()));
+      this->EraseHandler(command_serial_received_);
+    }
   }
 
   void EraseHandler(uint32_t serial) {
-    boost::recursive_mutex::scoped_lock lock1(handlers_mutex_);
-    handlers.erase(serial);
+    boost::recursive_mutex::scoped_lock lock1(command_handlers_mutex_);
+    command_handlers_.erase(serial);
   }
 
   uint32_t GetAvailableSerial() {
-    boost::recursive_mutex::scoped_lock lock1(handlers_mutex_);
+    boost::recursive_mutex::scoped_lock lock1(command_handlers_mutex_);
 
-    for (uint32_t new_port = 3; new_port < std::numeric_limits<uint32_t>::max(); ++new_port) {
-      if (handlers.count(new_port + !!is_server_) == 0) {
-        handlers[new_port + !!is_server_] = [](const boost::system::error_code&) {};
-        return new_port + !!is_server_;
+    for (uint32_t serial = 3; serial < std::numeric_limits<uint32_t>::max();
+         ++serial) {
+      if (command_handlers_.count(serial + !!is_server_) == 0) {
+        command_handlers_[serial + !!is_server_] =
+            [](const boost::system::error_code&) {};
+        return serial + !!is_server_;
       }
     }
     return 0;
@@ -139,17 +146,16 @@ public:
   void HandleStop();
   void Initialize();
   void StartRemoteService(
-    const admin::CreateServiceRequest<demux>& create_request,
-    const HandlerType& handler);
-  void StopRemoteService(
-    const admin::StopServiceRequest<demux>& stop_request,
-    const HandlerType& handler);
-  void Initialize_remote_services(const boost::system::error_code& ec);
+      const admin::CreateServiceRequest<demux>& create_request,
+      const CommandHandler& handler);
+  void StopRemoteService(const admin::StopServiceRequest<demux>& stop_request,
+                         const CommandHandler& handler);
+  void InitializeRemoteServices(const boost::system::error_code& ec);
   void ListenForCommand();
-  void DoAdmin(const boost::system::error_code& ec = boost::system::error_code(),
-               size_t length = 0);
-  void PostKeepAlive(const boost::system::error_code& ec,
-                       size_t length);
+  void DoAdmin(
+      const boost::system::error_code& ec = boost::system::error_code(),
+      size_t length = 0);
+  void PostKeepAlive(const boost::system::error_code& ec, size_t length);
   void SendKeepAlive(const boost::system::error_code& ec);
   void ReceiveInstructionHeader();
   void ReceiveInstructionParameters();
@@ -158,30 +164,24 @@ public:
   void ShutdownServices();
 
   template <typename Handler>
-  void async_SendCommand(const AdminCommand& command,
-                         Handler handler)  {
+  void async_SendCommand(const AdminCommand& command, Handler handler) {
+    auto do_handler = [handler](const boost::system::error_code& ec,
+                                size_t length) { handler(ec, length); };
 
-    auto do_handler = [handler](const boost::system::error_code& ec, size_t length) {
-      handler(ec, length);
-    };
-
-    boost::asio::async_write(fiber_,
-                             command.const_buffers(),
-                             do_handler);
-
+    boost::asio::async_write(fiber_, command.const_buffers(), do_handler);
   }
 
   void Notify(ssf::services::initialisation::type type,
-              BaseUserServicePtr p_user_service,
-              boost::system::error_code ec) {
+              BaseUserServicePtr p_user_service, boost::system::error_code ec) {
     if (callback_) {
-      this->get_io_service().post(
-        boost::bind(callback_, std::move(type), p_user_service, std::move(ec)));
+      this->get_io_service().post(boost::bind(callback_, std::move(type),
+                                              p_user_service, std::move(ec)));
     }
   }
 
   template <typename Handler, typename This>
-  auto Then(Handler handler, This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
+  auto Then(Handler handler,
+            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
     return boost::bind(handler, me->SelfFromThis(), _1);
   }
 
@@ -214,8 +214,7 @@ public:
   boost::asio::deadline_timer reserved_keep_alive_timer_;
 
   // List of user services
-  std::vector<BaseUserServicePtr>
-    user_services_;
+  std::vector<BaseUserServicePtr> user_services_;
 
   // Connection attempts
   uint8_t retries_;
@@ -227,17 +226,16 @@ public:
   // Initialize services
   boost::asio::coroutine coroutine_;
   size_t i_;
-  std::vector<admin::CreateServiceRequest<demux>>
-    create_request_vector_;
+  std::vector<admin::CreateServiceRequest<demux>> create_request_vector_;
   size_t j_;
   uint32_t remote_all_started_;
   uint16_t init_retries_;
   std::vector<admin::StopServiceRequest<demux>> stop_request_vector_;
-  bool local_all_starter_;
+  bool local_all_started_;
   boost::system::error_code init_ec_;
 
-  boost::recursive_mutex handlers_mutex_;
-  IdToHandlerMapType handlers;
+  boost::recursive_mutex command_handlers_mutex_;
+  IdToCommandHandlerMap command_handlers_;
 
   AdminCallbackType callback_;
 };

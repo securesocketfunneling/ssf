@@ -115,8 +115,9 @@ void Admin<Demux>::HandleConnect(const boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(trace) << "service admin: handle connect";
 
   if (!fiber_.is_open() || ec) {
-    BOOST_LOG_TRIVIAL(error) << "service admin: no new connection: " << ec << " "
-                             << ec.value();
+    BOOST_LOG_TRIVIAL(error)
+        << "service admin: no new connection: " << ec.message() << " "
+        << ec.value();
     // Retry to connect if failed to open the fiber
     if (retries_ < 50) {
       this->StartConnect();
@@ -125,7 +126,7 @@ void Admin<Demux>::HandleConnect(const boost::system::error_code& ec) {
     return;
   } else {
     this->Initialize();
-    this->Initialize_remote_services(boost::system::error_code());
+    this->InitializeRemoteServices(boost::system::error_code());
   }
 }
 
@@ -144,7 +145,7 @@ void Admin<Demux>::Initialize() {
 
 /// Initialize micro services (local and remote) asked by the client
 template <typename Demux>
-void Admin<Demux>::Initialize_remote_services(
+void Admin<Demux>::InitializeRemoteServices(
     const boost::system::error_code& ec) {
   if (!ec) {
     reenter(coroutine_) {
@@ -157,17 +158,18 @@ void Admin<Demux>::Initialize_remote_services(
 
         // For each remote micro service to start
         for (j_ = 0; j_ < create_request_vector_.size(); ++j_) {
-          // Send a service creation request
+          // Start remove service and yield until server response comes back
           yield StartRemoteService(
               create_request_vector_[j_],
-              boost::bind(&Admin::Initialize_remote_services,
+              boost::bind(&Admin::InitializeRemoteServices,
                           this->SelfFromThis(), _1));
         }
 
+        // At this point, all remote services have responded with their statuses
         remote_all_started_ =
             user_services_[i_]->CheckRemoteServiceStatus(this->get_demux());
 
-        // If something went wrong remote_all_started_ == 0
+        // If something went wrong remote_all_started_ > 0
         if (remote_all_started_) {
           BOOST_LOG_TRIVIAL(warning) << "service admin: remote could not start";
 
@@ -184,7 +186,7 @@ void Admin<Demux>::Initialize_remote_services(
             // Send a service stop request
             yield StopRemoteService(
                 stop_request_vector_[j_],
-                boost::bind(&Admin::Initialize_remote_services,
+                boost::bind(&Admin::InitializeRemoteServices,
                             this->SelfFromThis(), _1));
           }
 
@@ -192,11 +194,11 @@ void Admin<Demux>::Initialize_remote_services(
         }
 
         // Start local associated services
-        local_all_starter_ =
+        local_all_started_ =
             user_services_[i_]->StartLocalServices(this->get_demux());
 
-        // If something went wrong local_all_starter_ != 0
-        if (!local_all_starter_) {
+        // If something went wrong local_all_started_ == false
+        if (!local_all_started_) {
           BOOST_LOG_TRIVIAL(warning) << "service admin: local could not start";
 
           Notify(
@@ -212,7 +214,7 @@ void Admin<Demux>::Initialize_remote_services(
             // Send a service stop request
             yield StopRemoteService(
                 stop_request_vector_[j_],
-                boost::bind(&Admin::Initialize_remote_services,
+                boost::bind(&Admin::InitializeRemoteServices,
                             this->SelfFromThis(), _1));
           }
           // Stop local services
@@ -361,6 +363,7 @@ void Admin<Demux>::TreatInstructionId() {
           ssf::CommandFactory<Demux>::GetReplyCommandIndex(
               command_id_received_);
 
+      // reply with command serial received (command handler execution)
       auto p_command = std::make_shared<AdminCommand>(command_serial_received_,
                                                       *p_reply_command_index,
                                                       (uint32_t)reply.size(), reply);
@@ -370,11 +373,9 @@ void Admin<Demux>::TreatInstructionId() {
     }
   }
 
-  if (handlers.count(command_serial_received_)) {
-    this->get_io_service().post(boost::bind(handlers[command_serial_received_],
-                                            boost::system::error_code()));
-    this->EraseHandler(command_serial_received_);
-  }
+  // Execute an handler bound to the serial command (e.g, callback after a
+  // service started)
+  this->ExecuteAndRemoveCommandHandler(command_serial_received_);
 
   this->ListenForCommand();
 }
@@ -383,7 +384,7 @@ void Admin<Demux>::TreatInstructionId() {
 template <typename Demux>
 void Admin<Demux>::StartRemoteService(
     const admin::CreateServiceRequest<demux>& create_request,
-    const HandlerType& handler) {
+    const CommandHandler& handler) {
   this->Command(create_request, handler);
 }
 
@@ -391,7 +392,7 @@ void Admin<Demux>::StartRemoteService(
 template <typename Demux>
 void Admin<Demux>::StopRemoteService(
     const admin::StopServiceRequest<demux>& stop_request,
-    const HandlerType& handler) {
+    const CommandHandler& handler) {
   this->Command(stop_request, handler);
 }
 
