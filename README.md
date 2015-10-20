@@ -50,18 +50,19 @@ Copy [the diff from OpenSSL Github](https://github.com/openssl/openssl/commit/77
 
 * Generate project
 
- ```bash
- mkdir PROJECT_PATH/build
- cd PROJECT_PATH/build
- cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
- ```
+```bash
+git submodule update --init --recursive
+mkdir PROJECT_PATH/build
+cd PROJECT_PATH/build
+cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+```
 
- * Build project
+* Build project
 
- ```bash
- cd PROJECT_PATH/build
- cmake --build `pwd` --config Debug|Release
- ```
+```bash
+cd PROJECT_PATH/build
+cmake --build . --config Debug|Release
+```
 
 ### Build SSF on Linux
 
@@ -92,6 +93,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 * Generate project
 
 ```bash
+git submodule update --init --recursive
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
 cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
@@ -100,7 +102,8 @@ cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP
 * Build project
 
 ```bash
-cmake --build PROJECT_PATH/build -- -j
+cd PROJECT_PATH/build
+cmake --build . -- -j
 ```
 
 ### Build SSF on Mac OS X
@@ -132,6 +135,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 * Generate project
 
 ```bash
+git submodule update --init --recursive
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
 cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
@@ -140,9 +144,9 @@ cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP
 * Build project
 
 ```bash
-cmake --build PROJECT_PATH/build -- -j
+cd PROJECT_PATH/build
+cmake --build .
 ```
-
 
 ## How to configure
 
