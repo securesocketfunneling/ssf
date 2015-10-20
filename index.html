@@ -42,6 +42,7 @@
                                 <li><a aria-controls="how-to-use-tcp-forwarding" data-toggle="tab" href="#how-to-use-tcp-forwarding">Use TCP port forwarding</a></li>
                                 <li><a aria-controls="how-to-use-udp-forwarding" data-toggle="tab" href="#how-to-use-udp-forwarding">Use UDP port forwarding</a></li>
                                 <li><a aria-controls="how-to-browse-privately" data-toggle="tab" href="#how-to-browse-privately">Browse securely and privately from everywhere</a></li>
+                                <li><a aria-controls="how-to-copy-file" data-toggle="tab" href="#how-to-copy-file">Copy file</a></li>
                             </ul>                            
                         </li>
                         <li role="presentation" class="dropdown">
@@ -126,7 +127,7 @@
                                 <ul>
                                     <li>be <strong>cross platform</strong></li>
                                     <li>be <strong>lightweight</strong> (preferably standalone)</li>
-                                    <li>be easily <strong>extendible</strong></li>
+                                    <li>be easily <strong><a href="#developer-corner">extendible</a></strong></li>
                                     <li>provide modern (TLS 1.2) <strong>secure</strong> point-to-point communication with the strongest cipher-suites</li>
                                     <li>provide <strong>high performance</strong> communications by using the benefits of modern multi-core / multi-threaded architecture</li>
                                 </ul>
@@ -137,20 +138,20 @@
                         
                         <h3>Specific features</h3>
                         <div class="col-md-12">
-							<ul>
-								<li>
-									<p>One feature which was not present in any another equivalent network tool was UDP forwarding. UDP is nonetheless widely used in real-time services (VoIP, online gaming, ...) and for DNS.
-									Therefore, <strong>SSF is able to forward both TCP and UDP</strong> from the client to the server (options <strong>-L</strong> and <strong>-U</strong>) 
-									as well as from the server to the client (options <strong>-R</strong> and <strong>-V</strong>)</p>
-								</li>
-								<li>
-									<p>SSF also allows <strong>dynamic port forwarding with a SOCKS server</strong> from the client to the server (option <strong>-D</strong> just like SSH) 
-									and <strong>from the server to the client</strong> (option <strong>-F</strong> which SSH does not allow)</p>
-								</li>
-								<li>
-									<p>The <strong>bouncing feature</strong> allows to simply forward the traffic from one point to another, <strong>through a list of intermediary</strong> relay servers</p>
-								</li>
-							</ul>
+                            <ul>
+                                <li>
+                                    <p>One feature which was not present in any another equivalent network tool was UDP forwarding. UDP is nonetheless widely used in real-time services (VoIP, online gaming, ...) and for DNS.
+                                    Therefore, <strong>SSF is able to forward both TCP and UDP</strong> from the client to the server (options <strong>-L</strong> and <strong>-U</strong>) 
+                                    as well as from the server to the client (options <strong>-R</strong> and <strong>-V</strong>)</p>
+                                </li>
+                                <li>
+                                    <p>SSF also allows <strong>dynamic port forwarding with a SOCKS server</strong> from the client to the server (option <strong>-D</strong> just like SSH) 
+                                    and <strong>from the server to the client</strong> (option <strong>-F</strong> which SSH does not allow)</p>
+                                </li>
+                                <li>
+                                    <p>The <strong>bouncing feature</strong> allows to simply forward the traffic from one point to another, <strong>through a list of intermediary</strong> relay servers</p>
+                                </li>
+                            </ul>
                         </div>
                         
                         <h3>DevOps friendly</h3>
@@ -627,6 +628,106 @@ SERVER3:PORT3</pre>
                         </div>
                     </div>
                     <!-- End how to browse privately  -->
+
+                    <!-- How to copy file -->
+                    <div role="tabpanel" id="how-to-copy-file" class="tab-pane fade">
+                        <h1>How to copy file</h1>
+
+                        <div class="col-md-12">
+                            <div class="col-md-12">
+                                <h2>Command line</h2>
+                                <div class="col-md-12">
+                                    <pre>ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] [-t] [host@]path [[host@]path]</pre>
+                                    <dl class="dl-horizontal">
+                                        <dt>-b</dt>
+                                        <dd><code>bounce_file</code> is the file containing the list of relays to use</dd>
+
+                                        <dt>-c</dt>
+                                        <dd><code>config_file</code> is the file containing configuration for SSF (TLS configuration)</dd>
+
+                                        <dt>-p</dt>
+                                        <dd><code>port</code> is the port of the remote SSF server</dd>
+
+                                        <dt>-t</dt>
+                                        <dd>input data from stdin</dd>
+                                    </dl>
+
+                                    <p>
+                                        <code>ssfcp</code> is cross platform and its syntax is similar to scp command.<br/>
+                                        The main difference resides in the separator between host and path: <code>@</code> for ssfcp instead of <code>:</code>
+                                    </p>
+                                    <p>
+                                        Since <code>ssfcp</code> is part of SSF framework, it is also fully compatible with the <a href="#how-to-use-relay-servers">relay servers feature</a>.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <h2>From Linux to Linux</h2>
+                                <div class="col-md-12">
+                                    <h3>Local to remote</h3>
+                                    <p>This command will copy the file <code>/home/doe/test.txt</code> into the remote directory <code>/tmp/test_dir</code> of server 10.0.0.1</p>
+                                    <pre>ssfcp /home/doe/test.txt 10.0.0.1@/tmp/test_dir</pre>
+
+                                    <h3>Local globbing to remote</h3>
+                                    <p>This command will copy all local files matching <code>/home/doe/*.txt</code> into the remote directory <code>/tmp/test_dir</code> of server 10.0.0.1</p>
+                                    <pre>ssfcp /home/doe/*.txt 10.0.0.1@/tmp/test_dir</pre>
+
+                                    <h3>stdin to remote</h3>
+                                    <p>This command will send the tar archive of <code>/tmp/test</code> through client stdin into the remote file <code>/tmp/test_dir/test.tar</code> of server 10.0.0.1</p>
+                                    <pre>tar cf - /tmp/test | ssfcp 10.0.0.1@/tmp/test_dir/test.tar</pre>
+
+                                    <h3>Remote to local</h3>
+                                    <p>This command will copy the remote file <code>/home/doe/test.txt</code> of 10.0.0.1 into the local directory <code>/tmp/test_dir</code></p>
+                                    <pre>ssfcp 10.0.0.1@/home/doe/test.txt /tmp/test_dir</pre>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <h2>From Windows to Linux</h2>
+                                <div class="col-md-12">
+                                    <h3>Local to remote</h3>
+                                    <p>This command will copy the file <code>D:\test.txt</code> into the remote directory <code>/tmp/test_dir</code> of server 10.0.0.1</p>
+                                    <pre>ssfcp.exe D:\\test.txt 10.0.0.1@/tmp/test_dir</pre>
+
+                                    <h3>Local globbing to remote</h3>
+                                    <p>This command will copy all local files matching <code>D:\*.txt</code> into the remote directory <code>/tmp/test_dir</code> of server 10.0.0.1</p>
+                                    <pre>ssfcp.exe D:\\test.txt 10.0.0.1@/tmp/test_dir</pre>
+
+                                    <h3>stdin to remote</h3>
+                                    <p>This command will send the tar archive of <code>D:\test</code> through client stdin into the remote file <code>/tmp/test_dir/test.tar</code> of server 10.0.0.1</p>
+                                    <pre>tar.exe cf - D:\\test | ssfcp.exe 10.0.0.1@/tmp/test_dir/test.tar</pre>
+
+                                    <h3>Remote to local</h3>
+                                    <p>This command will copy the remote file <code>D:\test.txt</code> of 10.0.0.1 into the local directory <code>/tmp/test_dir</code></p>
+                                    <pre>ssfcp 10.0.0.1@D:\\test.txt /tmp/test_dir</pre>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <h2>From Windows to Windows</h2>
+
+                                <div class="col-md-12">
+                                    <h3>Local to remote</h3>
+                                    <p>This command will copy the file <code>D:\test.txt</code> into the remote directory <code>E:\test_dir</code> of server 10.0.0.1</p>
+                                    <pre>ssfcp.exe D:\\test.txt 10.0.0.1@E:\\test_dir</pre>
+
+                                    <h3>Local globbing to remote</h3>
+                                    <p>This command will copy all local files matching <code>D:\*.txt</code> into the remote directory <code>E:\test_dir</code> of server 10.0.0.1</p>
+                                    <pre>ssfcp.exe D:\\*.txt 10.0.0.1@E:\\test_dir</pre>
+
+                                    <h3>stdin to remote</h3>
+                                    <p>This command will send the tar archive of <code>D:\test</code> through client stdin into the remote file <code>E:\test_dir\test.tar</code> of server 10.0.0.1</p>
+                                    <pre>tar.exe cf - D:\\test | ssfcp.exe 10.0.0.1@E:\\test_dir\\test.tar</pre>
+
+                                    <h3>Remote to local</h3>
+                                    <p>This command will copy the remote file <code>D:\test.txt</code> of 10.0.0.1 into the local directory <code>E:\test_dir</code></p>
+                                    <pre>ssfcp.exe 10.0.0.1@D:\\test.txt E:\\test_dir</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- How to copy file -->
                     
                     <!-- How to build windows -->
                     <div role="tabpanel" id="how-to-build-windows" class="tab-pane fade">
@@ -677,7 +778,8 @@ cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
-cmake --build `pwd` --config Debug|Release</pre>
+git submodule update --init --recursive
+cmake --build . --config Debug|Release</pre>
                                     </li>
                                 </ul>
                             </div>
@@ -743,7 +845,8 @@ cmake -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_T
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
-cmake --build `pwd` -- -j</pre>
+git submodule update --init --recursive
+cmake --build .</pre>
                                     </li>
                                 </ul>
                             </div>
@@ -798,7 +901,8 @@ cmake -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_T
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
-cmake --build `pwd` -- -j</pre>
+git submodule update --init --recursive
+cmake --build .</pre>
                                     </li>
                                 </ul>
                             </div>
