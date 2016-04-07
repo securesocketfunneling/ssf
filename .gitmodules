@@ -1,0 +1,3 @@
+[submodule "third_party/cmake-build-system"]
+	path = third_party/cmake-build-system
+	url = https://github.com/securesocketfunneling/cmake-build-system.git

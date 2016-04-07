@@ -18,10 +18,6 @@ else()
   set(SSF_VERSION_SECURITY 1)
 endif()
 
-# --- Include CMake build components and CMake common files
-add_subdirectory(./cmake)
-include(HelpersIdeTarget)
-
 # --- Project variables
 set(project_BINARY_DIR "${${project_name}_BINARY_DIR}")
 set(project_ROOT_DIR "${${project_name}_SOURCE_DIR}")
@@ -29,6 +25,10 @@ set(project_SRC_DIR "${project_ROOT_DIR}/src")
 set(project_IMG_DIR "${project_ROOT_DIR}/img")
 set(project_LIB_DIR "${project_SRC_DIR}/lib")
 set(project_THIRDPARTY_DIR "${project_ROOT_DIR}/third_party")
+
+# --- Include CMake build system scripts
+add_subdirectory("${project_THIRDPARTY_DIR}/cmake-build-system")
+include(HelpersIdeTarget)
 
 # --- Project files declaration
 set(VERSIONS_FILES

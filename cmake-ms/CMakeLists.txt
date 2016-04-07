@@ -18,7 +18,7 @@ if (WIN32)
 
   # --- Icon path
   set(ICON_RC "${project_IMG_DIR}/icon.rc")
-  set(EXEC_FLAG "")
+  set(EXEC_FLAG "RUNTIME_STATIC")
 
   # --- Boost platform requirements
   list(APPEND BOOST_PLATFORM_FLAGS "RUNTIME_STATIC")
