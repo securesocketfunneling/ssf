@@ -83,7 +83,7 @@ TEST(BouncingTests, BouncingChain) {
     ssf::Config ssf_config;
     ++initial_server_port;
     servers.emplace_front(server_io_service, ssf_config, initial_server_port);
-    servers.front().run();
+    servers.front().Run();
     bouncers.emplace_front(std::string("127.0.0.1:") +
       std::to_string(initial_server_port));
   }
@@ -92,7 +92,7 @@ TEST(BouncingTests, BouncingChain) {
       ssf::Config ssf_config;
       ++initial_server_port;
       servers.emplace_front(bouncer_io_service, ssf_config, initial_server_port);
-      servers.front().run();
+      servers.front().Run();
       bouncers.emplace_front(std::string("127.0.0.1:") +
                              std::to_string(initial_server_port));
   }
@@ -140,18 +140,17 @@ TEST(BouncingTests, BouncingChain) {
     Client client(client_io_service, "127.0.0.1",
                   std::to_string(initial_server_port - nb_of_servers),
                   ssf_config, client_options, std::move(callback));
-    client.run(params);
+    client.Run(params);
 
     network_set.get_future().wait();
     transport_set.get_future().wait();
 
     { boost::recursive_mutex::scoped_lock lock(mutex); }
 
-    client.stop();
+    client.Stop();
     for (auto& server : servers) {
-      server.stop();
+      server.Stop();
     }
-
 
     p_client_worker.reset();
     client_threads.join_all();

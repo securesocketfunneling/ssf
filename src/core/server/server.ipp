@@ -24,7 +24,8 @@ SSFServer<P, L, N, T>::SSFServer(boost::asio::io_service& io_service,
 template <typename P, template <class> class L,
           template <class, template <class> class> class N,
           template <class> class T>
-void SSFServer<P, L, N, T>::run() {
+void SSFServer<P, L, N, T>::Run() {
+  // network policy
   this->AcceptNewRoutes(
       local_port_,
       boost::bind(&SSFServer<P, L, N, T>::NetworkToTransport, this, _1, _2));
@@ -34,8 +35,10 @@ void SSFServer<P, L, N, T>::run() {
 template <typename P, template <class> class L,
           template <class, template <class> class> class N,
           template <class> class T>
-void SSFServer<P, L, N, T>::stop() {
+void SSFServer<P, L, N, T>::Stop() {
+  // network policy
   this->StopAcceptingRoutes();
+
   this->RemoveAllDemuxes();
 }
 

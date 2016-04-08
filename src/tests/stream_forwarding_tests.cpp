@@ -242,7 +242,7 @@ class StreamForwardTest : public ::testing::Test {
         server_io_service_, ssf_config, 8000));
 
     StartServerThreads();
-    p_ssf_server_->run();
+    p_ssf_server_->Run();
   }
 
   void StartClient() {
@@ -264,7 +264,7 @@ class StreamForwardTest : public ::testing::Test {
         client_io_service_, "127.0.0.1", "8000", ssf_config, client_options,
         boost::bind(&StreamForwardTest::SSFClientCallback, this, _1, _2, _3)));
     StartClientThreads();
-    p_ssf_client_->run(params);
+    p_ssf_client_->Run(params);
   }
 
   bool Wait() {
@@ -293,14 +293,14 @@ class StreamForwardTest : public ::testing::Test {
   }
 
   void StopServerThreads() {
-    p_ssf_server_->stop();
+    p_ssf_server_->Stop();
     p_server_worker_.reset();
     server_threads_.join_all();
     server_io_service_.stop();
   }
 
   void StopClientThreads() {
-    p_ssf_client_->stop();
+    p_ssf_client_->Stop();
     p_client_worker_.reset();
     client_threads_.join_all();
     client_io_service_.stop();

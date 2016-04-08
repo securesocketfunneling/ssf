@@ -120,7 +120,7 @@ public:
         boost::recursive_mutex::scoped_lock lock(acceptors_mutex_);
         acceptors_[port] = p_acceptor;
       }
-
+      // Link policy
       this->AcceptLinks(
           p_acceptor,
           boost::bind(&BounceProtocolPolicy::NewLinkConnectedHandler, this,
@@ -132,45 +132,47 @@ public:
   }
 
   void StopAcceptingRoutes() {
-      boost::recursive_mutex::scoped_lock lock(acceptors_mutex_);
-      for (auto& p_acceptor : acceptors_) {
-        boost::system::error_code ec;
-        p_acceptor.second->close(ec);
-      }
-      acceptors_.clear();
+    boost::recursive_mutex::scoped_lock lock(acceptors_mutex_);
+    for (auto& p_acceptor : acceptors_) {
+      boost::system::error_code ec;
+      p_acceptor.second->close(ec);
+    }
+    acceptors_.clear();
   }
 
-
-  //-------------------------------------------------------
-
-private:
+ private:
   static void InitAcceptor(acceptor_type& acceptor, uint16_t port,
                             boost::system::error_code& ec) {
     boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
     boost::asio::socket_base::reuse_address option(true);
 
     acceptor.open(endpoint.protocol(), ec);
-    if (!ec) {
-      acceptor.set_option(option, ec);
-      if (!ec) {
-        acceptor.bind(endpoint, ec);
-        if (!ec) {
-          acceptor.listen(100, ec);  ///
-          if (ec) {
-            BOOST_LOG_TRIVIAL(error) << "network: error in listen" << ec.message() << " " << ec.value()
-                      << std::endl;
-          }
-        } else {
-          BOOST_LOG_TRIVIAL(error) << "network: error in bind" << ec.message() << " " << ec.value()
-                    << std::endl;
-        }
-      } else {
-        BOOST_LOG_TRIVIAL(error) << "network: error in set_option" << ec.message() << " " << ec.value()
-                  << std::endl;
-      }
-    } else {
-      BOOST_LOG_TRIVIAL(error) << "network: error in open" << ec.message() << " " << ec.value()
-                << std::endl;
+    if (ec) {
+      BOOST_LOG_TRIVIAL(error) << "network: error when opening acceptor "
+        << ec.message() << " " << ec.value() << std::endl;
+      return;
+    }
+
+    acceptor.set_option(option, ec);
+    if (ec) {
+      BOOST_LOG_TRIVIAL(error)
+        << "network: error when setting option "
+        << ec.message() << " " << ec.value() << std::endl;
+      return;
+    }
+
+    acceptor.bind(endpoint, ec);
+    if (ec) {
+      BOOST_LOG_TRIVIAL(error) << "network: error when binding "
+        << ec.message() << " " << ec.value() << std::endl;
+      return;
+    }
+
+    acceptor.listen(100, ec);
+    if (ec) {
+      BOOST_LOG_TRIVIAL(error) << "network: error when listening "
+        << ec.message() << " " << ec.value() << std::endl;
+      return;
     }
   }
 
@@ -180,11 +182,8 @@ private:
     acceptor.close(ec);
   }
 
-  //-------------------------------------------------------
-
  private:
 
-  //-------------------------------------------------------
   template <typename Handler>
   void DoAddRoute(Handler handler, const Parameters& parameters,
                     callback_type callback) {
@@ -224,7 +223,8 @@ private:
       std::shared_ptr<uint32_t> p_version, p_socket_type p_socket,
       const boost::system::error_code& ec, size_t length) {
     if (!ec) {
-      BOOST_LOG_TRIVIAL(trace) << "network: bounce version received: " << *p_version;
+      BOOST_LOG_TRIVIAL(trace) << "network: bounce version received: "
+        << *p_version;
 
       if (IsSupportedVersion(*p_version)) {
         auto p_answer = std::make_shared<uint32_t>(1);
@@ -361,13 +361,13 @@ private:
       handler(p_ec_value, p_socket_type(nullptr), callback);
     }
   }
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   void GetAllEcs(const Parameters& parameters, p_vector_uint32_t p_ec_values,
                    uint32_t already_done, uint32_t total_size,
                    p_uint32_t p_ec_value, p_socket_type p_socket,
                    callback_type callback) {
     BOOST_LOG_TRIVIAL(trace) << "network: get all ecs done : " << already_done;
+
     if (already_done < total_size) {
       (*p_ec_values)[already_done] = *p_ec_value;
     }
@@ -404,12 +404,6 @@ private:
     }
   }
 
-  //********************************
-  
-
-  //********************************
-
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   template <typename Handler>
   void SendOneEc(Handler handler, p_uint32_t p_ec_value,
                    p_socket_type p_socket, callback_type callback) {
@@ -430,9 +424,7 @@ private:
       this->ProtocolEnd(p_socket, ec, callback);
     }
   }
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  //-------------------------------------------------------
   void NewLinkConnectedHandler(callback_type callback, p_socket_type p_socket) {
     if (!p_socket) {
       boost::system::error_code ec(ssf::error::not_a_socket,
@@ -494,14 +486,16 @@ private:
       } else {
         boost::system::error_code result_ec(ssf::error::wrong_protocol_type,
           ssf::error::get_ssf_category());
-        BOOST_LOG_TRIVIAL(error) << "network: bounce anwser NOT ok " << ec.message();
+        BOOST_LOG_TRIVIAL(error) << "network: bounce anwser NOT ok "
+          << ec.message();
+
         this->CloseLink(*p_socket);
         this->ProtocolEnd(nullptr, vector_error_code_type(1, result_ec),
                            callback);
         return;
       }
     } else {
-      BOOST_LOG_TRIVIAL(error) << "network: could NOT receive the Bounce anwser "
+      BOOST_LOG_TRIVIAL(error) << "network: could NOT receive the bounce answer "
                                << ec.message();
       this->CloseLink(*p_socket);
       this->ProtocolEnd(nullptr, vector_error_code_type(1, ec), callback);
@@ -589,7 +583,9 @@ private:
       this->CloseLink(*p_socket_in);
       return;
     }
-    BOOST_LOG_TRIVIAL(trace) << "network: forward link " << remote_addr << ":" << remote_port;
+    BOOST_LOG_TRIVIAL(trace) << "network: forward link "
+      << remote_addr << ":" << remote_port;
+
     Parameters parameters;
     parameters["remote_addr"] = remote_addr;
     parameters["remote_port"] = remote_port;
@@ -644,7 +640,8 @@ private:
     this->GetCredentials(parameters, handler_to_do_add_route, p_socket_in);
   }
 
-  void EstablishSession(p_socket_type p_socket_in, p_socket_type p_socket_out) {
+  void EstablishSession(p_socket_type p_socket_in,
+                        p_socket_type p_socket_out) {
     boost::system::error_code ec;
 
     // ! Can't std::move ssl stream ! //

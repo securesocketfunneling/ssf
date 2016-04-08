@@ -9,17 +9,17 @@ project("SSF Client")
 # --- ssfc
 set(CLIENT_NAME "ssfc")
 
-set(CLIENT_FILES
+set(CLIENT_MAIN
     main.cpp)
 
 add_target(${CLIENT_NAME}
   TYPE
     executable ${EXEC_FLAG} INSTALL
   FILES
-    ${CLIENT_FILES}
     ${SSF_SOURCES}
     ${CORE_COMMAND_LINE_STANDARD_FILES}
     ${ICON_RC}
+    ${CLIENT_MAIN}
   LINKS
     ${Boost_LIBRARIES}
     ${OpenSSL_LIBRARIES}
@@ -34,17 +34,17 @@ endif (APPLE)
 
 # --- ssfcp
 set(CLIENT_CP_NAME "ssfcp") 
-set(CLIENT_CP_FILES
+set(CLIENT_CP_MAIN
     main_cp.cpp) 
   
 add_target(${CLIENT_CP_NAME}
   TYPE
     executable ${EXEC_FLAG} INSTALL
   FILES
-    ${CLIENT_CP_FILES}
     ${SSF_SOURCES}
     ${CORE_COMMAND_LINE_COPY_FILES}
     ${ICON_RC}
+    ${CLIENT_CP_MAIN}
   LINKS
     ${Boost_LIBRARIES}
     ${OpenSSL_LIBRARIES}

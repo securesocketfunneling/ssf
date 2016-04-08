@@ -81,10 +81,10 @@ int main(int argc, char **argv) {
   // Initiate and start the server
   Server server(io_service, ssf_config, cmd.port());
 
-  server.run();
+  server.Run();
 
   getchar();
-  server.stop();
+  server.Stop();
   io_service.stop();
   threads.join_all();
 

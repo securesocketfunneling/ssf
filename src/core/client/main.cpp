@@ -162,11 +162,11 @@ int main(int argc, char** argv) {
 
   params["bouncing_nodes"] = ostrs.str();
 
-  client.run(params);
+  client.Run(params);
 
   getchar();
 
-  client.stop();
+  client.Stop();
   threads.join_all();
   io_service.stop();
 

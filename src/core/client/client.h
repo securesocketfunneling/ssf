@@ -61,9 +61,9 @@ class SSFClient : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
             std::vector<BaseUserServicePtr> user_services,
             client_callback_type callback);
 
-  void run(Parameters& parameters);
+  void Run(Parameters& parameters);
 
-  void stop();
+  void Stop();
 
  private:
   void DoSSFStart(p_socket_type p_socket, const boost::system::error_code& ec);

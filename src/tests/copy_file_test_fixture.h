@@ -78,7 +78,7 @@ class CopyFileTestFixture : public ::testing::Test {
                                                          ssf_config, 8000));
 
     StartServerThreads();
-    p_ssf_server_->run();
+    p_ssf_server_->Run();
   }
 
   virtual void StartClient() {
@@ -103,7 +103,7 @@ class CopyFileTestFixture : public ::testing::Test {
         boost::bind(&CopyFileTestFixture::SSFClientCallback, this, _1, _2,
                     _3)));
     StartClientThreads();
-    p_ssf_client_->run(params);
+    p_ssf_client_->Run(params);
   }
 
   bool Wait() {
@@ -144,7 +144,7 @@ class CopyFileTestFixture : public ::testing::Test {
   }
 
   void StopServerThreads() {
-    p_ssf_server_->stop();
+    p_ssf_server_->Stop();
     p_server_worker_.reset();
     server_threads_.join_all();
     server_io_service_.stop();

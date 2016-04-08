@@ -25,8 +25,8 @@ class NullLinkAuthenticationPolicy {
   typedef std::shared_ptr<uint32_t> p_uint32_t;
   typedef std::map<std::string, std::string> Parameters;
 
-  typedef std::function<void(const Parameters&, p_socket_type, const boost::system::error_code&)>
-      callback_type;
+  typedef std::function<void(const Parameters&, p_socket_type,
+                             const boost::system::error_code&)> callback_type;
 
 public:
  void GetCredentials(Parameters& parameters, callback_type callback,
@@ -38,8 +38,8 @@ public:
       boost::asio::async_write(
           *p_socket, boost::asio::buffer(p_value.get(), sizeof(*p_value)),
           boost::bind(
-              &NullLinkAuthenticationPolicy::RemoteConnectionEstablishedHandler,
-              this, parameters, callback, p_value, p_socket, _1, _2));
+            &NullLinkAuthenticationPolicy::RemoteConnectionEstablishedHandler,
+            this, parameters, callback, p_value, p_socket, _1, _2));
     }
   }
 
@@ -103,6 +103,7 @@ private:
     callback(parameters, p_socket, ec);
   }
 };
+
 }  // ssf
 
 #endif  // SSF_CORE_NETWORK_VIRTUAL_LAYER_POLICIES_LINK_AUTHENTICATION_POLICIES_NULL_LINK_AUTHENTICATION_POLICY_H_

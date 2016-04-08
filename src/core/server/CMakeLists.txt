@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project("SSF Server")
 
 set(SERVER_NAME "ssfs")
-set(SERVER_FILES
+set(SERVER_MAIN
       "${project_SRC_DIR}/core/server/main.cpp")
 
 include_directories(
@@ -14,10 +14,10 @@ add_target(${SERVER_NAME}
   TYPE
     executable ${EXEC_FLAG} INSTALL
   FILES
-    ${SERVER_FILES}
     ${CORE_COMMAND_LINE_STANDARD_FILES}
     ${SSF_SOURCES}
     ${ICON_RC}
+    ${SERVER_MAIN}
   LINKS
     ${Boost_LIBRARIES}
     ${OpenSSL_LIBRARIES}

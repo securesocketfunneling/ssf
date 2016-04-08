@@ -59,8 +59,8 @@ class SSFServer : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
   SSFServer(boost::asio::io_service& io_service, const ssf::Config& ssf_config,
             uint16_t local_port);
 
-  void run();
-  void stop();
+  void Run();
+  void Stop();
 
  private:
   void AddDemux(p_demux p_fiber_demux, p_ServiceManager p_service_manager);

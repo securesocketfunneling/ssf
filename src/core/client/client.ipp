@@ -39,7 +39,7 @@ SSFClient<P, L, N, T>::SSFClient(boost::asio::io_service& io_service,
 template <typename P, template <class> class L,
           template <class, template <class> class> class N,
           template <class> class T>
-void SSFClient<P, L, N, T>::run(Parameters& parameters) {
+void SSFClient<P, L, N, T>::Run(Parameters& parameters) {
   this->AddRoute(
       parameters,
       boost::bind(&SSFClient<P, L, N, T>::NetworkToTransport, this, _1, _2));
@@ -48,7 +48,7 @@ void SSFClient<P, L, N, T>::run(Parameters& parameters) {
 template <typename P, template <class> class L,
           template <class, template <class> class> class N,
           template <class> class T>
-void SSFClient<P, L, N, T>::stop() {
+void SSFClient<P, L, N, T>::Stop() {
   fiber_demux_.close();
 }
 
