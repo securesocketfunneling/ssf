@@ -22,6 +22,7 @@ add_target(${SERVER_NAME}
     ${Boost_LIBRARIES}
     ${OpenSSL_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
   PREFIX_SKIP
     ${project_SRC_DIR})
 

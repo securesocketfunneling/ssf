@@ -28,23 +28,23 @@
 #include "core/factories/service_factory.h"
 
 namespace ssf {
-template <typename PhysicalVirtualLayer,
-          template <class> class LinkAuthenticationPolicy,
-          template <class, template <class> class>
-          class NetworkVirtualLayerPolicy,
+template <class NetworkProtocol,
           template <class> class TransportVirtualLayerPolicy>
-class SSFServer : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
-                                                   LinkAuthenticationPolicy>,
-                  public TransportVirtualLayerPolicy<
-                      typename PhysicalVirtualLayer::socket_type> {
+class SSFServer : public TransportVirtualLayerPolicy<
+                      typename NetworkProtocol::socket> {
  private:
-  typedef typename PhysicalVirtualLayer::socket_type socket_type;
-  typedef typename PhysicalVirtualLayer::p_socket_type p_socket_type;
+  using network_socket_type = typename NetworkProtocol::socket;
+  using p_network_socket_type = std::shared_ptr<network_socket_type>;
+  using network_endpoint_type = typename NetworkProtocol::endpoint;
+  using p_network_endpoint_type = std::shared_ptr<network_endpoint_type>;
+  using network_resolver_type = typename NetworkProtocol::resolver;
+  using network_query_type = typename NetworkProtocol::resolver::query;
+  using network_acceptor_type = typename NetworkProtocol::acceptor;
 
-  typedef std::vector<boost::system::error_code> vector_error_code_type;
+  using worker_ptr = std::unique_ptr<boost::asio::io_service::work>;
 
  public:
-  typedef boost::asio::fiber::basic_fiber_demux<socket_type> demux;
+  typedef boost::asio::fiber::basic_fiber_demux<network_socket_type> demux;
 
  private:
   typedef std::shared_ptr<demux> p_demux;
@@ -52,26 +52,32 @@ class SSFServer : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
   typedef std::shared_ptr<ServiceManager<demux>> p_ServiceManager;
 
   typedef std::set<p_demux> demux_set;
-  typedef std::map<p_demux, p_socket_type> socket_map;
+  typedef std::map<p_demux, p_network_socket_type> socket_map;
   typedef std::map<p_demux, p_ServiceManager> service_manager_map;
 
  public:
   SSFServer(boost::asio::io_service& io_service, const ssf::Config& ssf_config,
             uint16_t local_port);
 
-  void Run();
+  void Run(const network_query_type& query);
   void Stop();
 
  private:
+  void AsyncAcceptConnection();
+  void NetworkToTransport(const boost::system::error_code& ec,
+                          p_network_socket_type p_socket);
   void AddDemux(p_demux p_fiber_demux, p_ServiceManager p_service_manager);
+  void DoSSFStart(p_network_socket_type p_socket,
+                  const boost::system::error_code& ec);
+  void DoFiberize(p_network_socket_type p_socket,
+                  boost::system::error_code& ec);
   void RemoveDemux(p_demux p_fiber_demux);
   void RemoveAllDemuxes();
-  void DoSSFStart(p_socket_type p_socket, const boost::system::error_code& ec);
-  void DoFiberize(p_socket_type p_socket, boost::system::error_code& ec);
-  void NetworkToTransport(p_socket_type p_socket, vector_error_code_type v_ec);
 
  private:
   boost::asio::io_service& io_service_;
+  worker_ptr p_worker_;
+  network_acceptor_type network_acceptor_;
 
   uint16_t local_port_;
 
