@@ -186,7 +186,7 @@ private:
     std::shared_ptr<boost::asio::ip::udp::endpoint> p_endpoint,
     std::shared_ptr<size_t> p_size, const boost::system::error_code& ec,
     size_t length) {
-    if (ec.value() == ssf::error::message_too_long) {
+    if (ec.value() == ::error::message_too_long) {
       {
         boost::recursive_mutex::scoped_lock lock(one_buffer_mutex_);
         one_buffer_.resize(one_buffer_.size() / 2);

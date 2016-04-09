@@ -74,8 +74,8 @@ class ItemManager : private boost::noncopyable {
 
     /// If new_id == 0, no ID was available
     if (!new_id) {
-      ec.assign(ssf::error::device_or_resource_busy,
-                ssf::error::get_ssf_category());
+      ec.assign(::error::device_or_resource_busy,
+                ::error::get_ssf_category());
       return 0;
     } else {
       item->start(ec);
@@ -100,7 +100,7 @@ class ItemManager : private boost::noncopyable {
         id_map_.erase(id);
       }
     } else {
-      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     }
   }
 

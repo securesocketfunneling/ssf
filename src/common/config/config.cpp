@@ -54,13 +54,13 @@ ssf::Config ssf::LoadConfig(const std::string& filepath,
         }
       }
     }
-    ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+    ec.assign(::error::success, ::error::get_ssf_category());
 
     return config;
   } catch (const std::exception& e) {
     BOOST_LOG_TRIVIAL(error)
         << "config: error reading SSF config file : " << e.what();
-    ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
     return ssf::Config();
   }

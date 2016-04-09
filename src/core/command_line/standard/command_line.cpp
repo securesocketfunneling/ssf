@@ -90,10 +90,10 @@ std::map<std::string, std::vector<std::string>> CommandLine::parse(
       std::cout << cmd_line << std::endl;
     }
 
-    ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+    ec.assign(::error::success, ::error::get_ssf_category());
     return InternalParsing(vm, ec);
   } catch (const std::exception&) {
-    ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return std::map<std::string, std::vector<std::string>>();
   }
 }
@@ -123,7 +123,7 @@ std::map<std::string, std::vector<std::string>> CommandLine::InternalParsing(
         port_ = static_cast<uint16_t>(port);
         port_set_ = true;
       } else {
-        ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+        ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       }
     } else if (variable.first == "host") {
       addr_ = vm[variable.first].as<std::string>();

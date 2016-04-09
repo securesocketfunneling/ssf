@@ -46,10 +46,10 @@ class RemoteSocks : public BaseUserService<Demux> {
       uint16_t port = (uint16_t)std::stoul(line);
       return std::shared_ptr<RemoteSocks>(new RemoteSocks(port));
     } catch (const std::invalid_argument&) {
-      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<RemoteSocks>(nullptr);
     } catch (const std::out_of_range&) {
-      ec.assign(ssf::error::out_of_range, ssf::error::get_ssf_category());
+      ec.assign(::error::out_of_range, ::error::get_ssf_category());
       return std::shared_ptr<RemoteSocks>(nullptr);
     }
   }

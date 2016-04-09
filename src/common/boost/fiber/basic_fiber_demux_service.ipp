@@ -33,7 +33,7 @@ namespace fiber {
 template <typename S>
 void basic_fiber_demux_service<S>::fiberize(implementation_type impl) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: fiberizing NOK " << ssf::error::broken_pipe;
+    BOOST_LOG_TRIVIAL(debug) << "demux: fiberizing NOK " << ::error::broken_pipe;
     return;
   }
 
@@ -48,8 +48,8 @@ void basic_fiber_demux_service<S>::bind(implementation_type impl,
                                         fiber_impl_type fib_impl,
                                         boost::system::error_code& ec) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: bind NOK " << ssf::error::broken_pipe;
-    ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+    BOOST_LOG_TRIVIAL(debug) << "demux: bind NOK " << ::error::broken_pipe;
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
 
@@ -78,12 +78,12 @@ void basic_fiber_demux_service<S>::bind(implementation_type impl,
         fib_impl->closed = false;
       }
 
-      ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+      ec.assign(::error::success, ::error::get_ssf_category());
     } else {
       BOOST_LOG_TRIVIAL(debug) << "demux: bind NOK "
-                               << ssf::error::device_or_resource_busy;
-      ec.assign(ssf::error::device_or_resource_busy,
-                ssf::error::get_ssf_category());
+                               << ::error::device_or_resource_busy;
+      ec.assign(::error::device_or_resource_busy,
+                ::error::get_ssf_category());
     }
   }
 }
@@ -92,7 +92,7 @@ template <typename S>
 bool basic_fiber_demux_service<S>::is_bound(implementation_type impl,
                                             const fiber_id& id) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: is_bound NOK " << ssf::error::broken_pipe;
+    BOOST_LOG_TRIVIAL(debug) << "demux: is_bound NOK " << ::error::broken_pipe;
     return false;
   }
 
@@ -104,7 +104,7 @@ template <typename S>
 void basic_fiber_demux_service<S>::unbind(implementation_type impl,
                                           const fiber_id& id) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: unbind NOK " << ssf::error::broken_pipe;
+    BOOST_LOG_TRIVIAL(debug) << "demux: unbind NOK " << ::error::broken_pipe;
     return;
   }
 
@@ -122,8 +122,8 @@ void basic_fiber_demux_service<S>::listen(implementation_type impl,
                                           local_port_type local_port,
                                           boost::system::error_code& ec) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: listen NOK " << ssf::error::broken_pipe;
-    ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+    BOOST_LOG_TRIVIAL(debug) << "demux: listen NOK " << ::error::broken_pipe;
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
 
@@ -135,12 +135,12 @@ void basic_fiber_demux_service<S>::listen(implementation_type impl,
 
     impl->listening.insert(local_port);
 
-    ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+    ec.assign(::error::success, ::error::get_ssf_category());
   } else if (impl->listening.count(local_port)) {
-    ec.assign(ssf::error::device_or_resource_busy,
-              ssf::error::get_ssf_category());
+    ec.assign(::error::device_or_resource_busy,
+              ::error::get_ssf_category());
   } else {
-    ec.assign(ssf::error::protocol_error, ssf::error::get_ssf_category());
+    ec.assign(::error::protocol_error, ::error::get_ssf_category());
   }
 }
 
@@ -148,7 +148,7 @@ template <typename S>
 bool basic_fiber_demux_service<S>::is_listening(implementation_type impl,
                                                 local_port_type local_port) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: is_listening NOK " << ssf::error::broken_pipe;
+    BOOST_LOG_TRIVIAL(debug) << "demux: is_listening NOK " << ::error::broken_pipe;
     return false;
   }
 
@@ -161,7 +161,7 @@ void basic_fiber_demux_service<S>::stop_listening(implementation_type impl,
                                                   local_port_type local_port) {
   if (!impl) {
     BOOST_LOG_TRIVIAL(debug) << "demux: stop_listening NOK "
-                             << ssf::error::broken_pipe;
+                             << ::error::broken_pipe;
     return;
   }
 
@@ -229,8 +229,8 @@ void basic_fiber_demux_service<S>::async_push_packets(
     boost::asio::async_write(impl->socket, toSendPriority.buffer, handler);
   } else {
     impl->socket.get_io_service().post(boost::bind(
-        handler, boost::system::error_code(ssf::error::connection_aborted,
-                                           ssf::error::get_ssf_category()),
+        handler, boost::system::error_code(::error::connection_aborted,
+                                           ::error::get_ssf_category()),
         0));
   }
 }
@@ -325,8 +325,8 @@ void basic_fiber_demux_service<S>::handle_ack(implementation_type impl,
     if (p_fib_impl->connecting) {
       p_fib_impl->set_connected();
       auto on_ack = p_fib_impl->access_connect_handler();
-      on_ack(boost::system::error_code(ssf::error::success,
-                                       ssf::error::get_ssf_category()));
+      on_ack(boost::system::error_code(::error::success,
+                                       ::error::get_ssf_category()));
     }
   } else {
     async_send_rst(impl, header.id().returning_id(),
@@ -369,8 +369,8 @@ void basic_fiber_demux_service<S>::handle_rst(implementation_type impl,
     if (p_fib_impl->connecting || p_fib_impl->connected) {
       if (p_fib_impl->connecting) {
         auto on_connection = p_fib_impl->access_connect_handler();
-        on_connection(boost::system::error_code(ssf::error::connection_refused,
-          ssf::error::get_ssf_category()));
+        on_connection(boost::system::error_code(::error::connection_refused,
+          ::error::get_ssf_category()));
       } else {
         p_fib_impl->set_disconnected();
         auto rst_sent = [this, impl, returning_id, p_fib_impl]() {
@@ -410,8 +410,8 @@ void basic_fiber_demux_service<S>::async_send_push(implementation_type impl,
       p_timer->async_wait(lambda);
     }
   } else {
-    handler(boost::system::error_code(ssf::error::protocol_error,
-                                      ssf::error::get_ssf_category()),
+    handler(boost::system::error_code(::error::protocol_error,
+                                      ::error::get_ssf_category()),
             0);
   }
 }
@@ -452,8 +452,8 @@ void basic_fiber_demux_service<S>::async_send_dgr(implementation_type impl,
     }
   } else {
     io_service_.post(boost::bind(
-        handler, boost::system::error_code(ssf::error::protocol_error,
-                                           ssf::error::get_ssf_category()),
+        handler, boost::system::error_code(::error::protocol_error,
+                                           ::error::get_ssf_category()),
         0));
   }
 }
@@ -599,8 +599,8 @@ void basic_fiber_demux_service<S>::async_send(
   if (buffers_size > impl->mtu) {
     if (flags & kFlagDatagram) {
       io_service_.post(boost::bind<void>(
-        handler, boost::system::error_code(ssf::error::message_too_long,
-                                           ssf::error::get_ssf_category()), 0));
+        handler, boost::system::error_code(::error::message_too_long,
+                                           ::error::get_ssf_category()), 0));
       return;
     }
     buffers_size = impl->mtu;

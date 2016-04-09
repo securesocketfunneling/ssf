@@ -78,7 +78,7 @@ public:
     if (it != std::end(service_options_)) {
       return it->second.parser(parameters, ec);
     } else {
-      ec.assign(ssf::error::service_not_found, ssf::error::get_ssf_category());
+      ec.assign(::error::service_not_found, ::error::get_ssf_category());
       return std::shared_ptr<ssf::services::BaseUserService<Demux>>(nullptr);
     }
   }

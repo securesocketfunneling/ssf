@@ -104,8 +104,8 @@ public:
         yield boost::asio::async_read(c_, r_.Address_Buffer(), std::move(*this));
         total_length_ += length;
       } else {
-        boost::get<0>(handler_)(boost::system::error_code(ssf::error::protocol_error,
-                                                          ssf::error::get_ssf_category()),
+        boost::get<0>(handler_)(boost::system::error_code(::error::protocol_error,
+                                                          ::error::get_ssf_category()),
                                 total_length_);
       }
 

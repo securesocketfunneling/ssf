@@ -237,8 +237,8 @@ public:
       } else {
         BOOST_LOG_TRIVIAL(error) << "network: bounce version NOT supported "
                                  << *p_version;
-        boost::system::error_code result_ec(ssf::error::wrong_protocol_type,
-                                            ssf::error::get_ssf_category());
+        boost::system::error_code result_ec(::error::wrong_protocol_type,
+                                            ::error::get_ssf_category());
         this->CloseLink(*p_socket);
         this->ProtocolEnd(nullptr, result_ec, callback);
         return;
@@ -283,8 +283,8 @@ public:
                 handler, result, bouncing_nodes.size(), p_bounce_size, p_socket,
                 callback, _1, _2));
       } else {
-        boost::system::error_code result_ec(ssf::error::wrong_protocol_type,
-          ssf::error::get_ssf_category());
+        boost::system::error_code result_ec(::error::wrong_protocol_type,
+          ::error::get_ssf_category());
         BOOST_LOG_TRIVIAL(error) << "network: bounce answer NOT ok "
                                  << result_ec.message();
         this->CloseLink(*p_socket);
@@ -427,8 +427,8 @@ public:
 
   void NewLinkConnectedHandler(callback_type callback, p_socket_type p_socket) {
     if (!p_socket) {
-      boost::system::error_code ec(ssf::error::not_a_socket,
-                                   ssf::error::get_ssf_category());
+      boost::system::error_code ec(::error::not_a_socket,
+                                   ::error::get_ssf_category());
       this->ProtocolEnd(nullptr, vector_error_code_type(1, ec), callback);
       return;
     }

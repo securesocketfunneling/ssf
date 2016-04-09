@@ -256,6 +256,8 @@ set(SSF_SOURCES
       ${SERVER_FILES}
 )
 
+add_subdirectory(${project_THIRDPARTY_DIR}/ssf-framework)
+
 set (BUILD_UNIT_TESTS ON)
 if (BUILD_UNIT_TESTS)
   include(GTest)

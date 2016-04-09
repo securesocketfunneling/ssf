@@ -461,8 +461,8 @@ public:
     if (!ctx_set) {
       BOOST_LOG_TRIVIAL(error) << "TLS context not initialized";
       BOOST_LOG_TRIVIAL(error) << "Check your configuration";
-      boost::system::error_code ec(ssf::error::invalid_argument,
-                                   ssf::error::get_ssf_category());
+      boost::system::error_code ec(::error::invalid_argument,
+                                   ::error::get_ssf_category());
       this->ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
       return;
     }
@@ -526,8 +526,8 @@ public:
       if (resolve_ec) {
         BOOST_LOG_TRIVIAL(error) << "link: could not resolve " << addr << ":"
                                  << port;
-        boost::system::error_code ec(ssf::error::invalid_argument,
-                                     ssf::error::get_ssf_category());
+        boost::system::error_code ec(::error::invalid_argument,
+                                     ::error::get_ssf_category());
         this->ToNextLayerHandler(p_socket_type(nullptr), connect_callback,
                                     ec);
         return;
@@ -540,8 +540,8 @@ public:
                                              this, p_socket, connect_callback,
                                              _1));
     } else {
-      boost::system::error_code ec(ssf::error::invalid_argument,
-                                   ssf::error::get_ssf_category());
+      boost::system::error_code ec(::error::invalid_argument,
+                                   ::error::get_ssf_category());
       this->ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
       return;
     }

@@ -62,8 +62,8 @@ class TCPPolicy {
       if (resolve_ec) {
         BOOST_LOG_TRIVIAL(error) << "link: could not resolve " << addr << ":"
                                  << port;
-        boost::system::error_code ec(ssf::error::invalid_argument,
-                                     ssf::error::get_ssf_category());
+        boost::system::error_code ec(::error::invalid_argument,
+                                     ::error::get_ssf_category());
         ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
         return;
       }
@@ -75,8 +75,8 @@ class TCPPolicy {
         boost::bind(&TCPPolicy::ConnectedHandler, this, p_socket,
                     connect_callback, _1));
     } else {
-      boost::system::error_code ec(ssf::error::invalid_argument,
-                                   ssf::error::get_ssf_category());
+      boost::system::error_code ec(::error::invalid_argument,
+                                   ::error::get_ssf_category());
       ToNextLayerHandler(p_socket_type(nullptr), connect_callback, ec);
     }
   }

@@ -62,8 +62,8 @@ class TransportProtocolPolicy {
                 p_ssf_reply, p_socket, _1, _2));
       } else {
         BOOST_LOG_TRIVIAL(error) << "transport: SSF version NOT supported " << version;
-        boost::system::error_code result_ec(ssf::error::wrong_protocol_type,
-                                            ssf::error::get_ssf_category());
+        boost::system::error_code result_ec(::error::wrong_protocol_type,
+                                            ::error::get_ssf_category());
         callback_(p_socket, result_ec);
       }
     } else {
@@ -98,8 +98,8 @@ class TransportProtocolPolicy {
         BOOST_LOG_TRIVIAL(info) << "transport: SSF reply OK";
         callback_(p_socket, ec);
       } else {
-        boost::system::error_code result_ec(ssf::error::wrong_protocol_type,
-                                            ssf::error::get_ssf_category());
+        boost::system::error_code result_ec(::error::wrong_protocol_type,
+                                            ::error::get_ssf_category());
         BOOST_LOG_TRIVIAL(error) << "transport: SSF reply NOT ok " << ec.message();
         callback_(p_socket, result_ec);
       }

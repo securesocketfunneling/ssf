@@ -66,7 +66,7 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(info) << "service admin: stopping";
-  ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+  ec.assign(::error::success, ::error::get_ssf_category());
 
   HandleStop();
 }
@@ -176,8 +176,8 @@ void Admin<Demux>::InitializeRemoteServices(
           Notify(
             ssf::services::initialisation::SERVICE,
             user_services_[i_],
-            boost::system::error_code(ssf::error::operation_canceled,
-                                      ssf::error::get_ssf_category()));
+            boost::system::error_code(::error::operation_canceled,
+                                      ::error::get_ssf_category()));
 
           // Get the remote micro services to stop
           stop_request_vector_ =
@@ -204,8 +204,8 @@ void Admin<Demux>::InitializeRemoteServices(
           Notify(
             ssf::services::initialisation::SERVICE,
             user_services_[i_],
-            boost::system::error_code(ssf::error::operation_canceled,
-                                      ssf::error::get_ssf_category()));
+            boost::system::error_code(::error::operation_canceled,
+                                      ::error::get_ssf_category()));
 
           // Get the remote micro services to stop
           stop_request_vector_ =
@@ -226,8 +226,8 @@ void Admin<Demux>::InitializeRemoteServices(
         Notify(
           ssf::services::initialisation::SERVICE,
           user_services_[i_],
-          boost::system::error_code(ssf::error::success,
-                                    ssf::error::get_ssf_category()));
+          boost::system::error_code(::error::success,
+                                    ::error::get_ssf_category()));
       }
     }
   } else {

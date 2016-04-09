@@ -89,7 +89,7 @@ class UdpRemotePortForwading : public BaseUserService<Demux>
       return std::shared_ptr<UdpRemotePortForwading>(
         new UdpRemotePortForwading(listening_port, target_addr, target_port));
     } else {
-      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<UdpRemotePortForwading>(nullptr);
     }
   }

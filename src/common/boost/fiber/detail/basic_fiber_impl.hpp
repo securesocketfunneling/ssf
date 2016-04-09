@@ -228,8 +228,8 @@ public:
     };
 
     close_handler = [this]() {
-      boost::system::error_code ec(ssf::error::connection_reset,
-                                    ssf::error::get_ssf_category());
+      boost::system::error_code ec(::error::connection_reset,
+                                    ::error::get_ssf_category());
       cancel_operations(ec);
 
       BOOST_LOG_TRIVIAL(trace) << "fiber impl : close handler "
@@ -491,8 +491,8 @@ public:
   */
   void cancel_operations(
     boost::system::error_code ec =
-      boost::system::error_code(ssf::error::interrupted,
-                                ssf::error::get_ssf_category()))
+      boost::system::error_code(::error::interrupted,
+                                ::error::get_ssf_category()))
   {
     r_queues_handler(ec);
     a_queues_handler(ec);

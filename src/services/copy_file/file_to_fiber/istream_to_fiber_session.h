@@ -51,7 +51,7 @@ class IstreamToFiberSession : public ssf::BaseSession {
       if (!input_stream_.is_open() || !input_stream_.good()) {
         BOOST_LOG_TRIVIAL(error) << "session istream to fiber : cannot open file "
                                  << input_file_;
-        ec.assign(ssf::error::bad_file_descriptor, ssf::error::get_ssf_category());
+        ec.assign(::error::bad_file_descriptor, ::error::get_ssf_category());
         stop_handler_(output_file_);
 
         return;

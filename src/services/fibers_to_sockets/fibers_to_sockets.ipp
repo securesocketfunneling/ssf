@@ -48,8 +48,8 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
 template <typename Demux>
 void FibersToSockets<Demux>::stop(boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(info) << "service fibers to sockets: stopping";
-  ec.assign(ssf::error::success,
-            ssf::error::get_ssf_category());
+  ec.assign(::error::success,
+            ::error::get_ssf_category());
 
   fiber_acceptor_.close();
   manager_.stop_all();

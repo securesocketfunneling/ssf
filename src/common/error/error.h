@@ -6,7 +6,6 @@
 #include <boost/asio/error.hpp>
 #include <boost/system/error_code.hpp>
 
-namespace ssf {
 namespace error {
 
 enum errors {
@@ -46,5 +45,5 @@ inline const boost::system::error_category& get_ssf_category() {
 }
 
 }  // error
-}  // ssf
+
 #endif  // SSF_COMMON_ERROR_ERROR_H_

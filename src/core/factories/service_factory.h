@@ -11,6 +11,8 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/system/error_code.hpp>
 
+#include "common/error/error.h"
+
 #include "core/service_manager/service_manager.h"
 #include "services/base_service.h"
 
@@ -75,11 +77,11 @@ public:
 
         return service_id;
       } else {
-        ec.assign(ssf::error::service_not_started, ssf::error::get_ssf_category());
+        ec.assign(::error::service_not_started, error::get_ssf_category());
         return 0;
       }
     } else {
-      ec.assign(ssf::error::service_not_found, ssf::error::get_ssf_category());
+      ec.assign(::error::service_not_found, error::get_ssf_category());
       return 0;
     }
   }

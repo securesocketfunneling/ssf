@@ -170,8 +170,8 @@ class fiber_acceptor_service
       if (impl->closed) {
         auto handler_to_post = [init]() mutable {
           init.handler(
-            boost::system::error_code(ssf::error::not_connected,
-            ssf::error::get_ssf_category()));
+            boost::system::error_code(::error::not_connected,
+            ::error::get_ssf_category()));
         };
         this->get_io_service().post(handler_to_post);
 
