@@ -149,7 +149,8 @@ set(PARSER_FILES
       
 FILE(GLOB_RECURSE CLIENT_FILES
       "${project_SRC_DIR}/core/client/*.h"
-      "${project_SRC_DIR}/core/client/*.ipp")
+      "${project_SRC_DIR}/core/client/*.ipp"
+      "${project_SRC_DIR}/core/client/query_factory.cpp")
       
 FILE(GLOB_RECURSE SERVER_FILES
       "${project_SRC_DIR}/core/server/*.h"

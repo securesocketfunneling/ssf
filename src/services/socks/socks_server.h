@@ -7,8 +7,8 @@
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>  // NOLINT
 
-#include "common/network/manager.h"
-#include "common/network/base_session.h"
+#include <ssf/network/manager.h>
+#include <ssf/network/base_session.h>
 
 #include "services/base_service.h"
 

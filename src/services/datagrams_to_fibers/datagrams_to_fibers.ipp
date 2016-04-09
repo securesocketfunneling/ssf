@@ -3,7 +3,7 @@
 
 #include <boost/log/trivial.hpp>
 
-#include "common/network/session_forwarder.h"
+#include <ssf/network/session_forwarder.h>
 
 namespace ssf { namespace services { namespace datagrams_to_fibers {
 template <typename Demux>

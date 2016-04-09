@@ -7,10 +7,10 @@
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>  // NOLINT
 
-#include "common/network/base_session.h"  // NOLINT
-#include "common/network/socket_link.h"  // NOLINT
-#include "common/network/manager.h"
-#include "common/network/base_session.h"
+#include <ssf/network/base_session.h> // NOLINT
+#include <ssf/network/socket_link.h>  // NOLINT
+#include <ssf/network/manager.h>
+#include <ssf/network/base_session.h>
 
 #include "services/socks/v4/request.h"  // NOLINT
 

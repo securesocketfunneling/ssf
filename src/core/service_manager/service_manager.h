@@ -7,10 +7,11 @@
 #include <utility>
 #include <list>
 
+#include <ssf/network/manager.h>
+
 #include <boost/system/error_code.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
-#include "common/network/manager.h"
 #include "services/base_service.h"
 
 namespace ssf {

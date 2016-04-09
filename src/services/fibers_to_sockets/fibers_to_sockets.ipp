@@ -4,7 +4,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "common/error/error.h"
-#include "common/network/session_forwarder.h"
+#include <ssf/network/session_forwarder.h>
 
 namespace ssf { namespace services { namespace fibers_to_sockets {
 

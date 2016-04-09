@@ -14,10 +14,11 @@
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio.hpp>  // NOLINT
 
+#include <ssf/network/manager.h>
+
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
-#include "common/network/manager.h"
 #include "services/initialisation.h"
 #include "services/base_service.h"
 

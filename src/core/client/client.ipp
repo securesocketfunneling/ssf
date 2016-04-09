@@ -17,84 +17,73 @@
 #include "services/user_services/copy_file_service.h"
 
 namespace ssf {
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-SSFClient<P, L, N, T>::SSFClient(boost::asio::io_service& io_service,
-                                 const std::string& remote_addr,
-                                 const std::string& port,
-                                 const ssf::Config& ssf_config,
-                                 std::vector<BaseUserServicePtr> user_services,
-                                 client_callback_type callback)
-    : N<P, L>(io_service, ssf_config),
-      T<typename P::socket_type>(
-          boost::bind(&SSFClient<P, L, N, T>::DoSSFStart, this, _1, _2)),
+
+template <class N, template <class> class T>
+SSFClient<N, T>::SSFClient(boost::asio::io_service& io_service,
+                           std::vector<BaseUserServicePtr> user_services,
+                           client_callback_type callback)
+    : T<typename N::socket>(
+          boost::bind(&SSFClient<N, T>::DoSSFStart, this, _1, _2)),
       io_service_(io_service),
+      p_worker_(nullptr),
       fiber_demux_(io_service),
       user_services_(user_services),
-      remote_addr_(remote_addr),
-      remote_port_(port),
       callback_(std::move(callback)) {}
 
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-void SSFClient<P, L, N, T>::Run(Parameters& parameters) {
-  this->AddRoute(
-      parameters,
-      boost::bind(&SSFClient<P, L, N, T>::NetworkToTransport, this, _1, _2));
+template <class N, template <class> class T>
+void SSFClient<N, T>::Run(const network_query_type& query) {
+  p_worker_.reset(new boost::asio::io_service::work(io_service_));
+  // Create network socket
+  p_network_socket_type p_socket =
+      std::make_shared<network_socket_type>(io_service_);
+  
+  // resolve remote endpoint with query
+  network_resolver_type resolver(io_service_);
+  boost::system::error_code ec;
+  auto endpoint_it = resolver.resolve(query, ec);
+
+  if (ec) {
+    Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
+    BOOST_LOG_TRIVIAL(error) << "Could not resolve network endpoint";
+    return;
+  }
+
+  // async connect client to given endpoint
+  p_socket->async_connect(
+      *endpoint_it,
+      boost::bind(&SSFClient<N, T>::NetworkToTransport, this, _1, p_socket));
 }
 
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-void SSFClient<P, L, N, T>::Stop() {
+template <class N, template <class> class T>
+void SSFClient<N, T>::Stop() {
   fiber_demux_.close();
+  p_worker_.reset();
 }
 
 //-------------------------------------------------------------------------------
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-void SSFClient<P, L, N, T>::NetworkToTransport(p_socket_type p_socket,
-                                               vector_error_code_type v_ec) {
-  if (PrintErrorVector(v_ec)) {
+template <class N, template <class> class T>
+void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
+                                         p_network_socket_type p_socket) {
+  if (!ec) {
     this->DoSSFInitiate(p_socket);
-  } else {
-    if (p_socket) {
-      boost::system::error_code ec;
-      p_socket->close(ec);
-    }
-    for (size_t i = 0; i < v_ec.size(); ++i) {
-      if (v_ec[i]) {
-        Notify(ssf::services::initialisation::NETWORK, nullptr, v_ec[i]);
-        return;
-      }
-    }
+    return;
   }
-}
-//------------------------------------------------------------------------------
 
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-bool SSFClient<P, L, N, T>::PrintErrorVector(vector_error_code_type v_ec) {
-  for (size_t i = 0; i < v_ec.size(); ++i) {
-    if (v_ec[i]) {
-      BOOST_LOG_TRIVIAL(error) << "client: node " << i << " status: " << v_ec[i]
-                               << " message: " << v_ec[i].message();
-      return false;
-    }
+  BOOST_LOG_TRIVIAL(error) << "Error when connecting to server "
+                           << ec.message();
+
+  if (p_socket) {
+    boost::system::error_code close_ec;
+    p_socket->close(close_ec);
   }
-  return true;
+
+  Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 }
 
 //------------------------------------------------------------------------------
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-void SSFClient<P, L, N, T>::DoSSFStart(p_socket_type p_socket,
-                                       const boost::system::error_code& ec) {
+template <class N, template <class> class T>
+void SSFClient<N, T>::DoSSFStart(p_network_socket_type p_socket,
+                                 const boost::system::error_code& ec) {
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 
   if (!ec) {
@@ -108,11 +97,9 @@ void SSFClient<P, L, N, T>::DoSSFStart(p_socket_type p_socket,
   }
 }
 
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-void SSFClient<P, L, N, T>::DoFiberize(p_socket_type p_socket,
-                                       boost::system::error_code& ec) {
+template <class N, template <class> class T>
+void SSFClient<N, T>::DoFiberize(p_network_socket_type p_socket,
+                                 boost::system::error_code& ec) {
   // Register supported admin commands
   services::admin::CreateServiceRequest<demux>::RegisterToCommandFactory();
   services::admin::StopServiceRequest<demux>::RegisterToCommandFactory();
@@ -156,10 +143,8 @@ void SSFClient<P, L, N, T>::DoFiberize(p_socket_type p_socket,
 }
 //------------------------------------------------------------------------------
 
-template <typename P, template <class> class L,
-          template <class, template <class> class> class N,
-          template <class> class T>
-void SSFClient<P, L, N, T>::OnDemuxClose() {
+template <class N, template <class> class T>
+void SSFClient<N, T>::OnDemuxClose() {
   auto p_service_factory =
       ServiceFactoryManager<demux>::GetServiceFactory(&fiber_demux_);
   if (p_service_factory) {

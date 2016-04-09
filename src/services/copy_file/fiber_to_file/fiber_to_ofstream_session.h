@@ -9,10 +9,9 @@
 
 #include <boost/system/error_code.hpp>
 
-#include "common/network/base_session.h"  // NOLINT
-
-#include "common/network/manager.h"
-#include "common/network/base_session.h"
+#include <ssf/network/base_session.h>  // NOLINT
+#include <ssf/network/manager.h>
+#include <ssf/network/base_session.h>
 
 #include "services/copy_file/filename_buffer.h"
 #include "services/copy_file/packet/packet.h"

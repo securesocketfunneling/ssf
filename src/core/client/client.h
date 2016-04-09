@@ -7,7 +7,7 @@
 #include <string>
 #include <functional>
 
-#include <boost/asio.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
@@ -26,66 +26,63 @@
 #include "core/service_manager/service_manager.h"
 #include "services/base_service.h"
 
-
 namespace ssf {
-template <typename PhysicalVirtualLayer,
-          template <class> class LinkAuthenticationPolicy,
-          template <class, template <class> class>
-            class NetworkVirtualLayerPolicy,
+template <class NetworkProtocol,
           template <class> class TransportVirtualLayerPolicy>
-class SSFClient : public NetworkVirtualLayerPolicy<PhysicalVirtualLayer,
-                                                   LinkAuthenticationPolicy>,
-                  public TransportVirtualLayerPolicy<
-                    typename PhysicalVirtualLayer::socket_type> {
-
+class SSFClient
+    : public TransportVirtualLayerPolicy<typename NetworkProtocol::socket> {
  private:
-  typedef typename PhysicalVirtualLayer::socket_type socket_type;
-  typedef typename PhysicalVirtualLayer::p_socket_type p_socket_type;
-  typedef std::map<std::string, std::string> Parameters;
+  using network_socket_type = typename NetworkProtocol::socket;
+  using p_network_socket_type = std::shared_ptr<network_socket_type>;
+  using network_endpoint_type = typename NetworkProtocol::endpoint;
+  using network_resolver_type = typename NetworkProtocol::resolver;
+  using network_query_type = typename NetworkProtocol::resolver::query;
 
-  typedef std::vector<boost::system::error_code> vector_error_code_type;
+  using Parameters = std::map<std::string, std::string>;
+
+  using worker_ptr = std::unique_ptr<boost::asio::io_service::work>;
 
  public:
-  typedef boost::asio::fiber::basic_fiber_demux<socket_type> demux;
+  typedef boost::asio::fiber::basic_fiber_demux<network_socket_type> demux;
   typedef typename ssf::services::BaseUserService<demux>::BaseUserServicePtr
     BaseUserServicePtr;
-  typedef std::function<
-    void(ssf::services::initialisation::type,
-         BaseUserServicePtr,
-         const boost::system::error_code&)>
-      client_callback_type;
+  typedef std::function<void(
+      ssf::services::initialisation::type, BaseUserServicePtr,
+      const boost::system::error_code&)> client_callback_type;
 
  public:
-  SSFClient(boost::asio::io_service& io_service, const std::string& remote_addr,
-            const std::string& port, const ssf::Config& ssf_config,
+  SSFClient(boost::asio::io_service& io_service,
             std::vector<BaseUserServicePtr> user_services,
             client_callback_type callback);
 
-  void Run(Parameters& parameters);
+  void Run(const network_query_type& query);
 
   void Stop();
 
  private:
-  void DoSSFStart(p_socket_type p_socket, const boost::system::error_code& ec);
+  void NetworkToTransport(const boost::system::error_code& ec,
+                          p_network_socket_type p_socket);
 
-  void DoFiberize(p_socket_type p_socket, boost::system::error_code& ec);
+  void DoSSFStart(p_network_socket_type p_socket,
+                  const boost::system::error_code& ec);
+
+  void DoFiberize(p_network_socket_type p_socket,
+                  boost::system::error_code& ec);
 
   void OnDemuxClose();
-
-  void NetworkToTransport(p_socket_type p_socket, vector_error_code_type v_ec);
-  bool PrintErrorVector(vector_error_code_type v_ec);
 
   void Notify(ssf::services::initialisation::type type,
               BaseUserServicePtr p_user_service,
               boost::system::error_code ec) {
     if (callback_) {
-      io_service_.post(
-          boost::bind(callback_, std::move(type), p_user_service, std::move(ec)));
+      io_service_.post(boost::bind(callback_, std::move(type), p_user_service,
+                                   std::move(ec)));
     }
   }
 
  private:
   boost::asio::io_service& io_service_;
+  worker_ptr p_worker_;
   demux fiber_demux_;
 
   std::vector<BaseUserServicePtr> user_services_;

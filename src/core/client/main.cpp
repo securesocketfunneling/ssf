@@ -6,6 +6,13 @@
 #include <boost/log/trivial.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/layer/data_link/circuit_helpers.h>
+#include <ssf/layer/data_link/basic_circuit_protocol.h>
+#include <ssf/layer/data_link/simple_circuit_policy.h>
+#include <ssf/layer/parameters.h>
+#include <ssf/layer/physical/tcp.h>
+#include <ssf/layer/physical/tlsotcp.h>
+
 #include "common/config/config.h"
 
 #include "core/client/client.h"
@@ -13,11 +20,9 @@
 #include "core/command_line/standard/command_line.h"
 #include "core/parser/bounce_parser.h"
 #include "core/factories/service_option_factory.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
+
+#include "core/client/query_factory.h"
 
 #include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
@@ -34,14 +39,24 @@ void Init() {
 }
 
 int main(int argc, char** argv) {
+  using CircuitBouncers = std::list<std::string>;
+  using NetworkQuery = ssf::layer::ParameterStack;
+
 #ifdef TLS_OVER_TCP_LINK
+  using TLSPhysicalProtocol = ssf::layer::physical::TLSboTCPPhysicalLayer;
+  using TLSCircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
+      TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
+
   using Client =
-      ssf::SSFClient<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
+      ssf::SSFClient<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
+
 #elif TCP_ONLY_LINK
+  using PhysicalProtocol = ssf::layer::physical::TCPPhysicalLayer;
+  using CircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
+      PhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
+
   using Client =
-      ssf::SSFClient<ssf::TCPPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
+      ssf::SSFClient<CircuitProtocol, ssf::TransportProtocolPolicy>;
 #endif
 
   using demux = Client::demux;
@@ -116,8 +131,39 @@ int main(int argc, char** argv) {
 
   // Initialize the asynchronous engine
   boost::asio::io_service io_service;
-  boost::asio::io_service::work worker(io_service);
   boost::thread_group threads;
+
+  auto callback = [](ssf::services::initialisation::type, BaseUserServicePtr,
+                     const boost::system::error_code&) {};
+
+  // Initiate and start client
+  Client client(io_service, user_services, callback);
+
+  CircuitBouncers bouncers = BounceParser::ParseBounceFile(cmd.bounce_file());
+
+  std::string remote_addr;
+  std::string remote_port;
+  if (bouncers.size()) {
+    auto first = bouncers.front();
+    bouncers.pop_front();
+    remote_addr = BounceParser::GetRemoteAddress(first);
+    remote_port = BounceParser::GetRemotePort(first);
+    bouncers.push_back(cmd.addr() + ":" + std::to_string(cmd.port()));
+  } else {
+    remote_addr = cmd.addr();
+    remote_port = std::to_string(cmd.port());
+  }
+
+  // construct endpoint parameter stack
+#ifdef TLS_OVER_TCP_LINK
+  auto endpoint_query =
+      ssf::GenerateTLSNetworkQuery(remote_addr, remote_port, ssf_config, bouncers);
+#elif TCP_ONLY_LINK
+  auto endpoint_query =
+      ssf::GenerateTCPNetworkQuery(remote_addr, remote_port, bouncers);
+#endif
+
+  client.Run(endpoint_query);
 
   for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
     auto lambda = [&]() {
@@ -132,37 +178,6 @@ int main(int argc, char** argv) {
 
     threads.create_thread(lambda);
   }
-
-  auto callback = [](ssf::services::initialisation::type, BaseUserServicePtr,
-                     const boost::system::error_code&) {};
-
-  // Initiate and start client
-  Client client(io_service, cmd.addr(), std::to_string(cmd.port()), ssf_config,
-                user_services, callback);
-
-  std::map<std::string, std::string> params;
-
-  std::list<std::string> bouncers =
-      BounceParser::ParseBounceFile(cmd.bounce_file());
-
-  if (bouncers.size()) {
-    auto first = bouncers.front();
-    bouncers.pop_front();
-    params["remote_addr"] = BounceParser::GetRemoteAddress(first);
-    params["remote_port"] = BounceParser::GetRemotePort(first);
-    bouncers.push_back(cmd.addr() + ":" + std::to_string(cmd.port()));
-  } else {
-    params["remote_addr"] = cmd.addr();
-    params["remote_port"] = std::to_string(cmd.port());
-  }
-
-  std::ostringstream ostrs;
-  boost::archive::text_oarchive ar(ostrs);
-  ar << BOOST_SERIALIZATION_NVP(bouncers);
-
-  params["bouncing_nodes"] = ostrs.str();
-
-  client.Run(params);
 
   getchar();
 
