@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 
   params["bouncing_nodes"] = ostrs.str();
 
-  client.run(params);
+  client.Run(params);
 
   // wait end transfer
   closed.get_future().get();
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
 
   threads.join_all();
 
-  client.stop();
+  client.Stop();
   io_service.stop();
 
   return 0;
