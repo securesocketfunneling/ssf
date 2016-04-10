@@ -10,16 +10,22 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
+#include <ssf/layer/data_link/circuit_helpers.h>
+#include <ssf/layer/data_link/basic_circuit_protocol.h>
+#include <ssf/layer/data_link/simple_circuit_policy.h>
+#include <ssf/layer/parameters.h>
+#include <ssf/layer/physical/tcp.h>
+#include <ssf/layer/physical/tlsotcp.h>
+
 #include "common/config/config.h"
 
 #include "core/client/client.h"
+#include "core/client/query_factory.h"
 #include "core/server/server.h"
+#include "core/server/query_factory.h"
 
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
 #include "core/parser/bounce_parser.h"
+
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -28,18 +34,16 @@
 //-----------------------------------------------------------------------------
 TEST(BouncingTests, BouncingChain) {
   using BounceParser = ssf::parser::BounceParser;
-  using Server =
-      ssf::SSFServer<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
+  using TLSPhysicalProtocol = ssf::layer::physical::TLSboTCPPhysicalLayer;
+  using TLSCircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
+      TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
   using Client =
-      ssf::SSFClient<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
-
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef ssf::SSLWrapper<> ssl_socket;
-  typedef boost::asio::fiber::basic_fiber_demux<ssl_socket> Demux;
-  typedef ssf::services::BaseUserService<Demux>::BaseUserServicePtr
-    BaseUserServicePtr;
+      ssf::SSFClient<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
+  using Server =
+      ssf::SSFServer<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
+  using demux = Client::demux;
+  using BaseUserServicePtr =
+      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
 
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                       boost::log::trivial::info);
@@ -82,8 +86,10 @@ TEST(BouncingTests, BouncingChain) {
   {
     ssf::Config ssf_config;
     ++initial_server_port;
+      auto endpoint_query = ssf::GenerateServerTLSNetworkQuery(
+          std::to_string(initial_server_port), ssf_config);
     servers.emplace_front(server_io_service, ssf_config, initial_server_port);
-    servers.front().Run();
+    servers.front().Run(endpoint_query);
     bouncers.emplace_front(std::string("127.0.0.1:") +
       std::to_string(initial_server_port));
   }
@@ -91,8 +97,11 @@ TEST(BouncingTests, BouncingChain) {
     for (uint8_t i = 0; i < nb_of_servers - 1; ++i) {
       ssf::Config ssf_config;
       ++initial_server_port;
+      auto endpoint_query = ssf::GenerateServerTLSNetworkQuery(
+          std::to_string(initial_server_port), ssf_config);
+
       servers.emplace_front(bouncer_io_service, ssf_config, initial_server_port);
-      servers.front().Run();
+      servers.front().Run(endpoint_query);
       bouncers.emplace_front(std::string("127.0.0.1:") +
                              std::to_string(initial_server_port));
   }
@@ -100,18 +109,13 @@ TEST(BouncingTests, BouncingChain) {
     std::vector<BaseUserServicePtr> client_options;
     std::string error_msg;
 
-    std::map<std::string, std::string> params;
+    std::string remote_addr;
+    std::string remote_port;
 
     auto first = bouncers.front();
     bouncers.pop_front();
-    params["remote_addr"] = BounceParser::GetRemoteAddress(first);
-    params["remote_port"] = BounceParser::GetRemotePort(first);
-
-    std::ostringstream ostrs;
-    boost::archive::text_oarchive ar(ostrs);
-    ar << BOOST_SERIALIZATION_NVP(bouncers);
-
-    params["bouncing_nodes"] = ostrs.str();
+    remote_addr = BounceParser::GetRemoteAddress(first);
+    remote_port = BounceParser::GetRemotePort(first);
 
     ssf::Config ssf_config;
 
@@ -137,10 +141,11 @@ TEST(BouncingTests, BouncingChain) {
       }
     };
 
-    Client client(client_io_service, "127.0.0.1",
-                  std::to_string(initial_server_port - nb_of_servers),
-                  ssf_config, client_options, std::move(callback));
-    client.Run(params);
+    auto endpoint_query = ssf::GenerateTLSNetworkQuery(remote_addr, remote_port,
+                                                       ssf_config, bouncers);
+
+    Client client(client_io_service, client_options, std::move(callback));
+    client.Run(endpoint_query);
 
     network_set.get_future().wait();
     transport_set.get_future().wait();

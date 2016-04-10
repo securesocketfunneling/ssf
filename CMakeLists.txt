@@ -154,7 +154,8 @@ FILE(GLOB_RECURSE CLIENT_FILES
       
 FILE(GLOB_RECURSE SERVER_FILES
       "${project_SRC_DIR}/core/server/*.h"
-      "${project_SRC_DIR}/core/server/*.ipp")
+      "${project_SRC_DIR}/core/server/*.ipp"
+      "${project_SRC_DIR}/core/server/query_factory.cpp")
 
 set(BOOST_ROOT
       "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")

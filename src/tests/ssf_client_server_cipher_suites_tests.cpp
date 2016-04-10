@@ -10,15 +10,20 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
+#include <ssf/layer/data_link/circuit_helpers.h>
+#include <ssf/layer/data_link/basic_circuit_protocol.h>
+#include <ssf/layer/data_link/simple_circuit_policy.h>
+#include <ssf/layer/parameters.h>
+#include <ssf/layer/physical/tcp.h>
+#include <ssf/layer/physical/tlsotcp.h>
+
 #include "common/config/config.h"
 
 #include "core/client/client.h"
+#include "core/client/query_factory.h"
 #include "core/server/server.h"
+#include "core/server/query_factory.h"
 
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -27,11 +32,16 @@
 class SSFClientServerCipherSuitesTest : public ::testing::Test
 {
  public:
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef ssf::SSLWrapper<> ssl_socket;
-  typedef boost::asio::fiber::basic_fiber_demux<ssl_socket> demux;
-  typedef ssf::services::BaseUserService<demux>::BaseUserServicePtr
-    BaseUserServicePtr;
+  using TLSPhysicalProtocol = ssf::layer::physical::TLSboTCPPhysicalLayer;
+  using TLSCircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
+      TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
+  using Client =
+      ssf::SSFClient<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
+  using Server =
+      ssf::SSFServer<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
+  using demux = Client::demux;
+  using BaseUserServicePtr =
+      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
   typedef boost::function<void(ssf::services::initialisation::type,
                                BaseUserServicePtr,
                                const boost::system::error_code&)>
@@ -54,33 +64,27 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test
   }
 
   void StartServer(const ssf::Config& config) {
-    p_ssf_server_.reset(new ssf::SSFServer<
-        ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-        ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>(
-        server_io_service_, config, 8000));
+    uint16_t port = 8000;
+    auto endpoint_query =
+        ssf::GenerateServerTLSNetworkQuery(std::to_string(port), config);
+
+    p_ssf_server_.reset(new Server(server_io_service_, config, 8000));
 
     StartServerThreads();
-    p_ssf_server_->Run();
+    p_ssf_server_->Run(endpoint_query);
   }
 
   void StartClient(const ssf::Config& config, const ClientCallback& callback) {
-    typedef boost::asio::ip::tcp::socket socket;
-    typedef ssf::SSLWrapper<> ssl_socket;
-    typedef boost::asio::fiber::basic_fiber_demux<ssl_socket> demux;
-
     std::vector<BaseUserServicePtr>
         client_options;
 
-    std::map<std::string, std::string> params(
-        {{"remote_addr", "127.0.0.1"}, {"remote_port", "8000"}});
+    auto endpoint_query =
+        ssf::GenerateTLSNetworkQuery("127.0.0.1", "8000", config, {});
 
-    p_ssf_client_.reset(new ssf::SSFClient<
-        ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-        ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>(
-      client_io_service_, "127.0.0.1", "8000",
-      config, client_options, callback));
+    p_ssf_client_.reset(
+        new Client(client_io_service_, client_options, callback));
     StartClientThreads();
-    p_ssf_client_->Run(params);
+    p_ssf_client_->Run(endpoint_query);
   }
   
   void StartServerThreads() {
@@ -117,12 +121,8 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test
   boost::asio::io_service server_io_service_;
   std::unique_ptr<boost::asio::io_service::work> p_server_worker_;
   boost::thread_group server_threads_;
-  std::unique_ptr<ssf::SSFClient<
-      ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-      ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>> p_ssf_client_;
-  std::unique_ptr<ssf::SSFServer<
-      ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-      ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>> p_ssf_server_;
+  std::unique_ptr<Client> p_ssf_client_;
+  std::unique_ptr<Server> p_ssf_server_;
 };
 
 //-----------------------------------------------------------------------------
@@ -136,8 +136,8 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
 
   auto network_set_future = network_set.get_future();
   auto transport_set_future = transport_set.get_future();
-  auto callback = [&network_set,
-    &transport_set](ssf::services::initialisation::type type,
+  auto callback = [&network_set, &transport_set](
+      ssf::services::initialisation::type type,
       SSFClientServerCipherSuitesTest::BaseUserServicePtr p_user_service,
       const boost::system::error_code& ec) {
     if (type == ssf::services::initialisation::NETWORK) {
