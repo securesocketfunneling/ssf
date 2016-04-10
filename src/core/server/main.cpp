@@ -82,7 +82,8 @@ int main(int argc, char **argv) {
   auto endpoint_query = ssf::GenerateServerTLSNetworkQuery(
       std::to_string(cmd.port()), ssf_config);
 #elif TCP_ONLY_LINK
-  auto endpoint_query = ssf::GenerateServerTCPNetworkQuery(remote_port);
+  auto endpoint_query =
+      ssf::GenerateServerTCPNetworkQuery(std::to_string(cmd.port()));
 #endif
 
   server.Run(endpoint_query);
