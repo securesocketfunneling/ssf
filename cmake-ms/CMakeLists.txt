@@ -30,7 +30,7 @@ if (WIN32)
   # --- Flags for compilation
   add_definitions(-D_WIN32_WINNT=0x0501)
   if (MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /wd4503")
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   endif(MSVC)

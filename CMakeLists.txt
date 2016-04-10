@@ -270,6 +270,20 @@ if (BUILD_UNIT_TESTS)
   # --- Extract GTest archive in build directory
   gtest_unpack_archive()
 
+  set(SSF_CERT_TEST_ROOT_FILES
+      "${project_ROOT_DIR}/certs/certificate.crt"
+      "${project_ROOT_DIR}/certs/dh4096.pem"
+      "${project_ROOT_DIR}/certs/private.key")
+  set(SSF_CERT_TEST_TRUSTED_FILES
+      "${project_ROOT_DIR}/certs/trusted/ca.crt"
+  )
+  
+  file(MAKE_DIRECTORY ${SSF_FRAMEWORK_BINARY_DIR}/src/tests/certs)
+  file(MAKE_DIRECTORY ${SSF_FRAMEWORK_BINARY_DIR}/src/tests/certs/trusted)
+
+  file(COPY ${SSF_CERT_TEST_ROOT_FILES} DESTINATION ${project_BINARY_DIR}/src/tests/certs)
+  file(COPY ${SSF_CERT_TEST_TRUSTED_FILES} DESTINATION ${project_BINARY_DIR}/src/tests/certs/trusted)
+
   enable_testing()
 
   # --- Add GTest project 
