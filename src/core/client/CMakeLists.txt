@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)     
+cmake_minimum_required(VERSION 2.8)
 
 include_directories(
   ${OpenSSL_INCLUDE_DIRS}
@@ -28,16 +28,11 @@ add_target(${CLIENT_NAME}
   PREFIX_SKIP
     ${project_SRC_DIR})
 
-if (APPLE)
-  set_source_files_properties(${ICON_RC} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-  set_target_properties(${CLIENT_NAME} PROPERTIES MACOSX_BUNDLE_ICON_FILE ${ICON_NAME})
-endif (APPLE)
-
 # --- ssfcp
-set(CLIENT_CP_NAME "ssfcp") 
+set(CLIENT_CP_NAME "ssfcp")
 set(CLIENT_CP_MAIN
-    main_cp.cpp) 
-  
+    main_cp.cpp)
+
 add_target(${CLIENT_CP_NAME}
   TYPE
     executable ${EXEC_FLAG} INSTALL
@@ -53,7 +48,8 @@ add_target(${CLIENT_CP_NAME}
   PREFIX_SKIP
     ${project_SRC_DIR})
 
-if (APPLE)
-  set_source_files_properties(${ICON_RC} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-  set_target_properties(${CLIENT_CP_NAME} PROPERTIES MACOSX_BUNDLE_ICON_FILE ${ICON_NAME})
-endif (APPLE)
+install(
+  TARGETS ssfc ssfcp
+  RUNTIME
+  DESTINATION ssf/${project_EXEC_DIR_NAME}
+)

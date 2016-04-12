@@ -2,10 +2,15 @@ cmake_minimum_required(VERSION 2.8)
 set(project_name "SSF")
 project(${project_name})
 
-set(SSF_VERSION_MAJOR 1)
+set(SSF_VERSION_MAJOR 2)
 set(SSF_VERSION_MINOR 0)
+set(SSF_VERSION_FIX 0)
 set(SSF_VERSION_BOUNCE 1)
 set(SSF_VERSION_TRANSPORT 1)
+
+set(SSF_VERSION "${SSF_VERSION_MAJOR}.${SSF_VERSION_MINOR}.${SSF_VERSION_FIX}")
+
+message("** SSF_VERSION ${SSF_VERSION}")
 
 # --- Set client/server security
 if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
@@ -26,6 +31,10 @@ set(project_IMG_DIR "${project_ROOT_DIR}/img")
 set(project_LIB_DIR "${project_SRC_DIR}/lib")
 set(project_THIRDPARTY_DIR "${project_ROOT_DIR}/third_party")
 
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
+set(project_EXEC_DIR_NAME "ssf-${SSF_VERSION}")
+set(project_EXEC_DIR "${project_BINARY_DIR}/ssf/${project_EXEC_DIR_NAME}")
+
 # --- Include CMake build system scripts
 add_subdirectory("${project_THIRDPARTY_DIR}/cmake-build-system")
 include(HelpersIdeTarget)
@@ -37,7 +46,7 @@ set(VERSIONS_FILES
 FILE(GLOB_RECURSE COMMON_BOOST_FIBER_FILES
       "${project_SRC_DIR}/common/boost/fiber/*.hpp"
       "${project_SRC_DIR}/common/boost/fiber/*.cpp")
-      
+
 FILE(GLOB_RECURSE COMMON_CONFIG_FILES
       "${project_SRC_DIR}/common/config/*.h"
       "${project_SRC_DIR}/common/config/*.cpp")
@@ -45,7 +54,7 @@ FILE(GLOB_RECURSE COMMON_CONFIG_FILES
 FILE(GLOB_RECURSE COMMON_ERROR_FILES
       "${project_SRC_DIR}/common/error/*.h"
       "${project_SRC_DIR}/common/error/*.cpp")
-      
+
 FILE(GLOB_RECURSE COMMON_NETWORK_FILES
       "${project_SRC_DIR}/common/network/*.h"
       "${project_SRC_DIR}/common/network/*.cpp")
@@ -62,7 +71,7 @@ FILE(GLOB CORE_COMMAND_LINE_STANDARD_FILES
 FILE(GLOB CORE_COMMAND_LINE_COPY_FILES
       "${project_SRC_DIR}/core/command_line/copy/*.h"
       "${project_SRC_DIR}/core/command_line/copy/*.cpp")
-      
+
 FILE(GLOB_RECURSE CORE_TRANSPORT_POLICIES_FILES
       "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.h"
       "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.cpp"
@@ -93,32 +102,32 @@ FILE(GLOB_RECURSE ADMIN_SERVICE_FILES
       "${project_SRC_DIR}/services/admin/*.h"
       "${project_SRC_DIR}/services/admin/*.cpp"
       "${project_SRC_DIR}/services/admin/*.ipp")
-      
+
 FILE(GLOB_RECURSE DATAGRAMS_TO_FIBERS_SERVICE_FILES
       "${project_SRC_DIR}/services/datagrams_to_fibers/*.h"
       "${project_SRC_DIR}/services/datagrams_to_fibers/*.cpp"
       "${project_SRC_DIR}/services/datagrams_to_fibers/*.ipp")
-      
+
 FILE(GLOB_RECURSE FIBERS_TO_DATAGRAMS_SERVICE_FILES
       "${project_SRC_DIR}/services/fibers_to_datagrams/*.h"
       "${project_SRC_DIR}/services/fibers_to_datagrams/*.cpp"
       "${project_SRC_DIR}/services/fibers_to_datagrams/*.ipp")
-      
+
 FILE(GLOB_RECURSE SOCKETS_TO_FIBERS_SERVICE_FILES
       "${project_SRC_DIR}/services/datagrams_to_fibers/*.h"
       "${project_SRC_DIR}/services/datagrams_to_fibers/*.cpp"
       "${project_SRC_DIR}/services/datagrams_to_fibers/*.ipp")
-      
+
 FILE(GLOB_RECURSE FIBERS_TO_SOCKETS_SERVICE_FILES
       "${project_SRC_DIR}/services/fibers_to_datagrams/*.h"
       "${project_SRC_DIR}/services/fibers_to_datagrams/*.cpp"
       "${project_SRC_DIR}/services/fibers_to_datagrams/*.ipp")
-      
+
 FILE(GLOB_RECURSE SOCKS_SERVICE_FILES
       "${project_SRC_DIR}/services/socks/*.h"
       "${project_SRC_DIR}/services/socks/*.cpp"
       "${project_SRC_DIR}/services/socks/*.ipp")
-      
+
 FILE(GLOB COPY_FILE_SERVICE_FILES
       "${project_SRC_DIR}/services/copy_file/*.h"
       "${project_SRC_DIR}/services/copy_file/*.cpp"
@@ -137,7 +146,7 @@ FILE(GLOB COPY_FILE_SERVICE_FILES
       "${project_SRC_DIR}/services/copy_file/packet/*.ipp"
       "${project_SRC_DIR}/services/copy_file/filesystem/*.h"
       "${project_SRC_DIR}/services/copy_file/filesystem/*.cpp")
-      
+
 FILE(GLOB_RECURSE USER_SERVICE_FILES
       "${project_SRC_DIR}/services/user_services/*.h"
       "${project_SRC_DIR}/services/user_services/*.cpp"
@@ -146,12 +155,12 @@ FILE(GLOB_RECURSE USER_SERVICE_FILES
 set(PARSER_FILES
     "${project_SRC_DIR}/core/parser/bounce_parser.h"
     "${project_SRC_DIR}/core/parser/bounce_parser.cpp")
-      
+
 FILE(GLOB_RECURSE CLIENT_FILES
       "${project_SRC_DIR}/core/client/*.h"
       "${project_SRC_DIR}/core/client/*.ipp"
       "${project_SRC_DIR}/core/client/query_factory.cpp")
-      
+
 FILE(GLOB_RECURSE SERVER_FILES
       "${project_SRC_DIR}/core/server/*.h"
       "${project_SRC_DIR}/core/server/*.ipp"
@@ -193,8 +202,8 @@ set(Boost_USE_STATIC_RUNTIME    ON)
 
 # --- Boost components
 find_package(
-  Boost REQUIRED 
-  FLAGS 
+  Boost REQUIRED
+  FLAGS
     STATIC
     ${BOOST_PLATFORM_FLAGS}
   WITH_COMPONENTS
@@ -224,12 +233,11 @@ set(SSF_VERSION_OPENSSL ${OpenSSL_VERSION})
 
 configure_file(${project_SRC_DIR}/versions.h.in ${project_BINARY_DIR}/versions.h)
 include_directories(${project_BINARY_DIR})
-  
+
 # --- Include source directory
 include_directories(${project_SRC_DIR})
 
-
-# --- Set macro SSF service files 
+# --- Set macro SSF service files
 set(SERVICES_FILES
       ${BASE_SERVICE_FILES}
       ${ADMIN_SERVICE_FILES}
@@ -260,36 +268,52 @@ set(SSF_SOURCES
 
 add_subdirectory(${project_THIRDPARTY_DIR}/ssf-framework)
 
+# --- Copy test certs in bin directory
+set(SSF_CERT_TEST_ROOT_FILES
+    "${project_ROOT_DIR}/certs/certificate.crt"
+    "${project_ROOT_DIR}/certs/dh4096.pem"
+    "${project_ROOT_DIR}/certs/private.key")
+set(SSF_CERT_TEST_TRUSTED_FILES
+    "${project_ROOT_DIR}/certs/trusted/ca.crt"
+)
+
+file(MAKE_DIRECTORY ${project_EXEC_DIR}/certs)
+file(MAKE_DIRECTORY ${project_EXEC_DIR}/certs/trusted)
+
+file(COPY ${SSF_CERT_TEST_ROOT_FILES}
+  DESTINATION ${project_EXEC_DIR}/certs)
+file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
+  DESTINATION ${project_EXEC_DIR}/certs/trusted)
+
+# --- Tests
 set (BUILD_UNIT_TESTS ON)
 if (BUILD_UNIT_TESTS)
   include(GTest)
 
-  set(GTEST_ROOT_DIR 
+  set(GTEST_ROOT_DIR
         "${project_THIRDPARTY_DIR}/gtest" CACHE PATH "Path of gtest library")
+
+  # --- Copy test certs for tests
+  set(project_BINARY_TESTS_DIR "${project_BINARY_DIR}/src/tests")
+  set(project_BINARY_TESTS_CERT_DIR ${project_BINARY_TESTS_DIR}/certs)
+
+  file(MAKE_DIRECTORY ${project_BINARY_TESTS_CERT_DIR})
+  file(MAKE_DIRECTORY ${project_BINARY_TESTS_CERT_DIR}/trusted)
+
+  file(COPY ${SSF_CERT_TEST_ROOT_FILES}
+    DESTINATION ${project_BINARY_TESTS_CERT_DIR})
+  file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
+    DESTINATION ${project_BINARY_TESTS_CERT_DIR}/trusted)
 
   # --- Extract GTest archive in build directory
   gtest_unpack_archive()
 
-  set(SSF_CERT_TEST_ROOT_FILES
-      "${project_ROOT_DIR}/certs/certificate.crt"
-      "${project_ROOT_DIR}/certs/dh4096.pem"
-      "${project_ROOT_DIR}/certs/private.key")
-  set(SSF_CERT_TEST_TRUSTED_FILES
-      "${project_ROOT_DIR}/certs/trusted/ca.crt"
-  )
-  
-  file(MAKE_DIRECTORY ${SSF_FRAMEWORK_BINARY_DIR}/src/tests/certs)
-  file(MAKE_DIRECTORY ${SSF_FRAMEWORK_BINARY_DIR}/src/tests/certs/trusted)
-
-  file(COPY ${SSF_CERT_TEST_ROOT_FILES} DESTINATION ${project_BINARY_DIR}/src/tests/certs)
-  file(COPY ${SSF_CERT_TEST_TRUSTED_FILES} DESTINATION ${project_BINARY_DIR}/src/tests/certs/trusted)
-
   enable_testing()
 
-  # --- Add GTest project 
+  # --- Add GTest project
   add_subdirectory(${GTEST_ROOT_DIR})
 
-  # --- Add src test 
+  # --- Add src test
   add_subdirectory("${project_SRC_DIR}/tests")
 endif (BUILD_UNIT_TESTS)
 

@@ -26,7 +26,8 @@ add_target(${SERVER_NAME}
   PREFIX_SKIP
     ${project_SRC_DIR})
 
-if (APPLE)
-  set_source_files_properties(${ICON_RC} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-  set_target_properties(${SERVER_NAME} PROPERTIES MACOSX_BUNDLE_ICON_FILE ${ICON_NAME})
-endif (APPLE)
+install(
+  TARGETS ssfs
+  RUNTIME
+  DESTINATION ssf/${project_EXEC_DIR_NAME}
+)
