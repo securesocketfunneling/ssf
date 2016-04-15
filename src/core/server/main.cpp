@@ -6,17 +6,10 @@
 #include <boost/log/trivial.hpp>
 #include <boost/system/error_code.hpp>
 
-#include <ssf/layer/data_link/circuit_helpers.h>
-#include <ssf/layer/data_link/basic_circuit_protocol.h>
-#include <ssf/layer/data_link/simple_circuit_policy.h>
-#include <ssf/layer/parameters.h>
-#include <ssf/layer/physical/tcp.h>
-#include <ssf/layer/physical/tlsotcp.h>
-
 #include "common/config/config.h"
 
 #include "core/server/server.h"
-#include "core/server/query_factory.h"
+#include "core/network_protocol.h"
 
 #include "core/command_line/standard/command_line.h"
 
@@ -28,20 +21,8 @@ void Init() {
 }
 
 int main(int argc, char **argv) {
-#ifdef TLS_OVER_TCP_LINK
-  using TLSPhysicalProtocol = ssf::layer::physical::TLSboTCPPhysicalLayer;
-  using TLSCircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
-      TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
-
   using Server =
-      ssf::SSFServer<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
-#elif TCP_ONLY_LINK
-  using PhysicalProtocol = ssf::layer::physical::TCPPhysicalLayer;
-  using CircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
-      PhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
-
-  using Server = ssf::SSFServer<CircuitProtocol, ssf::TransportProtocolPolicy>;
-#endif
+      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 
   Init();
 
@@ -72,37 +53,38 @@ int main(int argc, char **argv) {
   boost::asio::io_service::work worker(io_service);
   boost::thread_group threads;
 
-  BOOST_LOG_TRIVIAL(info) << "Start SSF server on port " << cmd.port();
-
   // Initiate and start the server
   Server server(io_service, ssf_config, cmd.port());
 
-// construct endpoint parameter stack
-#ifdef TLS_OVER_TCP_LINK
-  auto endpoint_query = ssf::GenerateServerTLSNetworkQuery(
-      std::to_string(cmd.port()), ssf_config);
-#elif TCP_ONLY_LINK
+  // construct endpoint parameter stack
   auto endpoint_query =
-      ssf::GenerateServerTCPNetworkQuery(std::to_string(cmd.port()));
-#endif
+      ssf::network::GenerateServerQuery(std::to_string(cmd.port()), ssf_config);
 
-  server.Run(endpoint_query);
+  boost::system::error_code run_ec;
+  server.Run(endpoint_query, run_ec);
 
-  for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    auto lambda = [&]() {
-      boost::system::error_code ec;
-      try {
-        io_service.run(ec);
-      } catch (std::exception e) {
-        BOOST_LOG_TRIVIAL(error) << "server: exception in io_service run "
-                                 << e.what();
-      }
-    };
-
-    threads.create_thread(lambda);
+  if (run_ec) {
+    BOOST_LOG_TRIVIAL(error)
+        << "server: error happened when running server : " << run_ec.message();
+  } else {
+    BOOST_LOG_TRIVIAL(info) << "Start SSF server on port " << cmd.port();
+    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
+      auto lambda = [&]() {
+        boost::system::error_code ec;
+        try {
+          io_service.run(ec);
+        } catch (std::exception e) {
+          BOOST_LOG_TRIVIAL(error) << "server: exception in io_service run "
+                                   << e.what();
+        }
+      };
+      threads.create_thread(lambda);
+    }
   }
 
+  std::cout << "[Press ENTER to stop]" << std::endl;
   getchar();
+
   server.Stop();
   io_service.stop();
   threads.join_all();

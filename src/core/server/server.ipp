@@ -1,6 +1,8 @@
 #ifndef SSF_CORE_SERVER_SERVER_IPP_
 #define SSF_CORE_SERVER_SERVER_IPP_
 
+#include "common/error/error.h"
+
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 #include "services/admin/requests/service_status.h"
@@ -18,9 +20,15 @@ SSFServer<N, T>::SSFServer(boost::asio::io_service& io_service,
       local_port_(local_port) {}
 
 /// Start accepting connections
-template <class N,
-          template <class> class T>
-void SSFServer<N, T>::Run(const network_query_type& query) {
+template <class N, template <class> class T>
+void SSFServer<N, T>::Run(const network_query_type& query,
+                          boost::system::error_code& ec) {
+  if (p_worker_.get() != nullptr) {
+    ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
+    BOOST_LOG_TRIVIAL(error) << "Server already running";
+    return;
+  }
+
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
 
  // resolve remote endpoint with query
@@ -50,13 +58,13 @@ void SSFServer<N, T>::Run(const network_query_type& query) {
 /// Stop accepting connections and end all on going connections
 template <class N, template <class> class T>
 void SSFServer<N, T>::Stop() {
+  this->RemoveAllDemuxes();
+
   // close acceptor
   boost::system::error_code close_ec;
   network_acceptor_.close(close_ec);
 
-  this->RemoveAllDemuxes();
-
-  p_worker_.reset();
+  p_worker_.reset(nullptr);
 }
 
 //-------------------------------------------------------------------------------
@@ -80,6 +88,9 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
     this->DoSSFInitiateReceive(p_socket);
     AsyncAcceptConnection();
   } else {
+    boost::system::error_code close_ec;
+    p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    p_socket->close(close_ec);
     BOOST_LOG_TRIVIAL(error) << "server: network error: " << ec.message();
   }
 }
@@ -94,6 +105,9 @@ void SSFServer<N, T>::DoSSFStart(p_network_socket_type p_socket,
     boost::system::error_code ec2;
     this->DoFiberize(p_socket, ec2);
   } else {
+    boost::system::error_code close_ec;
+    p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    p_socket->close(close_ec);
     BOOST_LOG_TRIVIAL(error) << "server: SSF protocol error " << ec.message();
   }
 }
@@ -101,6 +115,8 @@ void SSFServer<N, T>::DoSSFStart(p_network_socket_type p_socket,
 template <class N, template <class> class T>
 void SSFServer<N, T>::DoFiberize(p_network_socket_type p_socket,
                                  boost::system::error_code& ec) {
+  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+
   // Register supported admin commands
   services::admin::CreateServiceRequest<demux>::RegisterToCommandFactory();
   services::admin::StopServiceRequest<demux>::RegisterToCommandFactory();
@@ -185,12 +201,11 @@ void SSFServer<N, T>::RemoveAllDemuxes() {
   BOOST_LOG_TRIVIAL(trace) << "server: removing all demuxes";
 
   for (auto& p_fiber_demux : p_fiber_demuxes_) {
+    p_fiber_demux->close();
+
     if (p_service_managers_.count(p_fiber_demux)) {
       auto p_service_manager = p_service_managers_[p_fiber_demux];
-      if (p_service_manager) {
-        p_service_manager->stop_all();
-      }
-      p_fiber_demux->close();
+      p_service_manager->stop_all();
       p_service_managers_.erase(p_fiber_demux);
     }
 

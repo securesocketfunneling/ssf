@@ -55,7 +55,7 @@ class SSFClient
             std::vector<BaseUserServicePtr> user_services,
             client_callback_type callback);
 
-  void Run(const network_query_type& query);
+  void Run(const network_query_type& query, boost::system::error_code& ec);
 
   void Stop();
 

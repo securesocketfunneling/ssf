@@ -72,15 +72,14 @@ FILE(GLOB CORE_COMMAND_LINE_COPY_FILES
       "${project_SRC_DIR}/core/command_line/copy/*.h"
       "${project_SRC_DIR}/core/command_line/copy/*.cpp")
 
+SET(CORE_NETWORK_PROTOCOL_FILES
+      "${project_SRC_DIR}/core/network_protocol.h"
+      "${project_SRC_DIR}/core/network_protocol.cpp")
+
 FILE(GLOB_RECURSE CORE_TRANSPORT_POLICIES_FILES
       "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.h"
       "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.cpp"
       "${project_SRC_DIR}/core/transport_virtual_layer_policies/*.ipp")
-
-FILE(GLOB_RECURSE CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES
-      "${project_SRC_DIR}/core/network_virtual_layer_policies/*.h"
-      "${project_SRC_DIR}/core/network_virtual_layer_policies/*.cpp"
-      "${project_SRC_DIR}/core/network_virtual_layer_policies/*.ipp")
 
 FILE(GLOB_RECURSE CORE_FACTORIES_FILES
       "${project_SRC_DIR}/core/factories/*.h"
@@ -158,13 +157,11 @@ set(PARSER_FILES
 
 FILE(GLOB_RECURSE CLIENT_FILES
       "${project_SRC_DIR}/core/client/*.h"
-      "${project_SRC_DIR}/core/client/*.ipp"
-      "${project_SRC_DIR}/core/client/query_factory.cpp")
+      "${project_SRC_DIR}/core/client/*.ipp")
 
 FILE(GLOB_RECURSE SERVER_FILES
       "${project_SRC_DIR}/core/server/*.h"
-      "${project_SRC_DIR}/core/server/*.ipp"
-      "${project_SRC_DIR}/core/server/query_factory.cpp")
+      "${project_SRC_DIR}/core/server/*.ipp")
 
 set(BOOST_ROOT
       "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
@@ -257,6 +254,7 @@ set(SSF_SOURCES
       ${COMMON_ERROR_FILES}
       ${COMMON_NETWORK_FILES}
       ${COMMON_UTILS_FILES}
+      ${CORE_NETWORK_PROTOCOL_FILES}
       ${CORE_TRANSPORT_POLICIES_FILES}
       ${CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES}
       ${CORE_FACTORIES_FILES}

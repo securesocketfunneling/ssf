@@ -59,7 +59,7 @@ class SSFServer : public TransportVirtualLayerPolicy<
   SSFServer(boost::asio::io_service& io_service, const ssf::Config& ssf_config,
             uint16_t local_port);
 
-  void Run(const network_query_type& query);
+  void Run(const network_query_type& query, boost::system::error_code& ec);
   void Stop();
 
  private:

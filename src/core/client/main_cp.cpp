@@ -7,23 +7,15 @@
 #include <boost/log/trivial.hpp>
 #include <boost/system/error_code.hpp>
 
-#include <ssf/layer/data_link/circuit_helpers.h>
-#include <ssf/layer/data_link/basic_circuit_protocol.h>
-#include <ssf/layer/data_link/simple_circuit_policy.h>
-#include <ssf/layer/parameters.h>
-#include <ssf/layer/physical/tcp.h>
-#include <ssf/layer/physical/tlsotcp.h>
-
 #include "common/config/config.h"
 
+#include "core/network_protocol.h"
 #include "core/client/client.h"
 
 #include "core/command_line/copy/command_line.h"
 #include "core/parser/bounce_parser.h"
 #include "core/factories/service_option_factory.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
-
-#include "core/client/query_factory.h"
 
 #include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
@@ -36,24 +28,8 @@ void Init() {
 
 int main(int argc, char** argv) {
   using CircuitBouncers = std::list<std::string>;
-  using NetworkQuery = ssf::layer::ParameterStack;
-
-#ifdef TLS_OVER_TCP_LINK
-  using TLSPhysicalProtocol = ssf::layer::physical::TLSboTCPPhysicalLayer;
-  using TLSCircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
-      TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
-
   using Client =
-      ssf::SSFClient<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
-
-#elif TCP_ONLY_LINK
-  using PhysicalProtocol = ssf::layer::physical::TCPPhysicalLayer;
-  using CircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
-      PhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
-
-  using Client =
-      ssf::SSFClient<CircuitProtocol, ssf::TransportProtocolPolicy>;
-#endif
+      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 
   using Demux = Client::demux;
   using BaseUserServicePtr =
@@ -142,32 +118,32 @@ int main(int argc, char** argv) {
   }
 
   // construct endpoint parameter stack
-#ifdef TLS_OVER_TCP_LINK
-  auto endpoint_query =
-      ssf::GenerateTLSNetworkQuery(remote_addr, remote_port, ssf_config, bouncers);
-#elif TCP_ONLY_LINK
-  auto endpoint_query =
-      ssf::GenerateTCPNetworkQuery(remote_addr, remote_port, bouncers);
-#endif
+  auto endpoint_query = ssf::network::GenerateClientQuery(
+      remote_addr, remote_port, ssf_config, bouncers);
+  boost::system::error_code run_ec;
+  client.Run(endpoint_query, run_ec);
 
-  client.Run(endpoint_query);
+  if (run_ec) {
+    BOOST_LOG_TRIVIAL(error)
+        << "client: error happened when running client : " << run_ec.message();
+  } else {
+    for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
+      auto lambda = [&]() {
+        boost::system::error_code ec;
+        try {
+          io_service.run(ec);
+        } catch (std::exception e) {
+          BOOST_LOG_TRIVIAL(error) << "client: exception in io_service run "
+                                   << e.what();
+        }
+      };
 
-  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-    auto lambda = [&]() {
-      boost::system::error_code ec;
-      try {
-        io_service.run(ec);
-      } catch (std::exception e) {
-        BOOST_LOG_TRIVIAL(error) << "client: exception in io_service run "
-                                 << e.what();
-      }
-    };
+      threads.create_thread(lambda);
+    }
 
-    threads.create_thread(lambda);
+    // wait end transfer
+    closed.get_future().get();
   }
-
-  // wait end transfer
-  closed.get_future().get();
 
   client.Stop();
   threads.join_all();

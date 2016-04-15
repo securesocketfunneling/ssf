@@ -10,19 +10,11 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
-#include <ssf/layer/data_link/circuit_helpers.h>
-#include <ssf/layer/data_link/basic_circuit_protocol.h>
-#include <ssf/layer/data_link/simple_circuit_policy.h>
-#include <ssf/layer/parameters.h>
-#include <ssf/layer/physical/tcp.h>
-#include <ssf/layer/physical/tlsotcp.h>
-
 #include "common/config/config.h"
 
+#include "core/network_protocol.h"
 #include "core/client/client.h"
-#include "core/client/query_factory.h"
 #include "core/server/server.h"
-#include "core/server/query_factory.h"
 
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
@@ -32,13 +24,10 @@
 class SSFClientServerCipherSuitesTest : public ::testing::Test
 {
  public:
-  using TLSPhysicalProtocol = ssf::layer::physical::TLSboTCPPhysicalLayer;
-  using TLSCircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
-      TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
   using Client =
-      ssf::SSFClient<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFClient<ssf::network::FullTLSProtocol, ssf::TransportProtocolPolicy>;
   using Server =
-      ssf::SSFServer<TLSCircuitProtocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFServer<ssf::network::FullTLSProtocol, ssf::TransportProtocolPolicy>;
   using demux = Client::demux;
   using BaseUserServicePtr =
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
@@ -66,25 +55,26 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test
   void StartServer(const ssf::Config& config) {
     uint16_t port = 8000;
     auto endpoint_query =
-        ssf::GenerateServerTLSNetworkQuery(std::to_string(port), config);
+        ssf::network::GenerateServerQuery(std::to_string(port), config);
 
     p_ssf_server_.reset(new Server(server_io_service_, config, 8000));
 
     StartServerThreads();
-    p_ssf_server_->Run(endpoint_query);
+    boost::system::error_code run_ec;
+    p_ssf_server_->Run(endpoint_query, run_ec);
   }
 
   void StartClient(const ssf::Config& config, const ClientCallback& callback) {
-    std::vector<BaseUserServicePtr>
-        client_options;
+    std::vector<BaseUserServicePtr> client_options;
 
     auto endpoint_query =
-        ssf::GenerateTLSNetworkQuery("127.0.0.1", "8000", config, {});
+        ssf::network::GenerateClientQuery("127.0.0.1", "8000", config, {});
 
     p_ssf_client_.reset(
         new Client(client_io_service_, client_options, callback));
     StartClientThreads();
-    p_ssf_client_->Run(endpoint_query);
+    boost::system::error_code run_ec;
+    p_ssf_client_->Run(endpoint_query, run_ec);
   }
   
   void StartServerThreads() {
@@ -125,11 +115,9 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test
   std::unique_ptr<Server> p_ssf_server_;
 };
 
-//-----------------------------------------------------------------------------
 TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                       boost::log::trivial::debug);
-
 
   std::promise<bool> network_set;
   std::promise<bool> transport_set;
@@ -158,8 +146,6 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
   transport_set_future.wait();
 }
 
-
-//-----------------------------------------------------------------------------
 TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                       boost::log::trivial::debug);

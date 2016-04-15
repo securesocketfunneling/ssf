@@ -1,7 +1,7 @@
 #ifndef SSF_CORE_CLIENT_CLIENT_IPP_
 #define SSF_CORE_CLIENT_CLIENT_IPP_
 
-#include <vector>
+#include "common/error/error.h"
 
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
@@ -31,7 +31,14 @@ SSFClient<N, T>::SSFClient(boost::asio::io_service& io_service,
       callback_(std::move(callback)) {}
 
 template <class N, template <class> class T>
-void SSFClient<N, T>::Run(const network_query_type& query) {
+void SSFClient<N, T>::Run(const network_query_type& query,
+                          boost::system::error_code& ec) {
+  if (p_worker_.get() != nullptr) {
+    ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
+    BOOST_LOG_TRIVIAL(error) << "Client already running";
+    return;
+  }
+
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
   // Create network socket
   p_network_socket_type p_socket =
@@ -39,7 +46,6 @@ void SSFClient<N, T>::Run(const network_query_type& query) {
   
   // resolve remote endpoint with query
   network_resolver_type resolver(io_service_);
-  boost::system::error_code ec;
   auto endpoint_it = resolver.resolve(query, ec);
 
   if (ec) {
@@ -57,7 +63,7 @@ void SSFClient<N, T>::Run(const network_query_type& query) {
 template <class N, template <class> class T>
 void SSFClient<N, T>::Stop() {
   fiber_demux_.close();
-  p_worker_.reset();
+  p_worker_.reset(nullptr);
 }
 
 //-------------------------------------------------------------------------------
