@@ -248,6 +248,29 @@ ssf<c|s>[.exe] [-h] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U lo
 * -b : *bounce_file* is the file containing the list of relays to use.
 * -c : *config_file* is the config file containing configuration for SSF (TLS configuration).
 
+#### Server example
+
+Server will listen on all network interfaces on port **8011**
+
+```plaintext
+ssfs[.exe]
+```
+
+Server will listen on **192.168.0.1:9000**
+
+```plaintext
+ssfs[.exe] -p 9000 192.168.0.1
+```
+
+#### Client example
+
+Client will open port 9000 locally and wait SOCKS requests to be transferred to
+server **192.168.0.1:8000**
+
+```plaintext
+ssfc[.exe] -D 9000 -b bounce.txt -c config.json -p 8000 192.168.0.1
+```
+
 ### Copy command line
 
 ```plaintext
