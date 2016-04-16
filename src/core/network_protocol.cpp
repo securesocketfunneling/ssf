@@ -18,12 +18,13 @@ Query GenerateClientQuery(const std::string& remote_addr,
 #endif
 }
 
-Query GenerateServerQuery(const std::string& remote_port,
+Query GenerateServerQuery(const std::string& remote_addr,
+                          const std::string& remote_port,
                           const ssf::Config& ssf_config) {
 #ifdef TLS_OVER_TCP_LINK
-  return GenerateServerTLSQuery(remote_port, ssf_config);
+  return GenerateServerTLSQuery(remote_addr, remote_port, ssf_config);
 #elif TCP_ONLY_LINK
-  return GenerateServerTCPQuery(remote_port, ssf_config);
+  return GenerateServerTCPQuery(remote_addr, remote_port);
 #endif
 }
 
@@ -87,10 +88,14 @@ Query GenerateClientTLSQuery(const std::string& remote_addr,
   return query;
 }
 
-Query GenerateServerTCPQuery(const std::string& remote_port) {
+Query GenerateServerTCPQuery(const std::string& remote_addr,
+                             const std::string& remote_port) {
   Query query;
   ssf::layer::LayerParameters physical_parameters;
   physical_parameters["port"] = remote_port;
+  if (remote_addr != "") {
+    physical_parameters["addr"] = remote_addr;
+  }
 
   ssf::layer::ParameterStack layer_parameters;
   layer_parameters.push_front(physical_parameters);
@@ -99,7 +104,8 @@ Query GenerateServerTCPQuery(const std::string& remote_port) {
       "server", {}, layer_parameters);
 }
 
-Query GenerateServerTLSQuery(const std::string& remote_port,
+Query GenerateServerTLSQuery(const std::string& remote_addr,
+                             const std::string& remote_port,
                              const ssf::Config& ssf_config) {
   ssf::layer::LayerParameters tls_param_layer = {
       {"ca_src", "file"},
@@ -114,6 +120,9 @@ Query GenerateServerTLSQuery(const std::string& remote_port,
 
   ssf::layer::LayerParameters physical_parameters;
   physical_parameters["port"] = remote_port;
+  if (remote_addr != "") {
+    physical_parameters["addr"] = remote_addr;
+  }
 
   ssf::layer::ParameterStack layer_parameters;
   layer_parameters.push_front(physical_parameters);

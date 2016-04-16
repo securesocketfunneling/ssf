@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   cmd.parse(argc, argv, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "server: wrong arguments" << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "server: wrong arguments";
     return 1;
   }
 
@@ -32,17 +32,16 @@ int main(int argc, char** argv) {
   ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
 
   if (ec_config) {
-    BOOST_LOG_TRIVIAL(error) << "server: invalid config file format"
-                             << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "server: invalid config file format";
     return 1;
   }
 
   // Initiate and start the server
-  Server server(ssf_config, cmd.port());
+  Server server;
 
   // construct endpoint parameter stack
-  auto endpoint_query =
-      ssf::network::GenerateServerQuery(std::to_string(cmd.port()), ssf_config);
+  auto endpoint_query = ssf::network::GenerateServerQuery(
+      cmd.addr(), std::to_string(cmd.port()), ssf_config);
 
   boost::system::error_code run_ec;
   server.Run(endpoint_query, run_ec);

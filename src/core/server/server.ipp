@@ -12,15 +12,16 @@
 namespace ssf {
 
 template <class N, template <class> class T>
-SSFServer<N, T>::SSFServer(const ssf::Config& ssf_config, uint16_t local_port)
+SSFServer<N, T>::SSFServer()
     : AsyncRunner(),
       T<typename N::socket>(
           boost::bind(&SSFServer<N, T>::DoSSFStart, this, _1, _2)),
-      network_acceptor_(io_service_),
-      local_port_(local_port) {}
+      network_acceptor_(io_service_) {}
 
 template <class N, template <class> class T>
-SSFServer<N, T>::~SSFServer() {}
+SSFServer<N, T>::~SSFServer() {
+  Stop();
+}
 
 /// Start accepting connections
 template <class N, template <class> class T>
@@ -36,27 +37,25 @@ void SSFServer<N, T>::Run(const network_query_type& query,
 
   // resolve remote endpoint with query
   network_resolver_type resolver(io_service_);
-  boost::system::error_code resolve_ec;
-  auto endpoint_it = resolver.resolve(query, resolve_ec);
+  auto endpoint_it = resolver.resolve(query, ec);
 
-  if (resolve_ec) {
+  if (ec) {
     BOOST_LOG_TRIVIAL(error) << "Could not resolve network endpoint";
     return;
   }
 
   // set acceptor
-  boost::system::error_code acceptor_ec;
   network_acceptor_.open();
   network_acceptor_.set_option(boost::asio::socket_base::reuse_address(true),
-                               acceptor_ec);
-  network_acceptor_.bind(*endpoint_it, acceptor_ec);
-  if (acceptor_ec) {
+                               ec);
+  network_acceptor_.bind(*endpoint_it, ec);
+  if (ec) {
     BOOST_LOG_TRIVIAL(error) << "Could not bind acceptor to network endpoint";
     return;
   }
 
-  network_acceptor_.listen(100, acceptor_ec);
-  if (acceptor_ec) {
+  network_acceptor_.listen(100, ec);
+  if (ec) {
     BOOST_LOG_TRIVIAL(error) << "Could not listen for new connections";
     return;
   }

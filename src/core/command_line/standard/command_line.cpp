@@ -44,18 +44,23 @@ CommandLine::ParsedParameters CommandLine::parse(
     boost::program_options::options_description options("Local options");
 
     boost::program_options::positional_options_description p;
+
+    options.add_options()
+        ("host,H",
+            boost::program_options::value<std::string>(),
+            "Set host");
+
+    p.add("host", 1);
+    options.add_options()
+      ("config,c",
+          boost::program_options::value<std::string>(),
+          "Set config file");
+
     if (!is_server_) {
       options.add_options()
         ("port,p",
             boost::program_options::value<int>(&opt)->default_value(8011),
             "Set remote SSF server port");
-
-      options.add_options()
-        ("host,H",
-            boost::program_options::value<std::string>(),
-            "Set host");
-
-      p.add("host", 1);
 
       options.add_options()
         ("bounces,b",
@@ -67,12 +72,7 @@ CommandLine::ParsedParameters CommandLine::parse(
             boost::program_options::value<int>(&opt)->default_value(8011),
             "Set local SSF server port");
     }
-
-    options.add_options()
-      ("config,c",
-          boost::program_options::value<std::string>(),
-          "Set config file");
-    // clang-format on
+    // clang-format off
 
     boost::program_options::options_description cmd_line;
     cmd_line.add(desc).add(options).add(services);

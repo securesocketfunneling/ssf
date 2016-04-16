@@ -51,10 +51,9 @@ class SSFClientServerTest : public ::testing::Test {
   void StartServer() {
     ssf::Config ssf_config;
 
-    uint16_t port = 8000;
     auto endpoint_query =
-        ssf::network::GenerateServerQuery(std::to_string(port), ssf_config);
-    p_ssf_server_.reset(new Server(ssf_config, port));
+        ssf::network::GenerateServerQuery("", "8000", ssf_config);
+    p_ssf_server_.reset(new Server());
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);

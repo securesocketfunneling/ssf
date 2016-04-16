@@ -57,7 +57,7 @@ class SSFServer
   typedef std::map<p_demux, p_ServiceManager> service_manager_map;
 
  public:
-  SSFServer(const ssf::Config& ssf_config, uint16_t local_port);
+  SSFServer();
 
   ~SSFServer();
 
@@ -79,8 +79,6 @@ class SSFServer
  private:
   worker_ptr p_worker_;
   network_acceptor_type network_acceptor_;
-
-  uint16_t local_port_;
 
   demux_set p_fiber_demuxes_;
   service_manager_map p_service_managers_;

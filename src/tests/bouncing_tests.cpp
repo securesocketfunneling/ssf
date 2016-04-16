@@ -56,8 +56,8 @@ TEST(BouncingTests, BouncingChain) {
 
   ++initial_server_port;
   auto server_endpoint_query = ssf::network::GenerateServerQuery(
-      std::to_string(initial_server_port), ssf_config);
-  servers.emplace_front(ssf_config, initial_server_port);
+      "", std::to_string(initial_server_port), ssf_config);
+  servers.emplace_front();
   servers.front().Run(server_endpoint_query, server_ec);
   ASSERT_EQ(server_ec.value(), 0) << "Server could not run";
 
@@ -67,9 +67,9 @@ TEST(BouncingTests, BouncingChain) {
   for (uint8_t i = 0; i < nb_of_servers - 1; ++i) {
     ++initial_server_port;
     auto bounce_endpoint_query = ssf::network::GenerateServerQuery(
-        std::to_string(initial_server_port), ssf_config);
+        "", std::to_string(initial_server_port), ssf_config);
 
-    servers.emplace_front(ssf_config, initial_server_port);
+    servers.emplace_front();
     servers.front().Run(bounce_endpoint_query, bounce_ec);
     ASSERT_EQ(server_ec.value(), 0) << "Bounce " << i << "could not run";
     bouncers.emplace_front(std::string("127.0.0.1:") +

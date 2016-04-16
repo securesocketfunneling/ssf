@@ -6,8 +6,11 @@
 #include <functional>
 #include <memory>
 
+#include <boost/archive/basic_archive.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/log/trivial.hpp>
+
+#include "common/error/error.h"
 
 #include "core/transport_virtual_layer_policies/init_packets/ssf_reply.h"
 #include "core/transport_virtual_layer_policies/init_packets/ssf_request.h"

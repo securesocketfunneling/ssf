@@ -45,7 +45,8 @@ Query GenerateClientQuery(const std::string& remote_addr,
                           const ssf::Config& ssf_config,
                           const CircuitBouncers& bouncers);
 
-Query GenerateServerQuery(const std::string& remote_port,
+Query GenerateServerQuery(const std::string& remote_addr,
+                          const std::string& remote_port,
                           const ssf::Config& ssf_config);
 
 Query GenerateClientTCPQuery(const std::string& remote_addr,
@@ -57,9 +58,11 @@ Query GenerateClientTLSQuery(const std::string& remote_addr,
                              const ssf::Config& ssf_config,
                              const CircuitBouncers& nodes);
 
-Query GenerateServerTCPQuery(const std::string& remote_port);
+Query GenerateServerTCPQuery(const std::string& remote_addr,
+                             const std::string& remote_port);
 
-Query GenerateServerTLSQuery(const std::string& remote_port,
+Query GenerateServerTLSQuery(const std::string& remote_addr,
+                             const std::string& remote_port,
                              const ssf::Config& ssf_config);
 
 }  // network

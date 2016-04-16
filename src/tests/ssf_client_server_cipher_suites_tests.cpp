@@ -46,11 +46,10 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
   }
 
   void StartServer(const ssf::Config& config) {
-    uint16_t port = 8000;
     auto endpoint_query =
-        ssf::network::GenerateServerQuery(std::to_string(port), config);
+        ssf::network::GenerateServerQuery("", "8000", config);
 
-    p_ssf_server_.reset(new Server(config, 8000));
+    p_ssf_server_.reset(new Server());
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
