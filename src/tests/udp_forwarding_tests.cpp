@@ -56,7 +56,8 @@ class DummyClient {
     while (received < size_) {
       boost::system::error_code ec;
       size_t remaining_size = size_ - received;
-      socket_.send(boost::asio::buffer(&remaining_size, sizeof(remaining_size)), 0, ec);
+      socket_.send(boost::asio::buffer(&remaining_size, sizeof(remaining_size)),
+                   0, ec);
 
       if (ec) {
         return false;
@@ -219,13 +220,7 @@ class UdpForwardTest : public ::testing::Test {
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
 
  public:
-  UdpForwardTest()
-      : client_io_service_(),
-        p_client_worker_(new boost::asio::io_service::work(client_io_service_)),
-        server_io_service_(),
-        p_server_worker_(new boost::asio::io_service::work(server_io_service_)),
-        p_ssf_client_(nullptr),
-        p_ssf_server_(nullptr) {}
+  UdpForwardTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
   ~UdpForwardTest() {}
 
@@ -235,8 +230,8 @@ class UdpForwardTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
-    StopClientThreads();
-    StopServerThreads();
+    p_ssf_client_->Stop();
+    p_ssf_server_->Stop();
   }
 
   void StartServer() {
@@ -246,10 +241,8 @@ class UdpForwardTest : public ::testing::Test {
     auto endpoint_query =
         ssf::network::GenerateServerQuery(std::to_string(port), ssf_config);
 
-    p_ssf_server_.reset(new Server(
-        server_io_service_, ssf_config, 8000));
+    p_ssf_server_.reset(new Server(ssf_config, 8000));
 
-    StartServerThreads();
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
   }
@@ -269,10 +262,9 @@ class UdpForwardTest : public ::testing::Test {
         ssf::network::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
 
     p_ssf_client_.reset(new Client(
-        client_io_service_, client_options,
+        client_options,
         boost::bind(&UdpForwardTest::SSFClientCallback, this, _1, _2, _3)));
 
-    StartClientThreads();
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);
   }
@@ -288,32 +280,6 @@ class UdpForwardTest : public ::testing::Test {
 
     return network_set_future.get() && service_set_future.get() &&
            transport_set_future.get();
-  }
-
-  void StartServerThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      server_threads_.create_thread([&]() { server_io_service_.run(); });
-    }
-  }
-
-  void StartClientThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      client_threads_.create_thread([&]() { client_io_service_.run(); });
-    }
-  }
-
-  void StopServerThreads() {
-    p_ssf_server_->Stop();
-    p_server_worker_.reset();
-    server_threads_.join_all();
-    server_io_service_.stop();
-  }
-
-  void StopClientThreads() {
-    p_ssf_client_->Stop();
-    p_client_worker_.reset();
-    client_threads_.join_all();
-    client_io_service_.stop();
   }
 
   void SSFClientCallback(ssf::services::initialisation::type type,
@@ -343,13 +309,6 @@ class UdpForwardTest : public ::testing::Test {
   }
 
  protected:
-  boost::asio::io_service client_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_client_worker_;
-  boost::thread_group client_threads_;
-
-  boost::asio::io_service server_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_server_worker_;
-  boost::thread_group server_threads_;
   std::unique_ptr<Client> p_ssf_client_;
   std::unique_ptr<Server> p_ssf_server_;
 

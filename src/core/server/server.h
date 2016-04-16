@@ -13,25 +13,26 @@
 
 #include "common/config/config.h"
 
+#include "core/factories/service_factory.h"
+#include "core/async_runner.h"
+#include "core/service_manager/service_manager.h"
+
 #include "services/admin/admin.h"
-#include "services/socks/socks_server.h"
-#include "services/fibers_to_sockets/fibers_to_sockets.h"
-#include "services/sockets_to_fibers/sockets_to_fibers.h"
-#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
-#include "services/datagrams_to_fibers/datagrams_to_fibers.h"
+#include "services/base_service.h"
 #include "services/copy_file/file_to_fiber/file_to_fiber.h"
 #include "services/copy_file/fiber_to_file/fiber_to_file.h"
-
-#include "core/service_manager/service_manager.h"
-#include "services/base_service.h"
-
-#include "core/factories/service_factory.h"
+#include "services/datagrams_to_fibers/datagrams_to_fibers.h"
+#include "services/fibers_to_sockets/fibers_to_sockets.h"
+#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
+#include "services/sockets_to_fibers/sockets_to_fibers.h"
+#include "services/socks/socks_server.h"
 
 namespace ssf {
 template <class NetworkProtocol,
           template <class> class TransportVirtualLayerPolicy>
-class SSFServer : public TransportVirtualLayerPolicy<
-                      typename NetworkProtocol::socket> {
+class SSFServer
+    : public AsyncRunner,
+      public TransportVirtualLayerPolicy<typename NetworkProtocol::socket> {
  private:
   using network_socket_type = typename NetworkProtocol::socket;
   using p_network_socket_type = std::shared_ptr<network_socket_type>;
@@ -56,8 +57,9 @@ class SSFServer : public TransportVirtualLayerPolicy<
   typedef std::map<p_demux, p_ServiceManager> service_manager_map;
 
  public:
-  SSFServer(boost::asio::io_service& io_service, const ssf::Config& ssf_config,
-            uint16_t local_port);
+  SSFServer(const ssf::Config& ssf_config, uint16_t local_port);
+
+  ~SSFServer();
 
   void Run(const network_query_type& query, boost::system::error_code& ec);
   void Stop();
@@ -75,7 +77,6 @@ class SSFServer : public TransportVirtualLayerPolicy<
   void RemoveAllDemuxes();
 
  private:
-  boost::asio::io_service& io_service_;
   worker_ptr p_worker_;
   network_acceptor_type network_acceptor_;
 

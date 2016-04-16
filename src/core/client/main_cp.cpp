@@ -32,10 +32,6 @@ ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
                                          const ssf::Config& config,
                                          const CircuitBouncers& bouncers);
 
-// Start asynchronous engine
-void StartAsynchronousEngine(boost::thread_group* p_threads,
-                             boost::asio::io_service& io_service);
-
 int main(int argc, char** argv) {
   ssf::log::Configure();
 
@@ -82,9 +78,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Initialize the asynchronous engine
-  boost::asio::io_service io_service;
-  boost::thread_group threads;
   std::promise<bool> closed;
 
   auto callback =
@@ -98,6 +91,8 @@ int main(int argc, char** argv) {
           case ssf::services::initialisation::CLOSE:
             closed.set_value(true);
             return;
+          default:
+            break;
         }
         if (ec) {
           closed.set_value(true);
@@ -105,7 +100,7 @@ int main(int argc, char** argv) {
       };
 
   // Initiating and starting the client
-  Client client(io_service, user_services, callback);
+  Client client(user_services, callback);
 
   CircuitBouncers bouncers = BounceParser::ParseBounceFile(cmd.bounce_file());
 
@@ -116,8 +111,10 @@ int main(int argc, char** argv) {
   client.Run(endpoint_query, run_ec);
 
   if (!run_ec) {
-    StartAsynchronousEngine(&threads, io_service);
+    BOOST_LOG_TRIVIAL(info) << "client: connecting to " << cmd.addr() << ":"
+                            << cmd.port();
     // wait end transfer
+    BOOST_LOG_TRIVIAL(info) << "client: wait end of file transfer";
     closed.get_future().get();
   } else {
     BOOST_LOG_TRIVIAL(error)
@@ -125,8 +122,6 @@ int main(int argc, char** argv) {
   }
 
   client.Stop();
-  threads.join_all();
-  io_service.stop();
 
   return 0;
 }
@@ -151,18 +146,4 @@ ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
 
   return ssf::network::GenerateClientQuery(first_node_addr, first_node_port,
                                            ssf_config, nodes);
-}
-
-void StartAsynchronousEngine(boost::thread_group* p_threads,
-                             boost::asio::io_service& io_service) {
-  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-    p_threads->create_thread([&]() {
-      boost::system::error_code ec;
-      io_service.run(ec);
-      if (ec) {
-        BOOST_LOG_TRIVIAL(error)
-            << "client: error running io_service : " << ec.message();
-      }
-    });
-  }
 }

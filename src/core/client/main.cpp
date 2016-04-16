@@ -46,10 +46,6 @@ ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
                                          const ssf::Config& config,
                                          const CircuitBouncers& bouncers);
 
-// Start asynchronous engine
-void StartAsynchronousEngine(boost::thread_group* p_threads,
-                             boost::asio::io_service& io_service);
-
 int main(int argc, char** argv) {
   ssf::log::Configure();
 
@@ -96,10 +92,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Initialize asynchronous engine
-  boost::asio::io_service io_service;
-  boost::thread_group threads;
-
   auto callback = [](ssf::services::initialisation::type type,
                      BaseUserServicePtr p_service,
                      const boost::system::error_code& ec) {
@@ -114,11 +106,13 @@ int main(int argc, char** argv) {
                                   << " " << (!ec ? "OK" : "NOK");
         }
         break;
+      default:
+        break;
     }
   };
 
   // Initiate and run client
-  Client client(io_service, user_services, callback);
+  Client client(user_services, callback);
 
   CircuitBouncers bouncers = BounceParser::ParseBounceFile(cmd.bounce_file());
 
@@ -129,7 +123,6 @@ int main(int argc, char** argv) {
   client.Run(endpoint_query, run_ec);
 
   if (!run_ec) {
-    StartAsynchronousEngine(&threads, io_service);
     BOOST_LOG_TRIVIAL(info) << "client: connecting to " << cmd.addr() << ":"
                             << cmd.port();
     BOOST_LOG_TRIVIAL(info) << "client: press [ENTER] to stop";
@@ -141,8 +134,6 @@ int main(int argc, char** argv) {
 
   BOOST_LOG_TRIVIAL(info) << "client: stop" << std::endl;
   client.Stop();
-  threads.join_all();
-  io_service.stop();
 
   return 0;
 }
@@ -199,18 +190,4 @@ ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
 
   return ssf::network::GenerateClientQuery(first_node_addr, first_node_port,
                                            ssf_config, nodes);
-}
-
-void StartAsynchronousEngine(boost::thread_group* p_threads,
-                             boost::asio::io_service& io_service) {
-  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-    p_threads->create_thread([&]() {
-      boost::system::error_code ec;
-      io_service.run(ec);
-      if (ec) {
-        BOOST_LOG_TRIVIAL(error)
-            << "client: error running io_service : " << ec.message();
-      }
-    });
-  }
 }

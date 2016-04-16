@@ -186,8 +186,9 @@ class DummyServer {
         }
       } else {
         boost::asio::async_read(*p_socket, boost::asio::buffer(one_buffer_, 1),
-                                [=](const boost::system::error_code&,
-                                    size_t) { p_socket->close(); });
+                                [=](const boost::system::error_code&, size_t) {
+                                  p_socket->close();
+                                });
       }
     } else {
       p_socket->close();
@@ -213,13 +214,7 @@ class RemoteStreamForwardTest : public ::testing::Test {
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
 
  public:
-  RemoteStreamForwardTest()
-      : client_io_service_(),
-        p_client_worker_(new boost::asio::io_service::work(client_io_service_)),
-        server_io_service_(),
-        p_server_worker_(new boost::asio::io_service::work(server_io_service_)),
-        p_ssf_client_(nullptr),
-        p_ssf_server_(nullptr) {}
+  RemoteStreamForwardTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
   ~RemoteStreamForwardTest() {}
 
@@ -229,20 +224,19 @@ class RemoteStreamForwardTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
-    StopClientThreads();
-    StopServerThreads();
+    p_ssf_client_->Stop();
+    p_ssf_server_->Stop();
   }
 
   void StartServer() {
     ssf::Config ssf_config;
-    
+
     uint16_t port = 8000;
     auto endpoint_query =
         ssf::network::GenerateServerQuery(std::to_string(port), ssf_config);
 
-    p_ssf_server_.reset(new Server(server_io_service_, ssf_config, 8000));
+    p_ssf_server_.reset(new Server(ssf_config, 8000));
 
-    StartServerThreads();
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
   }
@@ -261,11 +255,10 @@ class RemoteStreamForwardTest : public ::testing::Test {
     auto endpoint_query =
         ssf::network::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
 
-    p_ssf_client_.reset(
-        new Client(client_io_service_, client_options,
-                   boost::bind(&RemoteStreamForwardTest::SSFClientCallback,
-                               this, _1, _2, _3)));
-    StartClientThreads();
+    p_ssf_client_.reset(new Client(
+        client_options, boost::bind(&RemoteStreamForwardTest::SSFClientCallback,
+                                    this, _1, _2, _3)));
+
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);
   }
@@ -281,32 +274,6 @@ class RemoteStreamForwardTest : public ::testing::Test {
 
     return network_set_future.get() && service_set_future.get() &&
            transport_set_future.get();
-  }
-
-  void StartServerThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      server_threads_.create_thread([&]() { server_io_service_.run(); });
-    }
-  }
-
-  void StartClientThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      client_threads_.create_thread([&]() { client_io_service_.run(); });
-    }
-  }
-
-  void StopServerThreads() {
-    p_ssf_server_->Stop();
-    p_server_worker_.reset();
-    server_threads_.join_all();
-    server_io_service_.stop();
-  }
-
-  void StopClientThreads() {
-    p_ssf_client_->Stop();
-    p_client_worker_.reset();
-    client_threads_.join_all();
-    client_io_service_.stop();
   }
 
   void SSFClientCallback(ssf::services::initialisation::type type,
@@ -337,13 +304,6 @@ class RemoteStreamForwardTest : public ::testing::Test {
   }
 
  protected:
-  boost::asio::io_service client_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_client_worker_;
-  boost::thread_group client_threads_;
-
-  boost::asio::io_service server_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_server_worker_;
-  boost::thread_group server_threads_;
   std::unique_ptr<Client> p_ssf_client_;
   std::unique_ptr<Server> p_ssf_server_;
 

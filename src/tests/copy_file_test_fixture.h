@@ -34,13 +34,7 @@ class CopyFileTestFixture : public ::testing::Test {
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
 
  protected:
-  CopyFileTestFixture()
-      : client_io_service_(),
-        p_client_worker_(new boost::asio::io_service::work(client_io_service_)),
-        server_io_service_(),
-        p_server_worker_(new boost::asio::io_service::work(server_io_service_)),
-        p_ssf_client_(nullptr),
-        p_ssf_server_(nullptr) {}
+  CopyFileTestFixture() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
   ~CopyFileTestFixture() {}
 
@@ -75,9 +69,8 @@ class CopyFileTestFixture : public ::testing::Test {
     auto endpoint_query =
         ssf::network::GenerateServerQuery(std::to_string(port), ssf_config);
 
-    p_ssf_server_.reset(new Server(server_io_service_, ssf_config, 8000));
+    p_ssf_server_.reset(new Server(ssf_config, 8000));
 
-    StartServerThreads();
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
   }
@@ -98,9 +91,8 @@ class CopyFileTestFixture : public ::testing::Test {
         ssf::network::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
 
     p_ssf_client_.reset(new Client(
-        client_io_service_, client_services,
-        boost::bind(&CopyFileTestFixture::SSFClientCallback, this, _1, _2, _3)));
-    StartClientThreads();
+        client_services, boost::bind(&CopyFileTestFixture::SSFClientCallback,
+                                     this, _1, _2, _3)));
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);
   }
@@ -130,31 +122,9 @@ class CopyFileTestFixture : public ::testing::Test {
 
   virtual std::string GetOutputPattern() { return "files_copied/"; }
 
-  void StartServerThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      server_threads_.create_thread([&]() { server_io_service_.run(); });
-    }
-  }
+  void StopServerThreads() { p_ssf_server_->Stop(); }
 
-  void StartClientThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      client_threads_.create_thread([&]() { client_io_service_.run(); });
-    }
-  }
-
-  void StopServerThreads() {
-    p_ssf_server_->Stop();
-    p_server_worker_.reset();
-    server_threads_.join_all();
-    server_io_service_.stop();
-  }
-
-  void StopClientThreads() {
-    p_client_worker_.reset();
-    p_ssf_client_->Stop();
-    client_threads_.join_all();
-    client_io_service_.stop();
-  }
+  void StopClientThreads() { p_ssf_client_->Stop(); }
 
   void SSFClientCallback(ssf::services::initialisation::type type,
                          BaseUserServicePtr p_user_service,
@@ -186,13 +156,6 @@ class CopyFileTestFixture : public ::testing::Test {
   }
 
  protected:
-  boost::asio::io_service client_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_client_worker_;
-  boost::thread_group client_threads_;
-
-  boost::asio::io_service server_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_server_worker_;
-  boost::thread_group server_threads_;
   std::unique_ptr<Client> p_ssf_client_;
   std::unique_ptr<Server> p_ssf_server_;
 

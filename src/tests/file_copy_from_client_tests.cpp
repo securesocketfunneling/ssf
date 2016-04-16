@@ -16,7 +16,7 @@ Md5Digest GetMd5Sum(const std::string& filepath,
 
   std::ifstream file(filepath, std::ifstream::binary);
   MD5_CTX md5_context;
-  
+
   if (!file.is_open()) {
     ec.assign(boost::system::errc::bad_file_descriptor,
               boost::system::get_system_category());

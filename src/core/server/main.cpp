@@ -12,10 +12,6 @@
 using Server =
     ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 
-// Start asynchronous engine
-void StartAsynchronousEngine(boost::thread_group* p_threads,
-                             boost::asio::io_service& io_service);
-
 int main(int argc, char** argv) {
   ssf::log::Configure();
 
@@ -41,12 +37,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Start the asynchronous engine
-  boost::asio::io_service io_service;
-  boost::thread_group threads;
-
   // Initiate and start the server
-  Server server(io_service, ssf_config, cmd.port());
+  Server server(ssf_config, cmd.port());
 
   // construct endpoint parameter stack
   auto endpoint_query =
@@ -56,7 +48,6 @@ int main(int argc, char** argv) {
   server.Run(endpoint_query, run_ec);
 
   if (!run_ec) {
-    StartAsynchronousEngine(&threads, io_service);
     BOOST_LOG_TRIVIAL(info) << "server: listening on port " << cmd.port();
     BOOST_LOG_TRIVIAL(info) << "server: press [ENTER] to stop";
     getchar();
@@ -64,25 +55,9 @@ int main(int argc, char** argv) {
     BOOST_LOG_TRIVIAL(error)
         << "server: error happened when running server : " << run_ec.message();
   }
-  
+
   BOOST_LOG_TRIVIAL(info) << "server: stop" << std::endl;
   server.Stop();
-  threads.join_all();
-  io_service.stop();
 
   return 0;
-}
-
-void StartAsynchronousEngine(boost::thread_group* p_threads,
-                             boost::asio::io_service& io_service) {
-  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-    p_threads->create_thread([&]() {
-      boost::system::error_code ec;
-      io_service.run(ec);
-      if (ec) {
-        BOOST_LOG_TRIVIAL(error)
-            << "server: error running io_service : " << ec.message();
-      }
-    });
-  }
 }

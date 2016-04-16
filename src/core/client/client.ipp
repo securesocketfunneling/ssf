@@ -19,16 +19,18 @@
 namespace ssf {
 
 template <class N, template <class> class T>
-SSFClient<N, T>::SSFClient(boost::asio::io_service& io_service,
-                           std::vector<BaseUserServicePtr> user_services,
+SSFClient<N, T>::SSFClient(std::vector<BaseUserServicePtr> user_services,
                            client_callback_type callback)
-    : T<typename N::socket>(
+    : AsyncRunner(),
+      T<typename N::socket>(
           boost::bind(&SSFClient<N, T>::DoSSFStart, this, _1, _2)),
-      io_service_(io_service),
       p_worker_(nullptr),
-      fiber_demux_(io_service),
+      fiber_demux_(io_service_),
       user_services_(user_services),
       callback_(std::move(callback)) {}
+
+template <class N, template <class> class T>
+SSFClient<N, T>::~SSFClient() {}
 
 template <class N, template <class> class T>
 void SSFClient<N, T>::Run(const network_query_type& query,
@@ -40,13 +42,15 @@ void SSFClient<N, T>::Run(const network_query_type& query,
   }
 
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
+
   // Create network socket
   p_network_socket_type p_socket =
       std::make_shared<network_socket_type>(io_service_);
-  
+
   // resolve remote endpoint with query
   network_resolver_type resolver(io_service_);
   auto endpoint_it = resolver.resolve(query, ec);
+  StartAsyncEngine();
 
   if (ec) {
     Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
@@ -64,9 +68,10 @@ template <class N, template <class> class T>
 void SSFClient<N, T>::Stop() {
   fiber_demux_.close();
   p_worker_.reset(nullptr);
+  
+  StopAsyncEngine();
 }
 
-//-------------------------------------------------------------------------------
 template <class N, template <class> class T>
 void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
                                          p_network_socket_type p_socket) {
@@ -86,7 +91,6 @@ void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 }
 
-//------------------------------------------------------------------------------
 template <class N, template <class> class T>
 void SSFClient<N, T>::DoSSFStart(p_network_socket_type p_socket,
                                  const boost::system::error_code& ec) {
@@ -95,7 +99,7 @@ void SSFClient<N, T>::DoSSFStart(p_network_socket_type p_socket,
   if (!ec) {
     BOOST_LOG_TRIVIAL(trace) << "client: SSF reply ok";
     boost::system::error_code ec2;
-    this->DoFiberize(p_socket, ec2);
+    DoFiberize(p_socket, ec2);
 
     Notify(ssf::services::initialisation::TRANSPORT, nullptr, ec);
   } else {
@@ -111,7 +115,7 @@ void SSFClient<N, T>::DoFiberize(p_network_socket_type p_socket,
   services::admin::StopServiceRequest<demux>::RegisterToCommandFactory();
   services::admin::ServiceStatus<demux>::RegisterToCommandFactory();
 
-  auto close_demux_handler = [this]() { this->OnDemuxClose(); };
+  auto close_demux_handler = [this]() { OnDemuxClose(); };
   fiber_demux_.fiberize(std::move(*p_socket), close_demux_handler);
 
   // Make a new service manager
@@ -147,7 +151,6 @@ void SSFClient<N, T>::DoFiberize(p_network_socket_type p_socket,
   p_admin_service->set_client(user_services_, callback_);
   p_service_manager->start(p_admin_service, ec);
 }
-//------------------------------------------------------------------------------
 
 template <class N, template <class> class T>
 void SSFClient<N, T>::OnDemuxClose() {
