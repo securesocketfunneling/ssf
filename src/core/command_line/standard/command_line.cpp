@@ -14,6 +14,8 @@
 
 #include "common/error/error.h"
 
+#include "versions.h"
+
 namespace ssf {
 namespace command_line {
 namespace standard {
@@ -49,8 +51,8 @@ CommandLine::ParsedParameters CommandLine::parse(
         ("host,H",
             boost::program_options::value<std::string>(),
             "Set host");
-
     p.add("host", 1);
+
     options.add_options()
       ("config,c",
           boost::program_options::value<std::string>(),
@@ -87,7 +89,17 @@ CommandLine::ParsedParameters CommandLine::parse(
     boost::program_options::notify(vm);
 
     if (vm.count("help")) {
+      std::cout << "SSF " << ssf::versions::major << "." 
+        << ssf::versions::minor << "."
+        << ssf::versions::fix << std::endl;
+
       std::cout << cmd_line << std::endl;
+
+      std::cout << "Using Boost " << ssf::versions::boost_version <<
+        " and OpenSSL " << ssf::versions::openssl_version
+        << std::endl << std::endl;
+      ec.assign(::error::operation_canceled, ::error::get_ssf_category());
+      return {};
     }
 
     ec.assign(::error::success, ::error::get_ssf_category());

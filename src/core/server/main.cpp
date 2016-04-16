@@ -28,10 +28,9 @@ int main(int argc, char** argv) {
   }
 
   // Load SSF config if any
-  boost::system::error_code ec_config;
-  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
+  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec);
 
-  if (ec_config) {
+  if (ec) {
     BOOST_LOG_TRIVIAL(error) << "server: invalid config file format";
     return 1;
   }
@@ -43,16 +42,15 @@ int main(int argc, char** argv) {
   auto endpoint_query = ssf::network::GenerateServerQuery(
       cmd.addr(), std::to_string(cmd.port()), ssf_config);
 
-  boost::system::error_code run_ec;
-  server.Run(endpoint_query, run_ec);
+  server.Run(endpoint_query, ec);
 
-  if (!run_ec) {
+  if (!ec) {
     BOOST_LOG_TRIVIAL(info) << "server: listening on port " << cmd.port();
     BOOST_LOG_TRIVIAL(info) << "server: press [ENTER] to stop";
     getchar();
   } else {
     BOOST_LOG_TRIVIAL(error)
-        << "server: error happened when running server : " << run_ec.message();
+        << "server: error happened when running server : " << ec.message();
   }
 
   BOOST_LOG_TRIVIAL(info) << "server: stop" << std::endl;

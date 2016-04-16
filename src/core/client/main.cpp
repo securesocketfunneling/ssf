@@ -119,17 +119,16 @@ int main(int argc, char** argv) {
   auto endpoint_query = GenerateNetworkQuery(
       cmd.addr(), std::to_string(cmd.port()), ssf_config, bouncers);
 
-  boost::system::error_code run_ec;
-  client.Run(endpoint_query, run_ec);
+  client.Run(endpoint_query, ec);
 
-  if (!run_ec) {
+  if (!ec) {
     BOOST_LOG_TRIVIAL(info) << "client: connecting to " << cmd.addr() << ":"
                             << cmd.port();
     BOOST_LOG_TRIVIAL(info) << "client: press [ENTER] to stop";
     getchar();
   } else {
     BOOST_LOG_TRIVIAL(error)
-        << "client: error happened when running client : " << run_ec.message();
+        << "client: error happened when running client : " << ec.message();
   }
 
   BOOST_LOG_TRIVIAL(info) << "client: stop" << std::endl;

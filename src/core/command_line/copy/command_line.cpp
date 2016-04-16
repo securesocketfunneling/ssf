@@ -14,6 +14,8 @@
 
 #include "common/error/error.h"
 
+#include "versions.h"
+
 namespace ssf {
 namespace command_line {
 namespace copy {
@@ -46,10 +48,10 @@ void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
       ("stdin,t", boost::program_options::bool_switch()->default_value(false), "Input will be stdin")
       ("arg1",
          boost::program_options::value<std::string>(),
-         "[host:]/absolute/path/file if host is present, the file will be copied from the remote host to local")
+         "[host@]/absolute/path/file if host is present, the file will be copied from the remote host to local")
       ("arg2",
          boost::program_options::value<std::string>(),
-         "[host:]/absolute/path/file if host is present, the file will be copied from local to host");
+         "[host@]/absolute/path/file if host is present, the file will be copied from local to host");
     // clang-format on
 
     boost::program_options::positional_options_description position_options;
@@ -68,9 +70,18 @@ void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
     boost::program_options::notify(vm);
 
     if (vm.count("help")) {
+      std::cout << "SSF " << ssf::versions::major << "." 
+        << ssf::versions::minor << "."
+        << ssf::versions::fix
+        << std::endl << std::endl;
       std::cout << "usage : ssfcp  [-p port] [-b bounces_file] [-c "
                    "config] [-h] [-t] arg1 [arg2]" << std::endl;
       std::cout << cmd_line << std::endl;
+      std::cout << "Using Boost " << ssf::versions::boost_version <<
+        " and OpenSSL " << ssf::versions::openssl_version
+        << std::endl << std::endl;
+      ec.assign(::error::operation_canceled, ::error::get_ssf_category());
+      return;
     }
 
     ec.assign(::error::success, ::error::get_ssf_category());
