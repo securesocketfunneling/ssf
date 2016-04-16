@@ -18,12 +18,14 @@ namespace standard {
 
 class CommandLine {
  public:
+  using ParsedParameters = std::map<std::string, std::vector<std::string>>;
+
+ public:
   CommandLine(bool is_server = false);
 
-  std::map<std::string, std::vector<std::string>> parse(
-      int argc, char* argv[], boost::system::error_code& ec);
+  ParsedParameters parse(int argc, char* argv[], boost::system::error_code& ec);
 
-  std::map<std::string, std::vector<std::string>> parse(
+  ParsedParameters parse(
       int ac, char* av[],
       const boost::program_options::options_description& services,
       boost::system::error_code& ec);
@@ -41,7 +43,7 @@ class CommandLine {
   bool IsAddrSet();
 
  private:
-  std::map<std::string, std::vector<std::string>> InternalParsing(
+  ParsedParameters InternalParsing(
       const boost::program_options::variables_map& vm,
       boost::system::error_code& ec);
 

@@ -24,13 +24,13 @@ CommandLine::CommandLine(bool is_server)
       port_set_(false),
       is_server_(is_server) {}
 
-std::map<std::string, std::vector<std::string>> CommandLine::parse(
+CommandLine::ParsedParameters CommandLine::parse(
     int argc, char* argv[], boost::system::error_code& ec) {
   boost::program_options::options_description services;
   return parse(argc, argv, services, ec);
 }
 
-std::map<std::string, std::vector<std::string>> CommandLine::parse(
+CommandLine::ParsedParameters CommandLine::parse(
     int ac, char* av[],
     const boost::program_options::options_description& services,
     boost::system::error_code& ec) {
@@ -110,7 +110,7 @@ bool CommandLine::IsPortSet() { return port_set_; }
 
 bool CommandLine::IsAddrSet() { return addr_set_; }
 
-std::map<std::string, std::vector<std::string>> CommandLine::InternalParsing(
+CommandLine::ParsedParameters CommandLine::InternalParsing(
     const boost::program_options::variables_map& vm,
     boost::system::error_code& ec) {
   std::map<std::string, std::vector<std::string>> result;

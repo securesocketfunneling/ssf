@@ -1,49 +1,48 @@
 #include <future>
-#include <stdexcept>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "common/config/config.h"
+#include "common/log/log.h"
 
-#include "core/network_protocol.h"
 #include "core/client/client.h"
-
 #include "core/command_line/copy/command_line.h"
-#include "core/parser/bounce_parser.h"
 #include "core/factories/service_option_factory.h"
+#include "core/network_protocol.h"
+#include "core/parser/bounce_parser.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
 #include "services/user_services/copy_file_service.h"
 
-void Init() {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-}
+using Client =
+    ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+
+using Demux = Client::demux;
+using BaseUserServicePtr =
+    ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
+using CircuitBouncers = std::list<std::string>;
+using BounceParser = ssf::parser::BounceParser;
+
+// Generate network query
+ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
+                                         const std::string& remote_port,
+                                         const ssf::Config& config,
+                                         const CircuitBouncers& bouncers);
+
+// Start asynchronous engine
+void StartAsynchronousEngine(boost::thread_group* p_threads,
+                             boost::asio::io_service& io_service);
 
 int main(int argc, char** argv) {
-  using CircuitBouncers = std::list<std::string>;
-  using Client =
-      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
-
-  using Demux = Client::demux;
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
-  using BounceParser = ssf::parser::BounceParser;
-
-  Init();
+  ssf::log::Configure();
 
   // Parse the command line
   ssf::command_line::copy::CommandLine cmd;
-  std::vector<BaseUserServicePtr> user_services;
 
   boost::system::error_code ec;
-
   cmd.parse(argc, argv, ec);
 
   if (ec) {
@@ -62,6 +61,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  std::vector<BaseUserServicePtr> user_services;
   user_services.push_back(p_copy_service);
 
   if (!cmd.IsAddrSet()) {
@@ -74,14 +74,12 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Load SSF config if any
   boost::system::error_code ec_config;
   ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
 
   if (ec_config) {
-    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format"
-                             << std::endl;
-    return 0;
+    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format";
+    return 1;
   }
 
   // Initialize the asynchronous engine
@@ -92,9 +90,17 @@ int main(int argc, char** argv) {
   auto callback =
       [&closed](ssf::services::initialisation::type type, BaseUserServicePtr,
                 const boost::system::error_code& ec) {
-        if (type == ssf::services::initialisation::CLOSE || ec) {
+        switch (type) {
+          case ssf::services::initialisation::NETWORK:
+            BOOST_LOG_TRIVIAL(info) << "client: connected to remote server "
+                                    << (!ec ? "OK" : "NOK");
+            break;
+          case ssf::services::initialisation::CLOSE:
+            closed.set_value(true);
+            return;
+        }
+        if (ec) {
           closed.set_value(true);
-          return;
         }
       };
 
@@ -103,46 +109,19 @@ int main(int argc, char** argv) {
 
   CircuitBouncers bouncers = BounceParser::ParseBounceFile(cmd.bounce_file());
 
-  std::string remote_addr;
-  std::string remote_port;
+  auto endpoint_query = GenerateNetworkQuery(
+      cmd.addr(), std::to_string(cmd.port()), ssf_config, bouncers);
 
-  if (bouncers.size()) {
-    auto first = bouncers.front();
-    bouncers.pop_front();
-    remote_addr = BounceParser::GetRemoteAddress(first);
-    remote_port = BounceParser::GetRemotePort(first);
-    bouncers.push_back(cmd.addr() + ":" + std::to_string(cmd.port()));
-  } else {
-    remote_addr = cmd.addr();
-    remote_port = std::to_string(cmd.port());
-  }
-
-  // construct endpoint parameter stack
-  auto endpoint_query = ssf::network::GenerateClientQuery(
-      remote_addr, remote_port, ssf_config, bouncers);
   boost::system::error_code run_ec;
   client.Run(endpoint_query, run_ec);
 
-  if (run_ec) {
-    BOOST_LOG_TRIVIAL(error)
-        << "client: error happened when running client : " << run_ec.message();
-  } else {
-    for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-      auto lambda = [&]() {
-        boost::system::error_code ec;
-        try {
-          io_service.run(ec);
-        } catch (std::exception e) {
-          BOOST_LOG_TRIVIAL(error) << "client: exception in io_service run "
-                                   << e.what();
-        }
-      };
-
-      threads.create_thread(lambda);
-    }
-
+  if (!run_ec) {
+    StartAsynchronousEngine(&threads, io_service);
     // wait end transfer
     closed.get_future().get();
+  } else {
+    BOOST_LOG_TRIVIAL(error)
+        << "client: error happened when running client : " << run_ec.message();
   }
 
   client.Stop();
@@ -150,4 +129,40 @@ int main(int argc, char** argv) {
   io_service.stop();
 
   return 0;
+}
+
+ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
+                                         const std::string& remote_port,
+                                         const ssf::Config& ssf_config,
+                                         const CircuitBouncers& bouncers) {
+  std::string first_node_addr;
+  std::string first_node_port;
+  CircuitBouncers nodes = bouncers;
+  if (nodes.size()) {
+    auto first = nodes.front();
+    nodes.pop_front();
+    first_node_addr = BounceParser::GetRemoteAddress(first);
+    first_node_port = BounceParser::GetRemotePort(first);
+    nodes.push_back(remote_addr + ":" + remote_port);
+  } else {
+    first_node_addr = remote_addr;
+    first_node_port = remote_port;
+  }
+
+  return ssf::network::GenerateClientQuery(first_node_addr, first_node_port,
+                                           ssf_config, nodes);
+}
+
+void StartAsynchronousEngine(boost::thread_group* p_threads,
+                             boost::asio::io_service& io_service) {
+  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
+    p_threads->create_thread([&]() {
+      boost::system::error_code ec;
+      io_service.run(ec);
+      if (ec) {
+        BOOST_LOG_TRIVIAL(error)
+            << "client: error running io_service : " << ec.message();
+      }
+    });
+  }
 }

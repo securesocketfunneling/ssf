@@ -55,6 +55,10 @@ FILE(GLOB_RECURSE COMMON_ERROR_FILES
       "${project_SRC_DIR}/common/error/*.h"
       "${project_SRC_DIR}/common/error/*.cpp")
 
+FILE(GLOB_RECURSE COMMON_LOG_FILES
+      "${project_SRC_DIR}/common/log/*.h"
+      "${project_SRC_DIR}/common/log/*.cpp")
+
 FILE(GLOB_RECURSE COMMON_NETWORK_FILES
       "${project_SRC_DIR}/common/network/*.h"
       "${project_SRC_DIR}/common/network/*.cpp")
@@ -209,6 +213,7 @@ find_package(
     program_options
     date_time
     filesystem
+    log_setup
     log
     regex
     thread
@@ -252,6 +257,7 @@ set(SSF_SOURCES
       ${COMMON_BOOST_FIBER_FILES}
       ${COMMON_CONFIG_FILES}
       ${COMMON_ERROR_FILES}
+      ${COMMON_LOG_FILES}
       ${COMMON_NETWORK_FILES}
       ${COMMON_UTILS_FILES}
       ${CORE_NETWORK_PROTOCOL_FILES}
