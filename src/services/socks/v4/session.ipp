@@ -1,5 +1,5 @@
-#ifndef SRC_SERVICES_SOCKS_V4_SESSION_IPP_
-#define SRC_SERVICES_SOCKS_V4_SESSION_IPP_
+#ifndef SSF_SERVICES_SOCKS_V4_SESSION_IPP_
+#define SSF_SERVICES_SOCKS_V4_SESSION_IPP_
 
 #include <boost/bind.hpp>
 #include <boost/bind/protect.hpp>
@@ -10,8 +10,10 @@
 
 #include <boost/asio/basic_stream_socket.hpp>
 
-namespace ssf { namespace socks { namespace v4 {
-//-----------------------------------------------------------------------------
+namespace ssf {
+namespace socks {
+namespace v4 {
+
 template <typename Demux>
 Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
     : ssf::BaseSession(),
@@ -20,41 +22,35 @@ Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
       client_(std::move(client)),
       app_server_(client.get_io_service()) {}
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Session<Demux>::HandleStop() {
   boost::system::error_code ec;
   p_session_manager_->stop(shared_from_this(), ec);
 }
 
-
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code&) {
   client_.close();
   boost::system::error_code ec;
   app_server_.close(ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "socks session: stop error " << ec.message() << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "socks session: stop error " << ec.message()
+                             << std::endl;
   }
 }
 
-
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code&) {
-  AsyncReadRequest(client_, &request_,
-                   boost::bind(&Session::HandleRequestDispatch,
-                               self_shared_from_this(),
-                               boost::asio::placeholders::error,
-                               boost::asio::placeholders::bytes_transferred));
+  AsyncReadRequest(
+      client_, &request_,
+      boost::bind(&Session::HandleRequestDispatch, self_shared_from_this(),
+                  boost::asio::placeholders::error,
+                  boost::asio::placeholders::bytes_transferred));
 }
 
-
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
-                                    std::size_t) {
+                                           std::size_t) {
   if (ec) {
     HandleStop();
     return;
@@ -62,27 +58,25 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 
   // Dispatch request according to it's command id
   switch (request_.Command()) {
-  case Request::kConnect:
-    DoConnectRequest();
-    break;
+    case Request::kConnect:
+      DoConnectRequest();
+      break;
 
-  case Request::kBind:
-    DoBindRequest();
-    break;
+    case Request::kBind:
+      DoBindRequest();
+      break;
 
-  default:
-    fprintf(stderr, "[!][Session][0x%p] Invalid v4 command\n", (void*)this);
-    break;
+    default:
+      BOOST_LOG_TRIVIAL(error) << "SOCKS session: Invalid v4 command";
+      break;
   }
 }
 
-
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
-  auto handler = boost::bind(&Session::HandleApplicationServerConnect,
-                             self_shared_from_this(),
-                             boost::asio::placeholders::error);
+  auto handler =
+      boost::bind(&Session::HandleApplicationServerConnect,
+                  self_shared_from_this(), boost::asio::placeholders::error);
 
   boost::system::error_code ec;
   boost::asio::ip::tcp::endpoint endpoint;
@@ -109,48 +103,41 @@ void Session<Demux>::DoConnectRequest() {
   }
 }
 
-
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  fprintf(stderr, "[!][Session][0x%p] Bind Not implemented yet\n", (void*)this);
-    HandleStop();
+  BOOST_LOG_TRIVIAL(error) << "SOCKS session: Bind Not implemented yet";
+  HandleStop();
 }
 
-
-//-----------------------------------------------------------------------------
 template <typename Demux>
-void Session<Demux>::HandleApplicationServerConnect(const boost::system::error_code&
-                                             err) {
+void Session<Demux>::HandleApplicationServerConnect(
+    const boost::system::error_code& err) {
   auto self = self_shared_from_this();
   auto p_reply = std::make_shared<Reply>(err, boost::asio::ip::tcp::endpoint());
 
   if (err) {  // Error connecting to the server, informing client and stopping
     AsyncSendReply(client_, *p_reply,
-                    [this, self, p_reply](boost::system::error_code, std::size_t) {
-                      HandleStop();
-                    });
+                   [this, self, p_reply](boost::system::error_code,
+                                         std::size_t) { HandleStop(); });
   } else {  // We successfully connect to application server
-    AsyncSendReply(client_, *p_reply,
-                    [this, self, p_reply](boost::system::error_code ec, std::size_t) {
-                      if (ec) {
-                        HandleStop();
-                        return;
-                      }  // reply successfully sent, Establishing link
-                      EstablishLink();
-                    });
+    AsyncSendReply(
+        client_, *p_reply,
+        [this, self, p_reply](boost::system::error_code ec, std::size_t) {
+          if (ec) {
+            HandleStop();
+            return;
+          }  // reply successfully sent, Establishing link
+          EstablishLink();
+        });
   }
 }
 
-
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Session<Demux>::EstablishLink() {
   auto self = self_shared_from_this();
 
   upstream_.reset(new StreamBuff);
   downstream_.reset(new StreamBuff);
-
 
   // Two half duplex links
   AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(app_server_),
@@ -161,8 +148,9 @@ void Session<Demux>::EstablishLink() {
                        boost::asio::buffer(*downstream_),
                        boost::bind(&Session::HandleStop, self));
 }
+
 }  // v4
 }  // socks
 }  // ssf
 
-#endif  // SRC_SERVICES_SOCKS_V4_SESSION_IPP_
+#endif  // SSF_SERVICES_SOCKS_V4_SESSION_IPP_

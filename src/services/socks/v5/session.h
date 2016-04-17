@@ -1,5 +1,5 @@
-#ifndef SRC_SERVICES_SOCKS_V5_SESSION_H_
-#define SRC_SERVICES_SOCKS_V5_SESSION_H_
+#ifndef SSF_SERVICES_SOCKS_V5_SESSION_H_
+#define SSF_SERVICES_SOCKS_V5_SESSION_H_
 
 #include <memory>
 
@@ -8,20 +8,22 @@
 #include <boost/asio.hpp>  // NOLINT
 
 #include <ssf/network/base_session.h>  // NOLINT
-#include <ssf/network/socket_link.h>  // NOLINT
+#include <ssf/network/socket_link.h>   // NOLINT
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
-#include "services/socks/v5/request.h"  // NOLINT
+#include "services/socks/v5/request.h"       // NOLINT
 #include "services/socks/v5/request_auth.h"  // NOLINT
 
 #include "common/boost/fiber/stream_fiber.hpp"
 
-namespace ssf { namespace socks { namespace v5 {
+namespace ssf {
+namespace socks {
+namespace v5 {
 
 template <typename Demux>
 class Session : public ssf::BaseSession {
-private:
+ private:
   typedef std::array<char, 50 * 1024> StreamBuff;
 
   typedef boost::asio::ip::tcp::socket socket;
@@ -31,15 +33,16 @@ private:
   typedef ItemManager<BaseSessionPtr> SessionManager;
 
  public:
-   Session(SessionManager* sm, fiber client);
+  Session(SessionManager* sm, fiber client);
 
  public:
-   virtual void start(boost::system::error_code&);
+  virtual void start(boost::system::error_code&);
 
-   virtual void stop(boost::system::error_code&);
+  virtual void stop(boost::system::error_code&);
 
  private:
-  void HandleRequestAuthDispatch(const boost::system::error_code& ec, std::size_t);
+  void HandleRequestAuthDispatch(const boost::system::error_code& ec,
+                                 std::size_t);
 
   void DoNoAuth();
   void DoErrorAuth();
@@ -65,7 +68,6 @@ private:
     return std::static_pointer_cast<Session>(shared_from_this());
   }
 
-
  private:
   boost::asio::io_service& io_service_;
   SessionManager* p_session_manager_;
@@ -84,4 +86,4 @@ private:
 
 #include "services/socks/v5/session.ipp"
 
-#endif  // SRC_SERVICES_SOCKS_V5_SESSION_H_
+#endif  // SSF_SERVICES_SOCKS_V5_SESSION_H_

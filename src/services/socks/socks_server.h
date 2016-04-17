@@ -22,7 +22,7 @@
 namespace ssf {
 namespace services {
 namespace socks {
-//-----------------------------------------------------------------------------
+
 template <typename Demux>
 class SocksServer : public BaseService<Demux> {
  private:
@@ -37,8 +37,8 @@ class SocksServer : public BaseService<Demux> {
   typedef typename ssf::BaseService<Demux>::endpoint endpoint;
 
  public:
-   SocksServer(const SocksServer&) = delete;
-   SocksServer& operator=(const SocksServer&) = delete;
+  SocksServer(const SocksServer&) = delete;
+  SocksServer& operator=(const SocksServer&) = delete;
 
   /// Create a new instance of the service
   static SocksServerPtr create(boost::asio::io_service& io_service,
@@ -88,8 +88,8 @@ class SocksServer : public BaseService<Demux> {
   void HandleStop();
 
   template <typename Handler, typename This>
-  auto Then(Handler handler, This me)
-      -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
+  auto Then(Handler handler,
+            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
     return boost::bind(handler, me->SelfFromThis(), _1);
   }
 
