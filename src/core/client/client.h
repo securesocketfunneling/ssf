@@ -58,12 +58,7 @@ class SSFClient
   void OnDemuxClose();
 
   void Notify(ssf::services::initialisation::type type,
-              BaseUserServicePtr p_user_service, boost::system::error_code ec) {
-    if (callback_) {
-      async_engine_.get_io_service().post(boost::bind(
-          callback_, std::move(type), p_user_service, std::move(ec)));
-    }
-  }
+              BaseUserServicePtr p_user_service, boost::system::error_code ec);
 
  private:
   AsyncEngine async_engine_;

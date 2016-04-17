@@ -166,6 +166,16 @@ void SSFClient<N, T>::OnDemuxClose() {
          boost::system::error_code());
 }
 
+template <class N, template <class> class T>
+void SSFClient<N, T>::Notify(ssf::services::initialisation::type type,
+                             BaseUserServicePtr p_user_service,
+                             boost::system::error_code ec) {
+  if (callback_) {
+    async_engine_.get_io_service().post(
+        boost::bind(callback_, std::move(type), p_user_service, std::move(ec)));
+  }
+}
+
 }  // ssf
 
 #endif  // SSF_CORE_CLIENT_CLIENT_IPP_
