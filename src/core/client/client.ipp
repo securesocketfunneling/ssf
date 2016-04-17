@@ -3,54 +3,58 @@
 
 #include "common/error/error.h"
 
+#include "core/factories/service_factory.h"
+
+#include "services/admin/admin.h"
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 #include "services/admin/requests/service_status.h"
 
-#include "core/factories/service_factory.h"
-
-#include "services/user_services/base_user_service.h"
-#include "services/user_services/socks.h"
-#include "services/user_services/remote_socks.h"
-#include "services/user_services/port_forwarding.h"
-#include "services/user_services/remote_port_forwarding.h"
-#include "services/user_services/copy_file_service.h"
+#include "services/copy_file/fiber_to_file/fiber_to_file.h"
+#include "services/copy_file/file_enquirer/file_enquirer.h"
+#include "services/copy_file/file_to_fiber/file_to_fiber.h"
+#include "services/datagrams_to_fibers/datagrams_to_fibers.h"
+#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
+#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
+#include "services/fibers_to_sockets/fibers_to_sockets.h"
+#include "services/sockets_to_fibers/sockets_to_fibers.h"
+#include "services/socks/socks_server.h"
 
 namespace ssf {
 
 template <class N, template <class> class T>
 SSFClient<N, T>::SSFClient(std::vector<BaseUserServicePtr> user_services,
-                           client_callback_type callback)
-    : AsyncRunner(),
-      T<typename N::socket>(
+                           ClientCallback callback)
+    : T<typename N::socket>(
           boost::bind(&SSFClient<N, T>::DoSSFStart, this, _1, _2)),
-      p_worker_(nullptr),
-      fiber_demux_(io_service_),
+      async_engine_(),
+      fiber_demux_(async_engine_.get_io_service()),
       user_services_(user_services),
       callback_(std::move(callback)) {}
 
 template <class N, template <class> class T>
-SSFClient<N, T>::~SSFClient() {}
+SSFClient<N, T>::~SSFClient() {
+  Stop();
+}
 
 template <class N, template <class> class T>
-void SSFClient<N, T>::Run(const network_query_type& query,
+void SSFClient<N, T>::Run(const NetworkQuery& query,
                           boost::system::error_code& ec) {
-  if (p_worker_.get() != nullptr) {
+  if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
     BOOST_LOG_TRIVIAL(error) << "Client already running";
     return;
   }
 
-  p_worker_.reset(new boost::asio::io_service::work(io_service_));
-
   // Create network socket
-  p_network_socket_type p_socket =
-      std::make_shared<network_socket_type>(io_service_);
+  NetworkSocketPtr p_socket =
+      std::make_shared<NetworkSocket>(async_engine_.get_io_service());
 
   // resolve remote endpoint with query
-  network_resolver_type resolver(io_service_);
+  NetworkResolver resolver(async_engine_.get_io_service());
   auto endpoint_it = resolver.resolve(query, ec);
-  StartAsyncEngine();
+
+  async_engine_.Start();
 
   if (ec) {
     Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
@@ -67,14 +71,13 @@ void SSFClient<N, T>::Run(const network_query_type& query,
 template <class N, template <class> class T>
 void SSFClient<N, T>::Stop() {
   fiber_demux_.close();
-  p_worker_.reset(nullptr);
-  
-  StopAsyncEngine();
+
+  async_engine_.Stop();
 }
 
 template <class N, template <class> class T>
 void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
-                                         p_network_socket_type p_socket) {
+                                         NetworkSocketPtr p_socket) {
   if (!ec) {
     this->DoSSFInitiate(p_socket);
     return;
@@ -92,7 +95,7 @@ void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
 }
 
 template <class N, template <class> class T>
-void SSFClient<N, T>::DoSSFStart(p_network_socket_type p_socket,
+void SSFClient<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
                                  const boost::system::error_code& ec) {
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 
@@ -108,46 +111,46 @@ void SSFClient<N, T>::DoSSFStart(p_network_socket_type p_socket,
 }
 
 template <class N, template <class> class T>
-void SSFClient<N, T>::DoFiberize(p_network_socket_type p_socket,
+void SSFClient<N, T>::DoFiberize(NetworkSocketPtr p_socket,
                                  boost::system::error_code& ec) {
   // Register supported admin commands
-  services::admin::CreateServiceRequest<demux>::RegisterToCommandFactory();
-  services::admin::StopServiceRequest<demux>::RegisterToCommandFactory();
-  services::admin::ServiceStatus<demux>::RegisterToCommandFactory();
+  services::admin::CreateServiceRequest<Demux>::RegisterToCommandFactory();
+  services::admin::StopServiceRequest<Demux>::RegisterToCommandFactory();
+  services::admin::ServiceStatus<Demux>::RegisterToCommandFactory();
 
   auto close_demux_handler = [this]() { OnDemuxClose(); };
   fiber_demux_.fiberize(std::move(*p_socket), close_demux_handler);
 
   // Make a new service manager
-  auto p_service_manager = std::make_shared<ServiceManager<demux>>();
+  auto p_service_manager = std::make_shared<ServiceManager<Demux>>();
 
   // Make a new service factory
-  auto p_service_factory = ServiceFactory<demux>::Create(
-      io_service_, fiber_demux_, p_service_manager);
+  auto p_service_factory = ServiceFactory<Demux>::Create(
+      async_engine_.get_io_service(), fiber_demux_, p_service_manager);
 
   // Register supported micro services
-  services::socks::SocksServer<demux>::RegisterToServiceFactory(
+  services::socks::SocksServer<Demux>::RegisterToServiceFactory(
       p_service_factory);
-  services::fibers_to_sockets::FibersToSockets<demux>::RegisterToServiceFactory(
+  services::fibers_to_sockets::FibersToSockets<Demux>::RegisterToServiceFactory(
       p_service_factory);
-  services::sockets_to_fibers::SocketsToFibers<demux>::RegisterToServiceFactory(
+  services::sockets_to_fibers::SocketsToFibers<Demux>::RegisterToServiceFactory(
       p_service_factory);
   services::fibers_to_datagrams::FibersToDatagrams<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory);
   services::datagrams_to_fibers::DatagramsToFibers<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory);
   services::copy_file::file_to_fiber::FileToFiber<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory);
   services::copy_file::fiber_to_file::FiberToFile<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory);
   services::copy_file::file_enquirer::FileEnquirer<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory);
 
   // Start the admin micro service
   std::map<std::string, std::string> empty_map;
 
-  auto p_admin_service = services::admin::Admin<demux>::Create(
-      io_service_, fiber_demux_, empty_map);
+  auto p_admin_service = services::admin::Admin<Demux>::Create(
+      async_engine_.get_io_service(), fiber_demux_, empty_map);
   p_admin_service->set_client(user_services_, callback_);
   p_service_manager->start(p_admin_service, ec);
 }
@@ -155,7 +158,7 @@ void SSFClient<N, T>::DoFiberize(p_network_socket_type p_socket,
 template <class N, template <class> class T>
 void SSFClient<N, T>::OnDemuxClose() {
   auto p_service_factory =
-      ServiceFactoryManager<demux>::GetServiceFactory(&fiber_demux_);
+      ServiceFactoryManager<Demux>::GetServiceFactory(&fiber_demux_);
   if (p_service_factory) {
     p_service_factory->Destroy();
   }

@@ -5,83 +5,61 @@
 #include <map>
 
 #include <boost/asio.hpp>
-#include <boost/asio/basic_stream_socket.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
-#include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
-#include "common/config/config.h"
-
+#include "core/async_engine.h"
 #include "core/factories/service_factory.h"
-#include "core/async_runner.h"
 #include "core/service_manager/service_manager.h"
-
-#include "services/admin/admin.h"
-#include "services/base_service.h"
-#include "services/copy_file/file_to_fiber/file_to_fiber.h"
-#include "services/copy_file/fiber_to_file/fiber_to_file.h"
-#include "services/datagrams_to_fibers/datagrams_to_fibers.h"
-#include "services/fibers_to_sockets/fibers_to_sockets.h"
-#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
-#include "services/sockets_to_fibers/sockets_to_fibers.h"
-#include "services/socks/socks_server.h"
 
 namespace ssf {
 template <class NetworkProtocol,
           template <class> class TransportVirtualLayerPolicy>
 class SSFServer
-    : public AsyncRunner,
-      public TransportVirtualLayerPolicy<typename NetworkProtocol::socket> {
+    : public TransportVirtualLayerPolicy<typename NetworkProtocol::socket> {
  private:
-  using network_socket_type = typename NetworkProtocol::socket;
-  using p_network_socket_type = std::shared_ptr<network_socket_type>;
-  using network_endpoint_type = typename NetworkProtocol::endpoint;
-  using p_network_endpoint_type = std::shared_ptr<network_endpoint_type>;
-  using network_resolver_type = typename NetworkProtocol::resolver;
-  using network_query_type = typename NetworkProtocol::resolver::query;
-  using network_acceptor_type = typename NetworkProtocol::acceptor;
-
-  using worker_ptr = std::unique_ptr<boost::asio::io_service::work>;
+  using NetworkSocket = typename NetworkProtocol::socket;
+  using NetworkSocketPtr = std::shared_ptr<NetworkSocket>;
+  using NetworkEndpoint = typename NetworkProtocol::endpoint;
+  using NetworkEndpointPtr = std::shared_ptr<NetworkEndpoint>;
+  using NetworkResolver = typename NetworkProtocol::resolver;
+  using NetworkQuery = typename NetworkProtocol::resolver::query;
+  using NetworkAcceptor = typename NetworkProtocol::acceptor;
 
  public:
-  typedef boost::asio::fiber::basic_fiber_demux<network_socket_type> demux;
+  using demux = boost::asio::fiber::basic_fiber_demux<NetworkSocket>;
 
  private:
-  typedef std::shared_ptr<demux> p_demux;
-
-  typedef std::shared_ptr<ServiceManager<demux>> p_ServiceManager;
-
-  typedef std::set<p_demux> demux_set;
-  typedef std::map<p_demux, p_network_socket_type> socket_map;
-  typedef std::map<p_demux, p_ServiceManager> service_manager_map;
+  using DemuxPtr = std::shared_ptr<demux>;
+  using DemuxPtrSet = std::set<DemuxPtr>;
+  using ServiceManagerPtr = std::shared_ptr<ServiceManager<demux>>;
+  using ServiceManagerPtrMap = std::map<DemuxPtr, ServiceManagerPtr>;
 
  public:
   SSFServer();
-
   ~SSFServer();
 
-  void Run(const network_query_type& query, boost::system::error_code& ec);
+  void Run(const NetworkQuery& query, boost::system::error_code& ec);
   void Stop();
 
  private:
   void AsyncAcceptConnection();
   void NetworkToTransport(const boost::system::error_code& ec,
-                          p_network_socket_type p_socket);
-  void AddDemux(p_demux p_fiber_demux, p_ServiceManager p_service_manager);
-  void DoSSFStart(p_network_socket_type p_socket,
+                          NetworkSocketPtr p_socket);
+  void AddDemux(DemuxPtr p_fiber_demux, ServiceManagerPtr p_service_manager);
+  void DoSSFStart(NetworkSocketPtr p_socket,
                   const boost::system::error_code& ec);
-  void DoFiberize(p_network_socket_type p_socket,
-                  boost::system::error_code& ec);
-  void RemoveDemux(p_demux p_fiber_demux);
+  void DoFiberize(NetworkSocketPtr p_socket, boost::system::error_code& ec);
+  void RemoveDemux(DemuxPtr p_fiber_demux);
   void RemoveAllDemuxes();
 
  private:
-  worker_ptr p_worker_;
-  network_acceptor_type network_acceptor_;
+  AsyncEngine async_engine_;
+  NetworkAcceptor network_acceptor_;
 
-  demux_set p_fiber_demuxes_;
-  service_manager_map p_service_managers_;
+  DemuxPtrSet p_fiber_demuxes_;
+  ServiceManagerPtrMap p_service_managers_;
 
   boost::recursive_mutex storage_mutex_;
 };

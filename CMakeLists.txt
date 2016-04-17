@@ -76,9 +76,9 @@ FILE(GLOB CORE_COMMAND_LINE_COPY_FILES
       "${project_SRC_DIR}/core/command_line/copy/*.h"
       "${project_SRC_DIR}/core/command_line/copy/*.cpp")
 
-SET(CORE_ASYNC_RUNNER_FILES
-      "${project_SRC_DIR}/core/async_runner.h"
-      "${project_SRC_DIR}/core/async_runner.cpp")
+SET(CORE_ASYNC_ENGINE_FILES
+      "${project_SRC_DIR}/core/async_engine.h"
+      "${project_SRC_DIR}/core/async_engine.cpp")
 
 SET(CORE_NETWORK_PROTOCOL_FILES
       "${project_SRC_DIR}/core/network_protocol.h"
@@ -262,7 +262,7 @@ set(SSF_SOURCES
       ${COMMON_CONFIG_FILES}
       ${COMMON_ERROR_FILES}
       ${COMMON_LOG_FILES}
-      ${CORE_ASYNC_RUNNER_FILES}
+      ${CORE_ASYNC_ENGINE_FILES}
       ${COMMON_NETWORK_FILES}
       ${COMMON_UTILS_FILES}
       ${CORE_NETWORK_PROTOCOL_FILES}

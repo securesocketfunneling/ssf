@@ -27,7 +27,7 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
                                 ssf::TransportProtocolPolicy>;
   using Server = ssf::SSFServer<ssf::network::FullTLSProtocol,
                                 ssf::TransportProtocolPolicy>;
-  using demux = Client::demux;
+  using demux = Client::Demux;
   using BaseUserServicePtr =
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
   typedef boost::function<void(

@@ -3,20 +3,30 @@
 
 #include "common/error/error.h"
 
+#include "core/factories/service_factory.h"
+
+#include "services/admin/admin.h"
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 #include "services/admin/requests/service_status.h"
 
-#include "core/factories/service_factory.h"
+#include "services/base_service.h"
+#include "services/copy_file/file_to_fiber/file_to_fiber.h"
+#include "services/copy_file/fiber_to_file/fiber_to_file.h"
+#include "services/datagrams_to_fibers/datagrams_to_fibers.h"
+#include "services/fibers_to_sockets/fibers_to_sockets.h"
+#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
+#include "services/sockets_to_fibers/sockets_to_fibers.h"
+#include "services/socks/socks_server.h"
 
 namespace ssf {
 
 template <class N, template <class> class T>
 SSFServer<N, T>::SSFServer()
-    : AsyncRunner(),
-      T<typename N::socket>(
+    : T<typename N::socket>(
           boost::bind(&SSFServer<N, T>::DoSSFStart, this, _1, _2)),
-      network_acceptor_(io_service_) {}
+      async_engine_(),
+      network_acceptor_(async_engine_.get_io_service()) {}
 
 template <class N, template <class> class T>
 SSFServer<N, T>::~SSFServer() {
@@ -25,22 +35,20 @@ SSFServer<N, T>::~SSFServer() {
 
 /// Start accepting connections
 template <class N, template <class> class T>
-void SSFServer<N, T>::Run(const network_query_type& query,
+void SSFServer<N, T>::Run(const NetworkQuery& query,
                           boost::system::error_code& ec) {
-  if (p_worker_.get() != nullptr) {
+  if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
-    BOOST_LOG_TRIVIAL(error) << "Server already running";
+    BOOST_LOG_TRIVIAL(error) << "server : already running";
     return;
   }
 
-  p_worker_.reset(new boost::asio::io_service::work(io_service_));
-
   // resolve remote endpoint with query
-  network_resolver_type resolver(io_service_);
+  NetworkResolver resolver(async_engine_.get_io_service());
   auto endpoint_it = resolver.resolve(query, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "Could not resolve network endpoint";
+    BOOST_LOG_TRIVIAL(error) << "server: could not resolve network endpoint";
     return;
   }
 
@@ -50,17 +58,18 @@ void SSFServer<N, T>::Run(const network_query_type& query,
                                ec);
   network_acceptor_.bind(*endpoint_it, ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "Could not bind acceptor to network endpoint";
+    BOOST_LOG_TRIVIAL(error)
+        << "server: could not bind acceptor to network endpoint";
     return;
   }
 
   network_acceptor_.listen(100, ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "Could not listen for new connections";
+    BOOST_LOG_TRIVIAL(error) << "server: could not listen for new connections";
     return;
   }
 
-  StartAsyncEngine();
+  async_engine_.Start();
 
   // start accepting connection
   AsyncAcceptConnection();
@@ -75,16 +84,14 @@ void SSFServer<N, T>::Stop() {
   boost::system::error_code close_ec;
   network_acceptor_.close(close_ec);
 
-  p_worker_.reset(nullptr);
-
-  StopAsyncEngine();
+  async_engine_.Stop();
 }
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::AsyncAcceptConnection() {
   if (network_acceptor_.is_open()) {
-    p_network_socket_type p_socket =
-        std::make_shared<network_socket_type>(io_service_);
+    NetworkSocketPtr p_socket =
+        std::make_shared<NetworkSocket>(async_engine_.get_io_service());
 
     network_acceptor_.async_accept(
         *p_socket,
@@ -94,7 +101,7 @@ void SSFServer<N, T>::AsyncAcceptConnection() {
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
-                                         p_network_socket_type p_socket) {
+                                         NetworkSocketPtr p_socket) {
   if (!ec) {
     this->DoSSFInitiateReceive(p_socket);
     AsyncAcceptConnection();
@@ -107,7 +114,7 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
 }
 
 template <class N, template <class> class T>
-void SSFServer<N, T>::DoSSFStart(p_network_socket_type p_socket,
+void SSFServer<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
                                  const boost::system::error_code& ec) {
   if (!ec) {
     BOOST_LOG_TRIVIAL(trace) << "server: SSF reply ok";
@@ -122,7 +129,7 @@ void SSFServer<N, T>::DoSSFStart(p_network_socket_type p_socket,
 }
 
 template <class N, template <class> class T>
-void SSFServer<N, T>::DoFiberize(p_network_socket_type p_socket,
+void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
                                  boost::system::error_code& ec) {
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
 
@@ -132,7 +139,7 @@ void SSFServer<N, T>::DoFiberize(p_network_socket_type p_socket,
   services::admin::ServiceStatus<demux>::RegisterToCommandFactory();
 
   // Make a new fiber demux and fiberize
-  auto p_fiber_demux = std::make_shared<demux>(io_service_);
+  auto p_fiber_demux = std::make_shared<demux>(async_engine_.get_io_service());
   auto close_demux_handler =
       [this, p_fiber_demux]() { RemoveDemux(p_fiber_demux); };
   p_fiber_demux->fiberize(std::move(*p_socket), close_demux_handler);
@@ -145,7 +152,7 @@ void SSFServer<N, T>::DoFiberize(p_network_socket_type p_socket,
 
   // Make a new service factory
   auto p_service_factory = ServiceFactory<demux>::Create(
-      io_service_, *p_fiber_demux, p_service_manager);
+      async_engine_.get_io_service(), *p_fiber_demux, p_service_manager);
 
   // Register supported micro services
   services::socks::SocksServer<demux>::RegisterToServiceFactory(
@@ -167,14 +174,14 @@ void SSFServer<N, T>::DoFiberize(p_network_socket_type p_socket,
   std::map<std::string, std::string> empty_map;
 
   auto p_admin_service = services::admin::Admin<demux>::Create(
-      io_service_, *p_fiber_demux, empty_map);
+      async_engine_.get_io_service(), *p_fiber_demux, empty_map);
   p_admin_service->set_server();
   p_service_manager->start(p_admin_service, ec);
 }
 
 template <class N, template <class> class T>
-void SSFServer<N, T>::AddDemux(p_demux p_fiber_demux,
-                               p_ServiceManager p_service_manager) {
+void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
+                               ServiceManagerPtr p_service_manager) {
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
   BOOST_LOG_TRIVIAL(trace) << "server: adding a new demux";
 
@@ -183,7 +190,7 @@ void SSFServer<N, T>::AddDemux(p_demux p_fiber_demux,
 }
 
 template <class N, template <class> class T>
-void SSFServer<N, T>::RemoveDemux(p_demux p_fiber_demux) {
+void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
   BOOST_LOG_TRIVIAL(trace) << "server: removing a demux";
 

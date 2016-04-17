@@ -209,7 +209,7 @@ class StreamForwardTest : public ::testing::Test {
       ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
   using Server =
       ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
-  using demux = Client::demux;
+  using demux = Client::Demux;
   using BaseUserServicePtr =
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
 

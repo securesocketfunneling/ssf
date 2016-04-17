@@ -23,9 +23,8 @@
 using Client =
     ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 
-using Demux = Client::demux;
-using BaseUserServicePtr =
-    ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
+using Demux = Client::Demux;
+using BaseUserServicePtr = Client::BaseUserServicePtr;
 using ClientServices = std::vector<BaseUserServicePtr>;
 using CircuitBouncers = std::list<std::string>;
 using BounceParser = ssf::parser::BounceParser;
