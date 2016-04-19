@@ -1,7 +1,6 @@
 #include "common/error/error.h"
 
-const char* error::detail::ssf_category::name() const
-    BOOST_SYSTEM_NOEXCEPT {
+const char* error::detail::ssf_category::name() const BOOST_SYSTEM_NOEXCEPT {
   return "ssf";
 }
 

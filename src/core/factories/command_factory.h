@@ -10,37 +10,35 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/system/error_code.hpp>
 
-
 namespace boost {
-namespace archive { 
-  class text_iarchive;
+namespace archive {
+class text_iarchive;
 }  // archive
 }  // boost
 
-
 namespace ssf {
+
 template <typename Demux>
 class CommandFactory {
  public:
-  typedef std::function<std::string (boost::archive::text_iarchive&, 
-                              Demux*,
-                              boost::system::error_code&)> CommandExecuterType;
+  using CommandExecuterType = std::function<std::string(
+      boost::archive::text_iarchive&, Demux*, boost::system::error_code&)>;
 
-  typedef std::function<std::string (boost::archive::text_iarchive&, 
-                              Demux*,
-                              const boost::system::error_code&,
-                              std::string)> CommandReplierType;
+  using CommandReplierType =
+      std::function<std::string(boost::archive::text_iarchive&, Demux*,
+                                const boost::system::error_code&, std::string)>;
+
  private:
-  typedef std::map<uint32_t, CommandExecuterType> CommandExecuterMap;
-  typedef std::map<uint32_t, CommandReplierType> CommandReplierMap;
-  typedef std::map<uint32_t, uint32_t> CommandReplyIndexMap;
+  using CommandExecuterMap = std::map<uint32_t, CommandExecuterType>;
+  using CommandReplierMap = std::map<uint32_t, CommandReplierType>;
+  using CommandReplyIndexMap = std::map<uint32_t, uint32_t>;
 
  public:
-  static bool RegisterOnReceiveCommand(uint32_t index, 
+  static bool RegisterOnReceiveCommand(uint32_t index,
                                        CommandExecuterType executer) {
     boost::recursive_mutex::scoped_lock lock(executer_mutex_);
     auto inserted =
-      command_executers_.insert(std::make_pair(index, std::move(executer)));
+        command_executers_.insert(std::make_pair(index, std::move(executer)));
     return inserted.second;
   }
 
@@ -48,12 +46,11 @@ class CommandFactory {
                                      CommandReplierType replier) {
     boost::recursive_mutex::scoped_lock lock(replier_mutex_);
     auto inserted =
-      command_repliers_.insert(std::make_pair(index, std::move(replier)));
+        command_repliers_.insert(std::make_pair(index, std::move(replier)));
     return inserted.second;
   }
 
-  static bool RegisterReplyCommandIndex(uint32_t index,
-                                        uint32_t reply_index) {
+  static bool RegisterReplyCommandIndex(uint32_t index, uint32_t reply_index) {
     boost::recursive_mutex::scoped_lock lock(command_reply_mutex_);
     auto inserted = command_reply_indexes.insert(
         std::make_pair(index, std::move(reply_index)));
@@ -105,7 +102,6 @@ class CommandFactory {
   static CommandReplyIndexMap command_reply_indexes;
 };
 
-
 template <typename Demux>
 boost::recursive_mutex CommandFactory<Demux>::executer_mutex_;
 template <typename Demux>
@@ -114,11 +110,15 @@ template <typename Demux>
 boost::recursive_mutex CommandFactory<Demux>::command_reply_mutex_;
 
 template <typename Demux>
-typename CommandFactory<Demux>::CommandExecuterMap CommandFactory<Demux>::command_executers_;
+typename CommandFactory<Demux>::CommandExecuterMap
+    CommandFactory<Demux>::command_executers_;
 template <typename Demux>
-typename CommandFactory<Demux>::CommandReplierMap CommandFactory<Demux>::command_repliers_;
+typename CommandFactory<Demux>::CommandReplierMap
+    CommandFactory<Demux>::command_repliers_;
 template <typename Demux>
-typename CommandFactory<Demux>::CommandReplyIndexMap CommandFactory<Demux>::command_reply_indexes;
+typename CommandFactory<Demux>::CommandReplyIndexMap
+    CommandFactory<Demux>::command_reply_indexes;
 
 }  // ssf
+
 #endif  // SSF_CORE_FACTORIES_COMMAND_FACTORY_H_

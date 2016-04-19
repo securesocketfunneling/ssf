@@ -10,11 +10,9 @@ Query GenerateClientQuery(const std::string& remote_addr,
                           const ssf::Config& ssf_config,
                           const CircuitBouncers& bouncers) {
 #ifdef TLS_OVER_TCP_LINK
-  return GenerateClientTLSQuery(remote_addr, remote_port,
-                                              ssf_config, bouncers);
+  return GenerateClientTLSQuery(remote_addr, remote_port, ssf_config, bouncers);
 #elif TCP_ONLY_LINK
-  return GenerateClientTCPQuery(remote_addr, remote_port,
-                                              bouncers);
+  return GenerateClientTCPQuery(remote_addr, remote_port, bouncers);
 #endif
 }
 
@@ -79,9 +77,8 @@ Query GenerateClientTLSQuery(const std::string& remote_addr,
     nodes.AddTopLayerToBackNode(tls_default_param_layer);
   }
 
-  Query query =
-      ssf::layer::data_link::make_client_full_circuit_parameter_stack("client",
-                                                                      nodes);
+  Query query = ssf::layer::data_link::make_client_full_circuit_parameter_stack(
+      "client", nodes);
 
   query.push_front(tls_param_layer);
 
@@ -130,9 +127,8 @@ Query GenerateServerTLSQuery(const std::string& remote_addr,
 
   ssf::layer::ParameterStack default_parameters = {{}, tls_param_layer, {}};
 
-  Query query =
-      ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(
-          "server", default_parameters, layer_parameters);
+  Query query = ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(
+      "server", default_parameters, layer_parameters);
 
   query.push_front(tls_param_layer);
 

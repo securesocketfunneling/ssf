@@ -63,11 +63,6 @@ FILE(GLOB_RECURSE COMMON_NETWORK_FILES
       "${project_SRC_DIR}/common/network/*.h"
       "${project_SRC_DIR}/common/network/*.cpp")
 
-FILE(GLOB_RECURSE COMMON_UTILS_FILES
-      "${project_SRC_DIR}/common/utils/*.h"
-      "${project_SRC_DIR}/common/utils/*.cpp"
-      "${project_SRC_DIR}/common/utils/*.ipp")
-
 FILE(GLOB CORE_COMMAND_LINE_STANDARD_FILES
       "${project_SRC_DIR}/core/command_line/standard/*.h"
       "${project_SRC_DIR}/core/command_line/standard/*.cpp")
@@ -264,7 +259,6 @@ set(SSF_SOURCES
       ${COMMON_LOG_FILES}
       ${CORE_ASYNC_ENGINE_FILES}
       ${COMMON_NETWORK_FILES}
-      ${COMMON_UTILS_FILES}
       ${CORE_NETWORK_PROTOCOL_FILES}
       ${CORE_TRANSPORT_POLICIES_FILES}
       ${CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES}

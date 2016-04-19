@@ -10,7 +10,7 @@ namespace ssf {
 
 class AsyncEngine {
  private:
-   using WorkerPtr = std::unique_ptr<boost::asio::io_service::work>;
+  using WorkerPtr = std::unique_ptr<boost::asio::io_service::work>;
 
  public:
   AsyncEngine();

@@ -9,11 +9,12 @@
 
 #include "common/error/error.h"
 
-ssf::Config ssf::LoadConfig(const std::string& filepath,
-                            boost::system::error_code& ec) {
+namespace ssf {
+
+Config LoadConfig(const std::string& filepath, boost::system::error_code& ec) {
   using boost::property_tree::ptree;
   ptree pt;
-  ssf::Config config;
+  Config config;
 
   try {
     if (filepath != "") {
@@ -62,6 +63,8 @@ ssf::Config ssf::LoadConfig(const std::string& filepath,
         << "config: error reading SSF config file : " << e.what();
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
-    return ssf::Config();
+    return Config();
   }
 }
+
+}  // ssf
