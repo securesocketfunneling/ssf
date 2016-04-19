@@ -34,7 +34,7 @@ void Session<Demux>::stop(boost::system::error_code&) {
   boost::system::error_code ec;
   app_server_.close(ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "socks session: stop error " << ec.message()
+    BOOST_LOG_TRIVIAL(error) << "session SOCKS: stop error " << ec.message()
                              << std::endl;
   }
 }
@@ -67,7 +67,7 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       break;
 
     default:
-      BOOST_LOG_TRIVIAL(error) << "SOCKS session: Invalid v4 command";
+      BOOST_LOG_TRIVIAL(error) << "session SOCKS: Invalid v4 command";
       break;
   }
 }
@@ -105,7 +105,7 @@ void Session<Demux>::DoConnectRequest() {
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  BOOST_LOG_TRIVIAL(error) << "SOCKS session: Bind Not implemented yet";
+  BOOST_LOG_TRIVIAL(error) << "session SOCKS: Bind Not implemented yet";
   HandleStop();
 }
 
