@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     getchar();
   } else {
     BOOST_LOG_TRIVIAL(error)
-        << "server: error happened when running server : " << ec.message();
+        << "server: error happened when running server: " << ec.message();
   }
 
   BOOST_LOG_TRIVIAL(info) << "server: stop" << std::endl;

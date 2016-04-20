@@ -38,7 +38,7 @@ class DummyClient {
     boost::asio::connect(socket_, r.resolve(q), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to connect "
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to connect "
                                << ec.value();
       return false;
     }
@@ -47,7 +47,7 @@ class DummyClient {
                        ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to write " << ec.value();
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
       return false;
     }
 

@@ -42,7 +42,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
                           boost::system::error_code& ec) {
   if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
-    BOOST_LOG_TRIVIAL(error) << "Client already running";
+    BOOST_LOG_TRIVIAL(error) << "client: already running";
     return;
   }
 
@@ -58,7 +58,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
 
   if (ec) {
     Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
-    BOOST_LOG_TRIVIAL(error) << "Could not resolve network endpoint";
+    BOOST_LOG_TRIVIAL(error) << "client: could not resolve network endpoint";
     return;
   }
 
@@ -83,7 +83,7 @@ void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
     return;
   }
 
-  BOOST_LOG_TRIVIAL(error) << "Error when connecting to server "
+  BOOST_LOG_TRIVIAL(error) << "client: error when connecting to server "
                            << ec.message();
 
   if (p_socket) {

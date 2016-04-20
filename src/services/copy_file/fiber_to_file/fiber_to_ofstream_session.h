@@ -46,7 +46,7 @@ class FiberToOstreamSession : public ssf::BaseSession {
 
   // Stop session
   virtual void stop(boost::system::error_code& ec) {
-    BOOST_LOG_TRIVIAL(debug) << "session fiber to file : stopped";
+    BOOST_LOG_TRIVIAL(debug) << "session fiber to file: stopped";
     input_socket_stream_.close(ec);
     // connection interrupted without prior notification (broken pipe)
     // delete output file
@@ -93,13 +93,13 @@ class FiberToOstreamSession : public ssf::BaseSession {
                       _1, _2));
 
       BOOST_LOG_TRIVIAL(info)
-          << "session fiber to file : start receiving data and writing in file "
+          << "session fiber to file: start receiving data and writing in file "
           << request_.GetFilename();
 
       // open output_stream
       output_stream_.open(request_.GetFilename(), std::ofstream::binary);
       if (!output_stream_.is_open()) {
-        BOOST_LOG_TRIVIAL(error) << "session fiber to file : output file "
+        BOOST_LOG_TRIVIAL(error) << "session fiber to file: output file "
                                  << request_.GetFilename()
                                  << " could not be opened";
         boost::system::error_code stop_ec;

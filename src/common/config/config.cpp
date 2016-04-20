@@ -60,7 +60,7 @@ Config LoadConfig(const std::string& filepath, boost::system::error_code& ec) {
     return config;
   } catch (const std::exception& e) {
     BOOST_LOG_TRIVIAL(error)
-        << "config: error reading SSF config file : " << e.what();
+        << "config: error reading SSF config file: " << e.what();
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
     return Config();

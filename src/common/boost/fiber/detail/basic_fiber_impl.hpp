@@ -232,9 +232,9 @@ public:
                                     ::error::get_ssf_category());
       cancel_operations(ec);
 
-      BOOST_LOG_TRIVIAL(trace) << "fiber impl : close handler "
-                               << this->id.remote_port()
-                               << ":" << this->id.local_port();
+      BOOST_LOG_TRIVIAL(trace) << "fiber impl: close handler "
+                               << this->id.remote_port() << ":"
+                               << this->id.local_port();
 
       this->set_closed();
     };
@@ -354,7 +354,7 @@ public:
         p_fib_demux->async_send_ack(op->get_p_fib(), op);
 
         BOOST_LOG_TRIVIAL(debug)
-          << "fiber impl : new connection from remote port: " << remote_port;
+            << "fiber impl: new connection from remote port: " << remote_port;
 
         p_fib_demux->get_io_service().dispatch(boost::bind(
           &basic_fiber_impl::a_queues_handler, this->shared_from_this(), ec));

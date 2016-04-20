@@ -121,7 +121,7 @@ class DummyClient {
     boost::asio::connect(socket_, r.resolve(q), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to connect "
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to connect "
                                << ec.value();
       Stop();
     }
@@ -139,7 +139,7 @@ class DummyClient {
     boost::asio::write(socket_, req.buffers(), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to write " << ec.value();
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
       Stop();
       return false;
     }
@@ -149,7 +149,7 @@ class DummyClient {
     boost::asio::read(socket_, rep.buffers(), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to read " << ec.value();
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to read " << ec.value();
       Stop();
       return false;
     }
@@ -162,7 +162,7 @@ class DummyClient {
     boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_)), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to write " << ec.value();
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
       Stop();
     }
 

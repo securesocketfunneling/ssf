@@ -39,7 +39,7 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
                           boost::system::error_code& ec) {
   if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
-    BOOST_LOG_TRIVIAL(error) << "server : already running";
+    BOOST_LOG_TRIVIAL(error) << "server: already running";
     return;
   }
 

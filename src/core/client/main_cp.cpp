@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
     closed.get_future().get();
   } else {
     BOOST_LOG_TRIVIAL(error)
-        << "client: error happened when running client : " << run_ec.message();
+        << "client: error happened when running client: " << run_ec.message();
   }
 
   client.Stop();

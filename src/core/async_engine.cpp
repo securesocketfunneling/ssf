@@ -25,7 +25,7 @@ void AsyncEngine::Start() {
       io_service_.run(ec);
       if (ec) {
         BOOST_LOG_TRIVIAL(error)
-            << "async engine: when running io_service : " << ec.message();
+            << "async engine: when running io_service: " << ec.message();
       }
     });
   }

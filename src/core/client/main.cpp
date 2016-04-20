@@ -160,8 +160,8 @@ void InitializeClientServices(ClientServices* p_client_services,
         p_client_services->push_back(p_service_options);
       } else {
         BOOST_LOG_TRIVIAL(error) << "client: wrong parameter "
-                                 << parameter.first << " : " << single_parameter
-                                 << " : " << ec.message();
+                                 << parameter.first << ": " << single_parameter
+                                 << ": " << ec.message();
         return;
       }
     }
