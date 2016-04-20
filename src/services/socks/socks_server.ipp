@@ -33,7 +33,8 @@ SocksServer<Demux>::SocksServer(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void SocksServer<Demux>::start(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "service SOCKS: starting server on port " << local_port_;
+  BOOST_LOG_TRIVIAL(info) << "service SOCKS: starting server on port "
+                          << local_port_;
   ec = init_ec_;
 
   if (!init_ec_) {
@@ -70,46 +71,46 @@ void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
 
   if (ec) {
     BOOST_LOG_TRIVIAL(error)
-        << "service SOCKS: error accepting new connection: " << ec.message() << " "
-        << ec.value();
+        << "service SOCKS: error accepting new connection: " << ec.message()
+        << " " << ec.value();
     this->StartAccept();
   }
 
   std::shared_ptr<Version> p_version(new Version());
 
   auto self = this->SelfFromThis();
-  auto start_handler =
-      [this, self, p_version](boost::system::error_code ec, std::size_t) {
-        if (ec) {
-          BOOST_LOG_TRIVIAL(error)
-              << "service SOCKS: error reading protocol version: " << ec.message()
-              << " " << ec.value();
-          fiber fib = std::move(this->new_connection_);
-          this->StartAccept();
-        } else if (p_version->Number() == 4) {
-          BOOST_LOG_TRIVIAL(trace) << "service SOCKS: version accepted: v4";
-          ssf::BaseSessionPtr new_socks_session =
-              std::make_shared<ssf::socks::v4::Session<Demux> >(
-                  &(this->session_manager_), std::move(this->new_connection_));
-          boost::system::error_code e;
-          this->session_manager_.start(new_socks_session, e);
-          this->StartAccept();
-        } else if (p_version->Number() == 5) {
-          BOOST_LOG_TRIVIAL(trace) << "service SOCKS: version accepted: v5";
-          ssf::BaseSessionPtr new_socks_session =
-              std::make_shared<ssf::socks::v5::Session<Demux> >(
-                  &(this->session_manager_), std::move(this->new_connection_));
-          boost::system::error_code e;
-          this->session_manager_.start(new_socks_session, e);
-          this->StartAccept();
-        } else {
-          BOOST_LOG_TRIVIAL(error)
-              << "service SOCKS: protocol not supported yet: " << p_version->Number();
-          this->new_connection_.close();
-          fiber fib = std::move(this->new_connection_);
-          this->StartAccept();
-        }
-      };
+  auto start_handler = [this, self, p_version](boost::system::error_code ec,
+                                               std::size_t) {
+    if (ec) {
+      BOOST_LOG_TRIVIAL(error)
+          << "service SOCKS: error reading protocol version: " << ec.message()
+          << " " << ec.value();
+      fiber fib = std::move(this->new_connection_);
+      this->StartAccept();
+    } else if (p_version->Number() == 4) {
+      BOOST_LOG_TRIVIAL(trace) << "service SOCKS: version accepted: v4";
+      ssf::BaseSessionPtr new_socks_session =
+          std::make_shared<ssf::socks::v4::Session<Demux> >(
+              &(this->session_manager_), std::move(this->new_connection_));
+      boost::system::error_code e;
+      this->session_manager_.start(new_socks_session, e);
+      this->StartAccept();
+    } else if (p_version->Number() == 5) {
+      BOOST_LOG_TRIVIAL(trace) << "service SOCKS: version accepted: v5";
+      ssf::BaseSessionPtr new_socks_session =
+          std::make_shared<ssf::socks::v5::Session<Demux> >(
+              &(this->session_manager_), std::move(this->new_connection_));
+      boost::system::error_code e;
+      this->session_manager_.start(new_socks_session, e);
+      this->StartAccept();
+    } else {
+      BOOST_LOG_TRIVIAL(error) << "service SOCKS: protocol not supported yet: "
+                               << p_version->Number();
+      this->new_connection_.close();
+      fiber fib = std::move(this->new_connection_);
+      this->StartAccept();
+    }
+  };
 
   // Read the version field of the SOCKS header
   boost::asio::async_read(new_connection_, p_version->Buffer(), start_handler);

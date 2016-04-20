@@ -31,16 +31,18 @@
 
 #include "services/user_services/base_user_service.h"
 
-namespace ssf { namespace services { namespace admin {
+namespace ssf {
+namespace services {
+namespace admin {
 
 template <typename Demux>
 class Admin : public BaseService<Demux> {
-public:
- typedef typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr
-     BaseUserServicePtr;
- typedef std::function<void(
-     ssf::services::initialisation::type, BaseUserServicePtr,
-     const boost::system::error_code&)> AdminCallbackType;
+ public:
+  typedef typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr
+      BaseUserServicePtr;
+  typedef std::function<void(
+      ssf::services::initialisation::type, BaseUserServicePtr,
+      const boost::system::error_code&)> AdminCallbackType;
 
  private:
   typedef typename Demux::local_port_type local_port_type;
@@ -66,29 +68,26 @@ public:
 
   enum {
     factory_id = 1,
-    service_port = (1 << 17) + 1,  // first of the service range
-    keep_alive_interval = 120,  // seconds
+    service_port = (1 << 17) + 1,         // first of the service range
+    keep_alive_interval = 120,            // seconds
     service_status_retry_interval = 100,  // milliseconds
-    service_status_retry_number = 500  // retries
+    service_status_retry_number = 500     // retries
   };
 
   static void RegisterToServiceFactory(
-    std::shared_ptr<ServiceFactory<Demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory) {
     p_factory->RegisterServiceCreator(factory_id, &Admin::Create);
   }
 
   void set_server();
-  void set_client(
-      std::vector<BaseUserServicePtr>,
-      AdminCallbackType callback);
+  void set_client(std::vector<BaseUserServicePtr>, AdminCallbackType callback);
 
   virtual void start(boost::system::error_code& ec);
   virtual void stop(boost::system::error_code& ec);
   virtual uint32_t service_type_id();
 
   template <typename Request, typename Handler>
-  void Command(Request request,
-               Handler handler) {
+  void Command(Request request, Handler handler) {
     std::string parameters_buff_to_send = request.OnSending();
 
     auto serial = GetAvailableSerial();
@@ -112,8 +111,9 @@ public:
   // execute handler bound to the command serial id if exists
   void ExecuteAndRemoveCommandHandler(uint32_t serial) {
     if (command_handlers_.count(command_serial_received_)) {
-      this->get_io_service().post(boost::bind(
-          command_handlers_[command_serial_received_], boost::system::error_code()));
+      this->get_io_service().post(
+          boost::bind(command_handlers_[command_serial_received_],
+                      boost::system::error_code()));
       this->EraseHandler(command_serial_received_);
     }
   }

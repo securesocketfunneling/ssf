@@ -20,12 +20,13 @@ FibersToDatagrams<Demux>::FibersToDatagrams(boost::asio::io_service& io_service,
       local_port_(local_port),
       fiber_(io_service),
       received_from_(fiber_demux, 0),
-      p_udp_operator_(UdpOperator::Create(fiber_)) {
-    }
+      p_udp_operator_(UdpOperator::Create(fiber_)) {}
 
 template <typename Demux>
 void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "service fibers to datagrams: starting relay on local port udp " << local_port_;
+  BOOST_LOG_TRIVIAL(info)
+      << "service fibers to datagrams: starting relay on local port udp "
+      << local_port_;
 
   // fiber.open()
   fiber_.bind(datagram_endpoint(this->get_demux(), local_port_), ec);
@@ -59,7 +60,8 @@ uint32_t FibersToDatagrams<Demux>::service_type_id() {
 
 template <typename Demux>
 void FibersToDatagrams<Demux>::StartReceivingDatagrams() {
-  BOOST_LOG_TRIVIAL(trace) << "service fibers to datagrams: receiving new datagrams";
+  BOOST_LOG_TRIVIAL(trace)
+      << "service fibers to datagrams: receiving new datagrams";
 
   fiber_.async_receive_from(
       boost::asio::buffer(working_buffer_), received_from_,
@@ -75,12 +77,12 @@ void FibersToDatagrams<Demux>::FiberReceiveHandler(
 
     if (!already_in) {
       boost::asio::ip::udp::socket left(
-        this->get_io_service(),
-        boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), 0));
+          this->get_io_service(),
+          boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), 0));
       p_udp_operator_->AddLink(std::move(left), received_from_, endpoint_,
-                            this->get_io_service());
+                               this->get_io_service());
       p_udp_operator_->Feed(received_from_,
-                         boost::asio::buffer(working_buffer_), length);
+                            boost::asio::buffer(working_buffer_), length);
     }
 
     this->StartReceivingDatagrams();

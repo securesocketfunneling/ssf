@@ -313,8 +313,8 @@ class FileToFiber : public BaseService<Demux> {
 
     if (!from_stdin) {
       auto p_session = IstreamToFiberSession<std::ifstream, fiber>::Create(
-          &manager_, input_file, std::move(*p_fiber),
-          output_file, stop_handler);
+          &manager_, input_file, std::move(*p_fiber), output_file,
+          stop_handler);
       boost::system::error_code start_ec;
       manager_.start(p_session, start_ec);
     } else {

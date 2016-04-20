@@ -1,7 +1,7 @@
 #ifndef SSF_SERVICES_FIBERS_TO_DATAGRAMS_FIBERS_TO_DATAGRAMS_H_
 #define SSF_SERVICES_FIBERS_TO_DATAGRAMS_FIBERS_TO_DATAGRAMS_H_
 
-#include  <cstdint>
+#include <cstdint>
 
 #include <memory>
 
@@ -19,7 +19,9 @@
 
 #include "services/admin/requests/create_service_request.h"
 
-namespace ssf { namespace services { namespace fibers_to_datagrams {
+namespace ssf {
+namespace services {
+namespace fibers_to_datagrams {
 
 template <typename Demux>
 class FibersToDatagrams : public BaseService<Demux> {
@@ -32,11 +34,10 @@ class FibersToDatagrams : public BaseService<Demux> {
   typedef typename ssf::BaseService<Demux>::Parameters Parameters;
   typedef typename ssf::BaseService<Demux>::demux demux;
   typedef typename ssf::BaseService<Demux>::fiber_datagram fiber_datagram;
-  typedef typename ssf::BaseService<Demux>::datagram_endpoint
-    datagram_endpoint;
+  typedef typename ssf::BaseService<Demux>::datagram_endpoint datagram_endpoint;
 
   typedef DatagramLinkOperator<datagram_endpoint, fiber_datagram,
-    remote_udp_endpoint_type, socket> UdpOperator;
+                               remote_udp_endpoint_type, socket> UdpOperator;
   typedef std::shared_ptr<UdpOperator> UdpOperatorPtr;
 
   typedef std::shared_ptr<FibersToDatagrams> FibersToDatagramsPtr;
@@ -45,25 +46,20 @@ class FibersToDatagrams : public BaseService<Demux> {
 
  public:
   static FibersToDatagramsPtr create(boost::asio::io_service& io_service,
-                                    Demux& fiber_demux, Parameters parameters) {
-    if (!parameters.count("local_port") ||
-        !parameters.count("remote_ip") ||
+                                     Demux& fiber_demux,
+                                     Parameters parameters) {
+    if (!parameters.count("local_port") || !parameters.count("remote_ip") ||
         !parameters.count("remote_port")) {
       return FibersToDatagramsPtr(nullptr);
     } else {
-      return std::shared_ptr<FibersToDatagrams>(
-        new FibersToDatagrams(
-                      io_service,
-                      fiber_demux,
-                      std::stoul(parameters["local_port"]),
-                      parameters["remote_ip"],
-                      (uint16_t)std::stoul(parameters["remote_port"])));
+      return std::shared_ptr<FibersToDatagrams>(new FibersToDatagrams(
+          io_service, fiber_demux, std::stoul(parameters["local_port"]),
+          parameters["remote_ip"],
+          (uint16_t)std::stoul(parameters["remote_port"])));
     }
   }
 
-  enum {
-    factory_id = 5
-  };
+  enum { factory_id = 5 };
 
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<Demux>> p_factory) {
@@ -75,7 +71,8 @@ class FibersToDatagrams : public BaseService<Demux> {
   virtual uint32_t service_type_id();
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
-      local_port_type local_port, std::string remote_addr, uint16_t remote_port) {
+      local_port_type local_port, std::string remote_addr,
+      uint16_t remote_port) {
     ssf::services::admin::CreateServiceRequest<Demux> create(factory_id);
     create.add_parameter("local_port", std::to_string(local_port));
     create.add_parameter("remote_ip", remote_addr);
@@ -86,8 +83,8 @@ class FibersToDatagrams : public BaseService<Demux> {
 
  private:
   FibersToDatagrams(boost::asio::io_service& io_service, Demux& fiber_demux,
-                   local_port_type local, const std::string& ip,
-                   uint16_t remote_port);
+                    local_port_type local, const std::string& ip,
+                    uint16_t remote_port);
 
  private:
   void StartReceivingDatagrams();
@@ -100,7 +97,8 @@ class FibersToDatagrams : public BaseService<Demux> {
   }
 
   std::shared_ptr<FibersToDatagrams> SelfFromThis() {
-    return std::static_pointer_cast<FibersToDatagrams>(this->shared_from_this());
+    return std::static_pointer_cast<FibersToDatagrams>(
+        this->shared_from_this());
   }
 
  private:
@@ -113,7 +111,7 @@ class FibersToDatagrams : public BaseService<Demux> {
   datagram_endpoint received_from_;
 
   WorkingBufferType working_buffer_;
-  
+
   UdpOperatorPtr p_udp_operator_;
 };
 

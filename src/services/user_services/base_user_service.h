@@ -19,9 +19,9 @@ class BaseUserService
   typedef typename std::shared_ptr<BaseUserService<Demux>> BaseUserServicePtr;
 
   virtual std::vector<admin::CreateServiceRequest<Demux>>
-      GetRemoteServiceCreateVector() = 0;
+  GetRemoteServiceCreateVector() = 0;
   virtual std::vector<admin::StopServiceRequest<Demux>>
-      GetRemoteServiceStopVector(Demux& demux) = 0;
+  GetRemoteServiceStopVector(Demux& demux) = 0;
   virtual uint32_t CheckRemoteServiceStatus(Demux& demux) = 0;
 
   virtual std::string GetName() = 0;

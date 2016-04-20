@@ -80,8 +80,8 @@ class CopyFileService : public BaseUserService<Demux> {
                                    output_pattern_);
 
       local_service_ids_.insert(p_service_factory->CreateRunNewService(
-              local_service_request.service_id(),
-              local_service_request.parameters(), ec));
+          local_service_request.service_id(),
+          local_service_request.parameters(), ec));
       return !ec;
     }
 
