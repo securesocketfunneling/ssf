@@ -5,13 +5,7 @@ namespace ssf {
 namespace services {
 namespace initialisation {
 
-  enum type
-  {
-    NETWORK = 1,
-    TRANSPORT = 2,
-    SERVICE = 3,
-    CLOSE = 4
-  };
+enum type { NETWORK = 1, TRANSPORT = 2, SERVICE = 3, CLOSE = 4 };
 
 }  // initialisation
 }  // services

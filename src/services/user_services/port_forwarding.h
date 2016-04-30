@@ -34,30 +34,25 @@ namespace ssf {
 namespace services {
 
 template <typename Demux>
-class PortForwading : public BaseUserService<Demux>
-{
-private:
+class PortForwading : public BaseUserService<Demux> {
+ private:
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  private:
   PortForwading(uint16_t local_port, std::string remote_addr,
                 uint16_t remote_port)
-                : local_port_(local_port),
-                remote_addr_(remote_addr),
-                remote_port_(remote_port),
-                remoteServiceId_(0),
-                localServiceId_(0) {
+      : local_port_(local_port),
+        remote_addr_(remote_addr),
+        remote_port_(remote_port),
+        remoteServiceId_(0),
+        localServiceId_(0) {
     relay_fiber_port_ = local_port_;
   }
 
  public:
-  static std::string GetFullParseName() {
-    return "forward,L";
-  }
+  static std::string GetFullParseName() { return "forward,L"; }
 
-  static std::string GetParseName() {
-    return "forward";
-  }
+  static std::string GetParseName() { return "forward"; }
 
   static std::string GetParseDesc() {
     return "Forward local port on given target";
@@ -65,7 +60,7 @@ private:
 
  public:
   static std::shared_ptr<PortForwading> CreateServiceOptions(
-    std::string line, boost::system::error_code& ec) {
+      std::string line, boost::system::error_code& ec) {
     using boost::spirit::qi::int_;
     using boost::spirit::qi::alnum;
     using boost::spirit::qi::char_;
@@ -75,60 +70,52 @@ private:
     rule<str_it, std::string()> target_pattern = +char_("0-9a-zA-Z.-");
     uint16_t listening_port, target_port;
     std::string target_addr;
-    str_it begin = line.begin(),
-      end = line.end();
-    bool parsed = boost::spirit::qi::parse(begin,
-                                            end,
-                                            int_ >> ":" >> target_pattern
-                                            >> ":" >> int_,
-                                            listening_port,
-                                            target_addr,
-                                            target_port);
+    str_it begin = line.begin(), end = line.end();
+    bool parsed = boost::spirit::qi::parse(
+        begin, end, int_ >> ":" >> target_pattern >> ":" >> int_,
+        listening_port, target_addr, target_port);
 
     if (parsed) {
       return std::shared_ptr<PortForwading>(
-        new PortForwading(listening_port, target_addr, target_port));
+          new PortForwading(listening_port, target_addr, target_port));
     } else {
-      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<PortForwading>(nullptr);
     }
   }
 
   static void RegisterToServiceOptionFactory() {
     ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-      GetParseName(), GetFullParseName(), GetParseDesc(),
-      &PortForwading::CreateServiceOptions);
+        GetParseName(), GetFullParseName(), GetParseDesc(),
+        &PortForwading::CreateServiceOptions);
   }
 
-  virtual std::string GetName() {
-    return "forward";
-  }
+  virtual std::string GetName() { return "forward"; }
 
   virtual std::vector<admin::CreateServiceRequest<Demux>>
-    GetRemoteServiceCreateVector() {
-      std::vector<admin::CreateServiceRequest<Demux>> result;
+  GetRemoteServiceCreateVector() {
+    std::vector<admin::CreateServiceRequest<Demux>> result;
 
-      services::admin::CreateServiceRequest<Demux> r_socks(
-        services::fibers_to_sockets::FibersToSockets<
-        Demux>::GetCreateRequest(relay_fiber_port_, remote_addr_,
-        remote_port_));
+    services::admin::CreateServiceRequest<Demux> r_socks(
+        services::fibers_to_sockets::FibersToSockets<Demux>::GetCreateRequest(
+            relay_fiber_port_, remote_addr_, remote_port_));
 
-      result.push_back(r_socks);
+    result.push_back(r_socks);
 
-      return result;
-    }
+    return result;
+  }
 
   virtual std::vector<admin::StopServiceRequest<Demux>>
-    GetRemoteServiceStopVector(Demux& demux) {
-      std::vector<admin::StopServiceRequest<Demux>> result;
+  GetRemoteServiceStopVector(Demux& demux) {
+    std::vector<admin::StopServiceRequest<Demux>> result;
 
-      auto id = GetRemoteServiceId(demux);
+    auto id = GetRemoteServiceId(demux);
 
-      if (id) {
-        result.push_back(admin::StopServiceRequest<Demux>(id));
-      }
+    if (id) {
+      result.push_back(admin::StopServiceRequest<Demux>(id));
+    }
 
-      return result;
+    return result;
   }
 
   virtual bool StartLocalServices(Demux& demux) {
@@ -137,29 +124,28 @@ private:
             local_port_, relay_fiber_port_));
 
     auto p_service_factory =
-      ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
+        ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     boost::system::error_code ec;
     localServiceId_ = p_service_factory->CreateRunNewService(
-      l_forward.service_id(), l_forward.parameters(), ec);
+        l_forward.service_id(), l_forward.parameters(), ec);
     return !ec;
   }
 
   virtual uint32_t CheckRemoteServiceStatus(Demux& demux) {
     services::admin::CreateServiceRequest<Demux> r_socks(
-      services::fibers_to_sockets::FibersToSockets<
-      Demux>::GetCreateRequest(relay_fiber_port_, remote_addr_,
-      remote_port_));
+        services::fibers_to_sockets::FibersToSockets<Demux>::GetCreateRequest(
+            relay_fiber_port_, remote_addr_, remote_port_));
     auto p_service_factory =
-      ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
+        ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     auto status = p_service_factory->GetStatus(
-      r_socks.service_id(), r_socks.parameters(), GetRemoteServiceId(demux));
+        r_socks.service_id(), r_socks.parameters(), GetRemoteServiceId(demux));
 
     return status;
   }
 
   virtual void StopLocalServices(Demux& demux) {
     auto p_service_factory =
-      ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
+        ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     p_service_factory->StopService(localServiceId_);
   }
 
@@ -169,14 +155,13 @@ private:
       return remoteServiceId_;
     } else {
       services::admin::CreateServiceRequest<Demux> r_forward(
-        services::fibers_to_sockets::FibersToSockets<
-        Demux>::GetCreateRequest(relay_fiber_port_, remote_addr_,
-        remote_port_));
+          services::fibers_to_sockets::FibersToSockets<Demux>::GetCreateRequest(
+              relay_fiber_port_, remote_addr_, remote_port_));
 
       auto p_service_factory =
-        ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
+          ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
       auto id = p_service_factory->GetIdFromParameters(r_forward.service_id(),
-                                                        r_forward.parameters());
+                                                       r_forward.parameters());
       remoteServiceId_ = id;
       return id;
     }

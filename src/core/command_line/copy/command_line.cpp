@@ -14,6 +14,8 @@
 
 #include "common/error/error.h"
 
+#include "versions.h"
+
 namespace ssf {
 namespace command_line {
 namespace copy {
@@ -46,10 +48,10 @@ void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
       ("stdin,t", boost::program_options::bool_switch()->default_value(false), "Input will be stdin")
       ("arg1",
          boost::program_options::value<std::string>(),
-         "[host:]/absolute/path/file if host is present, the file will be copied from the remote host to local")
+         "[host@]/absolute/path/file if host is present, the file will be copied from the remote host to local")
       ("arg2",
          boost::program_options::value<std::string>(),
-         "[host:]/absolute/path/file if host is present, the file will be copied from local to host");
+         "[host@]/absolute/path/file if host is present, the file will be copied from local to host");
     // clang-format on
 
     boost::program_options::positional_options_description position_options;
@@ -68,15 +70,24 @@ void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
     boost::program_options::notify(vm);
 
     if (vm.count("help")) {
+      std::cout << "SSF " << ssf::versions::major << "." 
+        << ssf::versions::minor << "."
+        << ssf::versions::fix
+        << std::endl << std::endl;
       std::cout << "usage : ssfcp  [-p port] [-b bounces_file] [-c "
                    "config] [-h] [-t] arg1 [arg2]" << std::endl;
       std::cout << cmd_line << std::endl;
+      std::cout << "Using Boost " << ssf::versions::boost_version <<
+        " and OpenSSL " << ssf::versions::openssl_version
+        << std::endl << std::endl;
+      ec.assign(::error::operation_canceled, ::error::get_ssf_category());
+      return;
     }
 
-    ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+    ec.assign(::error::success, ::error::get_ssf_category());
     InternalParsing(vm, ec);
   } catch (const std::exception&) {
-    ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
 }
 
@@ -129,7 +140,7 @@ void CommandLine::InternalParsing(
   } else {
     // there should always exist a first arg (input file, or host:input_file or
     // host:output_file)
-    ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return;
   }
 
@@ -144,8 +155,8 @@ void CommandLine::ParsePort(int port, boost::system::error_code& parse_ec) {
     port_ = static_cast<uint16_t>(port);
     port_set_ = true;
   } else {
-    parse_ec.assign(ssf::error::invalid_argument,
-                    ssf::error::get_ssf_category());
+    parse_ec.assign(::error::invalid_argument,
+                    ::error::get_ssf_category());
   }
 }
 
@@ -177,8 +188,8 @@ void CommandLine::ParseSecondArgument(const std::string& second_arg,
                                       boost::system::error_code& parse_ec) {
   if (from_stdin_) {
     // no second arg should be provided
-    parse_ec.assign(ssf::error::invalid_argument,
-                    ssf::error::get_ssf_category());
+    parse_ec.assign(::error::invalid_argument,
+                    ::error::get_ssf_category());
   } else {
     // expecting host:filepath or filepath syntax
     if (from_local_to_remote_) {
@@ -209,13 +220,13 @@ void CommandLine::ExtractHostPattern(const std::string& string,
                                      boost::system::error_code& ec) const {
   std::size_t found = string.find_first_of(GetHostDirectorySeparator());
   if (found == std::string::npos || string.empty()) {
-    ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return;
   }
 
   *p_host = string.substr(0, found);
   *p_pattern = string.substr(found + 1);
-  ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+  ec.assign(::error::success, ::error::get_ssf_category());
 }
 
 char CommandLine::GetHostDirectorySeparator() const { return '@'; }

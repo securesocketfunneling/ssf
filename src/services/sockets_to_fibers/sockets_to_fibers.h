@@ -6,9 +6,9 @@
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
-#include "common/network/socket_link.h"
-#include "common/network/manager.h"
-#include "common/network/base_session.h"
+#include <ssf/network/socket_link.h>
+#include <ssf/network/manager.h>
+#include <ssf/network/base_session.h>
 
 #include "services/base_service.h"
 

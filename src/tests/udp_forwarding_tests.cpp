@@ -12,13 +12,10 @@
 
 #include "common/config/config.h"
 
+#include "core/network_protocol.h"
 #include "core/client/client.h"
 #include "core/server/server.h"
 
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -59,7 +56,8 @@ class DummyClient {
     while (received < size_) {
       boost::system::error_code ec;
       size_t remaining_size = size_ - received;
-      socket_.send(boost::asio::buffer(&remaining_size, sizeof(remaining_size)), 0, ec);
+      socket_.send(boost::asio::buffer(&remaining_size, sizeof(remaining_size)),
+                   0, ec);
 
       if (ec) {
         return false;
@@ -186,7 +184,7 @@ class DummyServer {
       std::shared_ptr<boost::asio::ip::udp::endpoint> p_endpoint,
       std::shared_ptr<size_t> p_size, const boost::system::error_code& ec,
       size_t length) {
-    if (ec.value() == ssf::error::message_too_long) {
+    if (ec.value() == ::error::message_too_long) {
       {
         boost::recursive_mutex::scoped_lock lock(one_buffer_mutex_);
         one_buffer_.resize(one_buffer_.size() / 2);
@@ -211,19 +209,18 @@ class DummyServer {
 
 class UdpForwardTest : public ::testing::Test {
  public:
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef ssf::SSLWrapper<> ssl_socket;
-  typedef boost::asio::fiber::basic_fiber_demux<ssl_socket> demux;
-  typedef ssf::services::BaseUserService<demux>::BaseUserServicePtr
-    BaseUserServicePtr;
+  using Client =
+      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+  using Server =
+      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+
+  using demux = Client::Demux;
+
+  using BaseUserServicePtr =
+      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
+
  public:
-  UdpForwardTest()
-      : client_io_service_(),
-        p_client_worker_(new boost::asio::io_service::work(client_io_service_)),
-        server_io_service_(),
-        p_server_worker_(new boost::asio::io_service::work(server_io_service_)),
-        p_ssf_client_(nullptr),
-        p_ssf_server_(nullptr) {}
+  UdpForwardTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
   ~UdpForwardTest() {}
 
@@ -233,20 +230,20 @@ class UdpForwardTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
-    StopClientThreads();
-    StopServerThreads();
+    p_ssf_client_->Stop();
+    p_ssf_server_->Stop();
   }
 
   void StartServer() {
     ssf::Config ssf_config;
 
-    p_ssf_server_.reset(new ssf::SSFServer<
-        ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-        ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>(
-        server_io_service_, ssf_config, 8000));
+    auto endpoint_query =
+        ssf::network::GenerateServerQuery("", "8000", ssf_config);
 
-    StartServerThreads();
-    p_ssf_server_->run();
+    p_ssf_server_.reset(new Server());
+
+    boost::system::error_code run_ec;
+    p_ssf_server_->Run(endpoint_query, run_ec);
   }
 
   void StartClient() {
@@ -258,18 +255,17 @@ class UdpForwardTest : public ::testing::Test {
 
     client_options.push_back(p_service);
 
-    std::map<std::string, std::string> params(
-        {{"remote_addr", "127.0.0.1"}, {"remote_port", "8000"}});
-
     ssf::Config ssf_config;
 
-    p_ssf_client_.reset(new ssf::SSFClient<
-        ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-        ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>(
-        client_io_service_, "127.0.0.1", "8000", ssf_config, client_options,
+    auto endpoint_query =
+        ssf::network::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
+
+    p_ssf_client_.reset(new Client(
+        client_options,
         boost::bind(&UdpForwardTest::SSFClientCallback, this, _1, _2, _3)));
-    StartClientThreads();
-    p_ssf_client_->run(params);
+
+    boost::system::error_code run_ec;
+    p_ssf_client_->Run(endpoint_query, run_ec);
   }
 
   bool Wait() {
@@ -283,32 +279,6 @@ class UdpForwardTest : public ::testing::Test {
 
     return network_set_future.get() && service_set_future.get() &&
            transport_set_future.get();
-  }
-
-  void StartServerThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      server_threads_.create_thread([&]() { server_io_service_.run(); });
-    }
-  }
-
-  void StartClientThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      client_threads_.create_thread([&]() { client_io_service_.run(); });
-    }
-  }
-
-  void StopServerThreads() {
-    p_ssf_server_->stop();
-    p_server_worker_.reset();
-    server_threads_.join_all();
-    server_io_service_.stop();
-  }
-
-  void StopClientThreads() {
-    p_ssf_client_->stop();
-    p_client_worker_.reset();
-    client_threads_.join_all();
-    client_io_service_.stop();
   }
 
   void SSFClientCallback(ssf::services::initialisation::type type,
@@ -338,19 +308,8 @@ class UdpForwardTest : public ::testing::Test {
   }
 
  protected:
-  boost::asio::io_service client_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_client_worker_;
-  boost::thread_group client_threads_;
-
-  boost::asio::io_service server_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_server_worker_;
-  boost::thread_group server_threads_;
-  std::unique_ptr<ssf::SSFClient<
-      ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-      ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>> p_ssf_client_;
-  std::unique_ptr<ssf::SSFServer<
-      ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-      ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>> p_ssf_server_;
+  std::unique_ptr<Client> p_ssf_client_;
+  std::unique_ptr<Server> p_ssf_server_;
 
   std::promise<bool> network_set_;
   std::promise<bool> transport_set_;

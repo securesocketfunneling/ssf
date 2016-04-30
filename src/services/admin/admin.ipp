@@ -41,9 +41,8 @@ void Admin<Demux>::set_server() {
 
 //-----------------------------------------------------------------------------
 template <typename Demux>
-void Admin<Demux>::set_client(
-    std::vector<BaseUserServicePtr> user_services,
-    AdminCallbackType callback) {
+void Admin<Demux>::set_client(std::vector<BaseUserServicePtr> user_services,
+                              AdminCallbackType callback) {
   user_services_ = std::move(user_services);
   callback_ = std::move(callback);
 }
@@ -66,7 +65,7 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
   BOOST_LOG_TRIVIAL(info) << "service admin: stopping";
-  ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+  ec.assign(::error::success, ::error::get_ssf_category());
 
   HandleStop();
 }
@@ -94,8 +93,9 @@ void Admin<Demux>::HandleAccept(const boost::system::error_code& ec) {
   }
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "service admin: error accepting new connection: " << ec << " "
-                             << ec.value();
+    BOOST_LOG_TRIVIAL(error)
+        << "service admin: error accepting new connection: " << ec << " "
+        << ec.value();
     ShutdownServices();
   } else {
     Initialize();
@@ -151,7 +151,6 @@ void Admin<Demux>::InitializeRemoteServices(
     reenter(coroutine_) {
       // For each user service
       for (i_ = 0; i_ < user_services_.size(); ++i_) {
-
         // Get the remote micro services to start
         create_request_vector_ =
             user_services_[i_]->GetRemoteServiceCreateVector();
@@ -159,10 +158,9 @@ void Admin<Demux>::InitializeRemoteServices(
         // For each remote micro service to start
         for (j_ = 0; j_ < create_request_vector_.size(); ++j_) {
           // Start remove service and yield until server response comes back
-          yield StartRemoteService(
-              create_request_vector_[j_],
-              boost::bind(&Admin::InitializeRemoteServices,
-                          this->SelfFromThis(), _1));
+          yield StartRemoteService(create_request_vector_[j_],
+                                   boost::bind(&Admin::InitializeRemoteServices,
+                                               this->SelfFromThis(), _1));
         }
 
         // At this point, all remote services have responded with their statuses
@@ -173,11 +171,9 @@ void Admin<Demux>::InitializeRemoteServices(
         if (remote_all_started_) {
           BOOST_LOG_TRIVIAL(warning) << "service admin: remote could not start";
 
-          Notify(
-            ssf::services::initialisation::SERVICE,
-            user_services_[i_],
-            boost::system::error_code(ssf::error::operation_canceled,
-                                      ssf::error::get_ssf_category()));
+          Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
+                 boost::system::error_code(::error::operation_canceled,
+                                           ::error::get_ssf_category()));
 
           // Get the remote micro services to stop
           stop_request_vector_ =
@@ -201,11 +197,9 @@ void Admin<Demux>::InitializeRemoteServices(
         if (!local_all_started_) {
           BOOST_LOG_TRIVIAL(warning) << "service admin: local could not start";
 
-          Notify(
-            ssf::services::initialisation::SERVICE,
-            user_services_[i_],
-            boost::system::error_code(ssf::error::operation_canceled,
-                                      ssf::error::get_ssf_category()));
+          Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
+                 boost::system::error_code(::error::operation_canceled,
+                                           ::error::get_ssf_category()));
 
           // Get the remote micro services to stop
           stop_request_vector_ =
@@ -219,15 +213,13 @@ void Admin<Demux>::InitializeRemoteServices(
           }
           // Stop local services
           user_services_[i_]->StopLocalServices(this->get_demux());
-          
+
           return;
         }
 
-        Notify(
-          ssf::services::initialisation::SERVICE,
-          user_services_[i_],
-          boost::system::error_code(ssf::error::success,
-                                    ssf::error::get_ssf_category()));
+        Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
+               boost::system::error_code(::error::success,
+                                         ::error::get_ssf_category()));
       }
     }
   } else {
@@ -253,7 +245,7 @@ void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
         this->ReceiveInstructionHeader();
       } else {
         this->get_io_service().post(
-          boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+            boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
         return;
       }
       break;
@@ -267,7 +259,7 @@ void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
         }
       } else {
         this->get_io_service().post(
-          boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+            boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
         return;
       }
       break;
@@ -277,7 +269,7 @@ void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
         this->TreatInstructionId();
       } else {
         this->get_io_service().post(
-          boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+            boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
         return;
       }
       break;
@@ -325,7 +317,6 @@ void Admin<Demux>::ReceiveInstructionParameters() {
 /// Execute the command received and send back the result
 template <typename Demux>
 void Admin<Demux>::TreatInstructionId() {
-
   // Get the right function to execute the command
   using CommandExecuterType =
       typename ssf::CommandFactory<Demux>::CommandExecuterType;
@@ -364,9 +355,9 @@ void Admin<Demux>::TreatInstructionId() {
               command_id_received_);
 
       // reply with command serial received (command handler execution)
-      auto p_command = std::make_shared<AdminCommand>(command_serial_received_,
-                                                      *p_reply_command_index,
-                                                      (uint32_t)reply.size(), reply);
+      auto p_command = std::make_shared<AdminCommand>(
+          command_serial_received_, *p_reply_command_index,
+          (uint32_t)reply.size(), reply);
 
       this->async_SendCommand(
           *p_command, [p_command](const boost::system::error_code&, size_t) {});
@@ -409,14 +400,15 @@ void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
 
     auto self = this->SelfFromThis();
 
-    auto do_handler = [self, p_command](
-        const boost::system::error_code& ec,
-        size_t length) { self->PostKeepAlive(ec, length); };
+    auto do_handler =
+        [self, p_command](const boost::system::error_code& ec, size_t length) {
+          self->PostKeepAlive(ec, length);
+        };
 
     this->async_SendCommand(*p_command, do_handler);
   } else {
     this->get_io_service().post(
-      boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+        boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
     return;
   }
 }
@@ -424,15 +416,15 @@ void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
 //-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
-                                   size_t length) {
+                                 size_t length) {
   if (!ec) {
     reserved_keep_alive_timer_.expires_from_now(
         boost::posix_time::seconds(keep_alive_interval));  // to define
     reserved_keep_alive_timer_.async_wait(
-      boost::bind(&Admin::SendKeepAlive, SelfFromThis(), _1));
+        boost::bind(&Admin::SendKeepAlive, SelfFromThis(), _1));
   } else {
     this->get_io_service().post(
-      boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+        boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
     return;
   }
 }

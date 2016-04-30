@@ -18,30 +18,27 @@
 
 #include "core/factory_manager/service_factory_manager.h"
 
-
-namespace ssf { namespace services { namespace admin {
+namespace ssf {
+namespace services {
+namespace admin {
 
 template <typename Demux>
 class ServiceStatus {
-private:
+ private:
   typedef std::map<std::string, std::string> Parameters;
-public:
+
+ public:
   ServiceStatus() {}
 
-  ServiceStatus(uint32_t id,
-                uint32_t service_id,
-                uint32_t error_code_value,
+  ServiceStatus(uint32_t id, uint32_t service_id, uint32_t error_code_value,
                 Parameters parameters)
-    : id_(id),
-    service_id_(service_id),
-    error_code_value_(error_code_value),
-    parameters_(parameters) {}
+      : id_(id),
+        service_id_(service_id),
+        error_code_value_(error_code_value),
+        parameters_(parameters) {}
 
-  enum {
-    command_id = 2,
-    reply_id = 2
-  };
-  
+  enum { command_id = 2, reply_id = 2 };
+
   static void RegisterToCommandFactory() {
     CommandFactory<Demux>::RegisterOnReceiveCommand(command_id,
                                                     &ServiceStatus::OnReceive);
@@ -50,45 +47,39 @@ public:
     CommandFactory<Demux>::RegisterReplyCommandIndex(command_id, reply_id);
   }
 
-  static std::string OnReceive(boost::archive::text_iarchive& ar, 
-                        Demux* p_demux,
-                        boost::system::error_code& ec) {
+  static std::string OnReceive(boost::archive::text_iarchive& ar,
+                               Demux* p_demux, boost::system::error_code& ec) {
     ServiceStatus<Demux> status;
 
     try {
       ar >> status;
-    }
-    catch (const std::exception&) {
+    } catch (const std::exception&) {
       return std::string();
     }
 
-    auto p_service_factory = 
-      ServiceFactoryManager<Demux>::GetServiceFactory(p_demux);
+    auto p_service_factory =
+        ServiceFactoryManager<Demux>::GetServiceFactory(p_demux);
 
     if (status.service_id()) {
-      p_service_factory->UpdateRemoteServiceStatus(status.id(),
-                                                   status.service_id(),
-                                                   status.error_code_value(),
-                                                   status.parameters(),
-                                                   ec);
+      p_service_factory->UpdateRemoteServiceStatus(
+          status.id(), status.service_id(), status.error_code_value(),
+          status.parameters(), ec);
     } else {
-      p_service_factory->UpdateRemoteServiceStatus(status.id(),
-                                                   status.error_code_value(),
-                                                   ec);
+      p_service_factory->UpdateRemoteServiceStatus(
+          status.id(), status.error_code_value(), ec);
     }
 
-      BOOST_LOG_TRIVIAL(debug) << "service status: received "
-                               << "service unique id " << status.id()
-                               << " service id " << status.service_id()
-                               << " - error_code " << status.error_code_value();
+    BOOST_LOG_TRIVIAL(debug) << "service status: received "
+                             << "service unique id " << status.id()
+                             << " service id " << status.service_id()
+                             << " - error_code " << status.error_code_value();
 
     return std::string();
   }
 
-  static std::string OnReply(boost::archive::text_iarchive& ar,
-                      Demux* p_demux,
-                      const boost::system::error_code& ec,
-                      std::string serialized_result) {
+  static std::string OnReply(boost::archive::text_iarchive& ar, Demux* p_demux,
+                             const boost::system::error_code& ec,
+                             std::string serialized_result) {
     return std::string();
   }
 
@@ -101,38 +92,30 @@ public:
     return ostrs.str();
   }
 
-  uint32_t id() {
-    return id_;
-  }
+  uint32_t id() { return id_; }
 
-  uint32_t service_id() {
-    return service_id_;
-  }
+  uint32_t service_id() { return service_id_; }
 
-  Parameters parameters() {
-    return parameters_;
-  }
+  Parameters parameters() { return parameters_; }
 
-  uint32_t error_code_value() {
-    return error_code_value_;
-  }
+  uint32_t error_code_value() { return error_code_value_; }
 
   void add_parameter(std::string key, std::string value) {
     parameters_[key] = value;
   }
 
-private:
+ private:
   friend class boost::serialization::access;
 
   template <typename Archive>
   void serialize(Archive& ar, const unsigned int version) {
-    ar & id_;
-    ar & service_id_;
-    ar & error_code_value_;
-    ar & BOOST_SERIALIZATION_NVP(parameters_);
+    ar& id_;
+    ar& service_id_;
+    ar& error_code_value_;
+    ar& BOOST_SERIALIZATION_NVP(parameters_);
   }
 
-private:
+ private:
   uint32_t id_;
   uint32_t service_id_;
   uint32_t error_code_value_;
@@ -142,6 +125,5 @@ private:
 }  // admin
 }  // services
 }  // ssf
-
 
 #endif  // SSF_SERVICES_ADMIN_REQUESTS_SERVICE_STATUS_H_

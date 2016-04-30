@@ -1,7 +1,7 @@
 project(RUN_TESTS CXX)
 
 enable_testing()
-  
+
 include_directories(
   ${OpenSSL_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS})
@@ -20,12 +20,12 @@ set(load_config_test_source_files
 add_target("load_config_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
   PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${load_config_test_source_files}
 )
@@ -40,12 +40,12 @@ set(fiber_asio_test_source_files
 add_target("fiber_asio_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
   PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${fiber_asio_test_source_files}
 )
@@ -59,12 +59,13 @@ set(ssf_client_server_source_files
 add_target("ssf_client_server_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${ssf_client_server_source_files}
 )
@@ -78,14 +79,35 @@ set(ssf_client_server_cipher_suites_source_files
 add_target("ssf_client_server_cipher_suites_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${ssf_client_server_cipher_suites_source_files}
+)
+
+# --- SSF Server tests
+set(ssf_server_source_files
+  "ssf_server_tests.cpp"
+  ${SSF_SOURCES}
+)
+
+add_target("ssf_server_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${ssf_server_source_files}
 )
 
 # --- Socks test
@@ -97,12 +119,13 @@ set(socks_test_source_files
 add_target("socks_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${socks_test_source_files}
 )
@@ -116,12 +139,13 @@ set(remote_socks_test_source_files
 add_target("remote_socks_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${remote_socks_test_source_files}
 )
@@ -135,12 +159,13 @@ set(stream_forwarding_test_source_files
 add_target("stream_forward_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${stream_forwarding_test_source_files}
 )
@@ -154,12 +179,13 @@ set(remote_stream_forwarding_test_source_files
 add_target("remote_stream_forward_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${remote_stream_forwarding_test_source_files}
 )
@@ -173,12 +199,13 @@ set(udp_test_source_files
 add_target("udp_forward_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${udp_test_source_files}
 )
@@ -192,12 +219,13 @@ set(remote_udp_test_source_files
 add_target("remote_udp_forward_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${remote_udp_test_source_files}
 )
@@ -211,16 +239,17 @@ set(bouncing_test_source_files
 add_target("bouncing_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${bouncing_test_source_files}
-)  
-  
+)
+
 # --- File copy from client test
 
 file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/files_to_copy)
@@ -240,12 +269,13 @@ set(file_copy_from_client_files
 add_target("file_copy_from_client_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
-  LINKS 
+  LINKS
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    PREFIX_SKIP     .*/src
-    HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?" 
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
     ${file_copy_from_client_files}
 )

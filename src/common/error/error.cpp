@@ -1,11 +1,10 @@
-#include "error.h"
+#include "common/error/error.h"
 
-const char* ssf::error::detail::ssf_category::name() const
-    BOOST_SYSTEM_NOEXCEPT {
+const char* error::detail::ssf_category::name() const BOOST_SYSTEM_NOEXCEPT {
   return "ssf";
 }
 
-std::string ssf::error::detail::ssf_category::message(int value) const {
+std::string error::detail::ssf_category::message(int value) const {
   switch (value) {
     case error::success:
       return "success";

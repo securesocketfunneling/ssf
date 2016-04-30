@@ -1,5 +1,5 @@
-#ifndef SSF_V4_REPLY_H_
-#define SSF_V4_REPLY_H_
+#ifndef SSF_SERVICES_SOCKS_V4_REPLY_H_
+#define SSF_SERVICES_SOCKS_V4_REPLY_H_
 
 #include <cstdint>
 #include <array>
@@ -13,12 +13,13 @@
 
 #include <boost/system/error_code.hpp>
 
-namespace ssf { namespace socks { namespace v4 {
-//-----------------------------------------------------------------------------
+namespace ssf {
+namespace socks {
+namespace v4 {
 
 class Reply {
  public:
-   // Status constants
+  // Status constants
   enum Status {
     kGranted = 0x5a,
     kFailed = 0x5b,
@@ -43,18 +44,13 @@ class Reply {
   boost::asio::ip::address_v4::bytes_type address_;
 };
 
-
-//-----------------------------------------------------------------------------
-//  S E N D   R E P L Y
-//-----------------------------------------------------------------------------
-template<class VerifyHandler, class StreamSocket>
+template <class VerifyHandler, class StreamSocket>
 void AsyncSendReply(StreamSocket& c, const Reply& r, VerifyHandler handler) {
   boost::asio::async_write(c, r.Buffer(), handler);
 }
 
-//-----------------------------------------------------------------------------
 }  // v4
 }  // socks
 }  // ssf
 
-#endif  // SSF_V4_REPLY_H_
+#endif  // SSF_SERVICES_SOCKS_V4_REPLY_H_

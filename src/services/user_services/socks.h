@@ -17,66 +17,61 @@
 
 #include "core/factories/service_option_factory.h"
 
-namespace ssf { namespace services {
+namespace ssf {
+namespace services {
 
 template <typename Demux>
 class Socks : public BaseUserService<Demux> {
-private:
- Socks(uint16_t local_port)
-     : local_port_(local_port), remoteServiceId_(0), localServiceId_(0) {}
+ private:
+  Socks(uint16_t local_port)
+      : local_port_(local_port), remoteServiceId_(0), localServiceId_(0) {}
 
-public:
-  static std::string GetFullParseName() {
-    return "socks,D";
-  }
+ public:
+  static std::string GetFullParseName() { return "socks,D"; }
 
-  static std::string GetParseName() {
-    return "socks";
-  }
+  static std::string GetParseName() { return "socks"; }
 
   static std::string GetParseDesc() {
     return "Run a proxy socks on remote host";
   }
 
-public:
+ public:
   static std::shared_ptr<Socks> CreateServiceOptions(
       std::string line, boost::system::error_code& ec) {
     try {
       uint16_t port = (uint16_t)std::stoul(line);
       return std::shared_ptr<Socks>(new Socks(port));
     } catch (const std::invalid_argument&) {
-      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<Socks>(nullptr);
     } catch (const std::out_of_range&) {
-      ec.assign(ssf::error::out_of_range, ssf::error::get_ssf_category());
+      ec.assign(::error::out_of_range, ::error::get_ssf_category());
       return std::shared_ptr<Socks>(nullptr);
     }
   }
 
   static void RegisterToServiceOptionFactory() {
     ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-       GetParseName(), GetFullParseName(), GetParseDesc(),
-       &Socks::CreateServiceOptions);
+        GetParseName(), GetFullParseName(), GetParseDesc(),
+        &Socks::CreateServiceOptions);
   }
 
-  virtual std::string GetName() {
-    return "socks";
-  }
+  virtual std::string GetName() { return "socks"; }
 
   virtual std::vector<admin::CreateServiceRequest<Demux>>
-      GetRemoteServiceCreateVector() {
+  GetRemoteServiceCreateVector() {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
     services::admin::CreateServiceRequest<Demux> r_socks(
-       services::socks::SocksServer<Demux>::GetCreateRequest(local_port_));
+        services::socks::SocksServer<Demux>::GetCreateRequest(local_port_));
 
     result.push_back(r_socks);
 
     return result;
   }
 
-  virtual std::vector<admin::StopServiceRequest<Demux>> GetRemoteServiceStopVector(
-      Demux& demux) {
+  virtual std::vector<admin::StopServiceRequest<Demux>>
+  GetRemoteServiceStopVector(Demux& demux) {
     std::vector<admin::StopServiceRequest<Demux>> result;
 
     auto id = GetRemoteServiceId(demux);
@@ -130,7 +125,7 @@ public:
           ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
 
       auto id = p_service_factory->GetIdFromParameters(l_forward.service_id(),
-        l_forward.parameters());
+                                                       l_forward.parameters());
 
       remoteServiceId_ = id;
       return id;

@@ -1,7 +1,7 @@
 #ifndef SSF_SERVICES_DATAGRAMS_TO_FIBERS_DATAGRAMS_TO_FIBERS_H_
 #define SSF_SERVICES_DATAGRAMS_TO_FIBERS_DATAGRAMS_TO_FIBERS_H_
 
-#include  <cstdint>
+#include <cstdint>
 
 #include <memory>
 
@@ -19,7 +19,9 @@
 
 #include "services/admin/requests/create_service_request.h"
 
-namespace ssf { namespace services { namespace datagrams_to_fibers {
+namespace ssf {
+namespace services {
+namespace datagrams_to_fibers {
 
 template <typename Demux>
 class DatagramsToFibers : public BaseService<Demux> {
@@ -44,26 +46,22 @@ class DatagramsToFibers : public BaseService<Demux> {
 
  public:
   static DatagramsToFibersPtr Create(boost::asio::io_service& io_service,
-                                    Demux& fiber_demux, Parameters parameters) {
-    if (!parameters.count("local_port") ||
-      !parameters.count("remote_port")) {
+                                     Demux& fiber_demux,
+                                     Parameters parameters) {
+    if (!parameters.count("local_port") || !parameters.count("remote_port")) {
       return DatagramsToFibersPtr(nullptr);
     } else {
       return std::shared_ptr<DatagramsToFibers>(
-        new DatagramsToFibers(
-                      io_service,
-                      fiber_demux,
-                      (uint16_t)std::stoul(parameters["local_port"]),
-                      std::stoul(parameters["remote_port"])));
+          new DatagramsToFibers(io_service, fiber_demux,
+                                (uint16_t)std::stoul(parameters["local_port"]),
+                                std::stoul(parameters["remote_port"])));
     }
   }
 
-  enum {
-    factory_id = 6
-  };
+  enum { factory_id = 6 };
 
   static void RegisterToServiceFactory(
-    std::shared_ptr<ServiceFactory<Demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory) {
     p_factory->RegisterServiceCreator(factory_id, &DatagramsToFibers::Create);
   }
 
@@ -72,7 +70,7 @@ class DatagramsToFibers : public BaseService<Demux> {
   virtual uint32_t service_type_id();
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
-    uint16_t local_port, remote_port_type remote_port) {
+      uint16_t local_port, remote_port_type remote_port) {
     ssf::services::admin::CreateServiceRequest<Demux> create(factory_id);
     create.add_parameter("local_port", std::to_string(local_port));
     create.add_parameter("remote_port", std::to_string(remote_port));
@@ -82,7 +80,7 @@ class DatagramsToFibers : public BaseService<Demux> {
 
  private:
   DatagramsToFibers(boost::asio::io_service& io_service, Demux& fiber_demux,
-                   uint16_t local, remote_port_type remote_port);
+                    uint16_t local, remote_port_type remote_port);
 
  private:
   void StartReceivingDatagrams();
@@ -95,7 +93,8 @@ class DatagramsToFibers : public BaseService<Demux> {
   }
 
   std::shared_ptr<DatagramsToFibers> SelfFromThis() {
-    return std::static_pointer_cast<DatagramsToFibers>(this->shared_from_this());
+    return std::static_pointer_cast<DatagramsToFibers>(
+        this->shared_from_this());
   }
 
   uint16_t local_port_;

@@ -27,8 +27,7 @@ struct DatagramLink : public std::enable_shared_from_this<
                                        RemoteEndpointLeft, LeftEndSocket>> {
  private:
   template <class T>
-  struct make_queue
-  {
+  struct make_queue {
     typedef std::queue<T> type;
     typedef T value_type;
   };
@@ -40,19 +39,20 @@ struct DatagramLink : public std::enable_shared_from_this<
                                RemoteEndpointLeft,
                                LeftEndSocket> DatagramLinkOperatorSpec;
   typedef std::shared_ptr<DatagramLinkOperatorSpec> DatagramLinkOperatorSpecPtr;
-  
+
   typedef std::vector<uint8_t> Datagram;
   typedef typename make_queue<Datagram>::type DatagramQueue;
 
  public:
-   static DatagramLinkPtr Create(RightEndSocket& right, LeftEndSocket left,
-                                 RemoteEndpointRight remote_endpoint_right,
-                                 RemoteEndpointLeft remote_endpoint_left,
-                                 boost::asio::io_service& io_service,
-                                 DatagramLinkOperatorSpecPtr oper) {
-     return DatagramLinkPtr(new DatagramLink(right,
-       std::move(left), remote_endpoint_right, remote_endpoint_left, io_service, oper));
-   }
+  static DatagramLinkPtr Create(RightEndSocket& right, LeftEndSocket left,
+                                RemoteEndpointRight remote_endpoint_right,
+                                RemoteEndpointLeft remote_endpoint_left,
+                                boost::asio::io_service& io_service,
+                                DatagramLinkOperatorSpecPtr oper) {
+    return DatagramLinkPtr(
+        new DatagramLink(right, std::move(left), remote_endpoint_right,
+                         remote_endpoint_left, io_service, oper));
+  }
 
   /// Feed data to be sent to the "left endpoint"
   void Feed(boost::asio::const_buffer buffer, size_t length) {
@@ -81,7 +81,6 @@ struct DatagramLink : public std::enable_shared_from_this<
 
     reenter(coro_external_) {
       for (;;) {
-
         // If no error occured but no data is available, we wait
         if (!ec && dgr_queue_.empty()) {
           timer_.expires_from_now(boost::posix_time::seconds(120));
@@ -95,7 +94,7 @@ struct DatagramLink : public std::enable_shared_from_this<
             !dgr_queue_.empty()) {
           if (l_.is_open()) {
             yield l_.async_send_to(
-              boost::asio::buffer(dgr_queue_.front()), remote_endpoint_left_,
+                boost::asio::buffer(dgr_queue_.front()), remote_endpoint_left_,
                 boost::bind(&DatagramLink::ExternalFeed,
                             this->shared_from_this(), _1, _2));
             dgr_queue_.pop();
@@ -159,23 +158,22 @@ struct DatagramLink : public std::enable_shared_from_this<
 
  private:
   DatagramLink(RightEndSocket& right, LeftEndSocket left,
-              RemoteEndpointRight remote_endpoint_right,
-              RemoteEndpointLeft remote_endpoint_left,
-              boost::asio::io_service& io_service,
-              DatagramLinkOperatorSpecPtr oper)
-              : coro_auto_(),
-              coro_external_(),
-              r_(right),
-              l_(std::move(left)),
-              bytes_to_transfer_(0),
-              transferred_bytes_(0),
-              timer_(io_service),
-              remote_endpoint_right_(remote_endpoint_right),
-              remote_endpoint_left_(remote_endpoint_left),
-              stopping_(false),
-              p_operator_(oper),
-              auto_feeding_(false) {
-  }
+               RemoteEndpointRight remote_endpoint_right,
+               RemoteEndpointLeft remote_endpoint_left,
+               boost::asio::io_service& io_service,
+               DatagramLinkOperatorSpecPtr oper)
+      : coro_auto_(),
+        coro_external_(),
+        r_(right),
+        l_(std::move(left)),
+        bytes_to_transfer_(0),
+        transferred_bytes_(0),
+        timer_(io_service),
+        remote_endpoint_right_(remote_endpoint_right),
+        remote_endpoint_left_(remote_endpoint_left),
+        stopping_(false),
+        p_operator_(oper),
+        auto_feeding_(false) {}
 
   void Shutdown() {
     boost::recursive_mutex::scoped_lock lock(p_operator_mutex_);
@@ -199,7 +197,7 @@ struct DatagramLink : public std::enable_shared_from_this<
   RemoteEndpointLeft remote_endpoint_left_;
   boost::recursive_mutex datagram_queue_mutex_;
   boost::recursive_mutex p_operator_mutex_;
-  bool  stopping_;
+  bool stopping_;
   DatagramLinkOperatorSpecPtr p_operator_;
   bool auto_feeding_;
 };

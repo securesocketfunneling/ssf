@@ -12,14 +12,13 @@
 
 #include "common/config/config.h"
 
+#include "core/network_protocol.h"
+
 #include "core/client/client.h"
 #include "core/server/server.h"
 
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
 #include "core/parser/bounce_parser.h"
+
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -28,142 +27,122 @@
 //-----------------------------------------------------------------------------
 TEST(BouncingTests, BouncingChain) {
   using BounceParser = ssf::parser::BounceParser;
-  using Server =
-      ssf::SSFServer<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
   using Client =
-      ssf::SSFClient<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
+      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+  using Server =
+      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef ssf::SSLWrapper<> ssl_socket;
-  typedef boost::asio::fiber::basic_fiber_demux<ssl_socket> Demux;
-  typedef ssf::services::BaseUserService<Demux>::BaseUserServicePtr
-    BaseUserServicePtr;
+  using demux = Client::Demux;
+  using BaseUserServicePtr =
+      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
 
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                       boost::log::trivial::info);
 
-  boost::recursive_mutex mutex;
   std::promise<bool> network_set;
   std::promise<bool> transport_set;
   std::promise<bool> service_set;
-
-  boost::asio::io_service client_io_service;
-  std::unique_ptr<boost::asio::io_service::work> p_client_worker(
-    new boost::asio::io_service::work(client_io_service));
-  boost::thread_group client_threads;
-  for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    client_threads.create_thread([&]() { client_io_service.run(); });
-  }
-
-  boost::asio::io_service bouncer_io_service;
-  std::unique_ptr<boost::asio::io_service::work> p_bouncer_worker(
-    new boost::asio::io_service::work(bouncer_io_service));
-  boost::thread_group bouncer_threads;
-  for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    bouncer_threads.create_thread([&]() { bouncer_io_service.run(); });
-  }
-
-  boost::asio::io_service server_io_service;
-  std::unique_ptr<boost::asio::io_service::work> p_server_worker(
-    new boost::asio::io_service::work(server_io_service));
-  boost::thread_group server_threads;
-  for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    server_threads.create_thread([&]() { server_io_service.run(); });
-  }
 
   std::list<Server> servers;
   std::list<std::string> bouncers;
 
   uint16_t initial_server_port = 10000;
-  uint8_t nb_of_servers = 10;
+  uint8_t nb_of_servers = 5;
+  ssf::Config ssf_config;
 
-  {
-    ssf::Config ssf_config;
+  boost::system::error_code client_ec;
+  boost::system::error_code bounce_ec;
+  boost::system::error_code server_ec;
+
+  ++initial_server_port;
+  auto server_endpoint_query = ssf::network::GenerateServerQuery(
+      "", std::to_string(initial_server_port), ssf_config);
+  servers.emplace_front();
+  servers.front().Run(server_endpoint_query, server_ec);
+  ASSERT_EQ(server_ec.value(), 0) << "Server could not run";
+
+  bouncers.emplace_front(std::string("127.0.0.1:") +
+                         std::to_string(initial_server_port));
+
+  for (uint8_t i = 0; i < nb_of_servers - 1; ++i) {
     ++initial_server_port;
-    servers.emplace_front(server_io_service, ssf_config, initial_server_port);
-    servers.front().run();
+    auto bounce_endpoint_query = ssf::network::GenerateServerQuery(
+        "", std::to_string(initial_server_port), ssf_config);
+
+    servers.emplace_front();
+    servers.front().Run(bounce_endpoint_query, bounce_ec);
+    ASSERT_EQ(server_ec.value(), 0) << "Bounce " << i << "could not run";
     bouncers.emplace_front(std::string("127.0.0.1:") +
-      std::to_string(initial_server_port));
+                           std::to_string(initial_server_port));
   }
 
-    for (uint8_t i = 0; i < nb_of_servers - 1; ++i) {
-      ssf::Config ssf_config;
-      ++initial_server_port;
-      servers.emplace_front(bouncer_io_service, ssf_config, initial_server_port);
-      servers.front().run();
-      bouncers.emplace_front(std::string("127.0.0.1:") +
-                             std::to_string(initial_server_port));
-  }
+  std::vector<BaseUserServicePtr> client_options;
+  boost::system::error_code client_option_ec;
+  auto p_service = ssf::services::PortForwading<demux>::CreateServiceOptions(
+      "5454:127.0.0.1:5354", client_option_ec);
+  client_options.push_back(p_service);
 
-    std::vector<BaseUserServicePtr> client_options;
-    std::string error_msg;
+  std::string error_msg;
 
-    std::map<std::string, std::string> params;
+  std::string remote_addr;
+  std::string remote_port;
 
-    auto first = bouncers.front();
-    bouncers.pop_front();
-    params["remote_addr"] = BounceParser::GetRemoteAddress(first);
-    params["remote_port"] = BounceParser::GetRemotePort(first);
+  auto first = bouncers.front();
+  bouncers.pop_front();
+  remote_addr = BounceParser::GetRemoteAddress(first);
+  remote_port = BounceParser::GetRemotePort(first);
 
-    std::ostringstream ostrs;
-    boost::archive::text_oarchive ar(ostrs);
-    ar << BOOST_SERIALIZATION_NVP(bouncers);
-
-    params["bouncing_nodes"] = ostrs.str();
-
-    ssf::Config ssf_config;
-
-    auto callback = [&mutex, &network_set, &service_set, &transport_set](
-        ssf::services::initialisation::type type,
-        BaseUserServicePtr p_user_service,
-        const boost::system::error_code& ec) {
-      boost::recursive_mutex::scoped_lock lock(mutex);
-      if (type == ssf::services::initialisation::NETWORK) {
-        network_set.set_value(!ec);
-        if (ec) {
-          service_set.set_value(false);
-          transport_set.set_value(false);
-        }
-
-        return;
+  auto callback = [&network_set, &transport_set, &service_set](
+      ssf::services::initialisation::type type,
+      BaseUserServicePtr p_user_service, const boost::system::error_code& ec) {
+    if (type == ssf::services::initialisation::NETWORK) {
+      network_set.set_value(!ec);
+      if (ec) {
+        service_set.set_value(false);
+        transport_set.set_value(false);
       }
 
-      if (type == ssf::services::initialisation::TRANSPORT) {
-        transport_set.set_value(!ec);
-
-        return;
-      }
-    };
-
-    Client client(client_io_service, "127.0.0.1",
-                  std::to_string(initial_server_port - nb_of_servers),
-                  ssf_config, client_options, std::move(callback));
-    client.run(params);
-
-    network_set.get_future().wait();
-    transport_set.get_future().wait();
-
-    { boost::recursive_mutex::scoped_lock lock(mutex); }
-
-    client.stop();
-    for (auto& server : servers) {
-      server.stop();
+      return;
     }
 
+    if (type == ssf::services::initialisation::TRANSPORT) {
+      transport_set.set_value(!ec);
+      if (ec) {
+        service_set.set_value(false);
+      }
 
-    p_client_worker.reset();
-    client_threads.join_all();
-    client_io_service.stop();
+      return;
+    }
 
-    p_bouncer_worker.reset();
-    bouncer_threads.join_all();
-    bouncer_io_service.stop();
+    if (type == ssf::services::initialisation::SERVICE) {
+      service_set.set_value(!ec);
+      return;
+    }
+  };
 
-    p_server_worker.reset();
-    server_threads.join_all();
-    server_io_service.stop();
+  auto client_endpoint_query = ssf::network::GenerateClientQuery(
+      remote_addr, remote_port, ssf_config, bouncers);
 
-    servers.clear();
+  Client client(client_options, std::move(callback));
+  client.Run(client_endpoint_query, client_ec);
+  ASSERT_EQ(client_ec.value(), 0) << "Client could not run";
+
+  auto network_future = network_set.get_future();
+  auto transport_future = transport_set.get_future();
+  auto service_future = service_set.get_future();
+
+  network_future.wait();
+  transport_future.wait();
+  service_future.wait();
+
+  ASSERT_TRUE(network_future.get()) << "Network should be set";
+  ASSERT_TRUE(transport_future.get()) << "Transport should be set";
+  ASSERT_TRUE(service_future.get()) << "Service should be set";
+
+  client.Stop();
+  for (auto& server : servers) {
+    server.Stop();
+  }
+
+  servers.clear();
 }

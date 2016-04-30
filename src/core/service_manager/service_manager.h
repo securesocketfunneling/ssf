@@ -7,26 +7,28 @@
 #include <utility>
 #include <list>
 
+#include <ssf/network/manager.h>
+
 #include <boost/system/error_code.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
-#include "common/network/manager.h"
 #include "services/base_service.h"
 
 namespace ssf {
+
 template <typename Demux>
 class ServiceManager
     : public ItemManager<typename BaseService<Demux>::BaseServicePtr> {
-private:
-  typedef std::map<std::string, std::string> Parameters;
-  typedef std::pair<Parameters, uint32_t> parameters_id_pair;
-  typedef std::list<parameters_id_pair> service_instance_id_list;
-  typedef std::map<uint32_t, service_instance_id_list> 
-    service_type_id_to_instances_list_map;
-  typedef std::map<uint32_t, uint32_t> id_to_status_map;
-  typedef std::map<uint32_t, uint32_t> id_to_service_id_map;
+ private:
+  using Parameters = std::map<std::string, std::string> ;
+  using ParametersIdPair = std::pair<Parameters, uint32_t>;
+  using ServiceInstanceIdList = std::list<ParametersIdPair>;
+  using ServiceTypeIdToInstancesListMap =
+      std::map<uint32_t, ServiceInstanceIdList>;
+  using IdToStatusMap = std::map<uint32_t, uint32_t>;
+  using IdToServiceIdMap = std::map<uint32_t, uint32_t>;
 
-public:
+ public:
   uint32_t get_id(uint32_t service_type_id, Parameters parameters) {
     boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
 
@@ -42,18 +44,18 @@ public:
   }
 
   uint32_t find_error(uint32_t service_type_id, Parameters parameters) {
-      boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
+    boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
 
-      auto& error_list = error_lists_[service_type_id];
+    auto& error_list = error_lists_[service_type_id];
 
-      for (const auto& error : error_list) {
-        if (error.first == parameters) {
-          return error.second;
-        }
+    for (const auto& error : error_list) {
+      if (error.first == parameters) {
+        return error.second;
       }
-
-      return 0;
     }
+
+    return 0;
+  }
 
   uint32_t get_status(uint32_t id) {
     if (status_.count(id)) {
@@ -77,10 +79,8 @@ public:
     }
   }
 
-  bool update_remote(uint32_t id,
-                     uint32_t service_type_id,
-                     uint32_t error_code_value,
-                     Parameters parameters,
+  bool update_remote(uint32_t id, uint32_t service_type_id,
+                     uint32_t error_code_value, Parameters parameters,
                      boost::system::error_code& ec) {
     boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
 
@@ -92,15 +92,14 @@ public:
     }
   }
 
-  bool update_remote(uint32_t id,
-                     uint32_t error_code_value,
+  bool update_remote(uint32_t id, uint32_t error_code_value,
                      boost::system::error_code& ec) {
     boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
 
     if (!status_.count(id)) {
       return false;
-    } else { // check for value 4... stopping
-      if (error_code_value == 4) {// Service  stopped
+    } else {                        // check for value 4... stopping
+      if (error_code_value == 4) {  // Service  stopped
         status_.erase(id);
         remove_id_from_instances(service_ids_[id], id);
         service_ids_.erase(id);
@@ -111,22 +110,20 @@ public:
     }
   }
 
-private:
-  void add_remote(uint32_t id,
-                  uint32_t service_type_id,
-                  uint32_t error_code_value,
-                  Parameters parameters) {
+ private:
+  void add_remote(uint32_t id, uint32_t service_type_id,
+                  uint32_t error_code_value, Parameters parameters) {
     boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
 
     if (id) {
       auto& instance_list = intance_lists_[service_type_id];
-      instance_list.push_front(parameters_id_pair(parameters, id));
+      instance_list.push_front(ParametersIdPair(parameters, id));
       service_ids_[id] = service_type_id;
       status_[id] = error_code_value;
     } else {
       auto& instance_list = error_lists_[service_type_id];
       instance_list.push_front(
-          parameters_id_pair(parameters, error_code_value));
+          ParametersIdPair(parameters, error_code_value));
       if (instance_list.size() > 100) {
         instance_list.pop_back();
       }
@@ -146,13 +143,13 @@ private:
     }
   }
 
-private:
+ private:
   boost::recursive_mutex status_n_instance_list_mutex_;
 
-  id_to_status_map status_;
-  id_to_service_id_map service_ids_;
-  service_type_id_to_instances_list_map intance_lists_;
-  service_type_id_to_instances_list_map error_lists_;
+  IdToStatusMap status_;
+  IdToServiceIdMap service_ids_;
+  ServiceTypeIdToInstancesListMap intance_lists_;
+  ServiceTypeIdToInstancesListMap error_lists_;
 };
 
 }  // ssf

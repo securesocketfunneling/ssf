@@ -11,6 +11,7 @@ namespace versions {
 enum Versions : uint8_t {
   major = @SSF_VERSION_MAJOR@,
   minor = @SSF_VERSION_MINOR@,
+  fix = @SSF_VERSION_FIX@,
   security = @SSF_VERSION_SECURITY@,
   bounce = @SSF_VERSION_BOUNCE@,
   transport = @SSF_VERSION_TRANSPORT@

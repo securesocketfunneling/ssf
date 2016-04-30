@@ -12,13 +12,10 @@
 
 #include "common/config/config.h"
 
+#include "core/network_protocol.h"
 #include "core/client/client.h"
 #include "core/server/server.h"
 
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -119,12 +116,12 @@ class DummyClient {
     t_ = boost::thread([&]() { io_service_.run(); });
 
     boost::asio::ip::tcp::resolver r(io_service_);
-    boost::asio::ip::tcp::resolver::query q("127.0.0.1", "8081");
+    boost::asio::ip::tcp::resolver::query q("127.0.0.1", "9091");
     boost::system::error_code ec;
     boost::asio::connect(socket_, r.resolve(q), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to connect "
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to connect "
                                << ec.value();
       Stop();
     }
@@ -136,13 +133,13 @@ class DummyClient {
     boost::system::error_code ec;
 
     boost::asio::ip::tcp::resolver r2(io_service_);
-    boost::asio::ip::tcp::resolver::query q2("127.0.0.1", "8080");
+    boost::asio::ip::tcp::resolver::query q2("127.0.0.1", "9090");
     request req(request::command_type::connect, *r2.resolve(q2), "01");
 
     boost::asio::write(socket_, req.buffers(), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to write " << ec.value();
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
       Stop();
       return false;
     }
@@ -152,7 +149,7 @@ class DummyClient {
     boost::asio::read(socket_, rep.buffers(), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to read " << ec.value();
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to read " << ec.value();
       Stop();
       return false;
     }
@@ -166,7 +163,7 @@ class DummyClient {
                        ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client : fail to write " << ec.value();
+      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
       Stop();
     }
 
@@ -235,6 +232,7 @@ class DummyServer {
  public:
   DummyServer()
       : io_service_(),
+        listening_port_(9090),
         p_worker_(new boost::asio::io_service::work(io_service_)),
         acceptor_(io_service_),
         one_buffer_size_(10240) {
@@ -248,13 +246,23 @@ class DummyServer {
       threads_.create_thread([&]() { io_service_.run(); });
     }
 
-    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), 8080);
+    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(),
+                                            listening_port_);
     boost::asio::socket_base::reuse_address option(true);
 
-    acceptor_.open(endpoint.protocol());
-    acceptor_.set_option(option);
-    acceptor_.bind(endpoint);
-    acceptor_.listen();
+    try {
+      acceptor_.open(endpoint.protocol());
+
+      acceptor_.set_option(option);
+      acceptor_.bind(endpoint);
+      acceptor_.listen();
+    } catch (const std::exception& e) {
+      BOOST_LOG_TRIVIAL(error)
+          << "dummy server: fail to initialize acceptor on port "
+          << listening_port_ << "(" << e.what() << ")";
+      Stop();
+      return;
+    }
 
     DoAccept();
   }
@@ -283,7 +291,7 @@ class DummyServer {
     if (!ec) {
       auto p_size = std::make_shared<std::size_t>(0);
       boost::asio::async_read(
-        *p_socket, boost::asio::buffer(p_size.get(), sizeof(*p_size)),
+          *p_socket, boost::asio::buffer(p_size.get(), sizeof(*p_size)),
           boost::bind(&DummyServer::DoSendOnes, this, p_socket, p_size, _1,
                       _2));
       DoAccept();
@@ -321,6 +329,7 @@ class DummyServer {
   }
 
   boost::asio::io_service io_service_;
+  int listening_port_;
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
   boost::asio::ip::tcp::acceptor acceptor_;
   size_t one_buffer_size_;
@@ -331,19 +340,18 @@ class DummyServer {
 
 class SocksTest : public ::testing::Test {
  public:
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef ssf::SSLWrapper<> ssl_socket;
-  typedef boost::asio::fiber::basic_fiber_demux<ssl_socket> demux;
-  typedef ssf::services::BaseUserService<demux>::BaseUserServicePtr
-    BaseUserServicePtr;
+  using Client =
+      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+  using Server =
+      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+
+  using demux = Client::Demux;
+
+  using BaseUserServicePtr =
+      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
+
  public:
-  SocksTest()
-      : client_io_service_(),
-        p_client_worker_(new boost::asio::io_service::work(client_io_service_)),
-        server_io_service_(),
-        p_server_worker_(new boost::asio::io_service::work(server_io_service_)),
-        p_ssf_client_(nullptr),
-        p_ssf_server_(nullptr) {}
+  SocksTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
   ~SocksTest() {}
 
@@ -353,42 +361,41 @@ class SocksTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
-    StopServerThreads();
-    StopClientThreads();
+    p_ssf_server_->Stop();
+    p_ssf_client_->Stop();
   }
 
   void StartServer() {
     ssf::Config ssf_config;
 
-    p_ssf_server_.reset(new ssf::SSFServer<
-        ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-        ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>(
-        server_io_service_, ssf_config, 8000));
+    auto endpoint_query =
+        ssf::network::GenerateServerQuery("", "9000", ssf_config);
 
-    StartServerThreads();
-    p_ssf_server_->run();
+    p_ssf_server_.reset(new Server());
+
+    boost::system::error_code run_ec;
+    p_ssf_server_->Run(endpoint_query, run_ec);
   }
 
   void StartClient() {
     std::vector<BaseUserServicePtr> client_options;
     boost::system::error_code ec;
     auto p_service =
-        ssf::services::Socks<demux>::CreateServiceOptions("8081", ec);
+        ssf::services::Socks<demux>::CreateServiceOptions("9091", ec);
 
     client_options.push_back(p_service);
 
-    std::map<std::string, std::string> params(
-        {{"remote_addr", "127.0.0.1"}, {"remote_port", "8000"}});
-
     ssf::Config ssf_config;
 
-    p_ssf_client_.reset(new ssf::SSFClient<
-        ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-        ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>(
-        client_io_service_, "127.0.0.1", "8000", ssf_config, client_options,
+    auto endpoint_query =
+        ssf::network::GenerateClientQuery("127.0.0.1", "9000", ssf_config, {});
+
+    p_ssf_client_.reset(new Client(
+        client_options,
         boost::bind(&SocksTest::SSFClientCallback, this, _1, _2, _3)));
-    StartClientThreads();
-    p_ssf_client_->run(params);
+
+    boost::system::error_code run_ec;
+    p_ssf_client_->Run(endpoint_query, run_ec);
   }
 
   bool Wait() {
@@ -402,32 +409,6 @@ class SocksTest : public ::testing::Test {
 
     return network_set_future.get() && service_set_future.get() &&
            transport_set_future.get();
-  }
-
-  void StartServerThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      server_threads_.create_thread([&]() { server_io_service_.run(); });
-    }
-  }
-
-  void StartClientThreads() {
-    for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      client_threads_.create_thread([&]() { client_io_service_.run(); });
-    }
-  }
-
-  void StopServerThreads() {
-    p_ssf_server_->stop();
-    p_server_worker_.reset();
-    server_threads_.join_all();
-    server_io_service_.stop();
-  }
-
-  void StopClientThreads() {
-    p_ssf_client_->stop();
-    p_client_worker_.reset();
-    client_threads_.join_all();
-    client_io_service_.stop();
   }
 
   void SSFClientCallback(ssf::services::initialisation::type type,
@@ -458,19 +439,8 @@ class SocksTest : public ::testing::Test {
   }
 
  protected:
-  boost::asio::io_service client_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_client_worker_;
-  boost::thread_group client_threads_;
-
-  boost::asio::io_service server_io_service_;
-  std::unique_ptr<boost::asio::io_service::work> p_server_worker_;
-  boost::thread_group server_threads_;
-  std::unique_ptr<ssf::SSFClient<
-      ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-      ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>> p_ssf_client_;
-  std::unique_ptr<ssf::SSFServer<
-      ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-      ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>> p_ssf_server_;
+  std::unique_ptr<Client> p_ssf_client_;
+  std::unique_ptr<Server> p_ssf_server_;
 
   std::promise<bool> network_set_;
   std::promise<bool> transport_set_;
