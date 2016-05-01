@@ -11,6 +11,8 @@
 
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include <ssf/network/base_session.h>
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
@@ -48,8 +50,8 @@ class IstreamToFiberSession : public ssf::BaseSession {
     if (!from_stdin_) {
       input_stream_.open(input_file_, InputStream::binary);
       if (!input_stream_.is_open() || !input_stream_.good()) {
-        BOOST_LOG_TRIVIAL(error)
-            << "session istream to fiber: cannot open file " << input_file_;
+        SSF_LOG(kLogError) << "session istream to fiber: cannot open file "
+                           << input_file_;
         ec.assign(::error::bad_file_descriptor, ::error::get_ssf_category());
         stop_handler_(output_file_);
 

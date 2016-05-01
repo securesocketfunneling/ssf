@@ -5,6 +5,8 @@
 #include <boost/bind/protect.hpp>
 #include <boost/asio/spawn.hpp>
 
+#include <ssf/log/log.h>
+
 #include "services/socks/v4/request.h"
 #include "services/socks/v4/reply.h"
 
@@ -34,8 +36,7 @@ void Session<Demux>::stop(boost::system::error_code&) {
   boost::system::error_code ec;
   app_server_.close(ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "session SOCKS: stop error " << ec.message()
-                             << std::endl;
+    SSF_LOG(kLogError) << "session SOCKS: stop error " << ec.message();
   }
 }
 
@@ -67,7 +68,7 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       break;
 
     default:
-      BOOST_LOG_TRIVIAL(error) << "session SOCKS: Invalid v4 command";
+      SSF_LOG(kLogError) << "session SOCKS: Invalid v4 command";
       break;
   }
 }
@@ -105,7 +106,7 @@ void Session<Demux>::DoConnectRequest() {
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  BOOST_LOG_TRIVIAL(error) << "session SOCKS: Bind Not implemented yet";
+  SSF_LOG(kLogError) << "session SOCKS: Bind Not implemented yet";
   HandleStop();
 }
 

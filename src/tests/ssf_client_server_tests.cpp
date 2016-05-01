@@ -6,9 +6,6 @@
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
 
 #include "common/config/config.h"
 
@@ -113,9 +110,4 @@ class SSFClientServerTest : public ::testing::Test {
 };
 
 //-----------------------------------------------------------------------------
-TEST_F(SSFClientServerTest, connectDisconnect) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::debug);
-
-  ASSERT_TRUE(Wait());
-}
+TEST_F(SSFClientServerTest, connectDisconnect) { ASSERT_TRUE(Wait()); }

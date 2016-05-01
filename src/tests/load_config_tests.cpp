@@ -10,7 +10,7 @@
 
 class LoadConfigTest : public ::testing::Test {
  protected:
-  LoadConfigTest(): filename_("config.json")  {}
+  LoadConfigTest() : filename_("config.json") {}
 
   ~LoadConfigTest() {}
 

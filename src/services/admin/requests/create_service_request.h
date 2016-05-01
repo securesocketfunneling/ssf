@@ -13,6 +13,8 @@
 #include <boost/serialization/map.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "core/factories/command_factory.h"
 #include "core/factories/service_factory.h"
 
@@ -63,9 +65,9 @@ class CreateServiceRequest {
     auto id = p_service_factory->CreateRunNewService(request.service_id(),
                                                      request.parameters(), ec);
 
-    BOOST_LOG_TRIVIAL(debug) << "service status: create "
-                             << "service unique id " << id << " - error_code "
-                             << ec.value();
+    SSF_LOG(kLogDebug) << "service status: create "
+                       << "service unique id " << id << " - error_code "
+                       << ec.value();
 
     std::stringstream ss;
     std::string result;

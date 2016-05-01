@@ -21,7 +21,8 @@
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/error.hpp>
-#include <boost/log/trivial.hpp>
+
+#include <ssf/log/log.h>
 
 #include "common/boost/fiber/detail/io_fiber_read_op.hpp"
 

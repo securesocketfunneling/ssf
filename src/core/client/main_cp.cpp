@@ -3,6 +3,8 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/config/config.h"
 #include "common/log/log.h"
 
@@ -41,7 +43,7 @@ int main(int argc, char** argv) {
   cmd.parse(argc, argv, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: wrong command line arguments";
+    SSF_LOG(kLogError) << "client: wrong command line arguments";
     return 1;
   }
 
@@ -52,7 +54,7 @@ int main(int argc, char** argv) {
           cmd.output_pattern(), ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: copy service could not be created";
+    SSF_LOG(kLogError) << "client: copy service could not be created";
     return 1;
   }
 
@@ -60,12 +62,12 @@ int main(int argc, char** argv) {
   user_services.push_back(p_copy_service);
 
   if (!cmd.IsAddrSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no remote host provided -- Exiting";
+    SSF_LOG(kLogError) << "client: no remote host provided -- Exiting";
     return 1;
   }
 
   if (!cmd.IsPortSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no host port provided -- Exiting";
+    SSF_LOG(kLogError) << "client: no host port provided -- Exiting";
     return 1;
   }
 
@@ -73,7 +75,7 @@ int main(int argc, char** argv) {
   ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
 
   if (ec_config) {
-    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format";
+    SSF_LOG(kLogError) << "client: invalid config file format";
     return 1;
   }
 
@@ -84,8 +86,8 @@ int main(int argc, char** argv) {
                 const boost::system::error_code& ec) {
         switch (type) {
           case ssf::services::initialisation::NETWORK:
-            BOOST_LOG_TRIVIAL(info) << "client: connected to remote server "
-                                    << (!ec ? "OK" : "NOK");
+            SSF_LOG(kLogInfo) << "client: connected to remote server "
+                              << (!ec ? "OK" : "NOK");
             break;
           case ssf::services::initialisation::CLOSE:
             closed.set_value(true);
@@ -110,14 +112,14 @@ int main(int argc, char** argv) {
   client.Run(endpoint_query, run_ec);
 
   if (!run_ec) {
-    BOOST_LOG_TRIVIAL(info) << "client: connecting to " << cmd.addr() << ":"
-                            << cmd.port();
+    SSF_LOG(kLogInfo) << "client: connecting to " << cmd.addr() << ":"
+                      << cmd.port();
     // wait end transfer
-    BOOST_LOG_TRIVIAL(info) << "client: wait end of file transfer";
+    SSF_LOG(kLogInfo) << "client: wait end of file transfer";
     closed.get_future().get();
   } else {
-    BOOST_LOG_TRIVIAL(error)
-        << "client: error happened when running client: " << run_ec.message();
+    SSF_LOG(kLogError) << "client: error happened when running client: "
+                       << run_ec.message();
   }
 
   client.Stop();

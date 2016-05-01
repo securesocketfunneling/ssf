@@ -6,9 +6,12 @@
 #include <functional>
 #include <memory>
 
+#include <ssf/log/log.h>
+
 #include <boost/archive/basic_archive.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/log/trivial.hpp>
+
+#include <ssf/log/log.h>
 
 #include "common/error/error.h"
 
@@ -30,7 +33,7 @@ class TransportProtocolPolicy {
   TransportProtocolPolicy(Callback callback) : callback_(callback) {}
 
   void DoSSFInitiate(SocketPtr p_socket) {
-    BOOST_LOG_TRIVIAL(info) << "transport: starting SSF protocol";
+    SSF_LOG(kLogInfo) << "transport: starting SSF protocol";
 
     uint32_t version = GetVersion();
     auto p_ssf_request = std::make_shared<SSFRequest>(version);
@@ -54,7 +57,7 @@ class TransportProtocolPolicy {
     if (!ec) {
       uint32_t version = p_ssf_request->version();
 
-      BOOST_LOG_TRIVIAL(trace) << "transport: SSF version read: " << version;
+      SSF_LOG(kLogTrace) << "transport: SSF version read: " << version;
 
       if (IsSupportedVersion(version)) {
         auto p_ssf_reply = std::make_shared<SSFReply>(true);
@@ -63,15 +66,14 @@ class TransportProtocolPolicy {
             boost::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
                         this, p_ssf_reply, p_socket, _1, _2));
       } else {
-        BOOST_LOG_TRIVIAL(error) << "transport: SSF version NOT supported "
-                                 << version;
+        SSF_LOG(kLogError) << "transport: SSF version NOT supported "
+                           << version;
         boost::system::error_code result_ec(::error::wrong_protocol_type,
                                             ::error::get_ssf_category());
         callback_(p_socket, result_ec);
       }
     } else {
-      BOOST_LOG_TRIVIAL(error) << "transport: SSF version NOT read "
-                               << ec.message();
+      SSF_LOG(kLogError) << "transport: SSF version NOT read " << ec.message();
       callback_(p_socket, ec);
     }
   }
@@ -79,7 +81,7 @@ class TransportProtocolPolicy {
   void DoSSFValidReceive(SSFRequestPtr p_ssf_request, SocketPtr p_socket,
                          const boost::system::error_code& ec, size_t length) {
     if (!ec) {
-      BOOST_LOG_TRIVIAL(info) << "transport: SSF request sent";
+      SSF_LOG(kLogInfo) << "transport: SSF request sent";
 
       auto p_ssf_reply = std::make_shared<SSFReply>();
 
@@ -88,8 +90,8 @@ class TransportProtocolPolicy {
           boost::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
                       this, p_ssf_reply, p_socket, _1, _2));
     } else {
-      BOOST_LOG_TRIVIAL(error) << "transport: could NOT send the SSF request "
-                               << ec.message();
+      SSF_LOG(kLogError) << "transport: could NOT send the SSF request "
+                         << ec.message();
       callback_(p_socket, ec);
     }
   }
@@ -99,18 +101,17 @@ class TransportProtocolPolicy {
                              size_t length) {
     if (!ec) {
       if (p_ssf_reply->result()) {
-        BOOST_LOG_TRIVIAL(info) << "transport: SSF reply OK";
+        SSF_LOG(kLogInfo) << "transport: SSF reply OK";
         callback_(p_socket, ec);
       } else {
         boost::system::error_code result_ec(::error::wrong_protocol_type,
                                             ::error::get_ssf_category());
-        BOOST_LOG_TRIVIAL(error) << "transport: SSF reply NOT ok "
-                                 << ec.message();
+        SSF_LOG(kLogError) << "transport: SSF reply NOT ok " << ec.message();
         callback_(p_socket, result_ec);
       }
     } else {
-      BOOST_LOG_TRIVIAL(error) << "transport: could NOT read SSF reply "
-                               << ec.message();
+      SSF_LOG(kLogError) << "transport: could NOT read SSF reply "
+                         << ec.message();
       callback_(p_socket, ec);
     }
   }

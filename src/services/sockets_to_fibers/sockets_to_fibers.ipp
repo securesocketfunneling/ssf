@@ -1,11 +1,12 @@
 #ifndef SSF_SERVICES_SOCKETS_TO_FIBERS_SOCKETS_TO_FIBERS_IPP_
 #define SSF_SERVICES_SOCKETS_TO_FIBERS_SOCKETS_TO_FIBERS_IPP_
 
-#include <boost/log/trivial.hpp>
-
+#include <ssf/log/log.h>
 #include <ssf/network/session_forwarder.h>
 
-namespace ssf { namespace services { namespace sockets_to_fibers {
+namespace ssf {
+namespace services {
+namespace sockets_to_fibers {
 
 template <typename Demux>
 SocketsToFibers<Demux>::SocketsToFibers(boost::asio::io_service& io_service,
@@ -20,7 +21,7 @@ SocketsToFibers<Demux>::SocketsToFibers(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info)
+  SSF_LOG(kLogInfo)
       << "service sockets to fibers: starting relay on local port tcp "
       << local_port_;
 
@@ -31,28 +32,28 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
 
   socket_acceptor_.open(endpoint.protocol(), ec);
   if (ec) {
-      socket_acceptor_.close(close_ec);
-      return;
+    socket_acceptor_.close(close_ec);
+    return;
   }
 
   boost::asio::socket_base::reuse_address option(true);
 
   socket_acceptor_.bind(endpoint, ec);
   if (ec) {
-      socket_acceptor_.close(close_ec);
-      return ;
+    socket_acceptor_.close(close_ec);
+    return;
   }
 
   socket_acceptor_.set_option(option, ec);
   if (ec) {
-      socket_acceptor_.close(close_ec);
-      return ;
+    socket_acceptor_.close(close_ec);
+    return;
   }
 
   socket_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
   if (ec) {
-      socket_acceptor_.close(close_ec);
-      return ;
+    socket_acceptor_.close(close_ec);
+    return;
   }
 
   this->StartAcceptSockets();
@@ -60,11 +61,11 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void SocketsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "service sockets to fibers: stopping";
+  SSF_LOG(kLogInfo) << "service sockets to fibers: stopping";
   socket_acceptor_.close(ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(debug) << "service sockets to fibers: " << ec.message()
-                             << std::endl;
+    SSF_LOG(kLogDebug) << "service sockets to fibers: " << ec.message()
+                       << std::endl;
   }
   manager_.stop_all();
 }
@@ -76,8 +77,7 @@ uint32_t SocketsToFibers<Demux>::service_type_id() {
 
 template <typename Demux>
 void SocketsToFibers<Demux>::StartAcceptSockets() {
-  BOOST_LOG_TRIVIAL(trace)
-      << "service sockets to fibers: accepting new clients";
+  SSF_LOG(kLogTrace) << "service sockets to fibers: accepting new clients";
 
   if (!socket_acceptor_.is_open()) {
     return;
@@ -91,7 +91,7 @@ void SocketsToFibers<Demux>::StartAcceptSockets() {
 template <typename Demux>
 void SocketsToFibers<Demux>::SocketAcceptHandler(
     const boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(trace) << "service sockets to fibers: accept handler";
+  SSF_LOG(kLogTrace) << "service sockets to fibers: accept handler";
 
   if (!socket_acceptor_.is_open()) {
     return;
@@ -100,15 +100,14 @@ void SocketsToFibers<Demux>::SocketAcceptHandler(
   if (!ec) {
     endpoint ep(this->get_demux(), remote_port_);
     fiber_.async_connect(
-      ep,
-      Then(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis()));
+        ep, Then(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis()));
   }
 }
 
 template <typename Demux>
 void SocketsToFibers<Demux>::FiberConnectHandler(
     const boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(trace) << "service sockets to fibers: connect handler";
+  SSF_LOG(kLogTrace) << "service sockets to fibers: connect handler";
 
   if (!ec) {
     auto session = SessionForwarder<socket, fiber>::create(
