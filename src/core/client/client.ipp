@@ -20,6 +20,8 @@
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
 
+#include "ssf/log/log.h"
+
 namespace ssf {
 
 template <class N, template <class> class T>
@@ -42,7 +44,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
                           boost::system::error_code& ec) {
   if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
-    BOOST_LOG_TRIVIAL(error) << "client: already running";
+    SSF_LOG(kLogError) << "client: already running";
     return;
   }
 
@@ -58,7 +60,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
 
   if (ec) {
     Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
-    BOOST_LOG_TRIVIAL(error) << "client: could not resolve network endpoint";
+    SSF_LOG(kLogError) << "client: could not resolve network endpoint";
     return;
   }
 
@@ -83,8 +85,8 @@ void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
     return;
   }
 
-  BOOST_LOG_TRIVIAL(error) << "client: error when connecting to server "
-                           << ec.message();
+  SSF_LOG(kLogError) << "client: error when connecting to server "
+                     << ec.message();
 
   if (p_socket) {
     boost::system::error_code close_ec;
@@ -100,13 +102,13 @@ void SSFClient<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 
   if (!ec) {
-    BOOST_LOG_TRIVIAL(trace) << "client: SSF reply ok";
+    SSF_LOG(kLogTrace) << "client: SSF reply ok";
     boost::system::error_code ec2;
     DoFiberize(p_socket, ec2);
 
     Notify(ssf::services::initialisation::TRANSPORT, nullptr, ec);
   } else {
-    BOOST_LOG_TRIVIAL(error) << "client: SSF protocol error " << ec.message();
+    SSF_LOG(kLogError) << "client: SSF protocol error " << ec.message();
   }
 }
 

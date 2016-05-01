@@ -6,9 +6,8 @@
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
+
+#include <ssf/log/log.h>
 
 #include "common/config/config.h"
 
@@ -38,8 +37,7 @@ class DummyClient {
     boost::asio::connect(socket_, r.resolve(q), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to connect "
-                               << ec.value();
+      SSF_LOG(kLogError) << "dummy client: fail to connect " << ec.value();
       return false;
     }
 
@@ -47,7 +45,7 @@ class DummyClient {
                        ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
+      SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
       return false;
     }
 
@@ -312,9 +310,6 @@ class StreamForwardTest : public ::testing::Test {
 
 //-----------------------------------------------------------------------------
 TEST_F(StreamForwardTest, transferOnesOverStream) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   std::list<std::promise<bool>> clients_finish;

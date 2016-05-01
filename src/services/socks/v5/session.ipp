@@ -36,8 +36,7 @@ void Session<Demux>::stop(boost::system::error_code&) {
   boost::system::error_code ec;
   app_server_.close(ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "session SOCKS: stop error " << ec.message()
-                             << std::endl;
+    SSF_LOG(kLogError) << "session SOCKS: stop error " << ec.message();
   }
 }
 
@@ -121,7 +120,7 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       DoUDPRequest();
       break;
     default:
-      BOOST_LOG_TRIVIAL(error) << "session SOCKS: Invalid v5 command";
+      SSF_LOG(kLogError) << "session SOCKS: Invalid v5 command";
       HandleStop();
       break;
   }
@@ -172,13 +171,13 @@ void Session<Demux>::DoConnectRequest() {
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  BOOST_LOG_TRIVIAL(error) << "session SOCKS: Bind Not implemented yet";
+  SSF_LOG(kLogError) << "session SOCKS: Bind Not implemented yet";
   HandleStop();
 }
 
 template <typename Demux>
 void Session<Demux>::DoUDPRequest() {
-  BOOST_LOG_TRIVIAL(error) << "session SOCKS: UDP Not implemented yet";
+  SSF_LOG(kLogError) << "session SOCKS: UDP Not implemented yet";
   HandleStop();
 }
 

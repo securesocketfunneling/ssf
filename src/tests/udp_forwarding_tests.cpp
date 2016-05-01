@@ -6,9 +6,6 @@
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
 
 #include "common/config/config.h"
 
@@ -318,9 +315,6 @@ class UdpForwardTest : public ::testing::Test {
 
 //-----------------------------------------------------------------------------
 TEST_F(UdpForwardTest, transferOnesOverUdp) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   std::list<std::promise<bool>> clients_finish;

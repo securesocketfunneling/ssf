@@ -1,6 +1,8 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/config/config.h"
 #include "common/log/log.h"
 
@@ -60,17 +62,17 @@ int main(int argc, char** argv) {
   ParsedParameters parameters = cmd.parse(argc, argv, options, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: wrong command line arguments";
+    SSF_LOG(kLogError) << "client: wrong command line arguments";
     return 1;
   }
 
   if (!cmd.IsAddrSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no hostname provided -- Exiting";
+    SSF_LOG(kLogError) << "client: no hostname provided -- Exiting";
     return 1;
   }
 
   if (!cmd.IsPortSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no host port provided -- Exiting";
+    SSF_LOG(kLogError) << "client: no host port provided -- Exiting";
     return 1;
   }
 
@@ -78,7 +80,7 @@ int main(int argc, char** argv) {
   InitializeClientServices(&user_services, parameters, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error)
+    SSF_LOG(kLogError)
         << "client: initialization of client services failed -- Exiting";
     return 1;
   }
@@ -87,28 +89,28 @@ int main(int argc, char** argv) {
   ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format -- Exiting";
+    SSF_LOG(kLogError) << "client: invalid config file format -- Exiting";
     return 1;
   }
 
-  auto callback = [](ssf::services::initialisation::type type,
-                     BaseUserServicePtr p_service,
-                     const boost::system::error_code& ec) {
-    switch (type) {
-      case ssf::services::initialisation::NETWORK:
-        BOOST_LOG_TRIVIAL(info) << "client: connected to remote server "
-                                << (!ec ? "OK" : "NOK");
-        break;
-      case ssf::services::initialisation::SERVICE:
-        if (p_service.get() != nullptr) {
-          BOOST_LOG_TRIVIAL(info) << "client: service " << p_service->GetName()
-                                  << " " << (!ec ? "OK" : "NOK");
+  auto callback =
+      [](ssf::services::initialisation::type type, BaseUserServicePtr p_service,
+         const boost::system::error_code& ec) {
+        switch (type) {
+          case ssf::services::initialisation::NETWORK:
+            SSF_LOG(kLogInfo) << "client: connected to remote server "
+                              << (!ec ? "OK" : "NOK");
+            break;
+          case ssf::services::initialisation::SERVICE:
+            if (p_service.get() != nullptr) {
+              SSF_LOG(kLogInfo) << "client: service " << p_service->GetName()
+                                << " " << (!ec ? "OK" : "NOK");
+            }
+            break;
+          default:
+            break;
         }
-        break;
-      default:
-        break;
-    }
-  };
+      };
 
   // Initiate and run client
   Client client(user_services, callback);
@@ -121,16 +123,16 @@ int main(int argc, char** argv) {
   client.Run(endpoint_query, ec);
 
   if (!ec) {
-    BOOST_LOG_TRIVIAL(info) << "client: connecting to " << cmd.addr() << ":"
-                            << cmd.port();
-    BOOST_LOG_TRIVIAL(info) << "client: press [ENTER] to stop";
+    SSF_LOG(kLogInfo) << "client: connecting to " << cmd.addr() << ":"
+                      << cmd.port();
+    SSF_LOG(kLogInfo) << "client: press [ENTER] to stop";
     getchar();
   } else {
-    BOOST_LOG_TRIVIAL(error)
-        << "client: error happened when running client : " << ec.message();
+    SSF_LOG(kLogError) << "client: error happened when running client : "
+                       << ec.message();
   }
 
-  BOOST_LOG_TRIVIAL(info) << "client: stop" << std::endl;
+  SSF_LOG(kLogInfo) << "client: stop" << std::endl;
   client.Stop();
 
   return 0;
@@ -159,9 +161,8 @@ void InitializeClientServices(ClientServices* p_client_services,
       if (!ec) {
         p_client_services->push_back(p_service_options);
       } else {
-        BOOST_LOG_TRIVIAL(error) << "client: wrong parameter "
-                                 << parameter.first << ": " << single_parameter
-                                 << ": " << ec.message();
+        SSF_LOG(kLogError) << "client: wrong parameter " << parameter.first
+                           << ": " << single_parameter << ": " << ec.message();
         return;
       }
     }

@@ -212,8 +212,6 @@ find_package(
     program_options
     date_time
     filesystem
-    log_setup
-    log
     regex
     thread
     chrono

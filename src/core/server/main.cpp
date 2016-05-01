@@ -1,6 +1,8 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/config/config.h"
 #include "common/log/log.h"
 
@@ -23,7 +25,7 @@ int main(int argc, char** argv) {
   cmd.parse(argc, argv, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "server: wrong arguments";
+    SSF_LOG(kLogError) << "server: wrong arguments";
     return 1;
   }
 
@@ -31,7 +33,7 @@ int main(int argc, char** argv) {
   ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "server: invalid config file format";
+    SSF_LOG(kLogError) << "server: invalid config file format";
     return 1;
   }
 
@@ -45,15 +47,15 @@ int main(int argc, char** argv) {
   server.Run(endpoint_query, ec);
 
   if (!ec) {
-    BOOST_LOG_TRIVIAL(info) << "server: listening on port " << cmd.port();
-    BOOST_LOG_TRIVIAL(info) << "server: press [ENTER] to stop";
+    SSF_LOG(kLogInfo) << "server: listening on port " << cmd.port();
+    SSF_LOG(kLogInfo) << "server: press [ENTER] to stop";
     getchar();
   } else {
-    BOOST_LOG_TRIVIAL(error)
-        << "server: error happened when running server: " << ec.message();
+    SSF_LOG(kLogError) << "server: error happened when running server: "
+                       << ec.message();
   }
 
-  BOOST_LOG_TRIVIAL(info) << "server: stop" << std::endl;
+  SSF_LOG(kLogInfo) << "server: stop" << std::endl;
   server.Stop();
 
   return 0;

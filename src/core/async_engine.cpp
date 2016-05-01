@@ -1,8 +1,8 @@
-#include "core/async_engine.h"
-
 #include <stdint.h>
 
-#include <boost/log/trivial.hpp>
+#include "core/async_engine.h"
+
+#include "ssf/log/log.h"
 
 namespace ssf {
 
@@ -17,22 +17,22 @@ void AsyncEngine::Start() {
     return;
   }
 
-  BOOST_LOG_TRIVIAL(debug) << "async engine: starting";
+  SSF_LOG(kLogDebug) << "async engine: starting";
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
   for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
     threads_.create_thread([this]() {
       boost::system::error_code ec;
       io_service_.run(ec);
       if (ec) {
-        BOOST_LOG_TRIVIAL(error)
-            << "async engine: when running io_service: " << ec.message();
+        SSF_LOG(kLogError) << "async engine: when running io_service: "
+                           << ec.message();
       }
     });
   }
 }
 
 void AsyncEngine::Stop() {
-  BOOST_LOG_TRIVIAL(debug) << "async engine: stopping";
+  SSF_LOG(kLogDebug) << "async engine: stopping";
   p_worker_.reset(nullptr);
   threads_.join_all();
   io_service_.stop();
