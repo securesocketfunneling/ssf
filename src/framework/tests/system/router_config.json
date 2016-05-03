@@ -1,0 +1,32 @@
+[
+  {
+    "router": "router1",
+    "networks": {
+      "1": "circuit_tlsotcp_connect",
+      "3": "circuit_tcp_connect",
+      "5": "tlsotcp_connect",
+      "7": "tcp_connect"
+    },
+    "routes": {
+      "2": "7",
+      "4": "1",
+      "6": "3",
+      "8": "5"
+    }
+  },
+  {
+    "router": "router2",
+    "networks": {
+      "2": "circuit_tlsotcp_accept",
+      "4": "circuit_tcp_accept",
+      "6": "tlsotcp_accept",
+      "8": "tcp_accept"
+    },
+    "routes": {
+      "1": "4",
+      "3": "6",
+      "5": "8",
+      "7": "2"
+    }
+  }
+]

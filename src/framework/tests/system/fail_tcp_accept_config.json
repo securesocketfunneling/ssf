@@ -1,0 +1,12 @@
+{
+  "interface": "tcp_accept",
+  "type": "ACCEPT",
+  "ttl": 5,
+  "delay": 200,
+  "layer_stack": {
+    "layer": "TCP",
+    "parameters": {
+      "port": "9000"
+    }
+  }
+}

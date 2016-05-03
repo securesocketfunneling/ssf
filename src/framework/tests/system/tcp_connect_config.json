@@ -1,0 +1,13 @@
+{
+  "interface": "tcp_connect",
+  "type": "CONNECT",
+  "ttl": 1,
+  "delay": 200,
+  "layer_stack": {
+    "layer": "TCP",
+    "parameters": {
+      "port": "9000",
+      "addr": "127.0.0.1"
+    }
+  }
+}
