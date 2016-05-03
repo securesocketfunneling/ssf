@@ -36,6 +36,7 @@ add_target("load_config_tests"
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
@@ -46,8 +47,7 @@ project_group("Unit Tests/Config" load_config_tests)
 # --- Fiber asio tests
 set(fiber_asio_test_source_files
   "fiber_asio_tests.cpp"
-  ${COMMON_BOOST_FIBER_FILES}
-  ${COMMON_ERROR_FILES}
+  ${SSF_SOURCES}
 )
 
 add_target("fiber_asio_tests"
@@ -57,6 +57,7 @@ add_target("fiber_asio_tests"
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES

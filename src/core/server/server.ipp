@@ -1,6 +1,8 @@
 #ifndef SSF_CORE_SERVER_SERVER_IPP_
 #define SSF_CORE_SERVER_SERVER_IPP_
 
+#include <ssf/log/log.h>
+
 #include "common/error/error.h"
 
 #include "core/factories/service_factory.h"
@@ -39,7 +41,7 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
                           boost::system::error_code& ec) {
   if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
-    BOOST_LOG_TRIVIAL(error) << "server: already running";
+    SSF_LOG(kLogError) << "server: already running";
     return;
   }
 
@@ -48,7 +50,7 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
   auto endpoint_it = resolver.resolve(query, ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "server: could not resolve network endpoint";
+    SSF_LOG(kLogError) << "server: could not resolve network endpoint";
     return;
   }
 
@@ -58,14 +60,13 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
                                ec);
   network_acceptor_.bind(*endpoint_it, ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error)
-        << "server: could not bind acceptor to network endpoint";
+    SSF_LOG(kLogError) << "server: could not bind acceptor to network endpoint";
     return;
   }
 
   network_acceptor_.listen(100, ec);
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "server: could not listen for new connections";
+    SSF_LOG(kLogError) << "server: could not listen for new connections";
     return;
   }
 
@@ -109,7 +110,7 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
     boost::system::error_code close_ec;
     p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
     p_socket->close(close_ec);
-    BOOST_LOG_TRIVIAL(error) << "server: network error: " << ec.message();
+    SSF_LOG(kLogError) << "server: network error: " << ec.message();
   }
 }
 
@@ -117,14 +118,14 @@ template <class N, template <class> class T>
 void SSFServer<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
                                  const boost::system::error_code& ec) {
   if (!ec) {
-    BOOST_LOG_TRIVIAL(trace) << "server: SSF reply ok";
+    SSF_LOG(kLogTrace) << "server: SSF reply ok";
     boost::system::error_code ec2;
     DoFiberize(p_socket, ec2);
   } else {
     boost::system::error_code close_ec;
     p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
     p_socket->close(close_ec);
-    BOOST_LOG_TRIVIAL(error) << "server: SSF protocol error " << ec.message();
+    SSF_LOG(kLogError) << "server: SSF protocol error " << ec.message();
   }
 }
 
@@ -183,7 +184,7 @@ template <class N, template <class> class T>
 void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
                                ServiceManagerPtr p_service_manager) {
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
-  BOOST_LOG_TRIVIAL(trace) << "server: adding a new demux";
+  SSF_LOG(kLogTrace) << "server: adding a new demux";
 
   p_fiber_demuxes_.insert(p_fiber_demux);
   p_service_managers_[p_fiber_demux] = p_service_manager;
@@ -192,7 +193,7 @@ void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
-  BOOST_LOG_TRIVIAL(trace) << "server: removing a demux";
+  SSF_LOG(kLogTrace) << "server: removing a demux";
 
   p_fiber_demux->close();
   p_fiber_demuxes_.erase(p_fiber_demux);
@@ -213,7 +214,7 @@ void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveAllDemuxes() {
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
-  BOOST_LOG_TRIVIAL(trace) << "server: removing all demuxes";
+  SSF_LOG(kLogTrace) << "server: removing all demuxes";
 
   for (auto& p_fiber_demux : p_fiber_demuxes_) {
     p_fiber_demux->close();

@@ -1,10 +1,10 @@
 #ifndef SSF_SERVICES_FIBERS_TO_SOCKETS_FIBERS_TO_SOCKETS_IPP_
 #define SSF_SERVICES_FIBERS_TO_SOCKETS_FIBERS_TO_SOCKETS_IPP_
 
-#include <boost/log/trivial.hpp>
+#include <ssf/log/log.h>
+#include <ssf/network/session_forwarder.h>
 
 #include "common/error/error.h"
-#include <ssf/network/session_forwarder.h>
 
 namespace ssf { namespace services { namespace fibers_to_sockets {
 
@@ -24,7 +24,7 @@ FibersToSockets<Demux>::FibersToSockets(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info)
+  SSF_LOG(kLogInfo)
       << "service fibers to sockets: starting relay on local port tcp "
       << local_port_;
 
@@ -47,7 +47,7 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void FibersToSockets<Demux>::stop(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "service fibers to sockets: stopping";
+  SSF_LOG(kLogInfo) << "service fibers to sockets: stopping";
   ec.assign(::error::success,
             ::error::get_ssf_category());
 
@@ -62,7 +62,7 @@ uint32_t FibersToSockets<Demux>::service_type_id() {
 
 template <typename Demux>
 void FibersToSockets<Demux>::StartAcceptFibers() {
-  BOOST_LOG_TRIVIAL(trace) << "service fibers to sockets: accepting new clients";
+  SSF_LOG(kLogTrace) << "service fibers to sockets: accepting new clients";
 
   fiber_acceptor_.async_accept(
       fiber_, Then(&FibersToSockets::FiberAcceptHandler, this->SelfFromThis()));
@@ -71,7 +71,7 @@ void FibersToSockets<Demux>::StartAcceptFibers() {
 template <typename Demux>
 void FibersToSockets<Demux>::FiberAcceptHandler(
     const boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(trace) << "service fibers to sockets: accept handler";
+  SSF_LOG(kLogTrace) << "service fibers to sockets: accept handler";
 
   if (!fiber_acceptor_.is_open()) {
     return;
@@ -87,7 +87,7 @@ void FibersToSockets<Demux>::FiberAcceptHandler(
 template <typename Demux>
 void FibersToSockets<Demux>::SocketConnectHandler(
     const boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(trace) << "service fibers to sockets: connect handler";
+  SSF_LOG(kLogTrace) << "service fibers to sockets: connect handler";
 
   if (!ec) {
     auto session = SessionForwarder<fiber, socket>::create(

@@ -4,11 +4,9 @@
 #include <memory>
 #include <vector>
 
-#include <gtest/gtest.h>
 #include <boost/asio.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
+
+#include <gtest/gtest.h>
 
 #include "common/config/config.h"
 
@@ -35,9 +33,6 @@ TEST(BouncingTests, BouncingChain) {
   using demux = Client::Demux;
   using BaseUserServicePtr =
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
-
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
 
   std::promise<bool> network_set;
   std::promise<bool> transport_set;

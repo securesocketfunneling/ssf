@@ -6,9 +6,8 @@
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
+
+#include <ssf/log/log.h>
 
 #include "common/config/config.h"
 
@@ -121,8 +120,7 @@ class DummyClient {
     boost::asio::connect(socket_, r.resolve(q), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to connect "
-                               << ec.value();
+      SSF_LOG(kLogError) << "dummy client: fail to connect " << ec.value();
       Stop();
     }
 
@@ -139,7 +137,7 @@ class DummyClient {
     boost::asio::write(socket_, req.buffers(), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
+      SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
       Stop();
       return false;
     }
@@ -149,7 +147,7 @@ class DummyClient {
     boost::asio::read(socket_, rep.buffers(), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to read " << ec.value();
+      SSF_LOG(kLogError) << "dummy client: fail to read " << ec.value();
       Stop();
       return false;
     }
@@ -162,7 +160,7 @@ class DummyClient {
     boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_)), ec);
 
     if (ec) {
-      BOOST_LOG_TRIVIAL(error) << "dummy client: fail to write " << ec.value();
+      SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
       Stop();
     }
 
@@ -254,9 +252,8 @@ class DummyServer {
       acceptor_.bind(endpoint);
       acceptor_.listen();
     } catch (const std::exception& e) {
-      BOOST_LOG_TRIVIAL(error)
-          << "dummy server: fail to initialize acceptor on port "
-          << listening_port_ << "(" << e.what() << ")";
+      SSF_LOG(kLogError) << "dummy server: fail to initialize acceptor on port "
+                         << listening_port_ << "(" << e.what() << ")";
       Stop();
       return;
     }
@@ -443,9 +440,6 @@ class RemoteSocksTest : public ::testing::Test {
 
 //-----------------------------------------------------------------------------
 TEST_F(RemoteSocksTest, startStopTransmitSSFRemoteSocks) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   std::list<std::promise<bool>> clients_finish;

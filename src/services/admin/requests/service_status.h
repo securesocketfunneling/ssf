@@ -11,7 +11,8 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/log/trivial.hpp>
+
+#include <ssf/log/log.h>
 
 #include "core/factories/command_factory.h"
 #include "core/factories/service_factory.h"
@@ -69,10 +70,10 @@ class ServiceStatus {
           status.id(), status.error_code_value(), ec);
     }
 
-    BOOST_LOG_TRIVIAL(debug) << "service status: received "
-                             << "service unique id " << status.id()
-                             << " service id " << status.service_id()
-                             << " - error_code " << status.error_code_value();
+    SSF_LOG(kLogDebug) << "service status: received "
+                       << "service unique id " << status.id() << " service id "
+                       << status.service_id() << " - error_code "
+                       << status.error_code_value();
 
     return std::string();
   }

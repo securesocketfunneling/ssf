@@ -5,9 +5,6 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/thread.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
 
 #include <gtest/gtest.h>
 
@@ -192,12 +189,6 @@ TEST_F(FiberTest, connectDisconnectFiberFromServer) {
   const uint32_t number_of_connections = 1000;
   std::atomic<uint32_t> number_of_connected = 0;
 
-  boost::log::core::get()->set_filter
-    (
-    //boost::log::trivial::severity >= boost::log::trivial::fatal
-    boost::log::trivial::severity >= boost::log::trivial::info
-    );
-
   std::function<void(std::shared_ptr<fiber> p_fiber, const boost::system::error_code&)> async_accept_h1;
   std::function<void()> async_accept_h2;
   std::function<void(const boost::system::error_code&)> handler;
@@ -263,12 +254,6 @@ TEST_F(FiberTest, connectDisconnectFiberFromServer) {
 
 //-----------------------------------------------------------------------------
 TEST_F(FiberTest, connectDisconnectFiberFromClient) {
-  boost::log::core::get()->set_filter
-    (
-    //boost::log::trivial::severity >= boost::log::trivial::fatal
-    boost::log::trivial::severity >= boost::log::trivial::info
-    );
-
   auto handler = [this](const boost::system::error_code&) {
     boost::system::error_code ec_server;
 
@@ -297,12 +282,6 @@ TEST_F(FiberTest, connectDisconnectFiberFromClient) {
 
 //-----------------------------------------------------------------------------
 TEST_F(FiberTest, MTU) {
-  boost::log::core::get()->set_filter
-    (
-    //boost::log::trivial::severity >= boost::log::trivial::fatal
-    boost::log::trivial::severity >= boost::log::trivial::info
-    );
-
   uint8_t buffer_server[100 * 1024] = { 0 };
   uint8_t buffer_client[100 * 1024] = { 0 };
   bool result_server = true;
@@ -371,7 +350,7 @@ TEST_F(FiberTest, MTU) {
   fib_client1.async_connect(async_connect_h);
   boost::system::error_code ec;
   io_service_client.run(ec);
-  BOOST_LOG_TRIVIAL(debug) << ec.message() << " " << ec.value() << std::endl;
+  SSF_LOG(kLogDebug) << ec.message() << " " << ec.value();
   serverThreads_.join_all();
 
   ASSERT_EQ(true, result_server);
@@ -379,12 +358,6 @@ TEST_F(FiberTest, MTU) {
 
 //-----------------------------------------------------------------------------
 TEST_F(FiberTest, exchangePackets) {
-  boost::log::core::get()->set_filter
-    (
-    //boost::log::trivial::severity >= boost::log::trivial::fatal
-    boost::log::trivial::severity >= boost::log::trivial::info
-    );
-
   const int32_t packet_number = 1000;
 
   uint8_t buffer_client[5] = { 0 };
@@ -493,7 +466,7 @@ TEST_F(FiberTest, exchangePackets) {
   fib_client1.async_connect(async_connect_h);
   boost::system::error_code ec;
   io_service_client.run(ec);
-  BOOST_LOG_TRIVIAL(debug) << ec.message() << " " << ec.value() << std::endl;
+  SSF_LOG(kLogDebug) << ec.message() << " " << ec.value() << std::endl;
   serverThreads_.join_all();
 
   ASSERT_EQ(true, result_server);
@@ -501,12 +474,6 @@ TEST_F(FiberTest, exchangePackets) {
 
 //-----------------------------------------------------------------------------
 TEST_F(FiberTest, exchangePacketsFiveClients) {
-  boost::log::core::get()->set_filter
-    (
-    //boost::log::trivial::severity >= boost::log::trivial::fatal
-    boost::log::trivial::severity >= boost::log::trivial::info
-    );
-
   typedef std::array<uint8_t, 5> buffer_type;
 
   buffer_type buffer_client1;

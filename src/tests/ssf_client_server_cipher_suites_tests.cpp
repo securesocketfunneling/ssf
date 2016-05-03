@@ -6,9 +6,6 @@
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
 
 #include "common/config/config.h"
 
@@ -46,8 +43,7 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
   }
 
   void StartServer(const ssf::Config& config) {
-    auto endpoint_query =
-        ssf::network::GenerateServerQuery("", "8000", config);
+    auto endpoint_query = ssf::network::GenerateServerQuery("", "8000", config);
 
     p_ssf_server_.reset(new Server());
 
@@ -73,9 +69,6 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
 };
 
 TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::debug);
-
   std::promise<bool> network_set;
   std::promise<bool> transport_set;
 
@@ -104,9 +97,6 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
 }
 
 TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::debug);
-
   std::promise<bool> network_set;
   std::promise<bool> transport_set;
 

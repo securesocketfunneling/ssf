@@ -3,9 +3,10 @@
 
 #include <memory>
 
-#include <boost/log/trivial.hpp>
 #include <boost/thread.hpp>
 #include <boost/system/error_code.hpp>
+
+#include <ssf/log/log.h>
 
 #include "common/error/error.h"
 #include "core/factories/command_factory.h"
@@ -64,7 +65,7 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 //-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "service admin: stopping";
+  SSF_LOG(kLogInfo) << "service admin: stopping";
   ec.assign(::error::success, ::error::get_ssf_category());
 
   HandleStop();
@@ -86,16 +87,15 @@ void Admin<Demux>::StartAccept() {
 //-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::HandleAccept(const boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(trace) << "service admin: handleAccept";
+  SSF_LOG(kLogTrace) << "service admin: handleAccept";
 
   if (!fiber_acceptor_.is_open()) {
     return;
   }
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error)
-        << "service admin: error accepting new connection: " << ec << " "
-        << ec.value();
+    SSF_LOG(kLogError) << "service admin: error accepting new connection: "
+                       << ec << " " << ec.value();
     ShutdownServices();
   } else {
     Initialize();
@@ -112,12 +112,11 @@ void Admin<Demux>::StartConnect() {
 //-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::HandleConnect(const boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(trace) << "service admin: handle connect";
+  SSF_LOG(kLogTrace) << "service admin: handle connect";
 
   if (!fiber_.is_open() || ec) {
-    BOOST_LOG_TRIVIAL(error)
-        << "service admin: no new connection: " << ec.message() << " "
-        << ec.value();
+    SSF_LOG(kLogError) << "service admin: no new connection: " << ec.message()
+                       << " " << ec.value();
     // Retry to connect if failed to open the fiber
     if (retries_ < 50) {
       this->StartConnect();
@@ -169,7 +168,7 @@ void Admin<Demux>::InitializeRemoteServices(
 
         // If something went wrong remote_all_started_ > 0
         if (remote_all_started_) {
-          BOOST_LOG_TRIVIAL(warning) << "service admin: remote could not start";
+          SSF_LOG(kLogWarning) << "service admin: remote could not start";
 
           Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
                  boost::system::error_code(::error::operation_canceled,
@@ -195,7 +194,7 @@ void Admin<Demux>::InitializeRemoteServices(
 
         // If something went wrong local_all_started_ == false
         if (!local_all_started_) {
-          BOOST_LOG_TRIVIAL(warning) << "service admin: local could not start";
+          SSF_LOG(kLogWarning) << "service admin: local could not start";
 
           Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
                  boost::system::error_code(::error::operation_canceled,
@@ -223,7 +222,7 @@ void Admin<Demux>::InitializeRemoteServices(
       }
     }
   } else {
-    BOOST_LOG_TRIVIAL(debug) << "service admin: ec intializing " << ec.value();
+    SSF_LOG(kLogDebug) << "service admin: ec intializing " << ec.value();
   }
 }
 #include <boost/asio/unyield.hpp>  // NOLINT

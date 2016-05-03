@@ -6,9 +6,6 @@
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
 
 #include <ssf/layer/data_link/circuit_helpers.h>
 #include <ssf/layer/data_link/basic_circuit_protocol.h>
@@ -326,9 +323,6 @@ class RemoteUdpForwardTest : public ::testing::Test {
 
 //-----------------------------------------------------------------------------
 TEST_F(RemoteUdpForwardTest, transferOnesOverUdp) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   std::list<std::promise<bool>> clients_finish;

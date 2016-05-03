@@ -7,9 +7,6 @@
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
 
 #include "common/config/config.h"
 

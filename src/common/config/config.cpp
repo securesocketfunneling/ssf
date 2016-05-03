@@ -1,12 +1,12 @@
-#include "common/config/config.h"
-
 #include <string>
 
-#include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
+#include "common/config/config.h"
 #include "common/error/error.h"
 
 namespace ssf {
@@ -59,8 +59,7 @@ Config LoadConfig(const std::string& filepath, boost::system::error_code& ec) {
 
     return config;
   } catch (const std::exception& e) {
-    BOOST_LOG_TRIVIAL(error)
-        << "config: error reading SSF config file: " << e.what();
+    SSF_LOG(kLogError) << "config: error reading SSF config file: " << e.what();
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
     return Config();

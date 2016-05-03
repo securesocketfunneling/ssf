@@ -19,6 +19,8 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include <ssf/log/log.h>
+
 #include "core/factories/service_factory.h"
 #include "services/admin/requests/create_service_request.h"
 #include "services/copy_file/file_to_fiber/istream_to_fiber_session.h"
@@ -86,9 +88,8 @@ class FileToFiber : public BaseService<Demux> {
 
     if (accept_) {
       endpoint ep(this->get_demux(), kServicePort);
-      BOOST_LOG_TRIVIAL(info)
-          << "service fiber to file: start accept on fiber port "
-          << kServicePort;
+      SSF_LOG(kLogInfo) << "service fiber to file: start accept on fiber port "
+                        << kServicePort;
       fiber_acceptor_.bind(ep, ec);
       fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
       if (ec) {
@@ -102,7 +103,7 @@ class FileToFiber : public BaseService<Demux> {
 
   // Stop service
   virtual void stop(boost::system::error_code& ec) {
-    BOOST_LOG_TRIVIAL(info) << "service file to fiber: stopping";
+    SSF_LOG(kLogInfo) << "service file to fiber: stopping";
     manager_.stop_all();
     boost::system::error_code close_ec;
     fiber_acceptor_.close(close_ec);
@@ -274,7 +275,7 @@ class FileToFiber : public BaseService<Demux> {
     FiberPtr p_fiber =
         std::make_shared<fiber>(this->get_demux().get_io_service());
 
-    BOOST_LOG_TRIVIAL(debug)
+    SSF_LOG(kLogDebug)
         << "service file to fiber: connect to remote fiber acceptor port "
         << ssf::services::copy_file::fiber_to_file::FiberToFile<
                Demux>::kServicePort;
@@ -302,13 +303,12 @@ class FileToFiber : public BaseService<Demux> {
     }
 
     if (from_stdin) {
-      BOOST_LOG_TRIVIAL(info)
+      SSF_LOG(kLogInfo)
           << "service file to fiber: start forward data from stdin to "
           << output_file;
     } else {
-      BOOST_LOG_TRIVIAL(info)
-          << "service file to fiber: start forward data from " << input_file
-          << " to " << output_file;
+      SSF_LOG(kLogInfo) << "service file to fiber: start forward data from "
+                        << input_file << " to " << output_file;
     }
 
     if (!from_stdin) {

@@ -13,6 +13,8 @@
 #include <boost/serialization/map.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "core/factories/command_factory.h"
 #include "core/factories/service_factory.h"
 
@@ -59,7 +61,7 @@ class StopServiceRequest {
 
     p_service_factory->StopService(request.unique_id());
 
-    BOOST_LOG_TRIVIAL(debug) << "service status: stop request";
+    SSF_LOG(kLogDebug) << "service status: stop request";
 
     ec.assign(boost::system::errc::interrupted,
               boost::system::system_category());

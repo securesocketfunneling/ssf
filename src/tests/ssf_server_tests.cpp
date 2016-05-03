@@ -1,9 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
-
 #include "common/config/config.h"
 
 #include "core/network_protocol.h"
@@ -11,8 +7,6 @@
 #include "core/server/server.h"
 
 TEST(SSFServerTest, failListeningWrongInterface) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
   using Server =
       ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 
@@ -29,9 +23,6 @@ TEST(SSFServerTest, failListeningWrongInterface) {
 }
 
 TEST(SSFServerTest, listeningAllInterfaces) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   using Server =
       ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 
@@ -50,9 +41,6 @@ TEST(SSFServerTest, listeningAllInterfaces) {
 }
 
 TEST(SSFServerTest, listeningLocalhostInterface) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   using Server =
       ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
 

@@ -57,9 +57,6 @@ void FileExistsAndIdentical(const std::string& source_filepath,
 
 //-----------------------------------------------------------------------------
 TEST_F(CopyNoFileFromClientToRemoteTest, CopyTest) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -72,9 +69,6 @@ TEST_F(CopyNoFileFromClientToRemoteTest, CopyTest) {
 
 //-----------------------------------------------------------------------------
 TEST_F(CopyUniqueFileFromClientToRemoteTest, CopyTest) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -85,9 +79,6 @@ TEST_F(CopyUniqueFileFromClientToRemoteTest, CopyTest) {
 
 //-----------------------------------------------------------------------------
 TEST_F(CopyGlobFileFromClientToRemoteTest, CopyTest) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -100,9 +91,6 @@ TEST_F(CopyGlobFileFromClientToRemoteTest, CopyTest) {
 
 //-----------------------------------------------------------------------------
 TEST_F(CopyUniqueFileFromRemoteToClientTest, CopyTest) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -113,9 +101,6 @@ TEST_F(CopyUniqueFileFromRemoteToClientTest, CopyTest) {
 
 //-----------------------------------------------------------------------------
 TEST_F(CopyGlobFileFromRemoteToClientTest, CopyTest) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -128,9 +113,6 @@ TEST_F(CopyGlobFileFromRemoteToClientTest, CopyTest) {
 
 //-----------------------------------------------------------------------------
 TEST_F(CopyStdinFromClientToRemoteTest, CopyTest) {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-
   // stdin as test_file1.txt filebuf
   std::ifstream in("files_to_copy/test_file1.txt", std::ifstream::binary);
   std::streambuf* cinbuf = std::cin.rdbuf();
