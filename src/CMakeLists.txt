@@ -77,14 +77,14 @@ FILE(GLOB_RECURSE FIBERS_TO_DATAGRAMS_SERVICE_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_datagrams/*.ipp")
 
 FILE(GLOB_RECURSE SOCKETS_TO_FIBERS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/datagrams_to_fibers/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/datagrams_to_fibers/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/datagrams_to_fibers/*.ipp")
+  "${CMAKE_CURRENT_SOURCE_DIR}/services/sockets_to_fibers/*.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/services/sockets_to_fibers/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/services/sockets_to_fibers/*.ipp")
 
 FILE(GLOB_RECURSE FIBERS_TO_SOCKETS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_datagrams/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_datagrams/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_datagrams/*.ipp")
+  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_sockets/*.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_sockets/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_sockets/*.ipp")
 
 FILE(GLOB_RECURSE SOCKS_SERVICE_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/services/socks/*.h"

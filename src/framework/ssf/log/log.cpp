@@ -10,7 +10,7 @@ Log::Log() : os_() {}
 
 Log::~Log() {
   os_ << std::endl;
-  fprintf(stderr, os_.str().c_str());
+  fprintf(stderr, "%s", os_.str().c_str());
   fflush(stderr);
 }
 
