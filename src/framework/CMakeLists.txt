@@ -70,3 +70,7 @@ target_include_directories(lib_ssf_network
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+if (BUILD_UNIT_TESTS)
+  add_subdirectory(tests)
+endif(BUILD_UNIT_TESTS)

@@ -1,18 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 # --- Special settings to Unix platform
-if (UNIX)  
-  # --- Include linux/unix impl
-
-  # --- Filesystem globbing
-  FILE(GLOB_RECURSE COPY_FILE_SERVICE_LINUX_FILES
-      "${project_SRC_DIR}/services/copy_file/filesystem/linux/*.h"
-      "${project_SRC_DIR}/services/copy_file/filesystem/linux/*.cpp")
-
-  set(COPY_FILE_SERVICE_FILES
-      ${COPY_FILE_SERVICE_FILES}
-      ${COPY_FILE_SERVICE_LINUX_FILES})
-
+if (UNIX)
   # --- Flags for compilation
   if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     set(CLANG_NO_BOOST_WARNINGS "-Wno-unneeded-internal-declaration -Wno-unused-variable")
