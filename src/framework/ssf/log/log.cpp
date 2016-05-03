@@ -1,6 +1,5 @@
 #include <ctime>
-
-#include <iostream>
+#include <cstdio>
 
 #include "ssf/log/log.h"
 
@@ -11,7 +10,8 @@ Log::Log() : os_() {}
 
 Log::~Log() {
   os_ << std::endl;
-  std::cerr << os_.str();
+  fprintf(stderr, os_.str().c_str());
+  fflush(stderr);
 }
 
 std::ostream& Log::GetLog(LogLevel level) {
