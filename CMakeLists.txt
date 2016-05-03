@@ -240,36 +240,35 @@ include_directories(${project_SRC_DIR})
 
 # --- Set macro SSF service files
 set(SERVICES_FILES
-      ${BASE_SERVICE_FILES}
-      ${ADMIN_SERVICE_FILES}
-      ${DATAGRAMS_TO_FIBERS_SERVICE_FILES}
-      ${FIBERS_TO_DATAGRAMS_SERVICE_FILES}
-      ${SOCKETS_TO_FIBERS_SERVICE_FILES}
-      ${FIBERS_TO_SOCKETS_SERVICE_FILES}
-      ${SOCKS_SERVICE_FILES}
-      ${USER_SERVICE_FILES}
-      ${COPY_FILE_SERVICE_FILES})
+  ${BASE_SERVICE_FILES}
+  ${ADMIN_SERVICE_FILES}
+  ${DATAGRAMS_TO_FIBERS_SERVICE_FILES}
+  ${FIBERS_TO_DATAGRAMS_SERVICE_FILES}
+  ${SOCKETS_TO_FIBERS_SERVICE_FILES}
+  ${FIBERS_TO_SOCKETS_SERVICE_FILES}
+  ${SOCKS_SERVICE_FILES}
+  ${USER_SERVICE_FILES}
+  ${COPY_FILE_SERVICE_FILES}
+)
 
 # --- Set macro SSF source files
 set(SSF_SOURCES
-      ${VERSIONS_FILES}
-      ${COMMON_BOOST_FIBER_FILES}
-      ${COMMON_CONFIG_FILES}
-      ${COMMON_ERROR_FILES}
-      ${COMMON_LOG_FILES}
-      ${CORE_ASYNC_ENGINE_FILES}
-      ${COMMON_NETWORK_FILES}
-      ${CORE_NETWORK_PROTOCOL_FILES}
-      ${CORE_TRANSPORT_POLICIES_FILES}
-      ${CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES}
-      ${CORE_FACTORIES_FILES}
-      ${SERVICES_FILES}
-      ${PARSER_FILES}
-      ${CLIENT_FILES}
-      ${SERVER_FILES}
+  ${VERSIONS_FILES}
+  ${COMMON_BOOST_FIBER_FILES}
+  ${COMMON_CONFIG_FILES}
+  ${COMMON_ERROR_FILES}
+  ${COMMON_LOG_FILES}
+  ${CORE_ASYNC_ENGINE_FILES}
+  ${COMMON_NETWORK_FILES}
+  ${CORE_NETWORK_PROTOCOL_FILES}
+  ${CORE_TRANSPORT_POLICIES_FILES}
+  ${CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES}
+  ${CORE_FACTORIES_FILES}
+  ${SERVICES_FILES}
+  ${PARSER_FILES}
+  ${CLIENT_FILES}
+  ${SERVER_FILES}
 )
-
-add_subdirectory(${project_THIRDPARTY_DIR}/ssf-framework)
 
 # --- Copy test certs in bin directory
 set(SSF_CERT_TEST_ROOT_FILES
@@ -288,6 +287,8 @@ file(COPY ${SSF_CERT_TEST_ROOT_FILES}
 file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
   DESTINATION ${project_EXEC_DIR}/certs/trusted)
 
+add_subdirectory("${project_SRC_DIR}")
+
 # --- Tests
 set (BUILD_UNIT_TESTS ON)
 if (BUILD_UNIT_TESTS)
@@ -295,18 +296,6 @@ if (BUILD_UNIT_TESTS)
 
   set(GTEST_ROOT_DIR
         "${project_THIRDPARTY_DIR}/gtest" CACHE PATH "Path of gtest library")
-
-  # --- Copy test certs for tests
-  set(project_BINARY_TESTS_DIR "${project_BINARY_DIR}/src/tests")
-  set(project_BINARY_TESTS_CERT_DIR ${project_BINARY_TESTS_DIR}/certs)
-
-  file(MAKE_DIRECTORY ${project_BINARY_TESTS_CERT_DIR})
-  file(MAKE_DIRECTORY ${project_BINARY_TESTS_CERT_DIR}/trusted)
-
-  file(COPY ${SSF_CERT_TEST_ROOT_FILES}
-    DESTINATION ${project_BINARY_TESTS_CERT_DIR})
-  file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
-    DESTINATION ${project_BINARY_TESTS_CERT_DIR}/trusted)
 
   # --- Extract GTest archive in build directory
   gtest_unpack_archive()
@@ -318,6 +307,5 @@ if (BUILD_UNIT_TESTS)
 
   # --- Add src test
   add_subdirectory("${project_SRC_DIR}/tests")
+  add_subdirectory("${project_SRC_DIR}/framework/tests")
 endif (BUILD_UNIT_TESTS)
-
-add_subdirectory("${project_SRC_DIR}/core")

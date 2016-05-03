@@ -1,0 +1,17 @@
+{
+  "interface": "link_tcp_accept",
+  "type": "ACCEPT",
+  "layer_stack": {
+    "layer": "CIRCUIT",
+    "parameters": {
+      "forward": false,
+      "local_id": "server"
+    },
+    "sublayer": {
+      "layer": "TCP",
+      "parameters": {
+        "port": "9000"
+      }
+    }
+  }
+}

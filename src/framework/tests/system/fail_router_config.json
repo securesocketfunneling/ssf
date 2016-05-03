@@ -1,0 +1,24 @@
+[
+  {
+    "router": "router1",
+    "networks": {
+      "1" : "simple_lo1",
+      "3" : "simple_tls_lo1"
+    },
+    "routes": {
+      "2": "3"
+      "4": "1"
+    }
+  },
+  {
+    "router": "router2",
+    "networks": {
+      "2" : "simple_lo3",
+      "4" : "simple_tls_lo2"
+    },
+    "routes": {
+      "1": "4",
+      "4": "2"
+    }
+  }
+]
