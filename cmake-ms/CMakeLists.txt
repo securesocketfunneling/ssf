@@ -11,11 +11,10 @@ if (WIN32)
 
   # --- Boost platform requirements
   list(APPEND BOOST_PLATFORM_FLAGS "RUNTIME_STATIC")
-  list(APPEND BOOST_PLATFORM_COMPONENTS "context" "coroutine")
-    
+
   # --- OpenSSL platform requirements
   list(APPEND OPENSSL_PLATFORM_FLAGS "RUNTIME_STATIC")
-  
+
   # --- Flags for compilation
   add_definitions(-D_WIN32_WINNT=0x0501)
   if (MSVC)
@@ -24,4 +23,3 @@ if (WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   endif(MSVC)
 endif (WIN32)
-

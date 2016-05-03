@@ -86,7 +86,8 @@ find_package(
     regex
     thread
     chrono
-    ${BOOST_PLATFORM_COMPONENTS}
+    context
+    coroutine
 )
 
 # --- OpenSSL components
