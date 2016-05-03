@@ -15,7 +15,7 @@ file(COPY ${SSF_CERT_TEST_ROOT_FILES}
      DESTINATION ${FRAMEWORK_BINARY_CERT_TESTS_DIR})
 file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
      DESTINATION ${FRAMEWORK_BINARY_CERT_TESTS_DIR}/trusted)
-
+  
 # Copy test configuration files
 file(GLOB_RECURSE SYSTEM_CONFIG_TEST_FILES
   "${FRAMEWORK_SRC_TESTS_DIR}/system/*.json")
@@ -145,21 +145,21 @@ add_target("interface_layer_tests"
 project_group("Unit Tests/Framework" interface_layer_tests)
 
 # --- Routing layer tests
-add_target("routing_layer_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    "routing_layer_tests.cpp"
-    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
-)
-project_group("Unit Tests/Framework" routing_layer_tests)
+#add_target("routing_layer_tests"
+#  TYPE
+#    executable ${EXEC_FLAG} TEST
+#  LINKS
+#    ${OpenSSL_LIBRARIES}
+#    ${Boost_LIBRARIES}
+#    ${PLATFORM_SPECIFIC_LIB_DEP}
+#    lib_ssf_network
+#  PREFIX_SKIP     .*/src
+#  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+#  FILES
+#    "routing_layer_tests.cpp"
+#    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
+#)
+#project_group("Unit Tests/Framework" routing_layer_tests)
 
 # --- Transport layer tests
 add_target("transport_layer_tests"
@@ -179,35 +179,35 @@ add_target("transport_layer_tests"
 project_group("Unit Tests/Framework" transport_layer_tests)
 
 # --- Interface System tests
-add_target("interfaces_system_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    "interfaces_system_tests.cpp"
-    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
-)
-project_group("Unit Tests/Framework" interfaces_system_tests)
+#add_target("interfaces_system_tests"
+#  TYPE
+#    executable ${EXEC_FLAG} TEST
+#  LINKS
+#    ${OpenSSL_LIBRARIES}
+#    ${Boost_LIBRARIES}
+#    ${PLATFORM_SPECIFIC_LIB_DEP}
+#    lib_ssf_network
+#  PREFIX_SKIP     .*/src
+#  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+#  FILES
+#    "interfaces_system_tests.cpp"
+#    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
+#)
+#project_group("Unit Tests/Framework" interfaces_system_tests)
 
 # --- Router System tests
-add_target("router_system_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    "router_system_tests.cpp"
-    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
-)
-project_group("Unit Tests/Framework" router_system_tests)
+#add_target("router_system_tests"
+#  TYPE
+#    executable ${EXEC_FLAG} TEST
+#  LINKS
+#    ${OpenSSL_LIBRARIES}
+#    ${Boost_LIBRARIES}
+#    ${PLATFORM_SPECIFIC_LIB_DEP}
+#    lib_ssf_network
+#  PREFIX_SKIP     .*/src
+#  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+#  FILES
+#    "router_system_tests.cpp"
+#    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
+#)
+#project_group("Unit Tests/Framework" router_system_tests)

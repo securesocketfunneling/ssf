@@ -580,18 +580,18 @@ void TestStreamProtocol(
             buffer2, r_buffer1, length));
 
         {
-          boost::system::error_code endpoint_ec;
+          /*boost::system::error_code endpoint_ec;
           auto local_ep = socket1.local_endpoint(endpoint_ec);
-          auto remote_ep = socket2.remote_endpoint(endpoint_ec);
+          auto remote_ep = socket2.remote_endpoint(endpoint_ec);*/
           // TODO: endpoint contexts can really be equal?
           /*ASSERT_EQ(local_ep.endpoint_context(), remote_ep.endpoint_context())
               << "Endpoints should be equal";*/
         }
 
         {
-          boost::system::error_code endpoint_ec;
+          /*boost::system::error_code endpoint_ec;
           auto local_ep = socket2.local_endpoint(endpoint_ec);
-          auto remote_ep = socket1.remote_endpoint(endpoint_ec);
+          auto remote_ep = socket1.remote_endpoint(endpoint_ec);*/
           // TODO: endpoint contexts can really be equal?
           /*ASSERT_EQ(local_ep.endpoint_context(), remote_ep.endpoint_context())
               << "Endpoints should be equal";*/
