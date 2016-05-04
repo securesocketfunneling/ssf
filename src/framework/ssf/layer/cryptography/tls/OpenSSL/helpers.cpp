@@ -5,6 +5,7 @@
 #include <boost/serialization/vector.hpp>
 
 #include "ssf/error/error.h"
+#include "ssf/log/log.h"
 #include "ssf/utils/cleaner.h"
 #include "ssf/utils/map_helpers.h"
 
@@ -63,6 +64,8 @@ ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
   ctx.set_verify_callback(&verify_certificate, ec);
 
   if (ec) {
+    SSF_LOG(kLogError)
+        << "network crypto layer: could not set verify callback";
     return ExtendedTLSContext(nullptr);
   }
 
@@ -82,13 +85,27 @@ ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
 
   bool success = true;
 
-  success &= SetCtxCipher(ctx, parameters);
-  success &= SetCtxCa(ctx, parameters);
-  success &= SetCtxCrt(ctx, parameters, ec);
-  success &= SetCtxKey(ctx, parameters, ec);
+  if (!SetCtxCipher(ctx, parameters)) {
+    SSF_LOG(kLogError) << "network[crypto]: set context cipher suite failed";
+    success = false;
+  }
+  if (!SetCtxCa(ctx, parameters)) {
+    SSF_LOG(kLogError) << "network[crypto]: set context CA failed";
+    success = false;
+  }
+  if (!SetCtxCrt(ctx, parameters, ec)) {
+    SSF_LOG(kLogError) << "network[crypto]: set context crt failed";
+    success = false;
+  }
+  if (!SetCtxKey(ctx, parameters, ec)) {
+    SSF_LOG(kLogError) << "network[crypto]: set context key failed";
+    success = false;
+  }
+
   success |= SetCtxDhparam(ctx, parameters, ec);
 
   if (!success) {
+    SSF_LOG(kLogError) << "network[crypto]: context init failed";
     return ExtendedTLSContext(nullptr);
   }
 

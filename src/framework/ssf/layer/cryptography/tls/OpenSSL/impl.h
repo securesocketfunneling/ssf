@@ -76,7 +76,7 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
       boost::recursive_mutex::scoped_lock lock(pulling_mutex_);
       if (!pulling_) {
         pulling_ = true;
-        SSF_LOG(kLogDebug) << "pulling";
+        SSF_LOG(kLogDebug) << "network[crypto]: pulling";
         io_service_.post(boost::bind(&TLSStreamBufferer::async_pull_packets,
                                      this->shared_from_this()));
       }
@@ -218,7 +218,8 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
           cancel(cancel_ec);
         } else {
           this->status_ = ec;
-          SSF_LOG(kLogInfo) << "TLS connection terminated";
+          SSF_LOG(kLogInfo) << "network[crypto]: TLS connection terminated ("
+                            << ec.value() << ": " << ec.message() << ")";
         }
       }
 
@@ -238,7 +239,7 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
         strand_.dispatch(lambda);
       } else {
         pulling_ = false;
-        SSF_LOG(kLogDebug) << "not pulling";
+        SSF_LOG(kLogDebug) << "network[crypto]: not pulling";
       }
     }
   }
@@ -622,6 +623,7 @@ class basic_tls {
       boost::system::error_code& ec) {
     auto context = detail::make_tls_context(io_service, *parameters_it);
     if (!context) {
+      SSF_LOG(kLogError) << "network[crypto]: could not generate context";
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
     }
 
