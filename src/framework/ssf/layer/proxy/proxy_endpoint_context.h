@@ -3,12 +3,17 @@
 
 #include <string>
 
+#include <boost/asio/ip/tcp.hpp>
+
 namespace ssf {
 namespace layer {
 namespace proxy {
 
 struct Proxy {
   Proxy();
+
+  boost::asio::ip::tcp::endpoint ToTcpEndpoint(
+      boost::asio::io_service& io_service);
 
   std::string addr;
   std::string port;

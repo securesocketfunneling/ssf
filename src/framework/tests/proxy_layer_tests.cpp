@@ -35,8 +35,8 @@ TEST_F(ProxyTestFixture, ProxySetTest) {
   acceptor_parameters.push_back(tcp_server_parameters);
 
   ssf::layer::ParameterStack client_parameters;
-  client_parameters.push_back(client_address_.ToProxyParam());
-  client_parameters.push_back(proxy_address_.ToTCPParam());
+  client_parameters.push_back(proxy_address_.ToProxyParam());
+  client_parameters.push_back(client_address_.ToTCPParam());
 
   ssf::layer::ParameterStack client_error_connection_parameters;
   client_error_connection_parameters.push_back(client_address_.ToProxyParam());
@@ -102,8 +102,8 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(
       tests::virtual_network_helpers::tls_client_parameters);
-  client_parameters.push_back(client_address_.ToProxyParam());
-  client_parameters.push_back(proxy_address_.ToTCPParam());
+  client_parameters.push_back(proxy_address_.ToProxyParam());
+  client_parameters.push_back(client_address_.ToTCPParam());
 
   ssf::layer::ParameterStack client_error_parameters;
   client_error_parameters.push_back(
@@ -114,6 +114,8 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
   ssf::layer::ParameterStack client_wrong_number_parameters;
   client_wrong_number_parameters.push_back(empty_layer);
   client_wrong_number_parameters.push_back(client_address_.ToTCPParam());
+
+  TestEndpointResolverError<TLSStackProtocol>(client_wrong_number_parameters);
 
   TestStreamProtocol<TLSStackProtocol>(client_parameters, acceptor_parameters,
                                        1024);
@@ -129,8 +131,6 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
                                                   acceptor_parameters);
 
   TestStreamErrorConnectionProtocol<TLSStackProtocol>(client_error_parameters);
-
-  TestEndpointResolverError<TLSStackProtocol>(client_wrong_number_parameters);
 
   PerfTestStreamProtocolHalfDuplex<TLSStackProtocol>(client_parameters,
                                                      acceptor_parameters, 200);
@@ -165,6 +165,9 @@ TEST_F(ProxyTestFixture, ProxyNotSetTest) {
 
   ssf::layer::ParameterStack client_wrong_number_parameters;
 
+  TestEndpointResolverError<StreamStackProtocol>(
+      client_wrong_number_parameters);
+
   TestStreamProtocol<StreamStackProtocol>(client_parameters,
                                           acceptor_parameters, 1024);
 
@@ -180,9 +183,6 @@ TEST_F(ProxyTestFixture, ProxyNotSetTest) {
 
   TestStreamErrorConnectionProtocol<StreamStackProtocol>(
       client_error_connection_parameters);
-
-  TestEndpointResolverError<StreamStackProtocol>(
-      client_wrong_number_parameters);
 
   PerfTestStreamProtocolHalfDuplex<StreamStackProtocol>(
       client_parameters, acceptor_parameters, 200);

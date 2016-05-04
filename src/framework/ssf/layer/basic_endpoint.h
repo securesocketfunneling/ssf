@@ -105,6 +105,10 @@ class basic_VirtualLink_endpoint {
     return basic_address(protocol_type::get_address(*this));
   }
 
+  unsigned short port() const {
+    return protocol_type::get_port(*this);
+  }
+
  private:
   bool set_;
   internal_context_type internal_context_;
