@@ -4,7 +4,17 @@ include_directories(
   ${OpenSSL_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS})
 
-project("SSF Client")
+# --- Copy test certs for client
+set(project_BINARY_SERVER_DIR "${project_BINARY_DIR}/src/core/client")
+set(project_BINARY_SERVER_CERT_DIR ${project_BINARY_SERVER_DIR}/certs)
+
+file(MAKE_DIRECTORY ${project_BINARY_SERVER_CERT_DIR})
+file(MAKE_DIRECTORY ${project_BINARY_SERVER_CERT_DIR}/trusted)
+
+file(COPY ${SSF_CERT_TEST_ROOT_FILES}
+     DESTINATION ${project_BINARY_SERVER_CERT_DIR})
+file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
+     DESTINATION ${project_BINARY_SERVER_CERT_DIR}/trusted)
 
 # --- ssfc
 set(CLIENT_NAME "ssfc")
