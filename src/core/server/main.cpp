@@ -30,7 +30,8 @@ int main(int argc, char** argv) {
   }
 
   // Load SSF config if any
-  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec);
+  ssf::config::Config ssf_config;
+  ssf_config.Update(cmd.config_file(), ec);
 
   if (ec) {
     SSF_LOG(kLogError) << "server: invalid config file format";

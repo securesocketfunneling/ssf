@@ -7,7 +7,7 @@ namespace network {
 
 Query GenerateClientQuery(const std::string& remote_addr,
                           const std::string& remote_port,
-                          const ssf::Config& ssf_config,
+                          const ssf::config::Config& ssf_config,
                           const CircuitBouncers& bouncers) {
 #ifdef TLS_OVER_TCP_LINK
   return GenerateClientTLSQuery(remote_addr, remote_port, ssf_config, bouncers);
@@ -18,7 +18,7 @@ Query GenerateClientQuery(const std::string& remote_addr,
 
 Query GenerateServerQuery(const std::string& remote_addr,
                           const std::string& remote_port,
-                          const ssf::Config& ssf_config) {
+                          const ssf::config::Config& ssf_config) {
 #ifdef TLS_OVER_TCP_LINK
   return GenerateServerTLSQuery(remote_addr, remote_port, ssf_config);
 #elif TCP_ONLY_LINK
@@ -47,7 +47,7 @@ Query GenerateClientTCPQuery(const std::string& remote_addr,
 
 Query GenerateClientTLSQuery(const std::string& remote_addr,
                              const std::string& remote_port,
-                             const ssf::Config& ssf_config,
+                             const ssf::config::Config& ssf_config,
                              const CircuitBouncers& bouncers) {
   ssf::layer::LayerParameters tls_param_layer = {
       {"ca_src", "file"},
@@ -60,13 +60,18 @@ Query GenerateClientTLSQuery(const std::string& remote_addr,
       {"dhparam_file", ssf_config.tls.dh_path},
       {"set_cipher_suit", ssf_config.tls.cipher_alg}};
 
-  ssf::layer::LayerParameters tls_default_param_layer = {
-      {}, {"default", "true"}, {}};
+  auto& proxy = ssf_config.proxy;
+  ssf::layer::LayerParameters proxy_param_layer = {
+      {"http_addr", proxy.http_addr},
+      {"http_port", proxy.http_port}};
+
+  ssf::layer::LayerParameters default_param_layer = {{"default", "true"}};
 
   ssf::layer::data_link::NodeParameterList nodes;
 
   nodes.PushBackNode();
   nodes.AddTopLayerToBackNode({{"addr", remote_addr}, {"port", remote_port}});
+  nodes.AddTopLayerToBackNode(proxy_param_layer);
   nodes.AddTopLayerToBackNode(tls_param_layer);
 
   for (auto& bouncer : bouncers) {
@@ -74,7 +79,8 @@ Query GenerateClientTLSQuery(const std::string& remote_addr,
     auto port = ssf::parser::BounceParser::GetRemotePort(bouncer);
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode({{"addr", addr}, {"port", port}});
-    nodes.AddTopLayerToBackNode(tls_default_param_layer);
+    nodes.AddTopLayerToBackNode(default_param_layer);
+    nodes.AddTopLayerToBackNode(default_param_layer);
   }
 
   Query query = ssf::layer::data_link::make_client_full_circuit_parameter_stack(
@@ -103,7 +109,7 @@ Query GenerateServerTCPQuery(const std::string& remote_addr,
 
 Query GenerateServerTLSQuery(const std::string& remote_addr,
                              const std::string& remote_port,
-                             const ssf::Config& ssf_config) {
+                             const ssf::config::Config& ssf_config) {
   ssf::layer::LayerParameters tls_param_layer = {
       {"ca_src", "file"},
       {"crt_src", "file"},
@@ -121,11 +127,17 @@ Query GenerateServerTLSQuery(const std::string& remote_addr,
     physical_parameters["addr"] = remote_addr;
   }
 
+  ssf::layer::LayerParameters proxy_param_layer = {
+      {"http_addr", ssf_config.proxy.http_addr},
+      {"http_port", ssf_config.proxy.http_port}};
+
   ssf::layer::ParameterStack layer_parameters;
   layer_parameters.push_front(physical_parameters);
+  layer_parameters.push_front(proxy_param_layer);
   layer_parameters.push_front(tls_param_layer);
 
-  ssf::layer::ParameterStack default_parameters = {{}, tls_param_layer, {}};
+  ssf::layer::ParameterStack default_parameters = {
+      {}, tls_param_layer, proxy_param_layer, {}};
 
   Query query = ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(
       "server", default_parameters, layer_parameters);

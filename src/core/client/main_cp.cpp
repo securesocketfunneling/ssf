@@ -30,7 +30,7 @@ using BounceParser = ssf::parser::BounceParser;
 // Generate network query
 ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
                                          const std::string& remote_port,
-                                         const ssf::Config& config,
+                                         const ssf::config::Config& config,
                                          const CircuitBouncers& bouncers);
 
 int main(int argc, char** argv) {
@@ -72,7 +72,8 @@ int main(int argc, char** argv) {
   }
 
   boost::system::error_code ec_config;
-  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
+  ssf::config::Config ssf_config;
+  ssf_config.Update(cmd.config_file(), ec_config);
 
   if (ec_config) {
     SSF_LOG(kLogError) << "client: invalid config file format";
@@ -129,7 +130,7 @@ int main(int argc, char** argv) {
 
 ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
                                          const std::string& remote_port,
-                                         const ssf::Config& ssf_config,
+                                         const ssf::config::Config& ssf_config,
                                          const CircuitBouncers& bouncers) {
   std::string first_node_addr;
   std::string first_node_port;

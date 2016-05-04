@@ -6,29 +6,35 @@
 #include <boost/system/error_code.hpp>
 
 namespace ssf {
-struct Config {
-  Config() : tls() {}
+namespace config {
 
-  struct Tls {
-    Tls()
-        : ca_cert_path("./certs/trusted/ca.crt"),
-          cert_path("./certs/certificate.crt"),
-          key_path("./certs/private.key"),
-          key_password(""),
-          dh_path("./certs/dh4096.pem"),
-          cipher_alg("DHE-RSA-AES256-GCM-SHA384") {}
+struct Tls {
+  Tls();
 
-    std::string ca_cert_path;
-    std::string cert_path;
-    std::string key_path;
-    std::string key_password;
-    std::string dh_path;
-    std::string cipher_alg;
-  };
-  Tls tls;
+  std::string ca_cert_path;
+  std::string cert_path;
+  std::string key_path;
+  std::string key_password;
+  std::string dh_path;
+  std::string cipher_alg;
 };
 
-Config LoadConfig(const std::string& filepath, boost::system::error_code& ec);
+struct Proxy {
+  Proxy();
+
+  std::string http_addr;
+  std::string http_port;
+};
+
+struct Config {
+  Config();
+  void Update(const std::string& filepath, boost::system::error_code& ec);
+
+  Tls tls;
+  Proxy proxy;
+};
+
+}  // config
 
 }  // ssf
 
