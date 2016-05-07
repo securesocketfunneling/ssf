@@ -1,0 +1,206 @@
+cmake_minimum_required(VERSION 2.8)
+
+enable_testing()
+
+set(project_BINARY_SERVICES_TESTS_DIR "${project_BINARY_DIR}/src/tests/services")
+
+# --- Copy test certs for tests
+set(project_BINARY_SERVICES_TESTS_CERT_DIR ${project_BINARY_SERVICES_TESTS_DIR}/certs)
+
+file(MAKE_DIRECTORY ${project_BINARY_SERVICES_TESTS_CERT_DIR})
+file(MAKE_DIRECTORY ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
+
+file(COPY ${SSF_CERT_TEST_ROOT_FILES}
+     DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR})
+file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
+     DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
+
+SET(TCP_HELPERS_FILES
+  "tcp_helpers.h"
+  "tcp_helpers.cpp")
+  
+SET(UDP_HELPERS_FILES
+  "udp_helpers.h"
+  "udp_helpers.cpp")
+  
+SET(SOCKS_HELPERS_FILES
+  "socks_helpers.h"
+  "socks_helpers.cpp")
+  
+set(SERVICE_TESTS_FILES
+  "service_test_fixture.h"
+)
+
+# --- Service tests
+
+# --- Socks test
+set(socks_test_source_files
+  "socks_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${SOCKS_HELPERS_FILES}
+  ${TCP_HELPERS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("socks_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${socks_test_source_files}
+)
+project_group("Unit Tests/Services" socks_tests)
+
+# --- Remote socks test
+set(remote_socks_test_source_files
+  "remote_socks_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${SOCKS_HELPERS_FILES}
+  ${TCP_HELPERS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("remote_socks_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${remote_socks_test_source_files}
+)
+project_group("Unit Tests/Services" remote_socks_tests)
+
+# --- Stream forward test
+set(stream_forwarding_test_source_files
+  "stream_forwarding_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${TCP_HELPERS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("stream_forward_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${stream_forwarding_test_source_files}
+)
+project_group("Unit Tests/Services" stream_forward_tests)
+
+# --- Remote stream forward test
+set(remote_stream_forwarding_test_source_files
+  "remote_stream_forwarding_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${TCP_HELPERS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("remote_stream_forward_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${remote_stream_forwarding_test_source_files}
+)
+project_group("Unit Tests/Services" remote_stream_forward_tests)
+
+# --- UDP forward test
+set(udp_test_source_files
+  "udp_forwarding_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${UDP_HELPERS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("udp_forward_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${udp_test_source_files}
+)
+project_group("Unit Tests/Services" udp_forward_tests)
+
+# --- Remote UDP forward test
+set(remote_udp_test_source_files
+  "remote_udp_forwarding_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${UDP_HELPERS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("remote_udp_forward_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${remote_udp_test_source_files}
+)
+project_group("Unit Tests/Services" remote_udp_forward_tests)
+
+# --- File copy from client test
+file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_to_copy)
+file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_copied)
+
+FILE(GLOB_RECURSE TEST_FILES_TO_COPY
+  "${project_SRC_DIR}/tests/services/files_to_copy/*"
+)
+
+file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${project_BINARY_DIR}/src/tests/services/files_to_copy)
+
+set(file_copy_from_client_files
+  "file_copy_from_client_tests.cpp"
+  "file_copy_test_fixture.h"
+  "file_copy_test_fixture.cpp"
+  ${SSF_SOURCES}
+)
+
+add_target("file_copy_from_client_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${file_copy_from_client_files}
+)
+project_group("Unit Tests/Services" file_copy_from_client_tests)
