@@ -71,6 +71,6 @@ target_include_directories(lib_ssf_network
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-if (BUILD_UNIT_TESTS)
+if (BUILD_FRAMEWORK_UNIT_TESTS)
   add_subdirectory(tests)
-endif(BUILD_UNIT_TESTS)
+endif(BUILD_FRAMEWORK_UNIT_TESTS)

@@ -12,6 +12,11 @@ set(SSF_VERSION "${SSF_VERSION_MAJOR}.${SSF_VERSION_MINOR}.${SSF_VERSION_FIX}")
 
 message("** SSF_VERSION ${SSF_VERSION}")
 
+# --- Options
+option(BUILD_UNIT_TESTS "Build SSF unit tests" ON)
+option(BUILD_FRAMEWORK_UNIT_TESTS "Build SSF framework unit tests" OFF)
+option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
+
 # --- Set client/server security
 if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
   message("** SSF_SECURITY is FORCE_TCP_ONLY")
@@ -115,8 +120,7 @@ set(SSF_CERT_TEST_TRUSTED_FILES
 )
 
 # --- Unit tests
-set (BUILD_UNIT_TESTS ON)
-if (BUILD_UNIT_TESTS)
+if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
   include(GTest)
 
   set(GTEST_ROOT_DIR
@@ -129,7 +133,7 @@ if (BUILD_UNIT_TESTS)
 
   # --- Add GTest project
   add_subdirectory(${GTEST_ROOT_DIR})
-endif (BUILD_UNIT_TESTS)
+endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
 # --- Add sources
 add_subdirectory(src)
