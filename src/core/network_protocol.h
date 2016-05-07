@@ -1,6 +1,7 @@
 #ifndef SSF_CORE_NETWORK_PROTOCOL_H_
 #define SSF_CORE_NETWORK_PROTOCOL_H_
 
+#include <list>
 #include <string>
 
 #include <ssf/layer/data_link/circuit_helpers.h>
@@ -15,59 +16,72 @@
 
 namespace ssf {
 namespace network {
-using Query = ssf::layer::ParameterStack;
-using CircuitBouncers = std::list<std::string>;
 
-using ProxyTCPProtocol =
-    ssf::layer::proxy::basic_ProxyProtocol<ssf::layer::physical::tcp>;
+class NetworkProtocol {
+ public:
+  using Query = ssf::layer::ParameterStack;
+  using CircuitBouncers = std::list<std::string>;
 
-template <class Layer>
-using TLSboLayer = ssf::layer::cryptography::basic_CryptoStreamProtocol<
-    Layer, ssf::layer::cryptography::buffered_tls>;
+  using ProxyTCPProtocol =
+      ssf::layer::proxy::basic_ProxyProtocol<ssf::layer::physical::tcp>;
 
-using TLSPhysicalProtocol = TLSboLayer<ProxyTCPProtocol>;
+  template <class Layer>
+  using TLSboLayer = ssf::layer::cryptography::basic_CryptoStreamProtocol<
+      Layer, ssf::layer::cryptography::buffered_tls>;
 
-using CircuitTLSProtocol = ssf::layer::data_link::basic_CircuitProtocol<
-    TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
-using TLSoCircuitTLSProtocol = TLSboLayer<CircuitTLSProtocol>;
+  using TLSPhysicalProtocol = TLSboLayer<ProxyTCPProtocol>;
 
-using CircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
-    ProxyTCPProtocol, ssf::layer::data_link::CircuitPolicy>;
+  using CircuitTLSProtocol = ssf::layer::data_link::basic_CircuitProtocol<
+      TLSPhysicalProtocol, ssf::layer::data_link::CircuitPolicy>;
+  using TLSoCircuitTLSProtocol = TLSboLayer<CircuitTLSProtocol>;
 
-using PlainProtocol = CircuitProtocol;
-using TLSProtocol = CircuitTLSProtocol;
-using FullTLSProtocol = TLSoCircuitTLSProtocol;
+  using CircuitProtocol = ssf::layer::data_link::basic_CircuitProtocol<
+      ProxyTCPProtocol, ssf::layer::data_link::CircuitPolicy>;
+
+  using PlainProtocol = CircuitProtocol;
+  using TLSProtocol = CircuitTLSProtocol;
+  using FullTLSProtocol = TLSoCircuitTLSProtocol;
 
 #ifdef TLS_OVER_TCP_LINK
-using Protocol = FullTLSProtocol;
+  using Protocol = FullTLSProtocol;
 #elif TCP_ONLY_LINK
-using Protocol = PlainProtocol;
+  using Protocol = PlainProtocol;
 #endif
 
-Query GenerateClientQuery(const std::string& remote_addr,
-                          const std::string& remote_port,
-                          const ssf::config::Config& ssf_config,
-                          const CircuitBouncers& bouncers);
+ public:
+  static Query GenerateClientQuery(const std::string& remote_addr,
+                                   const std::string& remote_port,
+                                   const ssf::config::Config& ssf_config,
+                                   const CircuitBouncers& bouncers);
 
-Query GenerateServerQuery(const std::string& remote_addr,
-                          const std::string& remote_port,
-                          const ssf::config::Config& ssf_config);
+  static Query GenerateServerQuery(const std::string& remote_addr,
+                                   const std::string& remote_port,
+                                   const ssf::config::Config& ssf_config);
 
-Query GenerateClientTCPQuery(const std::string& remote_addr,
-                             const std::string& remote_port,
-                             const CircuitBouncers& nodes);
+  static Query GenerateClientTCPQuery(const std::string& remote_addr,
+                                      const std::string& remote_port,
+                                      const ssf::config::Config& ssf_config,
+                                      const CircuitBouncers& nodes);
 
-Query GenerateClientTLSQuery(const std::string& remote_addr,
-                             const std::string& remote_port,
-                             const ssf::config::Config& ssf_config,
-                             const CircuitBouncers& nodes);
+  static Query GenerateClientTLSQuery(const std::string& remote_addr,
+                                      const std::string& remote_port,
+                                      const ssf::config::Config& ssf_config,
+                                      const CircuitBouncers& nodes);
 
-Query GenerateServerTCPQuery(const std::string& remote_addr,
-                             const std::string& remote_port);
+  static Query GenerateServerTCPQuery(const std::string& remote_addr,
+                                      const std::string& remote_port,
+                                      const ssf::config::Config& ssf_config);
 
-Query GenerateServerTLSQuery(const std::string& remote_addr,
-                             const std::string& remote_port,
-                             const ssf::config::Config& ssf_config);
+  static Query GenerateServerTLSQuery(const std::string& remote_addr,
+                                      const std::string& remote_port,
+                                      const ssf::config::Config& ssf_config);
+
+  static ssf::layer::LayerParameters TlsConfigToLayerParameters(
+      const ssf::config::Config& ssf_config);
+
+  static ssf::layer::LayerParameters ProxyConfigToLayerParameters(
+      const ssf::config::Config& ssf_config);
+};
 
 }  // network
 }  // ssf
