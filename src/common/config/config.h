@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
 namespace ssf {
@@ -26,10 +27,17 @@ struct Proxy {
   std::string http_port;
 };
 
-struct Config {
+class Config {
+ public:
   Config();
+
   void Update(const std::string& filepath, boost::system::error_code& ec);
 
+ private:
+  void UpdateTls(const boost::property_tree::ptree& pt);
+  void UpdateProxy(const boost::property_tree::ptree& pt);
+
+ public:
   Tls tls;
   Proxy proxy;
 };
