@@ -1,3 +1,6 @@
+#ifndef TESTS_COPY_FILE_TEST_FIXTURE_H_
+#define TESTS_COPY_FILE_TEST_FIXTURE_H_
+
 #include <array>
 #include <functional>
 #include <future>
@@ -20,12 +23,14 @@
 #include "services/initialisation.h"
 #include "services/user_services/copy_file_service.h"
 
+using NetworkProtocol = ssf::network::NetworkProtocol;
+
 class CopyFileTestFixture : public ::testing::Test {
  public:
   using Client =
-      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
   using Server =
-      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
   using demux = Client::Demux;
   using BaseUserServicePtr =
       ssf::services::BaseUserService<demux>::BaseUserServicePtr;
@@ -60,10 +65,10 @@ class CopyFileTestFixture : public ::testing::Test {
   }
 
   void StartServer() {
-    ssf::Config ssf_config;
+    ssf::config::Config ssf_config;
 
     auto endpoint_query =
-        ssf::network::GenerateServerQuery("", "8000", ssf_config);
+        NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
 
     p_ssf_server_.reset(new Server());
 
@@ -81,10 +86,10 @@ class CopyFileTestFixture : public ::testing::Test {
 
     client_services.push_back(p_service);
 
-    ssf::Config ssf_config;
+    ssf::config::Config ssf_config;
 
-    auto endpoint_query =
-        ssf::network::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
+    auto endpoint_query = NetworkProtocol::GenerateClientQuery(
+        "127.0.0.1", "8000", ssf_config, {});
 
     p_ssf_client_.reset(new Client(
         client_services, boost::bind(&CopyFileTestFixture::SSFClientCallback,
@@ -236,3 +241,5 @@ class CopyStdinFromClientToRemoteTest : public CopyFileTestFixture {
     return "files_copied/test_file1.txt";
   }
 };
+
+#endif  // TESTS_COPY_FILE_TEST_FIXTURE_H_

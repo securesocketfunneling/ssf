@@ -11,14 +11,36 @@
 
 #include "common/config/config.h"
 
-#include "core/network_protocol.h"
-#include "core/client/client.h"
-#include "core/server/server.h"
-
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
 #include "services/user_services/remote_socks.h"
+
+#include "tests/service_test_fixture.h"
+
+#define SSF_ADDR "127.0.0.1"
+#define SSF_PORT "9000"
+#define SSF_SOCKS_ADDR "127.0.0.1"
+#define SSF_SOCKS_PORT "9091"
+#define SERVER_ADDR "127.0.0.1"
+#define SERVER_PORT "9090"
+
+class RemoteSocksTest : public ServiceFixtureTest<ssf::services::RemoteSocks> {
+ public:
+  RemoteSocksTest() {}
+
+  ~RemoteSocksTest() {}
+
+  virtual void SetUp() {
+    StartServer(SSF_ADDR, SSF_PORT);
+    StartClient(SSF_ADDR, SSF_PORT);
+  }
+
+  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+      boost::system::error_code& ec) {
+    return ServiceTested::CreateServiceOptions(SSF_SOCKS_PORT, ec);
+  }
+};
 
 class request {
  public:
@@ -115,7 +137,7 @@ class DummyClient {
     t_ = boost::thread([&]() { io_service_.run(); });
 
     boost::asio::ip::tcp::resolver r(io_service_);
-    boost::asio::ip::tcp::resolver::query q("127.0.0.1", "9091");
+    boost::asio::ip::tcp::resolver::query q(SSF_SOCKS_ADDR, SSF_SOCKS_PORT);
     boost::system::error_code ec;
     boost::asio::connect(socket_, r.resolve(q), ec);
 
@@ -131,7 +153,7 @@ class DummyClient {
     boost::system::error_code ec;
 
     boost::asio::ip::tcp::resolver r2(io_service_);
-    boost::asio::ip::tcp::resolver::query q2("127.0.0.1", "9090");
+    boost::asio::ip::tcp::resolver::query q2(SERVER_ADDR, SERVER_PORT);
     request req(request::command_type::connect, *r2.resolve(q2), "01");
 
     boost::asio::write(socket_, req.buffers(), ec);
@@ -229,7 +251,6 @@ class DummyServer {
  public:
   DummyServer()
       : io_service_(),
-        listening_port_(9090),
         p_worker_(new boost::asio::io_service::work(io_service_)),
         acceptor_(io_service_),
         one_buffer_size_(10240) {
@@ -243,17 +264,19 @@ class DummyServer {
       threads_.create_thread([&]() { io_service_.run(); });
     }
 
-    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(),
-                                            listening_port_);
+    boost::asio::ip::tcp::resolver r(io_service_);
+    boost::asio::ip::tcp::resolver::query q(SERVER_ADDR, SERVER_PORT);
+
     boost::asio::socket_base::reuse_address option(true);
     try {
+      boost::asio::ip::tcp::endpoint endpoint(*r.resolve(q));
       acceptor_.open(endpoint.protocol());
       acceptor_.set_option(option);
       acceptor_.bind(endpoint);
       acceptor_.listen();
     } catch (const std::exception& e) {
-      SSF_LOG(kLogError) << "dummy server: fail to initialize acceptor on port "
-                         << listening_port_ << "(" << e.what() << ")";
+      SSF_LOG(kLogError) << "dummy server: fail to initialize acceptor "
+                         << "(" << e.what() << ")";
       Stop();
       return;
     }
@@ -323,7 +346,6 @@ class DummyServer {
   }
 
   boost::asio::io_service io_service_;
-  int listening_port_;
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
   boost::asio::ip::tcp::acceptor acceptor_;
   std::size_t one_buffer_size_;
@@ -332,113 +354,6 @@ class DummyServer {
   boost::thread_group threads_;
 };
 
-class RemoteSocksTest : public ::testing::Test {
- public:
-  using Client =
-      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
-  using Server =
-      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
-  using demux = Client::Demux;
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
-
- public:
-  RemoteSocksTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
-
-  ~RemoteSocksTest() {}
-
-  virtual void SetUp() {
-    StartServer();
-    StartClient();
-  }
-
-  virtual void TearDown() {
-    p_ssf_client_->Stop();
-    p_ssf_server_->Stop();
-  }
-
-  void StartServer() {
-    ssf::Config ssf_config;
-
-    auto endpoint_query =
-        ssf::network::GenerateServerQuery("", "9000", ssf_config);
-
-    p_ssf_server_.reset(new Server());
-
-    boost::system::error_code run_ec;
-    p_ssf_server_->Run(endpoint_query, run_ec);
-  }
-
-  void StartClient() {
-    std::vector<BaseUserServicePtr> client_options;
-    boost::system::error_code ec;
-    auto p_service =
-        ssf::services::RemoteSocks<demux>::CreateServiceOptions("9091", ec);
-
-    client_options.push_back(p_service);
-
-    ssf::Config ssf_config;
-
-    auto endpoint_query =
-        ssf::network::GenerateClientQuery("127.0.0.1", "9000", ssf_config, {});
-
-    p_ssf_client_.reset(new Client(
-        client_options,
-        boost::bind(&RemoteSocksTest::SSFClientCallback, this, _1, _2, _3)));
-    boost::system::error_code run_ec;
-    p_ssf_client_->Run(endpoint_query, run_ec);
-  }
-
-  bool Wait() {
-    auto network_set_future = network_set_.get_future();
-    auto service_set_future = service_set_.get_future();
-    auto transport_set_future = transport_set_.get_future();
-
-    network_set_future.wait();
-    service_set_future.wait();
-    transport_set_future.wait();
-
-    return network_set_future.get() && service_set_future.get() &&
-           transport_set_future.get();
-  }
-
-  void SSFClientCallback(ssf::services::initialisation::type type,
-                         BaseUserServicePtr p_user_service,
-                         const boost::system::error_code& ec) {
-    if (type == ssf::services::initialisation::NETWORK) {
-      network_set_.set_value(!ec);
-      if (ec) {
-        service_set_.set_value(false);
-        transport_set_.set_value(false);
-      }
-
-      return;
-    }
-
-    if (type == ssf::services::initialisation::TRANSPORT) {
-      transport_set_.set_value(!ec);
-
-      return;
-    }
-
-    if (type == ssf::services::initialisation::SERVICE &&
-        p_user_service->GetName() == "remote_socks") {
-      service_set_.set_value(!ec);
-
-      return;
-    }
-  }
-
- protected:
-  std::unique_ptr<Client> p_ssf_client_;
-  std::unique_ptr<Server> p_ssf_server_;
-
-  std::promise<bool> network_set_;
-  std::promise<bool> transport_set_;
-  std::promise<bool> service_set_;
-};
-
-//-----------------------------------------------------------------------------
 TEST_F(RemoteSocksTest, startStopTransmitSSFRemoteSocks) {
   ASSERT_TRUE(Wait());
 

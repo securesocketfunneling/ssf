@@ -7,6 +7,10 @@
             "key_password": "test_key_password",
             "dh_path": "test_dh_path",
             "cipher_alg": "test_cipher_alg"
+        },
+        "proxy" : {
+            "http_addr": "127.0.0.1",
+            "http_port": "8080"
         }
     }
 }

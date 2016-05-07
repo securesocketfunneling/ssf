@@ -6,14 +6,16 @@
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 #include "core/server/server.h"
 
+using NetworkProtocol = ssf::network::NetworkProtocol;
+
 TEST(SSFServerTest, failListeningWrongInterface) {
   using Server =
-      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
-  ssf::Config ssf_config;
+  ssf::config::Config ssf_config;
 
   auto endpoint_query =
-      ssf::network::GenerateServerQuery("1.1.1.1", "8000", ssf_config);
+      NetworkProtocol::GenerateServerQuery("1.1.1.1", "8000", ssf_config);
   Server server;
 
   boost::system::error_code run_ec;
@@ -24,12 +26,12 @@ TEST(SSFServerTest, failListeningWrongInterface) {
 
 TEST(SSFServerTest, listeningAllInterfaces) {
   using Server =
-      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
-  ssf::Config ssf_config;
+  ssf::config::Config ssf_config;
 
   auto endpoint_query =
-      ssf::network::GenerateServerQuery("", "8000", ssf_config);
+      NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
   Server server;
 
   boost::system::error_code run_ec;
@@ -42,12 +44,12 @@ TEST(SSFServerTest, listeningAllInterfaces) {
 
 TEST(SSFServerTest, listeningLocalhostInterface) {
   using Server =
-      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
-  ssf::Config ssf_config;
+  ssf::config::Config ssf_config;
 
   auto endpoint_query =
-      ssf::network::GenerateServerQuery("127.0.0.1", "8000", ssf_config);
+      NetworkProtocol::GenerateServerQuery("127.0.0.1", "8000", ssf_config);
   Server server;
 
   boost::system::error_code run_ec;

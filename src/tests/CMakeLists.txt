@@ -144,6 +144,7 @@ project_group("Unit Tests/Network" ssf_server_tests)
 # --- Socks test
 set(socks_test_source_files
   "socks_tests.cpp"
+  "service_test_fixture.h"
   ${SSF_SOURCES}
 )
 
@@ -165,6 +166,7 @@ project_group("Unit Tests/Services" socks_tests)
 # --- Remote socks test
 set(remote_socks_test_source_files
   "remote_socks_tests.cpp"
+  "service_test_fixture.h"
   ${SSF_SOURCES}
 )
 
@@ -186,6 +188,7 @@ project_group("Unit Tests/Services" remote_socks_tests)
 # --- Stream forward test
 set(stream_forwarding_test_source_files
   "stream_forwarding_tests.cpp"
+  "service_test_fixture.h"
   ${SSF_SOURCES}
 )
 
@@ -207,6 +210,7 @@ project_group("Unit Tests/Services" stream_forward_tests)
 # --- Remote stream forward test
 set(remote_stream_forwarding_test_source_files
   "remote_stream_forwarding_tests.cpp"
+  "service_test_fixture.h"
   ${SSF_SOURCES}
 )
 
@@ -228,6 +232,7 @@ project_group("Unit Tests/Services" remote_stream_forward_tests)
 # --- UDP forward test
 set(udp_test_source_files
   "udp_forwarding_tests.cpp"
+  "service_test_fixture.h"
   ${SSF_SOURCES}
 )
 
@@ -249,6 +254,7 @@ project_group("Unit Tests/Services" udp_forward_tests)
 # --- Remote UDP forward test
 set(remote_udp_test_source_files
   "remote_udp_forwarding_tests.cpp"
+  "service_test_fixture.h"
   ${SSF_SOURCES}
 )
 
@@ -279,6 +285,7 @@ file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${project_BINARY_DIR}/src/tests/file
 
 set(file_copy_from_client_files
   "file_copy_from_client_tests.cpp"
+  "copy_file_test_fixture.h"
   ${SSF_SOURCES}
 )
 

@@ -22,13 +22,14 @@
 #include "services/initialisation.h"
 #include "services/user_services/port_forwarding.h"
 
-//-----------------------------------------------------------------------------
+using NetworkProtocol = ssf::network::NetworkProtocol;
+
 TEST(BouncingTests, BouncingChain) {
   using BounceParser = ssf::parser::BounceParser;
   using Client =
-      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
   using Server =
-      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
   using demux = Client::Demux;
   using BaseUserServicePtr =
@@ -43,14 +44,14 @@ TEST(BouncingTests, BouncingChain) {
 
   uint16_t initial_server_port = 10000;
   uint8_t nb_of_servers = 5;
-  ssf::Config ssf_config;
+  ssf::config::Config ssf_config;
 
   boost::system::error_code client_ec;
   boost::system::error_code bounce_ec;
   boost::system::error_code server_ec;
 
   ++initial_server_port;
-  auto server_endpoint_query = ssf::network::GenerateServerQuery(
+  auto server_endpoint_query = NetworkProtocol::GenerateServerQuery(
       "", std::to_string(initial_server_port), ssf_config);
   servers.emplace_front();
   servers.front().Run(server_endpoint_query, server_ec);
@@ -61,7 +62,7 @@ TEST(BouncingTests, BouncingChain) {
 
   for (uint8_t i = 0; i < nb_of_servers - 1; ++i) {
     ++initial_server_port;
-    auto bounce_endpoint_query = ssf::network::GenerateServerQuery(
+    auto bounce_endpoint_query = NetworkProtocol::GenerateServerQuery(
         "", std::to_string(initial_server_port), ssf_config);
 
     servers.emplace_front();
@@ -92,6 +93,8 @@ TEST(BouncingTests, BouncingChain) {
       BaseUserServicePtr p_user_service, const boost::system::error_code& ec) {
     if (type == ssf::services::initialisation::NETWORK) {
       network_set.set_value(!ec);
+      
+      EXPECT_EQ(ec.value(), 0) << "Error on network initialisation";
       if (ec) {
         service_set.set_value(false);
         transport_set.set_value(false);
@@ -101,6 +104,7 @@ TEST(BouncingTests, BouncingChain) {
     }
 
     if (type == ssf::services::initialisation::TRANSPORT) {
+      EXPECT_EQ(ec.value(), 0) << "Error on network initialisation";
       transport_set.set_value(!ec);
       if (ec) {
         service_set.set_value(false);
@@ -110,12 +114,13 @@ TEST(BouncingTests, BouncingChain) {
     }
 
     if (type == ssf::services::initialisation::SERVICE) {
+      EXPECT_EQ(ec.value(), 0) << "Error on network initialisation";
       service_set.set_value(!ec);
       return;
     }
   };
 
-  auto client_endpoint_query = ssf::network::GenerateClientQuery(
+  auto client_endpoint_query = NetworkProtocol::GenerateClientQuery(
       remote_addr, remote_port, ssf_config, bouncers);
 
   Client client(client_options, std::move(callback));
@@ -130,9 +135,9 @@ TEST(BouncingTests, BouncingChain) {
   transport_future.wait();
   service_future.wait();
 
-  ASSERT_TRUE(network_future.get()) << "Network should be set";
-  ASSERT_TRUE(transport_future.get()) << "Transport should be set";
-  ASSERT_TRUE(service_future.get()) << "Service should be set";
+  EXPECT_TRUE(network_future.get()) << "Network should be set";
+  EXPECT_TRUE(transport_future.get()) << "Transport should be set";
+  EXPECT_TRUE(service_future.get()) << "Service should be set";
 
   client.Stop();
   for (auto& server : servers) {
