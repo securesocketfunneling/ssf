@@ -74,6 +74,14 @@ class VirtualEmptyStreamProtocol {
         next_layer_protocol::make_endpoint(io_service, parameters_it, id, ec));
   }
 
+  static std::string get_address(const endpoint& endpoint) {
+    return endpoint.next_layer_endpoint().address().to_string();
+  }
+
+  static unsigned short get_port(const endpoint& endpoint) {
+    return endpoint.next_layer_endpoint().port();
+  }
+
   static void add_params_from_property_tree(
       query* p_query, const boost::property_tree::ptree& property_tree,
       bool connect, boost::system::error_code& ec) {

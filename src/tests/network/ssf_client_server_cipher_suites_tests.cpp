@@ -18,11 +18,13 @@
 #include "services/initialisation.h"
 #include "services/user_services/udp_port_forwarding.h"
 
+using NetworkProtocol = ssf::network::NetworkProtocol;
+
 class SSFClientServerCipherSuitesTest : public ::testing::Test {
  public:
-  using Client = ssf::SSFClient<ssf::network::FullTLSProtocol,
+  using Client = ssf::SSFClient<NetworkProtocol::FullTLSProtocol,
                                 ssf::TransportProtocolPolicy>;
-  using Server = ssf::SSFServer<ssf::network::FullTLSProtocol,
+  using Server = ssf::SSFServer<NetworkProtocol::FullTLSProtocol,
                                 ssf::TransportProtocolPolicy>;
   using demux = Client::Demux;
   using BaseUserServicePtr =
@@ -42,8 +44,9 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     p_ssf_server_->Stop();
   }
 
-  void StartServer(const ssf::Config& config) {
-    auto endpoint_query = ssf::network::GenerateServerQuery("", "8000", config);
+  void StartServer(const ssf::config::Config& config) {
+    auto endpoint_query =
+        NetworkProtocol::GenerateServerTLSQuery("", "8000", config);
 
     p_ssf_server_.reset(new Server());
 
@@ -51,11 +54,12 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     p_ssf_server_->Run(endpoint_query, run_ec);
   }
 
-  void StartClient(const ssf::Config& config, const ClientCallback& callback) {
+  void StartClient(const ssf::config::Config& config,
+                   const ClientCallback& callback) {
     std::vector<BaseUserServicePtr> client_options;
 
-    auto endpoint_query =
-        ssf::network::GenerateClientQuery("127.0.0.1", "8000", config, {});
+    auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
+        "127.0.0.1", "8000", config, {});
 
     p_ssf_client_.reset(new Client(client_options, callback));
 
@@ -86,9 +90,10 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
       return;
     }
   };
-  ssf::Config client_config;
-  ssf::Config server_config;
-  server_config.tls.cipher_alg = "DHE-RSA-AES256-GCM-SHA256";
+  ssf::config::Config client_config;
+  ssf::config::Config server_config;
+  server_config.tls().set_cipher_alg("DHE-RSA-AES256-GCM-SHA256");
+
   StartServer(server_config);
   StartClient(client_config, callback);
 
@@ -119,12 +124,14 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
       return;
     }
   };
-  ssf::Config client_config;
-  ssf::Config server_config;
-  client_config.tls.cipher_alg =
-      "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256";
-  server_config.tls.cipher_alg =
-      "ECDH-ECDSA-AES128-SHA256:DHE-RSA-AES128-SHA256";
+  ssf::config::Config client_config;
+  ssf::config::Config server_config;
+
+  client_config.tls().set_cipher_alg(
+      "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256^");
+  server_config.tls().set_cipher_alg(
+      "ECDH-ECDSA-AES128-SHA256:DHE-RSA-AES128-SHA256");
+
   StartServer(server_config);
   StartClient(client_config, callback);
 

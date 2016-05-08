@@ -6,6 +6,12 @@ namespace proxy {
 
 Proxy::Proxy() : addr(""), port("") {}
 
+boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(boost::asio::io_service& io_service) {
+  boost::asio::ip::tcp::resolver resolver(io_service);
+  auto endpoint_it = resolver.resolve({ addr, port });
+  return *endpoint_it;
+}
+
 ProxyEndpointContext::ProxyEndpointContext()
     : proxy_enabled(false), http_proxy() {}
 

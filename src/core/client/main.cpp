@@ -22,13 +22,15 @@
 #include "services/user_services/udp_port_forwarding.h"
 #include "services/user_services/udp_remote_port_forwarding.h"
 
+using NetworkProtocol = ssf::network::NetworkProtocol;
+
 using Client =
-    ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+    ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
 using Demux = Client::Demux;
 using BaseUserServicePtr = Client::BaseUserServicePtr;
 using ClientServices = std::vector<BaseUserServicePtr>;
-using CircuitBouncers = std::list<std::string>;
+using CircuitBouncers = NetworkProtocol::CircuitBouncers;
 using BounceParser = ssf::parser::BounceParser;
 using ParsedParameters =
     ssf::command_line::standard::CommandLine::ParsedParameters;
@@ -42,10 +44,10 @@ void InitializeClientServices(ClientServices* p_client_services,
                               boost::system::error_code& ec);
 
 // Generate network query
-ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
-                                         const std::string& remote_port,
-                                         const ssf::Config& config,
-                                         const CircuitBouncers& bouncers);
+NetworkProtocol::Query GenerateNetworkQuery(const std::string& remote_addr,
+                                            const std::string& remote_port,
+                                            const ssf::config::Config& config,
+                                            const CircuitBouncers& bouncers);
 
 int main(int argc, char** argv) {
   ssf::log::Configure();
@@ -86,7 +88,10 @@ int main(int argc, char** argv) {
   }
 
   // Load SSF config if any
-  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec);
+  ssf::config::Config ssf_config;
+  ssf_config.Update(cmd.config_file(), ec);
+
+  ssf_config.Log();
 
   if (ec) {
     SSF_LOG(kLogError) << "client: invalid config file format -- Exiting";
@@ -98,13 +103,21 @@ int main(int argc, char** argv) {
          const boost::system::error_code& ec) {
         switch (type) {
           case ssf::services::initialisation::NETWORK:
-            SSF_LOG(kLogInfo) << "client: connected to remote server "
-                              << (!ec ? "OK" : "NOK");
+            if (ec) {
+              SSF_LOG(kLogError) << "client: connected to remote server NOK";
+            } else {
+              SSF_LOG(kLogInfo) << "client: connected to remote server OK";
+            }
             break;
           case ssf::services::initialisation::SERVICE:
             if (p_service.get() != nullptr) {
-              SSF_LOG(kLogInfo) << "client: service " << p_service->GetName()
-                                << " " << (!ec ? "OK" : "NOK");
+              if (ec) {
+                SSF_LOG(kLogError) << "client: service <"
+                                   << p_service->GetName() << "> OK";
+              } else {
+                SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
+                                  << "> OK";
+              }
             }
             break;
           default:
@@ -169,10 +182,9 @@ void InitializeClientServices(ClientServices* p_client_services,
   }
 }
 
-ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
-                                         const std::string& remote_port,
-                                         const ssf::Config& ssf_config,
-                                         const CircuitBouncers& bouncers) {
+NetworkProtocol::Query GenerateNetworkQuery(
+    const std::string& remote_addr, const std::string& remote_port,
+    const ssf::config::Config& ssf_config, const CircuitBouncers& bouncers) {
   std::string first_node_addr;
   std::string first_node_port;
   CircuitBouncers nodes = bouncers;
@@ -187,6 +199,6 @@ ssf::network::Query GenerateNetworkQuery(const std::string& remote_addr,
     first_node_port = remote_port;
   }
 
-  return ssf::network::GenerateClientQuery(first_node_addr, first_node_port,
-                                           ssf_config, nodes);
+  return NetworkProtocol::GenerateClientQuery(first_node_addr, first_node_port,
+                                              ssf_config, nodes);
 }

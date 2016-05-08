@@ -1,0 +1,6 @@
+{
+    "ssf": {
+        "tls" : {
+            "ca_cert_path": "test"
+        }
+    }

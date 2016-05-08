@@ -18,12 +18,14 @@
 #include "services/initialisation.h"
 #include "services/user_services/udp_port_forwarding.h"
 
+using NetworkProtocol = ssf::network::NetworkProtocol;
+
 class SSFClientServerTest : public ::testing::Test {
  public:
   using Client =
-      ssf::SSFClient<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
   using Server =
-      ssf::SSFServer<ssf::network::Protocol, ssf::TransportProtocolPolicy>;
+      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
   using demux = Client::Demux;
 
@@ -46,10 +48,10 @@ class SSFClientServerTest : public ::testing::Test {
   }
 
   void StartServer() {
-    ssf::Config ssf_config;
+    ssf::config::Config ssf_config;
 
     auto endpoint_query =
-        ssf::network::GenerateServerQuery("", "8000", ssf_config);
+        NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
     p_ssf_server_.reset(new Server());
 
     boost::system::error_code run_ec;
@@ -59,10 +61,10 @@ class SSFClientServerTest : public ::testing::Test {
   void StartClient() {
     std::vector<BaseUserServicePtr> client_options;
 
-    ssf::Config ssf_config;
+    ssf::config::Config ssf_config;
 
-    auto endpoint_query =
-        ssf::network::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
+    auto endpoint_query = NetworkProtocol::GenerateClientQuery(
+        "127.0.0.1", "8000", ssf_config, {});
 
     p_ssf_client_.reset(new Client(
         client_options, boost::bind(&SSFClientServerTest::SSFClientCallback,
@@ -109,5 +111,4 @@ class SSFClientServerTest : public ::testing::Test {
   std::promise<bool> transport_set_;
 };
 
-//-----------------------------------------------------------------------------
 TEST_F(SSFClientServerTest, connectDisconnect) { ASSERT_TRUE(Wait()); }

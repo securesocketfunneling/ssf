@@ -1,0 +1,9 @@
+{
+    "ssf": {
+        "tls" : {
+            "ca_cert_path": "test_ca_path",
+            "key_path": "test_key_path",
+            "dh_path": "test_dh_path"
+        }
+    }
+}

@@ -34,7 +34,7 @@ ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
 
   if (!ValidateIPTarget(io_service, http_addr, http_port)) {
     ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
-    SSF_LOG(kLogError) << "proxy: could not resolve target address <"
+    SSF_LOG(kLogError) << "network[proxy]: could not resolve target address <"
                        << http_addr << ":" << http_port << ">";
     return context;
   }

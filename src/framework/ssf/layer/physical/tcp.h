@@ -56,6 +56,15 @@ class tcp {
     return ssf::layer::physical::detail::make_tcp_endpoint(
         io_service, *parameters_it, ec);
   }
+  
+
+  static std::string get_address(const endpoint& endpoint) {
+    return endpoint.address().to_string();  
+  }
+
+  static unsigned short get_port(const endpoint& endpoint) {
+    return endpoint.port();
+  }
 
   static void add_params_from_property_tree(
       query* p_query, const boost::property_tree::ptree& property_tree,

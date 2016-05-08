@@ -37,7 +37,10 @@ class HttpConnectOp {
         peer_endpoint_(std::move(peer_endpoint)) {}
 
   void operator()(boost::system::error_code& ec) {
-    stream_.connect(peer_endpoint_.next_layer_endpoint(), ec);
+    auto& endpoint_context = peer_endpoint_.endpoint_context();
+    stream_.connect(
+        endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
+        ec);
 
     if (ec) {
       return;
@@ -45,18 +48,14 @@ class HttpConnectOp {
 
     boost::system::error_code close_ec;
     try {
-      auto& next_layer_endpoint = p_local_endpoint_->next_layer_endpoint();
-      next_layer_endpoint = stream_.local_endpoint(ec);
+      auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
 
       p_local_endpoint_->set();
 
       // Send connect request to context addr:port
-      auto& endpoint_context = peer_endpoint_.endpoint_context();
-      auto& target_addr = endpoint_context.http_proxy.addr;
-      auto& target_port = endpoint_context.http_proxy.port;
-
-      std::string connect_str =
-          GenerateHttpProxyRequest(target_addr, target_port);
+      std::string connect_str = GenerateHttpProxyRequest(
+          next_layer_remote_endpoint.address().to_string(),
+          std::to_string(next_layer_remote_endpoint.port()));
 
       boost::asio::write(
           stream_, boost::asio::buffer(connect_str, connect_str.size()), ec);
@@ -126,20 +125,20 @@ class AsyncHttpConnectOp {
       std::size_t size = 0) {
     if (!ec) {
       boost::system::error_code endpoint_ec;
-      auto& next_layer_endpoint = p_local_endpoint_->next_layer_endpoint();
+      auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
       auto& endpoint_context = peer_endpoint_.endpoint_context();
-      auto& target_addr = endpoint_context.http_proxy.addr;
-      auto& target_port = endpoint_context.http_proxy.port;
 
       reenter(coro_) {
-        yield stream_.async_connect(peer_endpoint_.next_layer_endpoint(),
-                                    std::move(*this));
+        yield stream_.async_connect(
+            endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
+            std::move(*this));
 
-        next_layer_endpoint = stream_.local_endpoint(endpoint_ec);
         p_local_endpoint_->set();
 
         // Send connect request to context addr:port
-        *p_connect_str_ = GenerateHttpProxyRequest(target_addr, target_port);
+        *p_connect_str_ = GenerateHttpProxyRequest(
+            next_layer_remote_endpoint.address().to_string(),
+            std::to_string(next_layer_remote_endpoint.port()));
 
         yield boost::asio::async_write(
             stream_,
