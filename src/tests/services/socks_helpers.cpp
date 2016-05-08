@@ -64,12 +64,12 @@ DummyClient::DummyClient(const std::string& socks_server_addr,
                          const std::string& target_addr,
                          const std::string& target_port, size_t size)
     : io_service_(),
+      p_worker_(new boost::asio::io_service::work(io_service_)),
+      socket_(io_service_),
       socks_server_addr_(socks_server_addr),
       socks_server_port_(socks_server_port),
       target_addr_(target_addr),
       target_port_(target_port),
-      p_worker_(new boost::asio::io_service::work(io_service_)),
-      socket_(io_service_),
       size_(size) {}
 
 bool DummyClient::Init() {

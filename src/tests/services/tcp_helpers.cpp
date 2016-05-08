@@ -12,10 +12,10 @@ namespace tcp {
 DummyServer::DummyServer(const std::string& listening_addr,
                          const std::string& listening_port)
     : io_service_(),
-      listening_addr_(listening_addr),
-      listening_port_(listening_port),
       p_worker_(new boost::asio::io_service::work(io_service_)),
       acceptor_(io_service_),
+      listening_addr_(listening_addr),
+      listening_port_(listening_port),
       one_buffer_size_(10240) {
   for (size_t i = 0; i < one_buffer_size_; ++i) {
     one_buffer_[i] = 1;
