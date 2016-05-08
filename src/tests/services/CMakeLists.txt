@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-enable_testing()
+set(services_tests_group_name "Unit Tests/Services")  
 
 set(project_BINARY_SERVICES_TESTS_DIR "${project_BINARY_DIR}/src/tests/services")
 
@@ -14,16 +14,16 @@ file(COPY ${SSF_CERT_TEST_ROOT_FILES}
      DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR})
 file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
      DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
-
-SET(TCP_HELPERS_FILES
+     
+set(TCP_HELPERS_FILES
   "tcp_helpers.h"
   "tcp_helpers.cpp")
   
-SET(UDP_HELPERS_FILES
+set(UDP_HELPERS_FILES
   "udp_helpers.h"
   "udp_helpers.cpp")
   
-SET(SOCKS_HELPERS_FILES
+set(SOCKS_HELPERS_FILES
   "socks_helpers.h"
   "socks_helpers.cpp")
   
@@ -55,7 +55,7 @@ add_target("socks_tests"
   FILES
     ${socks_test_source_files}
 )
-project_group("Unit Tests/Services" socks_tests)
+project_group(${services_tests_group_name} socks_tests)
 
 # --- Remote socks test
 set(remote_socks_test_source_files
@@ -79,7 +79,7 @@ add_target("remote_socks_tests"
   FILES
     ${remote_socks_test_source_files}
 )
-project_group("Unit Tests/Services" remote_socks_tests)
+project_group(${services_tests_group_name} remote_socks_tests)
 
 # --- Stream forward test
 set(stream_forwarding_test_source_files
@@ -102,7 +102,7 @@ add_target("stream_forward_tests"
   FILES
     ${stream_forwarding_test_source_files}
 )
-project_group("Unit Tests/Services" stream_forward_tests)
+project_group(${services_tests_group_name} stream_forward_tests)
 
 # --- Remote stream forward test
 set(remote_stream_forwarding_test_source_files
@@ -125,7 +125,7 @@ add_target("remote_stream_forward_tests"
   FILES
     ${remote_stream_forwarding_test_source_files}
 )
-project_group("Unit Tests/Services" remote_stream_forward_tests)
+project_group(${services_tests_group_name} remote_stream_forward_tests)
 
 # --- UDP forward test
 set(udp_test_source_files
@@ -148,7 +148,7 @@ add_target("udp_forward_tests"
   FILES
     ${udp_test_source_files}
 )
-project_group("Unit Tests/Services" udp_forward_tests)
+project_group(${services_tests_group_name} udp_forward_tests)
 
 # --- Remote UDP forward test
 set(remote_udp_test_source_files
@@ -171,7 +171,7 @@ add_target("remote_udp_forward_tests"
   FILES
     ${remote_udp_test_source_files}
 )
-project_group("Unit Tests/Services" remote_udp_forward_tests)
+project_group(${services_tests_group_name} remote_udp_forward_tests)
 
 # --- File copy from client test
 file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_to_copy)
@@ -203,4 +203,4 @@ add_target("file_copy_from_client_tests"
   FILES
     ${file_copy_from_client_files}
 )
-project_group("Unit Tests/Services" file_copy_from_client_tests)
+project_group(${services_tests_group_name} file_copy_from_client_tests)

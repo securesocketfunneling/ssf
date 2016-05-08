@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 
-enable_testing()
-
 set(network_tests_group_name "Unit Tests/Network")
 
 set(project_BINARY_NETWORK_TESTS_DIR "${project_BINARY_DIR}/src/tests/network")

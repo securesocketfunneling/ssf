@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
-enable_testing()
+set(config_tests_group_name "Unit Tests/Config")  
 
-set(project_BINARY_CONFIG_TESTS_DIR "${project_BINARY_DIR}/src/tests")
+set(project_BINARY_CONFIG_TESTS_DIR "${project_BINARY_DIR}/src/tests/config")
      
 # --- copy test config files
 set(project_BINARY_CONFIG_TESTS_CONF_DIR ${project_BINARY_CONFIG_TESTS_DIR}/config_files)
@@ -36,4 +36,4 @@ add_target("load_config_tests"
   FILES
     ${load_config_test_source_files}
 )
-project_group("Unit Tests/Config" load_config_tests)
+project_group(${config_tests_group_name} load_config_tests)
