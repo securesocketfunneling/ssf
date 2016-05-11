@@ -54,7 +54,7 @@ class FileToFiber : public BaseService<Demux> {
   using FilenameBuffer = ssf::services::copy_file::FilenameBuffer;
 
  public:
-  enum { factory_id = 8, kServicePort = 41 };
+  enum { factory_id = 8, kServicePort = 41 + ((1 << 17) + 1) };
 
  public:
   // Factory method to create the service
