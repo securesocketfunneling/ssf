@@ -204,3 +204,25 @@ add_target("file_copy_from_client_tests"
     ${file_copy_from_client_files}
 )
 project_group(${services_tests_group_name} file_copy_from_client_tests)
+
+# --- Process test
+set(process_test_source_files
+  "process_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("process_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${process_test_source_files}
+)
+project_group(${services_tests_group_name} process_tests)
