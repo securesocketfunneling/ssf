@@ -34,7 +34,7 @@ class CommandLine {
 
   std::string addr();
 
-  std::string bounce_file();
+  std::string circuit_file();
 
   std::string config_file();
 
@@ -49,7 +49,7 @@ class CommandLine {
 
   uint16_t port_;
   std::string addr_;
-  std::string bounce_file_;
+  std::string circuit_file_;
   std::string config_file_;
   bool addr_set_;
   bool port_set_;

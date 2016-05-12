@@ -21,7 +21,7 @@ namespace command_line {
 namespace copy {
 
 CommandLine::CommandLine()
-    : addr_(""), bounce_file_(""), addr_set_(false), port_set_(false) {}
+    : addr_(""), circuit_file_(""), addr_set_(false), port_set_(false) {}
 
 void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
   try {
@@ -38,7 +38,7 @@ void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
           "Set remote SSF server port")
       ("bounces,b",
           boost::program_options::value<std::string>(),
-          "Set bounce file")
+          "Set circuit file")
       ("config,c",
           boost::program_options::value<std::string>(),
           "Set config file");
@@ -74,7 +74,7 @@ void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
         << ssf::versions::minor << "."
         << ssf::versions::fix
         << std::endl << std::endl;
-      std::cout << "usage : ssfcp  [-p port] [-b bounces_file] [-c "
+      std::cout << "usage : ssfcp  [-p port] [-b circuit_file] [-c "
                    "config] [-h] [-t] arg1 [arg2]" << std::endl;
       std::cout << cmd_line << std::endl;
       std::cout << "Using Boost " << ssf::versions::boost_version <<
@@ -95,7 +95,7 @@ uint16_t CommandLine::port() const { return port_; }
 
 std::string CommandLine::addr() const { return addr_; }
 
-std::string CommandLine::bounce_file() const { return bounce_file_; }
+std::string CommandLine::circuit_file() const { return circuit_file_; }
 
 std::string CommandLine::config_file() const { return config_file_; }
 
@@ -124,9 +124,9 @@ void CommandLine::InternalParsing(
     from_stdin_ = stdin_it->second.as<bool>();
   }
 
-  auto bounces_file_it = vm.find("bounces");
-  if (bounces_file_it != vm.end()) {
-    bounce_file_ = bounces_file_it->second.as<std::string>();
+  auto circuit_file_it = vm.find("bounces");
+  if (circuit_file_it != vm.end()) {
+    circuit_file_ = circuit_file_it->second.as<std::string>();
   }
 
   auto config_it = vm.find("config");
