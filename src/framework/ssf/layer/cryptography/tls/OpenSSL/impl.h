@@ -218,8 +218,8 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
           cancel(cancel_ec);
         } else {
           this->status_ = ec;
-          SSF_LOG(kLogInfo) << "network[crypto]: TLS connection terminated ("
-                            << ec.value() << ": " << ec.message() << ")";
+          SSF_LOG(kLogDebug) << "network[crypto]: TLS connection terminated ("
+                             << ec.value() << ": " << ec.message() << ")";
         }
       }
 

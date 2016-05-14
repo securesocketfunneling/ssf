@@ -34,7 +34,7 @@ SocksServer<Demux>::SocksServer(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void SocksServer<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service SOCKS: starting server on port " << local_port_;
+  SSF_LOG(kLogInfo) << "service[socks]: starting server on port " << local_port_;
   ec = init_ec_;
 
   if (!init_ec_) {
@@ -46,7 +46,7 @@ template <typename Demux>
 void SocksServer<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  SSF_LOG(kLogInfo) << "service SOCKS: stopping server";
+  SSF_LOG(kLogInfo) << "service[socks]: stopping server";
   this->HandleStop();
 }
 
@@ -63,14 +63,14 @@ void SocksServer<Demux>::StartAccept() {
 
 template <typename Demux>
 void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service SOCKS: HandleAccept";
+  SSF_LOG(kLogTrace) << "service[socks]: HandleAccept";
 
   if (!fiber_acceptor_.is_open()) {
     return;
   }
 
   if (ec) {
-    SSF_LOG(kLogError) << "service SOCKS: error accepting new connection: "
+    SSF_LOG(kLogError) << "service[socks]: error accepting new connection: "
                        << ec.message() << " " << ec.value();
     this->StartAccept();
   }
@@ -81,12 +81,12 @@ void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
   auto start_handler = [this, self, p_version](boost::system::error_code ec,
                                                std::size_t) {
     if (ec) {
-      SSF_LOG(kLogError) << "service SOCKS: error reading protocol version: "
+      SSF_LOG(kLogError) << "service[socks]: error reading protocol version: "
                          << ec.message() << " " << ec.value();
       fiber fib = std::move(this->new_connection_);
       this->StartAccept();
     } else if (p_version->Number() == 4) {
-      SSF_LOG(kLogTrace) << "service SOCKS: version accepted: v4";
+      SSF_LOG(kLogTrace) << "service[socks]: version accepted: v4";
       ssf::BaseSessionPtr new_socks_session =
           std::make_shared<ssf::socks::v4::Session<Demux> >(
               &(this->session_manager_), std::move(this->new_connection_));
@@ -94,7 +94,7 @@ void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
       this->session_manager_.start(new_socks_session, e);
       this->StartAccept();
     } else if (p_version->Number() == 5) {
-      SSF_LOG(kLogTrace) << "service SOCKS: version accepted: v5";
+      SSF_LOG(kLogTrace) << "service[socks]: version accepted: v5";
       ssf::BaseSessionPtr new_socks_session =
           std::make_shared<ssf::socks::v5::Session<Demux> >(
               &(this->session_manager_), std::move(this->new_connection_));
@@ -102,7 +102,7 @@ void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
       this->session_manager_.start(new_socks_session, e);
       this->StartAccept();
     } else {
-      SSF_LOG(kLogError) << "service SOCKS: protocol not supported yet: "
+      SSF_LOG(kLogError) << "service[socks]: protocol not supported yet: "
                          << p_version->Number();
       this->new_connection_.close();
       fiber fib = std::move(this->new_connection_);

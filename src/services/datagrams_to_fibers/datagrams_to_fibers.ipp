@@ -24,7 +24,7 @@ DatagramsToFibers<Demux>::DatagramsToFibers(boost::asio::io_service& io_service,
 template <typename Demux>
 void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo)
-      << "service datagrams to fibers: starting relay on local port udp "
+      << "service[datagrams to fibers]: starting relay on local port udp "
       << local_port_;
 
   // Listen on all interfaces
@@ -38,11 +38,11 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service datagrams to fibers: stopping";
+  SSF_LOG(kLogInfo) << "service[datagrams to fibers]: stopping";
   socket_.close(ec);
 
   if (ec) {
-    SSF_LOG(kLogDebug) << "service datagrams to fibers: error on stop "
+    SSF_LOG(kLogDebug) << "service[datagrams to fibers]: error on stop "
                        << ec.message() << std::endl;
   }
 
@@ -56,7 +56,7 @@ uint32_t DatagramsToFibers<Demux>::service_type_id() {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::StartReceivingDatagrams() {
-  SSF_LOG(kLogTrace) << "service datagrams to fibers: receiving new datagrams";
+  SSF_LOG(kLogTrace) << "service[datagrams to fibers]: receiving new datagrams";
 
   socket_.async_receive_from(
       boost::asio::buffer(working_buffer_), endpoint_,

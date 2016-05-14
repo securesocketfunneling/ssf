@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
                        << ec.message();
   }
 
-  SSF_LOG(kLogInfo) << "client: stop" << std::endl;
+  SSF_LOG(kLogInfo) << "client: stop";
   client.Stop();
 
   return 0;
