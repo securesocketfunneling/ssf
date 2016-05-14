@@ -49,7 +49,7 @@ class Server : public BaseService<Demux> {
   static ServerPtr Create(boost::asio::io_service& io_service,
                           demux& fiber_demux, Parameters parameters) {
     if (!parameters.count("local_port")) {
-      return ServerServerPtr(nullptr);
+      return ServerPtr(nullptr);
     } else {
       return std::shared_ptr<Server>(new Server(
           io_service, fiber_demux, std::stoul(parameters["local_port"])));

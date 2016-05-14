@@ -109,7 +109,7 @@ FILE(GLOB_RECURSE PROCESS_SERVICE_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/services/process/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/services/process/*.ipp"
   "${CMAKE_CURRENT_SOURCE_DIR}/services/process/*.cpp")
-  
+
 FILE(GLOB_RECURSE USER_SERVICE_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.cpp"
@@ -133,7 +133,7 @@ if (WIN32)
   FILE(GLOB_RECURSE COPY_FILE_SERVICE_WINDOWS_FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/filesystem/windows/*.h"
       "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/filesystem/windows/*.cpp")
-      
+
   set(COPY_FILE_SERVICE_FILES
       ${COPY_FILE_SERVICE_FILES}
       ${COPY_FILE_SERVICE_WINDOWS_FILES})
@@ -189,7 +189,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(framework)
 add_subdirectory(core)
-add_subdirectory(shell)
 
 if (BUILD_UNIT_TESTS)
   add_subdirectory(tests)

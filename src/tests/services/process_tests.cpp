@@ -52,7 +52,5 @@ TEST_F(ProcessTest, StartProcessTest) {
     SSF_LOG(kLogError) << "client: fail to connect " << ec.value();
   }
 
-
-
   socket.close();
 }

@@ -24,7 +24,6 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
   client_.close();
-  boost::system::error_code ec;
   if (ec) {
     SSF_LOG(kLogError) << "session[process]: stop error " << ec.message();
   }
