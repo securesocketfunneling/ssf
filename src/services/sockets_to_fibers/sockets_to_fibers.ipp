@@ -64,8 +64,7 @@ void SocketsToFibers<Demux>::stop(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo) << "service[sockets to fibers]: stopping";
   socket_acceptor_.close(ec);
   if (ec) {
-    SSF_LOG(kLogDebug) << "service[sockets to fibers]: " << ec.message()
-                       << std::endl;
+    SSF_LOG(kLogDebug) << "service[sockets to fibers]: " << ec.message();
   }
   manager_.stop_all();
 }

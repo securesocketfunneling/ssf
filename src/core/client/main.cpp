@@ -144,8 +144,8 @@ int main(int argc, char** argv) {
   client.Run(endpoint_query, ec);
 
   if (!ec) {
-    SSF_LOG(kLogInfo) << "client: connecting to " << cmd.addr() << ":"
-                      << cmd.port();
+    SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
+                      << cmd.port() << ">";
     SSF_LOG(kLogInfo) << "client: press [ENTER] to stop";
     getchar();
   } else {

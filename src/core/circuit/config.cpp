@@ -54,9 +54,16 @@ void Config::Update(const std::string& filepath,
 }
 
 void Config::Log() const {
+  if (nodes_.size() == 0) {
+    SSF_LOG(kLogInfo) << "config[circuit]: <None>";
+    return;
+  }
+
+  unsigned int i = 0;
   for (auto& node : nodes_) {
-    SSF_LOG(kLogInfo) << "config[circuit]: <" << node.addr() << ":"
-                      << node.port() << ">";
+    ++i;
+    SSF_LOG(kLogInfo) << "config[circuit]: " << std::to_string(i) << ". <"
+                      << node.addr() << ":" << node.port() << ">";
   }
 }
 

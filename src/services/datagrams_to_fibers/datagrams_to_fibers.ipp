@@ -43,7 +43,7 @@ void DatagramsToFibers<Demux>::stop(boost::system::error_code& ec) {
 
   if (ec) {
     SSF_LOG(kLogDebug) << "service[datagrams to fibers]: error on stop "
-                       << ec.message() << std::endl;
+                       << ec.message();
   }
 
   p_udp_operator_->StopAll();
