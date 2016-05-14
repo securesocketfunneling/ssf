@@ -21,7 +21,7 @@ namespace command_line {
 namespace standard {
 
 CommandLine::CommandLine(bool is_server)
-    : bounce_file_(""),
+    : circuit_file_(""),
       addr_set_(false),
       port_set_(false),
       is_server_(is_server) {}
@@ -67,7 +67,7 @@ CommandLine::ParsedParameters CommandLine::parse(
       options.add_options()
         ("bounces,b",
             boost::program_options::value<std::string>(),
-            "Set bounce file");
+            "Set circuit file");
     } else {
       options.add_options()
         ("port,p",
@@ -114,7 +114,7 @@ uint16_t CommandLine::port() { return port_; }
 
 std::string CommandLine::addr() { return addr_; }
 
-std::string CommandLine::bounce_file() { return bounce_file_; }
+std::string CommandLine::circuit_file() { return circuit_file_; }
 
 std::string CommandLine::config_file() { return config_file_; }
 
@@ -141,7 +141,7 @@ CommandLine::ParsedParameters CommandLine::InternalParsing(
       addr_ = vm[variable.first].as<std::string>();
       addr_set_ = true;
     } else if (variable.first == "bounces") {
-      bounce_file_ = vm[variable.first].as<std::string>();
+      circuit_file_ = vm[variable.first].as<std::string>();
     } else if (variable.first == "config") {
       config_file_ = vm[variable.first].as<std::string>();
     } else {

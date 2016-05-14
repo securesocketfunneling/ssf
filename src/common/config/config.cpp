@@ -1,5 +1,6 @@
 #include <string>
 
+#include <fstream>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/system/error_code.hpp>
 
@@ -25,19 +26,28 @@ Config::Config() : tls_(), proxy_() {}
 
 void Config::Update(const std::string& filepath,
                     boost::system::error_code& ec) {
+  std::string conf_file("config.json");
   ec.assign(::error::success, ::error::get_ssf_category());
   if (filepath == "") {
-    return;
+    std::ifstream ifile(conf_file);
+    if (!ifile.good()) {
+      return;
+    }
+  } else {
+    conf_file = filepath;
   }
+
+  SSF_LOG(kLogInfo) << "config[ssf]: loading file <" << conf_file << ">";
 
   try {
     boost::property_tree::ptree pt;
-    boost::property_tree::read_json(filepath, pt);
+    boost::property_tree::read_json(conf_file, pt);
 
     UpdateTls(pt);
     UpdateProxy(pt);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "config: error reading SSF config file: " << e.what();
+    SSF_LOG(kLogError) << "config[ssf]: error reading SSF config file: "
+                       << e.what();
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
 }

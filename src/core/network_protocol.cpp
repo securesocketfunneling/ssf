@@ -1,18 +1,17 @@
 #include "core/network_protocol.h"
 
-#include "core/parser/bounce_parser.h"
-
 namespace ssf {
 namespace network {
 
 NetworkProtocol::Query NetworkProtocol::GenerateClientQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const NetworkProtocol::CircuitBouncers& bouncers) {
+    const ssf::circuit::NodeList& circuit_nodes) {
 #ifdef TLS_OVER_TCP_LINK
-  return GenerateClientTLSQuery(remote_addr, remote_port, ssf_config, bouncers);
+  return GenerateClientTLSQuery(remote_addr, remote_port, ssf_config,
+                                circuit_nodes);
 #elif TCP_ONLY_LINK
-  return GenerateClientTCPQuery(remote_addr, remote_port, bouncers);
+  return GenerateClientTCPQuery(remote_addr, remote_port, circuit_nodes);
 #endif
 }
 
@@ -29,7 +28,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerQuery(
 NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const NetworkProtocol::CircuitBouncers& bouncers) {
+    const ssf::circuit::NodeList& circuit_nodes) {
   ssf::layer::LayerParameters proxy_param_layer =
       ProxyConfigToLayerParameters(ssf_config);
 
@@ -41,11 +40,10 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
   nodes.AddTopLayerToBackNode({{"addr", remote_addr}, {"port", remote_port}});
   nodes.AddTopLayerToBackNode(proxy_param_layer);
 
-  for (auto& bouncer : bouncers) {
-    auto addr = ssf::parser::BounceParser::GetRemoteAddress(bouncer);
-    auto port = ssf::parser::BounceParser::GetRemotePort(bouncer);
+  for (auto& circuit_node : circuit_nodes) {
     nodes.PushBackNode();
-    nodes.AddTopLayerToBackNode({{"addr", addr}, {"port", port}});
+    nodes.AddTopLayerToBackNode(
+        {{"addr", circuit_node.addr()}, {"port", circuit_node.port()}});
     nodes.AddTopLayerToBackNode(default_param_layer);
   }
 
@@ -56,7 +54,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
 NetworkProtocol::Query NetworkProtocol::GenerateClientTLSQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const NetworkProtocol::CircuitBouncers& bouncers) {
+    const ssf::circuit::NodeList& circuit_nodes) {
   ssf::layer::LayerParameters tls_param_layer =
       TlsConfigToLayerParameters(ssf_config);
 
@@ -72,11 +70,10 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTLSQuery(
   nodes.AddTopLayerToBackNode(proxy_param_layer);
   nodes.AddTopLayerToBackNode(tls_param_layer);
 
-  for (auto& bouncer : bouncers) {
-    auto addr = ssf::parser::BounceParser::GetRemoteAddress(bouncer);
-    auto port = ssf::parser::BounceParser::GetRemotePort(bouncer);
+  for (auto& circuit_node : circuit_nodes) {
     nodes.PushBackNode();
-    nodes.AddTopLayerToBackNode({{"addr", addr}, {"port", port}});
+    nodes.AddTopLayerToBackNode(
+        {{"addr", circuit_node.addr()}, {"port", circuit_node.port()}});
     nodes.AddTopLayerToBackNode(default_param_layer);
     nodes.AddTopLayerToBackNode(default_param_layer);
   }

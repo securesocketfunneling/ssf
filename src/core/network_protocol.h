@@ -13,6 +13,7 @@
 #include <ssf/layer/proxy/basic_proxy_protocol.h>
 
 #include "common/config/config.h"
+#include "core/circuit/config.h"
 
 namespace ssf {
 namespace network {
@@ -20,7 +21,6 @@ namespace network {
 class NetworkProtocol {
  public:
   using Query = ssf::layer::ParameterStack;
-  using CircuitBouncers = std::list<std::string>;
 
   using ProxyTCPProtocol =
       ssf::layer::proxy::basic_ProxyProtocol<ssf::layer::physical::tcp>;
@@ -52,21 +52,21 @@ class NetworkProtocol {
   static Query GenerateClientQuery(const std::string& remote_addr,
                                    const std::string& remote_port,
                                    const ssf::config::Config& ssf_config,
-                                   const CircuitBouncers& bouncers);
+                                   const ssf::circuit::NodeList& circuit_nodes);
 
   static Query GenerateServerQuery(const std::string& remote_addr,
                                    const std::string& remote_port,
                                    const ssf::config::Config& ssf_config);
 
-  static Query GenerateClientTCPQuery(const std::string& remote_addr,
-                                      const std::string& remote_port,
-                                      const ssf::config::Config& ssf_config,
-                                      const CircuitBouncers& nodes);
+  static Query GenerateClientTCPQuery(
+      const std::string& remote_addr, const std::string& remote_port,
+      const ssf::config::Config& ssf_config,
+      const ssf::circuit::NodeList& circuit_nodes);
 
-  static Query GenerateClientTLSQuery(const std::string& remote_addr,
-                                      const std::string& remote_port,
-                                      const ssf::config::Config& ssf_config,
-                                      const CircuitBouncers& nodes);
+  static Query GenerateClientTLSQuery(
+      const std::string& remote_addr, const std::string& remote_port,
+      const ssf::config::Config& ssf_config,
+      const ssf::circuit::NodeList& circuit_nodes);
 
   static Query GenerateServerTCPQuery(const std::string& remote_addr,
                                       const std::string& remote_port,

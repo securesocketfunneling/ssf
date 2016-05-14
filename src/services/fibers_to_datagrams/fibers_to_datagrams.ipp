@@ -25,7 +25,7 @@ FibersToDatagrams<Demux>::FibersToDatagrams(boost::asio::io_service& io_service,
 template <typename Demux>
 void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo)
-      << "service fibers to datagrams: starting relay on local port udp "
+      << "service[fibers to datagrams]: starting relay on local port udp "
       << local_port_;
 
   // fiber.open()
@@ -46,7 +46,7 @@ void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void FibersToDatagrams<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service fibers to datagrams: stopping";
+  SSF_LOG(kLogInfo) << "service[fibers to datagrams]: stopping";
   ec.assign(::error::success, ::error::get_ssf_category());
 
   fiber_.close();
@@ -60,7 +60,7 @@ uint32_t FibersToDatagrams<Demux>::service_type_id() {
 
 template <typename Demux>
 void FibersToDatagrams<Demux>::StartReceivingDatagrams() {
-  SSF_LOG(kLogTrace) << "service fibers to datagrams: receiving new datagrams";
+  SSF_LOG(kLogTrace) << "service[fibers to datagrams]: receiving new datagrams";
 
   fiber_.async_receive_from(
       boost::asio::buffer(working_buffer_), received_from_,

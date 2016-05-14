@@ -8,11 +8,11 @@
 #include "common/config/config.h"
 #include "common/log/log.h"
 
+#include "core/circuit/config.h"
 #include "core/client/client.h"
 #include "core/command_line/copy/command_line.h"
 #include "core/factories/service_option_factory.h"
 #include "core/network_protocol.h"
-#include "core/parser/bounce_parser.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -25,14 +25,13 @@ using Client =
 
 using Demux = Client::Demux;
 using BaseUserServicePtr = Client::BaseUserServicePtr;
-using CircuitBouncers = NetworkProtocol::CircuitBouncers;
-using BounceParser = ssf::parser::BounceParser;
+using CircuitNodeList = ssf::circuit::NodeList;
+using CircuitConfig = ssf::circuit::Config;
 
 // Generate network query
-NetworkProtocol::Query GenerateNetworkQuery(const std::string& remote_addr,
-                                            const std::string& remote_port,
-                                            const ssf::config::Config& config,
-                                            const CircuitBouncers& bouncers);
+NetworkProtocol::Query GenerateNetworkQuery(
+    const std::string& remote_addr, const std::string& remote_port,
+    const ssf::config::Config& config, const CircuitConfig& circuit_config);
 
 int main(int argc, char** argv) {
   ssf::log::Configure();
@@ -76,14 +75,27 @@ int main(int argc, char** argv) {
   ssf::config::Config ssf_config;
   ssf_config.Update(cmd.config_file(), ec_config);
 
-  ssf_config.Log();
-
   if (ec_config) {
     SSF_LOG(kLogError) << "client: invalid config file format";
     return 1;
   }
 
+  ssf_config.Log();
+
   std::promise<bool> closed;
+
+  CircuitConfig circuit_config;
+  circuit_config.Update(cmd.circuit_file(), ec);
+
+  if (ec) {
+    SSF_LOG(kLogError) << "client: invalid circuit config file -- Exiting";
+    return 1;
+  }
+
+  circuit_config.Log();
+
+  auto endpoint_query = GenerateNetworkQuery(
+      cmd.addr(), std::to_string(cmd.port()), ssf_config, circuit_config);
 
   auto callback =
       [&closed](ssf::services::initialisation::type type, BaseUserServicePtr,
@@ -107,23 +119,17 @@ int main(int argc, char** argv) {
   // Initiating and starting the client
   Client client(user_services, callback);
 
-  CircuitBouncers bouncers = BounceParser::ParseBounceFile(cmd.bounce_file());
+  client.Run(endpoint_query, ec);
 
-  auto endpoint_query = GenerateNetworkQuery(
-      cmd.addr(), std::to_string(cmd.port()), ssf_config, bouncers);
-
-  boost::system::error_code run_ec;
-  client.Run(endpoint_query, run_ec);
-
-  if (!run_ec) {
-    SSF_LOG(kLogInfo) << "client: connecting to " << cmd.addr() << ":"
-                      << cmd.port();
+  if (!ec) {
+    SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
+                      << cmd.port() << ">";
     // wait end transfer
     SSF_LOG(kLogInfo) << "client: wait end of file transfer";
     closed.get_future().get();
   } else {
     SSF_LOG(kLogError) << "client: error happened when running client: "
-                       << run_ec.message();
+                       << ec.message();
   }
 
   client.Stop();
@@ -133,16 +139,17 @@ int main(int argc, char** argv) {
 
 NetworkProtocol::Query GenerateNetworkQuery(
     const std::string& remote_addr, const std::string& remote_port,
-    const ssf::config::Config& ssf_config, const CircuitBouncers& bouncers) {
+    const ssf::config::Config& ssf_config,
+    const CircuitConfig& circuit_config) {
   std::string first_node_addr;
   std::string first_node_port;
-  CircuitBouncers nodes = bouncers;
+  CircuitNodeList nodes = circuit_config.nodes();
   if (nodes.size()) {
-    auto first = nodes.front();
+    auto first_node = nodes.front();
     nodes.pop_front();
-    first_node_addr = BounceParser::GetRemoteAddress(first);
-    first_node_port = BounceParser::GetRemotePort(first);
-    nodes.push_back(remote_addr + ":" + remote_port);
+    first_node_addr = first_node.addr();
+    first_node_port = first_node.port();
+    nodes.emplace_back(remote_addr, remote_port);
   } else {
     first_node_addr = remote_addr;
     first_node_port = remote_port;

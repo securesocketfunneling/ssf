@@ -6,11 +6,11 @@
 #include "common/config/config.h"
 #include "common/log/log.h"
 
+#include "core/circuit/config.h"
 #include "core/client/client.h"
 #include "core/command_line/standard/command_line.h"
 #include "core/factories/service_option_factory.h"
 #include "core/network_protocol.h"
-#include "core/parser/bounce_parser.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -30,8 +30,8 @@ using Client =
 using Demux = Client::Demux;
 using BaseUserServicePtr = Client::BaseUserServicePtr;
 using ClientServices = std::vector<BaseUserServicePtr>;
-using CircuitBouncers = NetworkProtocol::CircuitBouncers;
-using BounceParser = ssf::parser::BounceParser;
+using CircuitNodeList = ssf::circuit::NodeList;
+using CircuitConfig = ssf::circuit::Config;
 using ParsedParameters =
     ssf::command_line::standard::CommandLine::ParsedParameters;
 
@@ -44,10 +44,9 @@ void InitializeClientServices(ClientServices* p_client_services,
                               boost::system::error_code& ec);
 
 // Generate network query
-NetworkProtocol::Query GenerateNetworkQuery(const std::string& remote_addr,
-                                            const std::string& remote_port,
-                                            const ssf::config::Config& config,
-                                            const CircuitBouncers& bouncers);
+NetworkProtocol::Query GenerateNetworkQuery(
+    const std::string& remote_addr, const std::string& remote_port,
+    const ssf::config::Config& config, const CircuitConfig& circuit_config);
 
 int main(int argc, char** argv) {
   ssf::log::Configure();
@@ -89,14 +88,28 @@ int main(int argc, char** argv) {
 
   // Load SSF config if any
   ssf::config::Config ssf_config;
-  ssf_config.Update(cmd.config_file(), ec);
 
-  ssf_config.Log();
+  ssf_config.Update(cmd.config_file(), ec);
 
   if (ec) {
     SSF_LOG(kLogError) << "client: invalid config file format -- Exiting";
     return 1;
   }
+
+  ssf_config.Log();
+
+  CircuitConfig circuit_config;
+  circuit_config.Update(cmd.circuit_file(), ec);
+
+  if (ec) {
+    SSF_LOG(kLogError) << "client: invalid circuit config file -- Exiting";
+    return 1;
+  }
+
+  circuit_config.Log();
+
+  auto endpoint_query = GenerateNetworkQuery(
+      cmd.addr(), std::to_string(cmd.port()), ssf_config, circuit_config);
 
   auto callback =
       [](ssf::services::initialisation::type type, BaseUserServicePtr p_service,
@@ -113,7 +126,7 @@ int main(int argc, char** argv) {
             if (p_service.get() != nullptr) {
               if (ec) {
                 SSF_LOG(kLogError) << "client: service <"
-                                   << p_service->GetName() << "> OK";
+                                   << p_service->GetName() << "> NOK";
               } else {
                 SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
                                   << "> OK";
@@ -128,16 +141,11 @@ int main(int argc, char** argv) {
   // Initiate and run client
   Client client(user_services, callback);
 
-  CircuitBouncers bouncers = BounceParser::ParseBounceFile(cmd.bounce_file());
-
-  auto endpoint_query = GenerateNetworkQuery(
-      cmd.addr(), std::to_string(cmd.port()), ssf_config, bouncers);
-
   client.Run(endpoint_query, ec);
 
   if (!ec) {
-    SSF_LOG(kLogInfo) << "client: connecting to " << cmd.addr() << ":"
-                      << cmd.port();
+    SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
+                      << cmd.port() << ">";
     SSF_LOG(kLogInfo) << "client: press [ENTER] to stop";
     getchar();
   } else {
@@ -145,7 +153,7 @@ int main(int argc, char** argv) {
                        << ec.message();
   }
 
-  SSF_LOG(kLogInfo) << "client: stop" << std::endl;
+  SSF_LOG(kLogInfo) << "client: stop";
   client.Stop();
 
   return 0;
@@ -184,16 +192,17 @@ void InitializeClientServices(ClientServices* p_client_services,
 
 NetworkProtocol::Query GenerateNetworkQuery(
     const std::string& remote_addr, const std::string& remote_port,
-    const ssf::config::Config& ssf_config, const CircuitBouncers& bouncers) {
+    const ssf::config::Config& ssf_config,
+    const CircuitConfig& circuit_config) {
   std::string first_node_addr;
   std::string first_node_port;
-  CircuitBouncers nodes = bouncers;
+  CircuitNodeList nodes = circuit_config.nodes();
   if (nodes.size()) {
-    auto first = nodes.front();
+    auto first_node = nodes.front();
     nodes.pop_front();
-    first_node_addr = BounceParser::GetRemoteAddress(first);
-    first_node_port = BounceParser::GetRemotePort(first);
-    nodes.push_back(remote_addr + ":" + remote_port);
+    first_node_addr = first_node.addr();
+    first_node_port = first_node.port();
+    nodes.emplace_back(remote_addr, remote_port);
   } else {
     first_node_addr = remote_addr;
     first_node_port = remote_port;

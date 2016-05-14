@@ -96,6 +96,7 @@ class Config {
  public:
   /**
    * Update configuration with JSON file
+   * If no file provided, try to load config from "config.json" file
    * @param filepath config filepath (relative or absolute)
    * @param ec error code set if update failed
    *

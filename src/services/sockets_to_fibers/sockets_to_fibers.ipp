@@ -22,7 +22,7 @@ SocketsToFibers<Demux>::SocketsToFibers(boost::asio::io_service& io_service,
 template <typename Demux>
 void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo)
-      << "service sockets to fibers: starting relay on local port tcp "
+      << "service[sockets to fibers]: starting relay on local port tcp "
       << local_port_;
 
   boost::system::error_code close_ec;
@@ -61,11 +61,10 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void SocketsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service sockets to fibers: stopping";
+  SSF_LOG(kLogInfo) << "service[sockets to fibers]: stopping";
   socket_acceptor_.close(ec);
   if (ec) {
-    SSF_LOG(kLogDebug) << "service sockets to fibers: " << ec.message()
-                       << std::endl;
+    SSF_LOG(kLogDebug) << "service[sockets to fibers]: " << ec.message();
   }
   manager_.stop_all();
 }
@@ -77,7 +76,7 @@ uint32_t SocketsToFibers<Demux>::service_type_id() {
 
 template <typename Demux>
 void SocketsToFibers<Demux>::StartAcceptSockets() {
-  SSF_LOG(kLogTrace) << "service sockets to fibers: accepting new clients";
+  SSF_LOG(kLogTrace) << "service[sockets to fibers]: accepting new clients";
 
   if (!socket_acceptor_.is_open()) {
     return;
@@ -91,7 +90,7 @@ void SocketsToFibers<Demux>::StartAcceptSockets() {
 template <typename Demux>
 void SocketsToFibers<Demux>::SocketAcceptHandler(
     const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service sockets to fibers: accept handler";
+  SSF_LOG(kLogTrace) << "service[sockets to fibers]: accept handler";
 
   if (!socket_acceptor_.is_open()) {
     return;
@@ -107,7 +106,7 @@ void SocketsToFibers<Demux>::SocketAcceptHandler(
 template <typename Demux>
 void SocketsToFibers<Demux>::FiberConnectHandler(
     const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service sockets to fibers: connect handler";
+  SSF_LOG(kLogTrace) << "service[sockets to fibers]: connect handler";
 
   if (!ec) {
     auto session = SessionForwarder<socket, fiber>::create(
