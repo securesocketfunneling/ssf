@@ -26,7 +26,7 @@ class CommandLine {
 
   std::string addr() const;
 
-  std::string bounce_file() const;
+  std::string circuit_file() const;
 
   std::string config_file() const;
 
@@ -63,7 +63,7 @@ class CommandLine {
  private:
   uint16_t port_;
   std::string addr_;
-  std::string bounce_file_;
+  std::string circuit_file_;
   std::string config_file_;
   std::string input_pattern_;
   std::string output_pattern_;

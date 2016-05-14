@@ -45,7 +45,7 @@ class FiberToFile : public BaseService<Demux> {
   // Start service and listen new fiber on demux port kServicePort
   virtual void start(boost::system::error_code& ec) {
     endpoint ep(this->get_demux(), kServicePort);
-    SSF_LOG(kLogInfo) << "service fiber to file: start accept on fiber port "
+    SSF_LOG(kLogInfo) << "service[fiber to file]: start accept on fiber port "
                       << kServicePort;
     fiber_acceptor_.bind(ep, ec);
     fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
@@ -57,7 +57,7 @@ class FiberToFile : public BaseService<Demux> {
 
   // Stop service
   virtual void stop(boost::system::error_code& ec) {
-    SSF_LOG(kLogInfo) << "service fiber to file: stopping";
+    SSF_LOG(kLogInfo) << "service[fiber to file]: stopping";
     manager_.stop_all();
     fiber_acceptor_.close(ec);
     fiber_.close(ec);
@@ -93,7 +93,7 @@ class FiberToFile : public BaseService<Demux> {
   // Create a session to transmit files for the new connection
   void StartDataForwarderSessionHandler(const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogInfo) << "service fiber to file: fail accept fiber";
+      SSF_LOG(kLogInfo) << "service[fiber to file]: fail accept fiber";
       return;
     }
 

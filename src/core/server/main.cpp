@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   cmd.parse(argc, argv, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "server: wrong arguments";
+    SSF_LOG(kLogError) << "server: wrong arguments -- Exiting";
     return 1;
   }
 
@@ -35,12 +35,12 @@ int main(int argc, char** argv) {
   ssf::config::Config ssf_config;
   ssf_config.Update(cmd.config_file(), ec);
 
-  ssf_config.Log();
-
   if (ec) {
-    SSF_LOG(kLogError) << "server: invalid config file format";
+    SSF_LOG(kLogError) << "server: invalid config file format -- Exiting";
     return 1;
   }
+
+  ssf_config.Log();
 
   // Initiate and start the server
   Server server;
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
                        << ec.message();
   }
 
-  SSF_LOG(kLogInfo) << "server: stop" << std::endl;
+  SSF_LOG(kLogInfo) << "server: stop";
   server.Stop();
 
   return 0;

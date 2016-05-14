@@ -114,10 +114,10 @@ FILE(GLOB_RECURSE USER_SERVICE_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.ipp")
-
-set(PARSER_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/parser/bounce_parser.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/parser/bounce_parser.cpp")
+  
+set(CIRCUIT_CONFIG_FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/circuit/config.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/circuit/config.cpp")
 
 FILE(GLOB_RECURSE CLIENT_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/core/client/*.h"
@@ -179,7 +179,7 @@ set(SSF_SOURCES
   ${CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES}
   ${CORE_FACTORIES_FILES}
   ${SERVICES_FILES}
-  ${PARSER_FILES}
+  ${CIRCUIT_CONFIG_FILES}
   ${CLIENT_FILES}
   ${SERVER_FILES}
 )
