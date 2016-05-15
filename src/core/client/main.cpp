@@ -19,6 +19,8 @@
 #include "services/user_services/remote_socks.h"
 #include "services/user_services/port_forwarding.h"
 #include "services/user_services/remote_port_forwarding.h"
+#include "services/user_services/process.h"
+#include "services/user_services/remote_process.h"
 #include "services/user_services/udp_port_forwarding.h"
 #include "services/user_services/udp_remote_port_forwarding.h"
 
@@ -167,6 +169,8 @@ void RegisterSupportedClientServices() {
   ssf::services::UdpPortForwading<Demux>::RegisterToServiceOptionFactory();
   ssf::services::UdpRemotePortForwading<
       Demux>::RegisterToServiceOptionFactory();
+  ssf::services::Process<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::RemoteProcess<Demux>::RegisterToServiceOptionFactory();
 }
 
 void InitializeClientServices(ClientServices* p_client_services,

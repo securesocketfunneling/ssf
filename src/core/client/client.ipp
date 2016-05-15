@@ -19,6 +19,7 @@
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
+#include "services/process/server.h"
 
 #include "ssf/log/log.h"
 
@@ -147,6 +148,7 @@ void SSFClient<N, T>::DoFiberize(NetworkSocketPtr p_socket,
       Demux>::RegisterToServiceFactory(p_service_factory);
   services::copy_file::file_enquirer::FileEnquirer<
       Demux>::RegisterToServiceFactory(p_service_factory);
+  services::process::Server<Demux>::RegisterToServiceFactory(p_service_factory);
 
   // Start the admin micro service
   std::map<std::string, std::string> empty_map;

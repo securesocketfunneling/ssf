@@ -1,5 +1,5 @@
-#ifndef SSF_SERVICES_USER_SERVICES_PROCESS_H_
-#define SSF_SERVICES_USER_SERVICES_PROCESS_H_
+#ifndef SSF_SERVICES_USER_SERVICES_REMOTE_PROCESS_H_
+#define SSF_SERVICES_USER_SERVICES_REMOTE_PROCESS_H_
 
 #include <cstdint>
 
@@ -19,38 +19,38 @@ namespace ssf {
 namespace services {
 
 template <typename Demux>
-class Process : public BaseUserService<Demux> {
+class RemoteProcess : public BaseUserService<Demux> {
  private:
-  Process(uint16_t local_port)
-      : local_port_(local_port), remoteServiceId_(0), localServiceId_(0) {}
+  RemoteProcess(uint16_t remote_port)
+      : remote_port_(remote_port), remoteServiceId_(0), localServiceId_(0) {}
 
  public:
-  static std::string GetFullParseName() { return "process,P"; }
+  static std::string GetFullParseName() { return "remote_process,Q"; }
 
-  static std::string GetParseName() { return "process"; }
+  static std::string GetParseName() { return "remote_process"; }
 
   static std::string GetParseDesc() {
-    return "Bind a process on the remote host to a local socket";
+    return "Bind a process on local host to a remote connection";
   }
 
-  static std::shared_ptr<Process> CreateServiceOptions(
+  static std::shared_ptr<RemoteProcess> CreateServiceOptions(
       std::string line, boost::system::error_code& ec) {
     try {
       uint16_t port = (uint16_t)std::stoul(line);
-      return std::shared_ptr<Process>(new Process(port));
+      return std::shared_ptr<RemoteProcess>(new RemoteProcess(port));
     } catch (const std::invalid_argument&) {
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-      return std::shared_ptr<Process>(nullptr);
+      return std::shared_ptr<RemoteProcess>(nullptr);
     } catch (const std::out_of_range&) {
       ec.assign(::error::out_of_range, ::error::get_ssf_category());
-      return std::shared_ptr<Process>(nullptr);
+      return std::shared_ptr<RemoteProcess>(nullptr);
     }
   }
 
   static void RegisterToServiceOptionFactory() {
     ServiceOptionFactory<Demux>::RegisterUserServiceParser(
         GetParseName(), GetFullParseName(), GetParseDesc(),
-        &Process::CreateServiceOptions);
+        &RemoteProcess::CreateServiceOptions);
   }
 
  public:
@@ -58,10 +58,11 @@ class Process : public BaseUserService<Demux> {
   GetRemoteServiceCreateVector() {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
-    services::admin::CreateServiceRequest<Demux> r_process_server(
-        services::process::Server<Demux>::GetCreateRequest(local_port_));
+    services::admin::CreateServiceRequest<Demux> r_forward(
+        services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+            remote_port_, remote_port_));
 
-    result.push_back(r_process_server);
+    result.push_back(r_forward);
 
     return result;
   };
@@ -80,28 +81,28 @@ class Process : public BaseUserService<Demux> {
   };
 
   uint32_t CheckRemoteServiceStatus(Demux& demux) {
-    services::admin::CreateServiceRequest<Demux> r_process_server(
-        services::process::Server<Demux>::GetCreateRequest(local_port_));
+    services::admin::CreateServiceRequest<Demux> r_forward(
+        services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+            remote_port_, remote_port_));
 
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
-    return p_service_factory->GetStatus(r_process_server.service_id(),
-                                        r_process_server.parameters(),
+    return p_service_factory->GetStatus(r_forward.service_id(),
+                                        r_forward.parameters(),
                                         GetRemoteServiceId(demux));
   };
 
-  std::string GetName() { return "process"; };
+  std::string GetName() { return "remote_process"; };
 
   bool StartLocalServices(Demux& demux) {
-    services::admin::CreateServiceRequest<Demux> l_forward(
-        services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
-            local_port_, local_port_));
+    services::admin::CreateServiceRequest<Demux> l_process_server(
+        services::process::Server<Demux>::GetCreateRequest(remote_port_));
 
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     boost::system::error_code ec;
     localServiceId_ = p_service_factory->CreateRunNewService(
-        l_forward.service_id(), l_forward.parameters(), ec);
+        l_process_server.service_id(), l_process_server.parameters(), ec);
     return !ec;
   };
 
@@ -116,14 +117,15 @@ class Process : public BaseUserService<Demux> {
     if (remoteServiceId_) {
       return remoteServiceId_;
     } else {
-      services::admin::CreateServiceRequest<Demux> l_forward(
-          services::process::Server<Demux>::GetCreateRequest(local_port_));
+      services::admin::CreateServiceRequest<Demux> r_forward(
+          services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
+              remote_port_, remote_port_));
 
       auto p_service_factory =
           ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
 
-      auto id = p_service_factory->GetIdFromParameters(l_forward.service_id(),
-                                                       l_forward.parameters());
+      auto id = p_service_factory->GetIdFromParameters(r_forward.service_id(),
+                                                       r_forward.parameters());
 
       remoteServiceId_ = id;
       return id;
@@ -131,7 +133,7 @@ class Process : public BaseUserService<Demux> {
   }
 
  private:
-  uint16_t local_port_;
+  uint16_t remote_port_;
   uint32_t remoteServiceId_;
   uint32_t localServiceId_;
 };

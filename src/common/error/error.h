@@ -27,7 +27,8 @@ enum errors {
   operation_canceled = boost::system::errc::operation_canceled,
   service_not_found = 10000,
   service_not_started = 10001,
-  out_of_range = 10002
+  out_of_range = 10002,
+  process_not_created = 10003
 };
 
 namespace detail {

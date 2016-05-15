@@ -9,7 +9,7 @@
 
 #include <ssf/log/log.h>
 
-#include "services/process/session.h"
+#include "services/process/windows/session.h"
 
 namespace ssf {
 namespace services {
@@ -75,7 +75,7 @@ void Server<Demux>::HandleAccept(const boost::system::error_code& ec) {
 
   SSF_LOG(kLogInfo) << "service[process]: start session";
   ssf::BaseSessionPtr new_process_session =
-      std::make_shared<ssf::services::process::Session<Demux> >(
+      std::make_shared<ssf::services::process::windows::Session<Demux> >(
           &(this->session_manager_), std::move(this->new_connection_));
   boost::system::error_code e;
   this->session_manager_.start(new_process_session, e);

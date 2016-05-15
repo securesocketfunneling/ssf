@@ -13,15 +13,16 @@
 #include <ssf/log/log.h>
 
 #include "services/initialisation.h"
-#include "services/user_services/process.h"
+#include "services/user_services/remote_process.h"
 
 #include "tests/services/service_test_fixture.h"
 
-class ProcessTest : public ServiceFixtureTest<ssf::services::Process> {
+class RemoteProcessTest
+    : public ServiceFixtureTest<ssf::services::RemoteProcess> {
  public:
-  ProcessTest() {}
+  RemoteProcessTest() {}
 
-  ~ProcessTest() {}
+  ~RemoteProcessTest() {}
 
   virtual void SetUp() {
     StartServer("127.0.0.1", "9000");
@@ -34,7 +35,7 @@ class ProcessTest : public ServiceFixtureTest<ssf::services::Process> {
   }
 };
 
-TEST_F(ProcessTest, StartProcessTest) {
+TEST_F(RemoteProcessTest, StartProcessTest) {
   ASSERT_TRUE(Wait());
 
   boost::asio::io_service io_service;
