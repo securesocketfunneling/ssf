@@ -23,9 +23,26 @@ namespace ssf {
 namespace services {
 namespace process {
 
+namespace windows {
+template <class Demux>
+class Session;
+}  // windows
+
+namespace linux {
+template <class Demux>
+class Session;
+}  // linux
+
 template <typename Demux>
 class Server : public BaseService<Demux> {
  private:
+
+#if defined(BOOST_ASIO_HAS_IOCP)
+  using session_impl = class windows::Session<Demux>;
+#else
+  using session_impl = class linux::Session<Demux>;
+#endif
+
   using local_port_type = typename Demux::local_port_type;
 
   using ServerPtr = std::shared_ptr<Server>;

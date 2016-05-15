@@ -49,8 +49,6 @@ TEST_F(RemoteProcessTest, StartProcessTest) {
 
   boost::asio::connect(socket, r.resolve(q), ec);
 
-  Sleep(10000);
-
   if (ec) {
     SSF_LOG(kLogError) << "client: fail to connect " << ec.value();
   }
