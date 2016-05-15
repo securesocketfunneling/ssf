@@ -117,20 +117,21 @@ void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
         << "session[process]: could not initialize out stream handle";
     return;
   }
-
+  data_out_ = INVALID_HANDLE_VALUE;
   h_err_.assign(data_err_, ec);
   if (ec) {
     SSF_LOG(kLogError)
         << "session[process]: could not initialize err stream handle";
     return;
   }
-
+  data_err_ = INVALID_HANDLE_VALUE;
   h_in_.assign(data_in_, ec);
   if (ec) {
     SSF_LOG(kLogError)
         << "session[process]: could not initialize in stream handle";
     return;
   }
+  data_in_ = INVALID_HANDLE_VALUE;
 
   // pipe process stdout to socket output
   AsyncEstablishHDLink(ReadFrom(h_out_), WriteTo(client_),
@@ -160,8 +161,8 @@ void Session<Demux>::StartProcess(const std::string& process_cmd,
   startup_info.hStdError = proc_err_;
   startup_info.hStdInput = proc_in_;
   char* cmd = "cmd.exe";
-  if (!CreateProcessA(NULL, cmd, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL,
-                      NULL, &startup_info, &process_info_)) {
+  if (!::CreateProcessA(NULL, cmd, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL,
+                        NULL, &startup_info, &process_info_)) {
     SSF_LOG(kLogError) << "session[process]: create process <" << process_cmd
                        << "> failed";
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
@@ -224,12 +225,12 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
                                       SECURITY_ATTRIBUTES* p_pipe_attributes,
                                       DWORD pipe_size,
                                       boost::system::error_code& ec) {
-  HANDLE read_tmp = INVALID_HANDLE_VALUE;
+  HANDLE read_pipe_tmp = ::CreateNamedPipeA(
+      pipe_name.c_str(), PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+      PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, pipe_size, pipe_size,
+      0, p_pipe_attributes);
 
-  if ((read_tmp = ::CreateNamedPipeA(
-           pipe_name.c_str(), PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-           PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, pipe_size,
-           pipe_size, 0, p_pipe_attributes)) == INVALID_HANDLE_VALUE) {
+  if (read_pipe_tmp == INVALID_HANDLE_VALUE) {
     SSF_LOG(kLogError) << "session[process]: create read side of named pipe <"
                        << pipe_name << "> failed";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
@@ -247,8 +248,9 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
     goto cleanup;
   }
 
-  if (!::DuplicateHandle(GetCurrentProcess(), read_tmp, GetCurrentProcess(),
-                         p_read_pipe, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+  if (!::DuplicateHandle(GetCurrentProcess(), read_pipe_tmp,
+                         GetCurrentProcess(), p_read_pipe, 0, FALSE,
+                         DUPLICATE_SAME_ACCESS)) {
     SSF_LOG(kLogError)
         << "session[process]: duplicate read side of named pipe <" << pipe_name
         << "> failed";
@@ -257,8 +259,8 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
   }
 
 cleanup:
-  if (read_tmp != INVALID_HANDLE_VALUE) {
-    ::CloseHandle(read_tmp);
+  if (read_pipe_tmp != INVALID_HANDLE_VALUE) {
+    ::CloseHandle(read_pipe_tmp);
   }
 }
 
@@ -268,12 +270,12 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
                                      SECURITY_ATTRIBUTES* p_pipe_attributes,
                                      DWORD pipe_size,
                                      boost::system::error_code& ec) {
-  HANDLE in_write_tmp = INVALID_HANDLE_VALUE;
+  HANDLE write_pipe_tmp = ::CreateNamedPipeA(
+      pipe_name.c_str(), PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED,
+      PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, pipe_size, pipe_size,
+      0, p_pipe_attributes);
 
-  if ((in_write_tmp = ::CreateNamedPipeA(
-           pipe_name.c_str(), PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED,
-           PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, pipe_size,
-           pipe_size, 0, p_pipe_attributes)) == INVALID_HANDLE_VALUE) {
+  if (write_pipe_tmp == INVALID_HANDLE_VALUE) {
     SSF_LOG(kLogError) << "session[process]: create write side of named pipe <"
                        << pipe_name << "> failed";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
@@ -291,8 +293,9 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
     goto cleanup;
   }
 
-  if (!::DuplicateHandle(GetCurrentProcess(), in_write_tmp, GetCurrentProcess(),
-                         p_write_pipe, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+  if (!::DuplicateHandle(::GetCurrentProcess(), write_pipe_tmp,
+                         ::GetCurrentProcess(), p_write_pipe, 0, FALSE,
+                         DUPLICATE_SAME_ACCESS)) {
     SSF_LOG(kLogError)
         << "session[process]: duplicate write side of named pipe <" << pipe_name
         << "> failed";
@@ -301,8 +304,8 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
   }
 
 cleanup:
-  if (in_write_tmp != INVALID_HANDLE_VALUE) {
-    CloseHandle(in_write_tmp);
+  if (write_pipe_tmp != INVALID_HANDLE_VALUE) {
+    ::CloseHandle(write_pipe_tmp);
   }
 }
 
