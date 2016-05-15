@@ -61,6 +61,9 @@ class Session : public ssf::BaseSession {
   void InitPipes(int pipe_out[2], int pipe_err[2], int pipe_in[2],
                  boost::system::error_code& ec);
 
+  void InitMasterSlaveTty(int* p_master, int* p_slave,
+                          boost::system::error_code& ec);
+
   void StartForwarding(boost::system::error_code& ec);
  private:
   boost::asio::io_service& io_service_;
@@ -69,17 +72,13 @@ class Session : public ssf::BaseSession {
   fiber client_;
 
   pid_t child_pid_;
-  int pipe_out_;
-  int pipe_err_;
-  int pipe_in_;
 
-  boost::asio::posix::stream_descriptor sd_out_;
-  boost::asio::posix::stream_descriptor sd_err_;
-  boost::asio::posix::stream_descriptor sd_in_;
+  int master_tty_;
+
+  boost::asio::posix::stream_descriptor sd_;
 
   StreamBuff upstream_;
-  StreamBuff downstream_out_;
-  StreamBuff downstream_err_;
+  StreamBuff downstream_;
 };
 
 }  // linux

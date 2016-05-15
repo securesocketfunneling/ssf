@@ -3,7 +3,11 @@
 
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/select.h>
+#include <sys/ioctl.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include <ssf/log/log.h>
@@ -29,23 +33,19 @@ Session<Demux>::Session(SessionManager *p_session_manager, fiber client)
       p_session_manager_(p_session_manager),
       client_(std::move(client)),
       child_pid_(-1),
-      pipe_out_(INVALID_PIPE_ID),
-      pipe_err_(INVALID_PIPE_ID),
-      pipe_in_(INVALID_PIPE_ID),
-      sd_out_(io_service_),
-      sd_err_(io_service_),
-      sd_in_(io_service_) {}
+      master_tty_(-1),
+      sd_(io_service_) {}
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo) << "session[process]: start";
-  int pipe_out[2];
-  int pipe_err[2];
-  int pipe_in[2];
+  int master_tty;
+  int slave_tty;
 
-  InitPipes(pipe_out, pipe_err, pipe_in, ec);
+  InitMasterSlaveTty(&master_tty, &slave_tty, ec);
+
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: init pipes failed";
+    SSF_LOG(kLogError) << "session[process]: init tty failed";
     stop(ec);
     return;
   }
@@ -60,30 +60,38 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     case 0:
       // child
 
-      // redirect standard io in pies
-      while((dup2(pipe_out[SSF_PIPE_WRITE], STDOUT_FILENO) == -1) && (errno == EINTR)) {}
-      while((dup2(pipe_err[SSF_PIPE_WRITE], STDERR_FILENO) == -1) && (errno == EINTR)) {}
-      while((dup2(pipe_in[SSF_PIPE_READ], STDIN_FILENO) == -1) && (errno == EINTR)) {}
+      struct termios slave_orig_term_settings;
+      struct termios new_term_settings;
 
-      close(pipe_out[SSF_PIPE_READ]);
-      close(pipe_out[SSF_PIPE_WRITE]);
-      close(pipe_err[SSF_PIPE_READ]);
-      close(pipe_err[SSF_PIPE_WRITE]);
-      close(pipe_in[SSF_PIPE_READ]);
-      close(pipe_in[SSF_PIPE_WRITE]);
-      if (execl("/bin/bash", "/bin/bash", "-x") == -1) {
+      close(master_tty);
+
+      tcgetattr(slave_tty, &slave_orig_term_settings);
+
+      new_term_settings = slave_orig_term_settings;
+      cfmakeraw (&new_term_settings);
+      tcsetattr (slave_tty, TCSANOW, &new_term_settings);
+
+      setsid();
+      ioctl(0, TIOCSCTTY, NULL);
+
+      while((dup2(slave_tty, STDOUT_FILENO) == -1) && (errno == EINTR)) {}
+      while((dup2(slave_tty, STDERR_FILENO) == -1) && (errno == EINTR)) {}
+      while((dup2(slave_tty, STDIN_FILENO) == -1) && (errno == EINTR)) {}
+
+      if (execl("/bin/bash", "/bin/bash") == -1) {
         exit(1);
       }
+      exit(0);
     default:
       break;
   };
-  close(pipe_out[SSF_PIPE_WRITE]);
-  close(pipe_err[SSF_PIPE_WRITE]);
-  close(pipe_in[SSF_PIPE_READ]);
-  pipe_out_ = pipe_out[SSF_PIPE_READ];
-  pipe_err_ = pipe_err[SSF_PIPE_READ];
-  pipe_in_ = pipe_in[SSF_PIPE_WRITE];
+
+  master_tty_ = master_tty;
+
   StartForwarding(ec);
+  if (ec) {
+    stop(ec);
+  }
 }
 
 template <typename Demux>
@@ -98,87 +106,58 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
     kill(child_pid_, SIGTERM);
   }
 
-  if (pipe_out_ != INVALID_PIPE_ID) {
-    close(pipe_out_);
-  }
-  if (pipe_err_ != INVALID_PIPE_ID) {
-    close(pipe_err_);
-  }
-  if (pipe_in_ != INVALID_PIPE_ID) {
-    close(pipe_in_);
+  if (master_tty_ != INVALID_PIPE_ID) {
+    close(master_tty_);
   }
 
-  sd_out_.close(ec);
-  sd_err_.close(ec);
-  sd_in_.close(ec);
+  sd_.close(ec);
 }
 
+template <typename Demux>
+void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
+                                        boost::system::error_code& ec) {
+  *p_master_tty = posix_openpt(O_RDWR | O_NOCTTY);
+  if (*p_master_tty < 0) {
+    SSF_LOG(kLogError) << "session[process]: could not open master tty";
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
+    return;
+  }
+
+  if (grantpt(*p_master_tty) != 0) {
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
+    return;
+  }
+  if (unlockpt(*p_master_tty) != 0) {
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
+    return;
+  }
+
+  *p_slave_tty = open(ptsname(*p_master_tty), O_RDWR | O_NOCTTY);
+  if (*p_slave_tty < 0) {
+    SSF_LOG(kLogError) << "session[process]: could not open slave tty";
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
+    return;
+  }
+}
 
 template <typename Demux>
 void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
-  sd_out_.assign(pipe_out_, ec);
+  sd_.assign(master_tty_, ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "session[process]: could not initialize out stream handle";
+        << "session[process]: could not initialize stream handle";
     return;
   }
-  pipe_out_ = INVALID_PIPE_ID;
-  sd_err_.assign(pipe_err_, ec);
-  if (ec) {
-    SSF_LOG(kLogError)
-        << "session[process]: could not initialize err stream handle";
-    return;
-  }
-  pipe_err_ = INVALID_PIPE_ID;
-  sd_in_.assign(pipe_in_, ec);
-  if (ec) {
-    SSF_LOG(kLogError)
-        << "session[process]: could not initialize in stream handle";
-    return;
-  }
-  pipe_in_ = INVALID_PIPE_ID;
 
-  // pipe process stdout to socket output
-  AsyncEstablishHDLink(ReadFrom(sd_out_), WriteTo(client_),
-                       boost::asio::buffer(downstream_out_),
-                       Then(&Session::StopHandler, this->SelfFromThis()));
-  // pipe process stderr to socket output
-  AsyncEstablishHDLink(ReadFrom(sd_err_), WriteTo(client_),
-                       boost::asio::buffer(downstream_err_),
+  // pipe process stdout/stderr to socket output
+  AsyncEstablishHDLink(ReadFrom(sd_), WriteTo(client_),
+                       boost::asio::buffer(downstream_),
                        Then(&Session::StopHandler, this->SelfFromThis()));
   // pipe socket input to process stdin
-  AsyncEstablishHDLink(ReadFrom(client_), WriteTo(sd_in_),
+  AsyncEstablishHDLink(ReadFrom(client_), WriteTo(sd_),
                        boost::asio::buffer(upstream_),
                        Then(&Session::StopHandler, this->SelfFromThis()));
 }
-
-
-template <typename Demux>
-void Session<Demux>::InitPipes(int pipe_out[2], int pipe_err[2], int pipe_in[2],
-                               boost::system::error_code& ec) {
-  if (pipe(pipe_out) == -1) {
-    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
-    return;
-  }
-  if (pipe(pipe_err) == -1) {
-    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
-    goto cleanup_pipe_out;
-  }
-  if (pipe(pipe_in) == -1) {
-    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
-    goto cleanup_pipe_err;
-  }
-
-  return;
-
-cleanup_pipe_err:
-  close(pipe_err[SSF_PIPE_READ]);
-  close(pipe_err[SSF_PIPE_WRITE]);
-cleanup_pipe_out:
-  close(pipe_out[SSF_PIPE_READ]);
-  close(pipe_out[SSF_PIPE_WRITE]);
-}
-
 
 }  // linux
 }  // process
