@@ -23,15 +23,20 @@ namespace ssf {
 namespace services {
 namespace process {
 
+
+#if defined(BOOST_ASIO_HAS_IOCP)
+#define BINARY_PATH "cmd.exe"
 namespace windows {
 template <class Demux>
 class Session;
 }  // windows
-
+#else
+#define BINARY_PATH "/bin/bash"
 namespace linux {
 template <class Demux>
 class Session;
 }  // linux
+#endif
 
 template <typename Demux>
 class Server : public BaseService<Demux> {
@@ -107,15 +112,11 @@ class Server : public BaseService<Demux> {
   void HandleAccept(const boost::system::error_code& e);
   void HandleStop();
 
-  template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
-  }
-
   std::shared_ptr<Server> SelfFromThis() {
     return std::static_pointer_cast<Server>(this->shared_from_this());
   }
+  
+  bool CheckBinaryPath();
 
  private:
   fiber_acceptor fiber_acceptor_;
@@ -125,6 +126,7 @@ class Server : public BaseService<Demux> {
   fiber new_connection_;
   boost::system::error_code init_ec_;
   local_port_type local_port_;
+  std::string binary_path_;
 };
 
 }  // process

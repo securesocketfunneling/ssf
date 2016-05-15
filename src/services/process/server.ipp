@@ -1,6 +1,7 @@
 #ifndef SSF_SERVICES_PROCESS_PROCESS_SERVER_IPP_
 #define SSF_SERVICES_PROCESS_PROCESS_SERVER_IPP_
 
+#include <iostream>
 #include <string>
 
 #include <boost/bind.hpp>               // NOLINT
@@ -25,21 +26,37 @@ Server<Demux>::Server(boost::asio::io_service& io_service, demux& fiber_demux,
       fiber_acceptor_(io_service),
       session_manager_(),
       new_connection_(io_service, endpoint(fiber_demux, 0)),
-      local_port_(port) {
-  endpoint ep(this->get_demux(), port);
-  fiber_acceptor_.bind(ep, init_ec_);
-  fiber_acceptor_.listen(boost::asio::socket_base::max_connections, init_ec_);
-}
+      local_port_(port),
+      binary_path_(BINARY_PATH) {}
 
 template <typename Demux>
 void Server<Demux>::start(boost::system::error_code& ec) {
+    
+  endpoint ep(this->get_demux(), local_port_);
+  fiber_acceptor_.bind(ep, ec);
+  
+  if (ec) {
+    SSF_LOG(kLogError) << "service[process]: fiber acceptor could not bind on port "
+                       << local_port_;
+    return;
+  }
+  
+  fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "service[process]: fiber acceptor could not listen";
+    return;
+  }
+  
+  if (!CheckBinaryPath()) {
+    SSF_LOG(kLogError) << "service[process]: binary not found";
+    ec.assign(::error::file_not_found, ::error::get_ssf_category());
+    return;
+  }
+
   SSF_LOG(kLogInfo) << "service[process]: starting server on port "
                     << local_port_;
-  ec = init_ec_;
-
-  if (!init_ec_) {
-    this->StartAccept();
-  }
+  
+  this->StartAccept();
 }
 
 template <typename Demux>
@@ -59,7 +76,8 @@ template <typename Demux>
 void Server<Demux>::StartAccept() {
   SSF_LOG(kLogTrace) << "service[process]: accept new session";
   fiber_acceptor_.async_accept(
-      new_connection_, Then(&Server::HandleAccept, this->SelfFromThis()));
+      new_connection_, boost::bind(&Server::HandleAccept, this->SelfFromThis(),
+                                   _1));
 }
 
 template <typename Demux>
@@ -79,7 +97,8 @@ void Server<Demux>::HandleAccept(const boost::system::error_code& ec) {
   SSF_LOG(kLogInfo) << "service[process]: start session";
   ssf::BaseSessionPtr new_process_session =
       std::make_shared<session_impl>(
-          &(this->session_manager_), std::move(this->new_connection_));
+          &(this->session_manager_), std::move(this->new_connection_),
+          binary_path_);
   boost::system::error_code e;
   this->session_manager_.start(new_process_session, e);
 
@@ -90,6 +109,12 @@ template <typename Demux>
 void Server<Demux>::HandleStop() {
   fiber_acceptor_.close();
   session_manager_.stop_all();
+}
+
+template <typename Demux>
+bool Server<Demux>::CheckBinaryPath() {
+  std::ifstream binary_file(binary_path_);
+  return binary_file.good();
 }
 
 }  // process

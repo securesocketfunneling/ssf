@@ -1,13 +1,16 @@
 #ifndef SSF_SERVICES_PROCESS_SESSION_H_
 #define SSF_SERVICES_PROCESS_SESSION_H_
 
+#include <unistd.h>
 #include <sys/wait.h>
 #include <memory>
+#include <map>
 
 #include <boost/noncopyable.hpp>  // NOLINT
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>  // NOLINT
 #include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/signal_set.hpp>
 
 #include <ssf/network/base_session.h>  // NOLINT
 #include <ssf/network/socket_link.h>   // NOLINT
@@ -35,7 +38,8 @@ class Session : public ssf::BaseSession {
   typedef ItemManager<BaseSessionPtr> SessionManager;
 
  public:
-  Session(SessionManager* sm, fiber client);
+  Session(SessionManager* sm, fiber client,
+          const std::string& binary_path);
 
  public:
   void start(boost::system::error_code&) override;
@@ -47,17 +51,6 @@ class Session : public ssf::BaseSession {
     return std::static_pointer_cast<Session>(this->shared_from_this());
   }
 
-  template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
-  }
-
-  void StopHandler(const boost::system::error_code& ec) {
-    boost::system::error_code e;
-    p_session_manager_->stop(this->SelfFromThis(), e);
-  }
-
   void InitPipes(int pipe_out[2], int pipe_err[2], int pipe_in[2],
                  boost::system::error_code& ec);
 
@@ -65,12 +58,22 @@ class Session : public ssf::BaseSession {
                           boost::system::error_code& ec);
 
   void StartForwarding(boost::system::error_code& ec);
+
+  void StopHandler(const boost::system::error_code& ec);
+  
+  void StartSignalWait();
+  
+  void SigchldHandler(const boost::system::error_code& ec,
+                      int sig_num);
+  
  private:
   boost::asio::io_service& io_service_;
   SessionManager* p_session_manager_;
 
   fiber client_;
+  boost::asio::signal_set signal_;
 
+  std::string binary_path_;
   pid_t child_pid_;
 
   int master_tty_;

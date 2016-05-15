@@ -15,11 +15,13 @@ namespace process {
 namespace windows {
 
 template <typename Demux>
-Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
+Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
+                        const std::string& binary_path)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
       p_session_manager_(p_session_manager),
       client_(std::move(client)),
+      binary_path_(binary_path),
       out_pipe_name_("\\\\.\\pipe\\ssf_out_pipe_"),
       err_pipe_name_("\\\\.\\pipe\\ssf_err_pipe_"),
       in_pipe_name_("\\\\.\\pipe\\ssf_in_pipe_"),
@@ -48,7 +50,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     return;
   }
 
-  StartProcess("cmd.exe", ec);
+  StartProcess(binary_path_, ec);
   if (ec) {
     SSF_LOG(kLogError) << "session[process]: start process failed";
     stop(ec);
