@@ -1,7 +1,6 @@
 #ifndef SSF_SERVICES_PROCESS_SESSION_IPP_
 #define SSF_SERVICES_PROCESS_SESSION_IPP_
 
-#include <signal.h>
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
@@ -78,7 +77,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
       while((dup2(slave_tty, STDERR_FILENO) == -1) && (errno == EINTR)) {}
       while((dup2(slave_tty, STDIN_FILENO) == -1) && (errno == EINTR)) {}
 
-      if (execl("/bin/bash", "/bin/bash") == -1) {
+      if (execl("/bin/login", "login", (char*) NULL) == -1) {
         exit(1);
       }
       exit(0);
