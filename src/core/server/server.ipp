@@ -72,7 +72,7 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
   }
 
   async_engine_.Start();
-
+  
   // start accepting connection
   AsyncAcceptConnection();
 }
@@ -87,6 +87,11 @@ void SSFServer<N, T>::Stop() {
   network_acceptor_.close(close_ec);
 
   async_engine_.Stop();
+}
+
+template <class N, template <class> class T>
+boost::asio::io_service& SSFServer<N, T>::get_io_service() {
+  return async_engine_.get_io_service();
 }
 
 template <class N, template <class> class T>

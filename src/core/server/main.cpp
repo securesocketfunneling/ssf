@@ -1,4 +1,7 @@
+#include <future>
+
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
@@ -44,18 +47,31 @@ int main(int argc, char** argv) {
 
   // Initiate and start the server
   Server server;
+  boost::asio::signal_set signal(server.get_io_service(), SIGINT, SIGTERM);
+  std::promise<bool> stopped;
 
   // construct endpoint parameter stack
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(
       cmd.addr(), std::to_string(cmd.port()), ssf_config);
 
+  SSF_LOG(kLogInfo) << "server: listening on port " << cmd.port();
+
   server.Run(endpoint_query, ec);
 
   if (!ec) {
-    SSF_LOG(kLogInfo) << "server: listening on port " << cmd.port();
-    SSF_LOG(kLogInfo) << "server: press [ENTER] to stop";
-    getchar();
-  } else {
+    signal.async_wait([&stopped](const boost::system::error_code& ec, int signum){
+      if (ec) {
+        return;
+      }
+    
+      stopped.set_value(true);
+    });
+  
+    SSF_LOG(kLogInfo) << "server: running (Ctrl + C to stop)";
+    std::future<bool> stop = stopped.get_future();
+    stop.wait();
+  }
+  else {
     SSF_LOG(kLogError) << "server: error happened when running server: "
                        << ec.message();
   }

@@ -64,7 +64,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
     SSF_LOG(kLogError) << "client: could not resolve network endpoint";
     return;
   }
-
+  
   // async connect client to given endpoint
   p_socket->async_connect(
       *endpoint_it,
@@ -76,6 +76,11 @@ void SSFClient<N, T>::Stop() {
   fiber_demux_.close();
 
   async_engine_.Stop();
+}
+
+template <class N, template <class> class T>
+boost::asio::io_service& SSFClient<N, T>::get_io_service() {
+  return async_engine_.get_io_service();
 }
 
 template <class N, template <class> class T>
