@@ -16,11 +16,6 @@
 
 #include "common/error/error.h"
 
-#define SSF_PIPE_READ 0
-#define SSF_PIPE_WRITE 1
-#define INVALID_PIPE_ID -1
-#define INVALID_CHILD_PID -1
-
 namespace ssf {
 namespace services {
 namespace process {
@@ -35,8 +30,8 @@ Session<Demux>::Session(SessionManager *p_session_manager, fiber client,
       client_(std::move(client)),
       signal_(io_service_, SIGCHLD),
       binary_path_(binary_path),
-      child_pid_(-1),
-      master_tty_(-1),
+      child_pid_(kInvalidProcessId),
+      master_tty_(kInvalidTtyDescriptor),
       sd_(io_service_) {}
 
 template <typename Demux>
@@ -66,17 +61,17 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     struct termios new_term_settings;
     close(master_tty);
 
-    tcgetattr(slave_tty, &new_term_settings);
-
     // set tty as raw (input char by char, echoing disabled, special process
     // for input/output characters disabled.
+    tcgetattr(slave_tty, &new_term_settings);
     cfmakeraw (&new_term_settings);
     tcsetattr (slave_tty, TCSANOW, &new_term_settings);
 
     // new process as session leader
     setsid();
+
     // slave side as controlling terminal
-    ioctl(0, TIOCSCTTY, 1);
+    ioctl(slave_tty, TIOCSCTTY, 1);
 
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
@@ -86,20 +81,23 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     while((dup2(slave_tty, STDERR_FILENO) == -1) && (errno == EINTR)) {}
     while((dup2(slave_tty, STDIN_FILENO) == -1) && (errno == EINTR)) {}
 
-    // dup2 done, clode descriptor
+    // dup2 done, close descriptor
     close(slave_tty);
+
+    fprintf(stderr, "* SSF process: %s\n\n", binary_path_.c_str());
 
     std::size_t slash_pos = binary_path_.rfind('/');
     std::string binary_name = std::string::npos != slash_pos ?
       binary_path_.substr(slash_pos + 1) : binary_path_;
 
-    if (execl(binary_path_.c_str(), binary_name.c_str(), (char*) NULL) == -1) {
-      exit(1);
-    }
-    exit(0);
+    execl(binary_path_.c_str(), binary_name.c_str(), (char*) NULL);
+
+    fprintf(stderr, "Exiting: fail to exec <%s>\n", binary_path_.c_str());
+    exit(1);
   }
 
   // parent
+  close(slave_tty);
   master_tty_ = master_tty;
 
   StartSignalWait();
@@ -119,15 +117,14 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
     SSF_LOG(kLogError) << "session[process]: stop error " << ec.message();
   }
 
-  if (child_pid_ != INVALID_PIPE_ID) {
+  if (child_pid_ > 0) {
     kill(child_pid_, SIGTERM);
-    child_pid_ = INVALID_PIPE_ID;
+    child_pid_ = kInvalidProcessId;
   }
   
-  
-  if (master_tty_ != INVALID_PIPE_ID) {
+  if (master_tty_ > kInvalidTtyDescriptor) {
     close(master_tty_);
-    master_tty_ = INVALID_PIPE_ID;
+    master_tty_ = kInvalidTtyDescriptor;
   }
 
   sd_.close(ec);
@@ -173,7 +170,7 @@ void Session<Demux>::SigchldHandler(const boost::system::error_code& ec,
   // child terminated, close session
   SSF_LOG(kLogInfo) << "session[process]: child " << child_pid_
                     << " terminated";
-  child_pid_ = INVALID_PIPE_ID;
+  child_pid_ = kInvalidProcessId;
   StopHandler(ec);
 }
 

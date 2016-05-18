@@ -37,6 +37,11 @@ class Session : public ssf::BaseSession {
 
   typedef ItemManager<BaseSessionPtr> SessionManager;
 
+  enum {
+    kInvalidProcessId = -1,
+    kInvalidTtyDescriptor = -1
+  };
+
  public:
   Session(SessionManager* sm, fiber client,
           const std::string& binary_path);
