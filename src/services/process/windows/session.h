@@ -35,8 +35,7 @@ class Session : public ssf::BaseSession {
   typedef ItemManager<BaseSessionPtr> SessionManager;
 
  public:
-  Session(SessionManager* sm, fiber client,
-          const std::string& binary_path);
+  Session(SessionManager* sm, fiber client, const std::string& binary_path);
 
  public:
   void start(boost::system::error_code&) override;
@@ -45,8 +44,7 @@ class Session : public ssf::BaseSession {
 
  private:
   void StartForwarding(boost::system::error_code& ec);
-  void StartProcess(const std::string& process_cmd,
-                    boost::system::error_code& ec);
+  void StartProcess(boost::system::error_code& ec);
   void InitPipes(boost::system::error_code& ec);
 
   static void InitOutNamedPipe(const std::string& pipe_name,
@@ -59,27 +57,16 @@ class Session : public ssf::BaseSession {
                               SECURITY_ATTRIBUTES* p_pipe_attributes,
                               DWORD pipe_size, boost::system::error_code& ec);
 
-  std::shared_ptr<Session> SelfFromThis() {
-    return std::static_pointer_cast<Session>(this->shared_from_this());
-  }
+  std::shared_ptr<Session> SelfFromThis();
 
-  template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
-  }
-
-  void StopHandler(const boost::system::error_code& ec) {
-    boost::system::error_code e;
-    p_session_manager_->stop(this->SelfFromThis(), e);
-  }
+  void StopHandler(const boost::system::error_code& ec);
 
  private:
   boost::asio::io_service& io_service_;
   SessionManager* p_session_manager_;
 
   fiber client_;
-  
+
   std::string binary_path_;
 
   std::string out_pipe_name_;

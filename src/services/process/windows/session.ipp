@@ -3,6 +3,8 @@
 
 #include <sstream>
 
+#include <wincon.h>
+
 #include <ssf/log/log.h>
 #include <ssf/network/session_forwarder.h>
 #include <ssf/network/socket_link.h>
@@ -50,7 +52,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     return;
   }
 
-  StartProcess(binary_path_, ec);
+  StartProcess(ec);
   if (ec) {
     SSF_LOG(kLogError) << "session[process]: start process failed";
     stop(ec);
@@ -112,6 +114,17 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
 }
 
 template <typename Demux>
+void Session<Demux>::StopHandler(const boost::system::error_code& ec) {
+  boost::system::error_code e;
+  p_session_manager_->stop(this->SelfFromThis(), e);
+}
+
+template <typename Demux>
+std::shared_ptr<Session<Demux>> Session<Demux>::SelfFromThis() {
+  return std::static_pointer_cast<Session>(this->shared_from_this());
+}
+
+template <typename Demux>
 void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   h_out_.assign(data_out_, ec);
   if (ec) {
@@ -136,22 +149,21 @@ void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   data_in_ = INVALID_HANDLE_VALUE;
 
   // pipe process stdout to socket output
-  AsyncEstablishHDLink(ReadFrom(h_out_), WriteTo(client_),
-                       boost::asio::buffer(downstream_out_),
-                       Then(&Session::StopHandler, this->SelfFromThis()));
+  AsyncEstablishHDLink(
+      ReadFrom(h_out_), WriteTo(client_), boost::asio::buffer(downstream_out_),
+      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
   // pipe process stderr to socket output
-  AsyncEstablishHDLink(ReadFrom(h_err_), WriteTo(client_),
-                       boost::asio::buffer(downstream_err_),
-                       Then(&Session::StopHandler, this->SelfFromThis()));
+  AsyncEstablishHDLink(
+      ReadFrom(h_err_), WriteTo(client_), boost::asio::buffer(downstream_err_),
+      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
   // pipe socket input to process stdin
-  AsyncEstablishHDLink(ReadFrom(client_), WriteTo(h_in_),
-                       boost::asio::buffer(upstream_),
-                       Then(&Session::StopHandler, this->SelfFromThis()));
+  AsyncEstablishHDLink(
+      ReadFrom(client_), WriteTo(h_in_), boost::asio::buffer(upstream_),
+      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
 }
 
 template <typename Demux>
-void Session<Demux>::StartProcess(const std::string& process_cmd,
-                                  boost::system::error_code& ec) {
+void Session<Demux>::StartProcess(boost::system::error_code& ec) {
   memset(&process_info_, 0, sizeof(PROCESS_INFORMATION));
   STARTUPINFO startup_info;
 
@@ -162,10 +174,11 @@ void Session<Demux>::StartProcess(const std::string& process_cmd,
   startup_info.hStdOutput = proc_out_;
   startup_info.hStdError = proc_err_;
   startup_info.hStdInput = proc_in_;
-  char* cmd = "cmd.exe";
-  if (!::CreateProcessA(NULL, cmd, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL,
-                        NULL, &startup_info, &process_info_)) {
-    SSF_LOG(kLogError) << "session[process]: create process <" << process_cmd
+
+  if (!::CreateProcessA(NULL, const_cast<char*>(binary_path_.c_str()), NULL,
+                        NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL,
+                        &startup_info, &process_info_)) {
+    SSF_LOG(kLogError) << "session[process]: create process <" << binary_path_
                        << "> failed";
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
   }

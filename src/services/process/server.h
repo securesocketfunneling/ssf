@@ -19,33 +19,25 @@
 
 #include "services/admin/requests/create_service_request.h"
 
+#if defined(BOOST_ASIO_HAS_IOCP)
+#include "services/process/windows/session.h"
+#define BINARY_PATH "C:\\windows\\system32\\cmd.exe"
+#else
+#include "services/process/linux/session.h"
+#define BINARY_PATH "/bin/bash"
+#endif
+
 namespace ssf {
 namespace services {
 namespace process {
 
-
-#if defined(BOOST_ASIO_HAS_IOCP)
-#define BINARY_PATH "cmd.exe"
-namespace windows {
-template <class Demux>
-class Session;
-}  // windows
-#else
-#define BINARY_PATH "/bin/bash"
-namespace linux {
-template <class Demux>
-class Session;
-}  // linux
-#endif
-
 template <typename Demux>
 class Server : public BaseService<Demux> {
  private:
-
 #if defined(BOOST_ASIO_HAS_IOCP)
-  using session_impl = class windows::Session<Demux>;
+  using session_impl = windows::Session<Demux>;
 #else
-  using session_impl = class linux::Session<Demux>;
+  using session_impl = linux::Session<Demux>;
 #endif
 
   using local_port_type = typename Demux::local_port_type;
@@ -115,7 +107,7 @@ class Server : public BaseService<Demux> {
   std::shared_ptr<Server> SelfFromThis() {
     return std::static_pointer_cast<Server>(this->shared_from_this());
   }
-  
+
   bool CheckBinaryPath();
 
  private:

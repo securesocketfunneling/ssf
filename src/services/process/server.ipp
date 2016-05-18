@@ -10,11 +10,6 @@
 
 #include <ssf/log/log.h>
 
-#if defined(BOOST_ASIO_HAS_IOCP)
-#include "services/process/windows/session.h"
-#else
-#include "services/process/linux/session.h"
-#endif
 namespace ssf {
 namespace services {
 namespace process {
@@ -31,22 +26,22 @@ Server<Demux>::Server(boost::asio::io_service& io_service, demux& fiber_demux,
 
 template <typename Demux>
 void Server<Demux>::start(boost::system::error_code& ec) {
-    
   endpoint ep(this->get_demux(), local_port_);
   fiber_acceptor_.bind(ep, ec);
-  
+
   if (ec) {
-    SSF_LOG(kLogError) << "service[process]: fiber acceptor could not bind on port "
-                       << local_port_;
+    SSF_LOG(kLogError)
+        << "service[process]: fiber acceptor could not bind on port "
+        << local_port_;
     return;
   }
-  
+
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
   if (ec) {
     SSF_LOG(kLogError) << "service[process]: fiber acceptor could not listen";
     return;
   }
-  
+
   if (!CheckBinaryPath()) {
     SSF_LOG(kLogError) << "service[process]: binary not found";
     ec.assign(::error::file_not_found, ::error::get_ssf_category());
@@ -55,7 +50,7 @@ void Server<Demux>::start(boost::system::error_code& ec) {
 
   SSF_LOG(kLogInfo) << "service[process]: starting server on port "
                     << local_port_;
-  
+
   this->StartAccept();
 }
 
@@ -76,8 +71,8 @@ template <typename Demux>
 void Server<Demux>::StartAccept() {
   SSF_LOG(kLogTrace) << "service[process]: accept new session";
   fiber_acceptor_.async_accept(
-      new_connection_, boost::bind(&Server::HandleAccept, this->SelfFromThis(),
-                                   _1));
+      new_connection_,
+      boost::bind(&Server::HandleAccept, this->SelfFromThis(), _1));
 }
 
 template <typename Demux>
@@ -95,10 +90,9 @@ void Server<Demux>::HandleAccept(const boost::system::error_code& ec) {
   }
 
   SSF_LOG(kLogInfo) << "service[process]: start session";
-  ssf::BaseSessionPtr new_process_session =
-      std::make_shared<session_impl>(
-          &(this->session_manager_), std::move(this->new_connection_),
-          binary_path_);
+  ssf::BaseSessionPtr new_process_session = std::make_shared<session_impl>(
+      &(this->session_manager_), std::move(this->new_connection_),
+      binary_path_);
   boost::system::error_code e;
   this->session_manager_.start(new_process_session, e);
 
