@@ -47,8 +47,6 @@ int main(int argc, char** argv) {
 
   // Initiate and start the server
   Server server;
-  boost::asio::signal_set signal(server.get_io_service(), SIGINT, SIGTERM);
-  std::promise<bool> stopped;
 
   // construct endpoint parameter stack
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(
@@ -58,23 +56,27 @@ int main(int argc, char** argv) {
 
   server.Run(endpoint_query, ec);
 
-  if (!ec) {
-    signal.async_wait([&stopped](const boost::system::error_code& ec, int signum){
-      if (ec) {
-        return;
-      }
-    
-      stopped.set_value(true);
-    });
-  
-    SSF_LOG(kLogInfo) << "server: running (Ctrl + C to stop)";
-    std::future<bool> stop = stopped.get_future();
-    stop.wait();
-  }
-  else {
+  if (ec) {
     SSF_LOG(kLogError) << "server: error happened when running server: "
                        << ec.message();
+    return 1;
   }
+
+  std::promise<bool> stopped;
+  boost::asio::signal_set signal(server.get_io_service(), SIGINT, SIGTERM);
+
+  signal.async_wait(
+      [&stopped](const boost::system::error_code& ec, int signum) {
+        if (ec) {
+          return;
+        }
+
+        stopped.set_value(true);
+      });
+
+  SSF_LOG(kLogInfo) << "server: running (Ctrl + C to stop)";
+  std::future<bool> stop = stopped.get_future();
+  stop.wait();
 
   SSF_LOG(kLogInfo) << "server: stop";
   server.Stop();

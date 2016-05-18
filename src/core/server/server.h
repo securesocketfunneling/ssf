@@ -38,13 +38,13 @@ class SSFServer
 
  public:
   SSFServer();
-  
+
   ~SSFServer();
 
   void Run(const NetworkQuery& query, boost::system::error_code& ec);
 
   void Stop();
-  
+
   boost::asio::io_service& get_io_service();
 
  private:

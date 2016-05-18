@@ -64,7 +64,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
     SSF_LOG(kLogError) << "client: could not resolve network endpoint";
     return;
   }
-  
+
   // async connect client to given endpoint
   p_socket->async_connect(
       *endpoint_it,

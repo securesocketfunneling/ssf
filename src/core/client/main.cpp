@@ -145,30 +145,33 @@ int main(int argc, char** argv) {
 
   // Initiate and run client
   Client client(user_services, callback);
-  boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
-  std::promise<bool> stopped;
 
   client.Run(endpoint_query, ec);
 
-  if (!ec) {
-    SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
-                      << cmd.port() << ">";
-    
-    signal.async_wait([&stopped](const boost::system::error_code& ec, int signum){
-      if (ec) {
-        return;
-      }
-    
-      stopped.set_value(true);
-    });
-  
-    SSF_LOG(kLogInfo) << "client: running (Ctrl + C to stop)";
-    std::future<bool> stop = stopped.get_future();
-    stop.wait();
-  } else {
+  if (ec) {
     SSF_LOG(kLogError) << "client: error happened when running client : "
                        << ec.message();
+    return 1;
   }
+
+  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
+                    << cmd.port() << ">";
+
+  std::promise<bool> stopped;
+  boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
+
+  signal.async_wait(
+      [&stopped](const boost::system::error_code& ec, int signum) {
+        if (ec) {
+          return;
+        }
+
+        stopped.set_value(true);
+      });
+
+  SSF_LOG(kLogInfo) << "client: running (Ctrl + C to stop)";
+  std::future<bool> stop = stopped.get_future();
+  stop.wait();
 
   SSF_LOG(kLogInfo) << "client: stop";
   client.Stop();

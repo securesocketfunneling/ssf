@@ -72,7 +72,7 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
   }
 
   async_engine_.Start();
-  
+
   // start accepting connection
   AsyncAcceptConnection();
 }
@@ -176,8 +176,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
       demux>::RegisterToServiceFactory(p_service_factory);
   services::copy_file::fiber_to_file::FiberToFile<
       demux>::RegisterToServiceFactory(p_service_factory);
-  services::process::Server<demux>::RegisterToServiceFactory(
-      p_service_factory);
+  services::process::Server<demux>::RegisterToServiceFactory(p_service_factory);
 
   // Start the admin micro service
   std::map<std::string, std::string> empty_map;
