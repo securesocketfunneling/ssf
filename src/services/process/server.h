@@ -23,7 +23,7 @@
 #include "services/process/windows/session.h"
 #define BINARY_PATH "C:\\windows\\system32\\cmd.exe"
 #else
-#include "services/process/linux/session.h"
+#include "services/process/posix/session.h"
 #define BINARY_PATH "/bin/bash"
 #endif
 

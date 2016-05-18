@@ -161,15 +161,11 @@ void Session<Demux>::SigchldHandler(const boost::system::error_code& ec,
   
   if (!WIFEXITED(status) && !WIFSIGNALED(status)) {
     // child did not terminate
-    SSF_LOG(kLogInfo) << "session[process]: child " << child_pid_
-                      << " state changed";
     StartSignalWait();
     return;
   }
     
   // child terminated, close session
-  SSF_LOG(kLogInfo) << "session[process]: child " << child_pid_
-                    << " terminated";
   child_pid_ = kInvalidProcessId;
   StopHandler(ec);
 }
