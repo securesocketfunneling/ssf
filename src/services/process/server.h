@@ -32,10 +32,10 @@ class Session;
 }  // windows
 #else
 #define BINARY_PATH "/bin/bash"
-namespace linux {
+namespace posix {
 template <class Demux>
 class Session;
-}  // linux
+}  // posix
 #endif
 
 template <typename Demux>
@@ -45,7 +45,7 @@ class Server : public BaseService<Demux> {
 #if defined(BOOST_ASIO_HAS_IOCP)
   using session_impl = class windows::Session<Demux>;
 #else
-  using session_impl = class linux::Session<Demux>;
+  using session_impl = class posix::Session<Demux>;
 #endif
 
   using local_port_type = typename Demux::local_port_type;

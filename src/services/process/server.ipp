@@ -13,7 +13,7 @@
 #if defined(BOOST_ASIO_HAS_IOCP)
 #include "services/process/windows/session.h"
 #else
-#include "services/process/linux/session.h"
+#include "services/process/posix/session.h"
 #endif
 namespace ssf {
 namespace services {

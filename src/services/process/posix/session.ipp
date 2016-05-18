@@ -1,5 +1,5 @@
-#ifndef SSF_SERVICES_PROCESS_SESSION_IPP_
-#define SSF_SERVICES_PROCESS_SESSION_IPP_
+#ifndef SSF_SERVICES_PROCESS_POSIX_SESSION_IPP_
+#define SSF_SERVICES_PROCESS_POSIX_SESSION_IPP_
 
 #include <signal.h>
 #include <sys/types.h>
@@ -19,7 +19,7 @@
 namespace ssf {
 namespace services {
 namespace process {
-namespace linux {
+namespace posix {
 
 template <typename Demux>
 Session<Demux>::Session(SessionManager *p_session_manager, fiber client,
@@ -222,9 +222,9 @@ void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
                                    _1));
 }
 
-}  // linux
+}  // posix
 }  // process
 }  // services
 }  // ssf
 
-#endif  // SSF_SERVICES_PROCESS_SESSION_IPP_
+#endif  // SSF_SERVICES_PROCESS_POSIX_SESSION_IPP_
