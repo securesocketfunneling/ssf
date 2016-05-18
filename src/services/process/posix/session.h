@@ -1,5 +1,5 @@
-#ifndef SSF_SERVICES_PROCESS_SESSION_H_
-#define SSF_SERVICES_PROCESS_SESSION_H_
+#ifndef SSF_SERVICES_PROCESS_POSIX_SESSION_H_
+#define SSF_SERVICES_PROCESS_POSIX_SESSION_H_
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -24,7 +24,7 @@
 namespace ssf {
 namespace services {
 namespace process {
-namespace linux {
+namespace posix {
 
 template <typename Demux>
 class Session : public ssf::BaseSession {
@@ -36,6 +36,11 @@ class Session : public ssf::BaseSession {
       typename Demux::socket_type>::socket fiber;
 
   typedef ItemManager<BaseSessionPtr> SessionManager;
+
+  enum {
+    kInvalidProcessId = -1,
+    kInvalidTtyDescriptor = -1
+  };
 
  public:
   Session(SessionManager* sm, fiber client,
@@ -84,11 +89,11 @@ class Session : public ssf::BaseSession {
   StreamBuff downstream_;
 };
 
-}  // linux
+}  // posix
 }  // process
 }  // services
 }  // ssf
 
-#include "services/process/linux/session.ipp"
+#include "services/process/posix/session.ipp"
 
-#endif  // SSF_SERVICES_PROCESS_SESSION_H_
+#endif  // SSF_SERVICES_PROCESS_POSIX_SESSION_H_

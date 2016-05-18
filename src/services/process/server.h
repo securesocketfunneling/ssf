@@ -37,7 +37,7 @@ class Server : public BaseService<Demux> {
 #if defined(BOOST_ASIO_HAS_IOCP)
   using session_impl = windows::Session<Demux>;
 #else
-  using session_impl = linux::Session<Demux>;
+  using session_impl = class posix::Session<Demux>;
 #endif
 
   using local_port_type = typename Demux::local_port_type;
