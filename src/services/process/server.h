@@ -76,8 +76,7 @@ class Server : public BaseService<Demux> {
       std::shared_ptr<ServiceFactory<demux>> p_factory,
       const ssf::config::ProcessService& config) {
     p_factory->RegisterServiceCreator(
-        factory_id,
-        boost::bind(&Server::Create, _1, _2, _3, config.path()));
+        factory_id, boost::bind(&Server::Create, _1, _2, _3, config.path()));
   }
 
   // Function used to generate create service request

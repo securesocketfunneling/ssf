@@ -22,7 +22,7 @@ namespace process {
 namespace posix {
 
 template <typename Demux>
-Session<Demux>::Session(SessionManager *p_session_manager, fiber client,
+Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
                         const std::string& binary_path)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
@@ -55,7 +55,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     stop(ec);
     return;
   }
-  
+
   if (child_pid_ == 0) {
     // child
     struct termios new_term_settings;
@@ -64,8 +64,8 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     // set tty as raw (input char by char, echoing disabled, special process
     // for input/output characters disabled.
     tcgetattr(slave_tty, &new_term_settings);
-    cfmakeraw (&new_term_settings);
-    tcsetattr (slave_tty, TCSANOW, &new_term_settings);
+    cfmakeraw(&new_term_settings);
+    tcsetattr(slave_tty, TCSANOW, &new_term_settings);
 
     // new process as session leader
     setsid();
@@ -76,10 +76,13 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
     close(STDIN_FILENO);
-      
-    while((dup2(slave_tty, STDOUT_FILENO) == -1) && (errno == EINTR)) {}
-    while((dup2(slave_tty, STDERR_FILENO) == -1) && (errno == EINTR)) {}
-    while((dup2(slave_tty, STDIN_FILENO) == -1) && (errno == EINTR)) {}
+
+    while ((dup2(slave_tty, STDOUT_FILENO) == -1) && (errno == EINTR)) {
+    }
+    while ((dup2(slave_tty, STDERR_FILENO) == -1) && (errno == EINTR)) {
+    }
+    while ((dup2(slave_tty, STDIN_FILENO) == -1) && (errno == EINTR)) {
+    }
 
     // dup2 done, close descriptor
     close(slave_tty);
@@ -87,10 +90,11 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     fprintf(stderr, "* SSF process: %s\n\n", binary_path_.c_str());
 
     std::size_t slash_pos = binary_path_.rfind('/');
-    std::string binary_name = std::string::npos != slash_pos ?
-      binary_path_.substr(slash_pos + 1) : binary_path_;
+    std::string binary_name = std::string::npos != slash_pos
+                                  ? binary_path_.substr(slash_pos + 1)
+                                  : binary_path_;
 
-    execl(binary_path_.c_str(), binary_name.c_str(), (char*) NULL);
+    execl(binary_path_.c_str(), binary_name.c_str(), (char*)NULL);
 
     fprintf(stderr, "Exiting: fail to exec <%s>\n", binary_path_.c_str());
     exit(1);
@@ -111,7 +115,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo) << "session[process]: stop";
-  
+
   client_.close();
   if (ec) {
     SSF_LOG(kLogError) << "session[process]: stop error " << ec.message();
@@ -121,7 +125,7 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
     kill(child_pid_, SIGTERM);
     child_pid_ = kInvalidProcessId;
   }
-  
+
   if (master_tty_ > kInvalidTtyDescriptor) {
     close(master_tty_);
     master_tty_ = kInvalidTtyDescriptor;
@@ -137,12 +141,10 @@ void Session<Demux>::StopHandler(const boost::system::error_code& ec) {
   p_session_manager_->stop(this->SelfFromThis(), e);
 }
 
-
-
 template <typename Demux>
 void Session<Demux>::StartSignalWait() {
-  signal_.async_wait(boost::bind(&Session::SigchldHandler, this->SelfFromThis(),
-                     _1, _2));
+  signal_.async_wait(
+      boost::bind(&Session::SigchldHandler, this->SelfFromThis(), _1, _2));
 }
 
 template <typename Demux>
@@ -151,20 +153,20 @@ void Session<Demux>::SigchldHandler(const boost::system::error_code& ec,
   if (ec) {
     return;
   }
-  
+
   int status;
   if (waitpid(child_pid_, &status, WNOHANG) <= 0) {
     // child state did not change
     StartSignalWait();
     return;
   }
-  
+
   if (!WIFEXITED(status) && !WIFSIGNALED(status)) {
     // child did not terminate
     StartSignalWait();
     return;
   }
-    
+
   // child terminated, close session
   child_pid_ = kInvalidProcessId;
   StopHandler(ec);
@@ -207,15 +209,13 @@ void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   }
 
   // pipe process stdout/stderr to socket output
-  AsyncEstablishHDLink(ReadFrom(sd_), WriteTo(client_),
-                       boost::asio::buffer(downstream_),
-                       boost::bind(&Session::StopHandler, this->SelfFromThis(),
-                                   _1));
+  AsyncEstablishHDLink(
+      ReadFrom(sd_), WriteTo(client_), boost::asio::buffer(downstream_),
+      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
   // pipe socket input to process stdin
-  AsyncEstablishHDLink(ReadFrom(client_), WriteTo(sd_),
-                       boost::asio::buffer(upstream_),
-                       boost::bind(&Session::StopHandler, this->SelfFromThis(),
-                                   _1));
+  AsyncEstablishHDLink(
+      ReadFrom(client_), WriteTo(sd_), boost::asio::buffer(upstream_),
+      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
 }
 
 }  // posix

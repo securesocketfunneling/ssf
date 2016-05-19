@@ -49,8 +49,7 @@ ProcessService::ProcessService(const ProcessService& process_service)
 
 Services::Services() : process_() {}
 
-Services::Services(const Services& services)
-    : process_(services.process_) {}
+Services::Services(const Services& services) : process_(services.process_) {}
 
 void Services::UpdateProcessService(const boost::property_tree::ptree& pt) {
   auto process_optional = pt.get_child_optional("process");

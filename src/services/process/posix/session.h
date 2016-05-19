@@ -37,14 +37,10 @@ class Session : public ssf::BaseSession {
 
   typedef ItemManager<BaseSessionPtr> SessionManager;
 
-  enum {
-    kInvalidProcessId = -1,
-    kInvalidTtyDescriptor = -1
-  };
+  enum { kInvalidProcessId = -1, kInvalidTtyDescriptor = -1 };
 
  public:
-  Session(SessionManager* sm, fiber client,
-          const std::string& binary_path);
+  Session(SessionManager* sm, fiber client, const std::string& binary_path);
 
  public:
   void start(boost::system::error_code&) override;
@@ -65,12 +61,11 @@ class Session : public ssf::BaseSession {
   void StartForwarding(boost::system::error_code& ec);
 
   void StopHandler(const boost::system::error_code& ec);
-  
+
   void StartSignalWait();
-  
-  void SigchldHandler(const boost::system::error_code& ec,
-                      int sig_num);
-  
+
+  void SigchldHandler(const boost::system::error_code& ec, int sig_num);
+
  private:
   boost::asio::io_service& io_service_;
   SessionManager* p_session_manager_;
