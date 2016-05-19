@@ -1,5 +1,5 @@
-#ifndef TESTS_COPY_FILE_TEST_FIXTURE_H_
-#define TESTS_COPY_FILE_TEST_FIXTURE_H_
+#ifndef TESTS_SERVICES_COPY_FILE_FIXTURE_TEST_H_
+#define TESTS_SERVICES_COPY_FILE_FIXTURE_TEST_H_
 
 #include <array>
 #include <functional>
@@ -150,4 +150,4 @@ class CopyStdinFromClientToRemoteTest : public FileCopyTestFixture {
   }
 };
 
-#endif  // TESTS_COPY_FILE_TEST_FIXTURE_H_
+#endif  // TESTS_SERVICES_COPY_FILE_FIXTURE_TEST_H_

@@ -1,5 +1,5 @@
-#ifndef TESTS_SERVICE_TEST_FIXTURE_H_
-#define TESTS_SERVICE_TEST_FIXTURE_H_
+#ifndef TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
+#define TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
 
 #include <utility>
 
@@ -125,4 +125,4 @@ class ServiceFixtureTest : public ::testing::Test {
   std::promise<bool> service_set_;
 };
 
-#endif  // TESTS_SERVICE_TEST_FIXTURE_H_
+#endif  // TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_

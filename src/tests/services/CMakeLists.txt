@@ -28,8 +28,8 @@ set(SOCKS_HELPERS_FILES
   "socks_helpers.cpp")
 
 set(SERVICE_TESTS_FILES
-  "service_test_fixture.h"
-  "process_test_fixture.h"
+  "service_fixture_test.h"
+  "process_fixture_test.h"
 )
 
 # --- Service tests
@@ -186,8 +186,8 @@ file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${project_BINARY_DIR}/src/tests/serv
 
 set(file_copy_from_client_files
   "file_copy_from_client_tests.cpp"
-  "file_copy_test_fixture.h"
-  "file_copy_test_fixture.cpp"
+  "file_copy_fixture_test.h"
+  "file_copy_fixture_test.cpp"
   ${SSF_SOURCES}
 )
 

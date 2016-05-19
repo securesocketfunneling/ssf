@@ -1,6 +1,6 @@
 #include "services/user_services/process.h"
 
-#include "tests/services/process_test_fixture.h"
+#include "tests/services/process_fixture_test.h"
 
 class ProcessTest : public ProcessFixtureTest<ssf::services::Process> {};
 

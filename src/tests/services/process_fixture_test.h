@@ -1,5 +1,5 @@
-#ifndef TESTS_SERVICES_PROCESS_TEST_FIXTURE_H_
-#define TESTS_SERVICES_PROCESS_TEST_FIXTURE_H_
+#ifndef TESTS_SERVICES_PROCESS_FIXTURE_TEST_H_
+#define TESTS_SERVICES_PROCESS_FIXTURE_TEST_H_
 
 #include <array>
 #include <iostream>
@@ -9,7 +9,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/deadline_timer.hpp>
 
-#include "tests/services/service_test_fixture.h"
+#include "tests/services/service_fixture_test.h"
 
 template <template <typename> class TServiceTested>
 class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
@@ -70,4 +70,4 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
   }
 };
 
-#endif  // TESTS_SERVICES_PROCESS_TEST_FIXTURE_H_
+#endif  // TESTS_SERVICES_PROCESS_FIXTURE_TEST_H_

@@ -1,18 +1,14 @@
 #include <vector>
 #include <functional>
 #include <array>
-#include <future>
 #include <list>
 
-#include <gtest/gtest.h>
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 
-#include <ssf/log/log.h>
-
-#include "services/initialisation.h"
 #include "services/user_services/socks.h"
 
-#include "tests/services/service_test_fixture.h"
+#include "tests/services/service_fixture_test.h"
 #include "tests/services/socks_helpers.h"
 #include "tests/services/tcp_helpers.h"
 

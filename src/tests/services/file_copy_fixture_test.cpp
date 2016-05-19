@@ -1,4 +1,4 @@
-#include "tests/services/file_copy_test_fixture.h"
+#include "tests/services/file_copy_fixture_test.h"
 
 FileCopyTestFixture::FileCopyTestFixture()
     : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
