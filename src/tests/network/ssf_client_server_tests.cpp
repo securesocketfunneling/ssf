@@ -52,7 +52,7 @@ class SSFClientServerTest : public ::testing::Test {
 
     auto endpoint_query =
         NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
-    p_ssf_server_.reset(new Server());
+    p_ssf_server_.reset(new Server(ssf_config.services()));
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
@@ -66,9 +66,10 @@ class SSFClientServerTest : public ::testing::Test {
     auto endpoint_query = NetworkProtocol::GenerateClientQuery(
         "127.0.0.1", "8000", ssf_config, {});
 
-    p_ssf_client_.reset(new Client(
-        client_options, boost::bind(&SSFClientServerTest::SSFClientCallback,
-                                    this, _1, _2, _3)));
+    p_ssf_client_.reset(
+        new Client(client_options, ssf_config.services(),
+                   boost::bind(&SSFClientServerTest::SSFClientCallback, this,
+                               _1, _2, _3)));
 
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);

@@ -72,6 +72,8 @@ TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
   ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
   ASSERT_EQ(config_.proxy().http_addr(), "");
   ASSERT_EQ(config_.proxy().http_port(), "");
+  ASSERT_EQ(config_.services().process().path(),
+            SSF_PROCESS_SERVICE_BINARY_PATH);
 }
 
 TEST_F(LoadConfigTest, LoadProxyFileTest) {
@@ -83,9 +85,18 @@ TEST_F(LoadConfigTest, LoadProxyFileTest) {
   ASSERT_EQ(config_.proxy().http_port(), "8080");
 }
 
+TEST_F(LoadConfigTest, LoadServicesFileTest) {
+  boost::system::error_code ec;
+
+  config_.Update("./config_files/services.json", ec);
+
+  ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
+  ASSERT_EQ(config_.services().process().path(), "/bin/custom_path");
+}
+
 TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   boost::system::error_code ec;
-  
+
   config_.Update("./config_files/complete.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
@@ -97,4 +108,5 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
   ASSERT_EQ(config_.proxy().http_addr(), "127.0.0.1");
   ASSERT_EQ(config_.proxy().http_port(), "8080");
+  ASSERT_EQ(config_.services().process().path(), "/bin/custom_path");
 }

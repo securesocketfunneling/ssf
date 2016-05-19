@@ -20,9 +20,59 @@ Tls::Tls()
       dh_path_("./certs/dh4096.pem"),
       cipher_alg_("DHE-RSA-AES256-GCM-SHA384") {}
 
+void Tls::Log() const {
+#ifdef TLS_OVER_TCP_LINK
+  SSF_LOG(kLogInfo) << "config[tls]: CA cert path: <" << ca_cert_path_ << ">";
+  SSF_LOG(kLogInfo) << "config[tls]: cert path: <" << cert_path_ << ">";
+  SSF_LOG(kLogInfo) << "config[tls]: key path: <" << key_path_ << ">";
+  SSF_LOG(kLogInfo) << "config[tls]: key password: <" << key_password_ << ">";
+  SSF_LOG(kLogInfo) << "config[tls]: dh path: <" << dh_path_ << ">";
+  SSF_LOG(kLogInfo) << "config[tls]: cipher suite: <" << cipher_alg_ << ">";
+#endif
+}
+
 Proxy::Proxy() : http_addr_(""), http_port_("") {}
 
-Config::Config() : tls_(), proxy_() {}
+void Proxy::Log() const {
+  if (IsSet()) {
+    SSF_LOG(kLogInfo) << "config[proxy]: <" << http_addr_ << ":" << http_port_
+                      << ">";
+  } else {
+    SSF_LOG(kLogInfo) << "config[proxy]: <None>";
+  }
+}
+
+ProcessService::ProcessService() : path_(SSF_PROCESS_SERVICE_BINARY_PATH) {}
+
+ProcessService::ProcessService(const ProcessService& process_service)
+    : path_(process_service.path_) {}
+
+Services::Services() : process_() {}
+
+Services::Services(const Services& services)
+    : process_(services.process_) {}
+
+void Services::UpdateProcessService(const boost::property_tree::ptree& pt) {
+  auto process_optional = pt.get_child_optional("process");
+  if (!process_optional) {
+    SSF_LOG(kLogDebug)
+        << "config[update]: process service configuration not found";
+    return;
+  }
+
+  auto& process_prop = process_optional.get();
+  auto path = process_prop.get_child_optional("path");
+  if (path) {
+    process_.set_path(path.get().data());
+  }
+}
+
+void Services::Log() const {
+  SSF_LOG(kLogInfo) << "config[services][process]: <"
+                    << process_service().path() << ">";
+}
+
+Config::Config() : tls_(), proxy_(), services_() {}
 
 void Config::Update(const std::string& filepath,
                     boost::system::error_code& ec) {
@@ -45,6 +95,7 @@ void Config::Update(const std::string& filepath,
 
     UpdateTls(pt);
     UpdateProxy(pt);
+    UpdateServices(pt);
   } catch (const std::exception& e) {
     SSF_LOG(kLogError) << "config[ssf]: error reading SSF config file: "
                        << e.what();
@@ -53,24 +104,9 @@ void Config::Update(const std::string& filepath,
 }
 
 void Config::Log() const {
-#ifdef TLS_OVER_TCP_LINK
-  SSF_LOG(kLogInfo) << "config[tls]: CA cert path: <" << tls_.ca_cert_path()
-                    << ">";
-  SSF_LOG(kLogInfo) << "config[tls]: cert path: <" << tls_.cert_path() << ">";
-  SSF_LOG(kLogInfo) << "config[tls]: key path: <" << tls_.key_path() << ">";
-  SSF_LOG(kLogInfo) << "config[tls]: key password: <" << tls_.key_password()
-                    << ">";
-  SSF_LOG(kLogInfo) << "config[tls]: dh path: <" << tls_.dh_path() << ">";
-  SSF_LOG(kLogInfo) << "config[tls]: cipher suite: <" << tls_.cipher_alg()
-                    << ">";
-#endif
-
-  if (proxy_.IsSet()) {
-    SSF_LOG(kLogInfo) << "config[proxy]: <" << proxy_.http_addr() << ":"
-                      << proxy_.http_port() << ">";
-  } else {
-    SSF_LOG(kLogInfo) << "config[proxy]: <None>";
-  }
+  tls_.Log();
+  proxy_.Log();
+  services_.Log();
 }
 
 void Config::UpdateTls(const boost::property_tree::ptree& pt) {
@@ -131,6 +167,16 @@ void Config::UpdateProxy(const boost::property_tree::ptree& pt) {
   if (http_port_optional) {
     proxy_.set_http_port(http_port_optional.get().data());
   }
+}
+
+void Config::UpdateServices(const boost::property_tree::ptree& pt) {
+  auto services_optional = pt.get_child_optional("ssf.services");
+  if (!services_optional) {
+    SSF_LOG(kLogDebug) << "config[update]: services configuration not found";
+    return;
+  }
+
+  services_.UpdateProcessService(services_optional.get());
 }
 
 }  // config

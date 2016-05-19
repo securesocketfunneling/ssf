@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
       };
 
   // Initiating and starting the client
-  Client client(user_services, callback);
+  Client client(user_services, ssf_config.services(), callback);
 
   client.Run(endpoint_query, ec);
 

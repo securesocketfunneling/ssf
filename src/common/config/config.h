@@ -3,8 +3,16 @@
 
 #include <string>
 
+#include <boost/asio/detail/config.hpp>
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
+
+#if defined(BOOST_ASIO_WINDOWS)
+#define SSF_PROCESS_SERVICE_BINARY_PATH "C:\\windows\\system32\\cmd.exe"
+#else
+#define SSF_PROCESS_SERVICE_BINARY_PATH "/bin/bash"
+#endif
 
 namespace ssf {
 namespace config {
@@ -14,6 +22,8 @@ class Tls {
   Tls();
 
  public:
+  void Log() const;
+
   inline std::string ca_cert_path() const { return ca_cert_path_; }
 
   inline void set_ca_cert_path(const std::string& ca_cert_path) {
@@ -67,9 +77,11 @@ struct Proxy {
  public:
   Proxy();
 
+ public:
+  void Log() const;
+
   inline bool IsSet() const { return http_addr_ != "" && http_port_ != ""; }
 
- public:
   inline std::string http_addr() const { return http_addr_; }
 
   inline void set_http_addr(const std::string& http_addr) {
@@ -87,6 +99,33 @@ struct Proxy {
   std::string http_addr_;
   // HTTP proxy port
   std::string http_port_;
+};
+
+class ProcessService {
+ public:
+  ProcessService();
+  ProcessService(const ProcessService& process_service);
+
+  inline std::string path() const { return path_; }
+  inline void set_path(const std::string& path) { path_ = path; }
+
+ private:
+  std::string path_;
+};
+
+class Services {
+ public:
+  Services();
+  Services(const Services& services);
+
+  inline const ProcessService& process_service() const { return process_; }
+  inline ProcessService& process() { return process_; }
+
+  void UpdateProcessService(const boost::property_tree::ptree& pt);
+  void Log() const;
+
+ private:
+  ProcessService process_;
 };
 
 class Config {
@@ -114,6 +153,11 @@ class Config {
    *     "proxy" : {
    *       "http_addr": "",
    *       "http_port": ""
+   *     },
+   *     "services": {
+   *       "process": {
+   *         "path": "/bin/bash"
+   *       }
    *     }
    *   }
    * }
@@ -124,20 +168,25 @@ class Config {
    * Log configuration
    */
   void Log() const;
-  
+
   inline const Tls& tls() const { return tls_; }
   inline Tls& tls() { return tls_; }
-  
+
   inline const Proxy& proxy() const { return proxy_; }
   inline Proxy& proxy() { return proxy_; }
+
+  inline const Services& services() const { return services_; }
+  inline Services& services() { return services_; }
 
  private:
   void UpdateTls(const boost::property_tree::ptree& pt);
   void UpdateProxy(const boost::property_tree::ptree& pt);
+  void UpdateServices(const boost::property_tree::ptree& pt);
 
  private:
   Tls tls_;
   Proxy proxy_;
+  Services services_;
 };
 
 }  // config

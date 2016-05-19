@@ -35,7 +35,7 @@ void FileCopyTestFixture::StartServer() {
   auto endpoint_query =
       NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
 
-  p_ssf_server_.reset(new Server());
+  p_ssf_server_.reset(new Server(ssf_config.services()));
 
   boost::system::error_code run_ec;
   p_ssf_server_->Run(endpoint_query, run_ec);
@@ -57,7 +57,7 @@ void FileCopyTestFixture::StartClient() {
       NetworkProtocol::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
 
   p_ssf_client_.reset(new Client(
-      client_services,
+      client_services, ssf_config.services(),
       boost::bind(&FileCopyTestFixture::SSFClientCallback, this, _1, _2, _3)));
   boost::system::error_code run_ec;
   p_ssf_client_->Run(endpoint_query, run_ec);

@@ -29,6 +29,7 @@ set(SOCKS_HELPERS_FILES
 
 set(SERVICE_TESTS_FILES
   "service_test_fixture.h"
+  "process_test_fixture.h"
 )
 
 # --- Service tests

@@ -16,13 +16,14 @@ namespace process {
 
 template <typename Demux>
 Server<Demux>::Server(boost::asio::io_service& io_service, demux& fiber_demux,
-                      const local_port_type& port)
+                      const local_port_type& port,
+                      const std::string& binary_path)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
       fiber_acceptor_(io_service),
       session_manager_(),
       new_connection_(io_service, endpoint(fiber_demux, 0)),
       local_port_(port),
-      binary_path_(BINARY_PATH) {}
+      binary_path_(binary_path) {}
 
 template <typename Demux>
 void Server<Demux>::start(boost::system::error_code& ec) {

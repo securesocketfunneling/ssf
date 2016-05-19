@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
   ssf_config.Log();
 
   // Initiate and start the server
-  Server server;
+  Server server(ssf_config.services());
 
   // construct endpoint parameter stack
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(

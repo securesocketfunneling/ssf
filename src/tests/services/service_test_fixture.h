@@ -30,6 +30,11 @@ class ServiceFixtureTest : public ::testing::Test {
 
   virtual ~ServiceFixtureTest() {}
 
+  virtual void SetUp() {
+    StartServer("127.0.0.1", "10000");
+    StartClient("127.0.0.1", "10000");
+  }
+
   virtual void TearDown() {
     p_ssf_client_->Stop();
     p_ssf_server_->Stop();
@@ -41,7 +46,7 @@ class ServiceFixtureTest : public ::testing::Test {
     auto endpoint_query =
         NetworkProtocol::GenerateServerQuery(host_addr, host_port, ssf_config);
 
-    p_ssf_server_.reset(new Server());
+    p_ssf_server_.reset(new Server(ssf_config.services()));
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
@@ -62,7 +67,7 @@ class ServiceFixtureTest : public ::testing::Test {
         target_addr, target_host, ssf_config, {});
 
     p_ssf_client_.reset(new Client(
-        client_options,
+        client_options, ssf_config.services(),
         boost::bind(&ServiceFixtureTest::SSFClientCallback, this, _1, _2, _3)));
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);

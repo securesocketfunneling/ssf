@@ -20,11 +20,6 @@ class UdpForwardTest
 
   ~UdpForwardTest() {}
 
-  virtual void SetUp() {
-    StartServer("127.0.0.1", "8000");
-    StartClient("127.0.0.1", "8000");
-  }
-
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) {
     return ServiceTested::CreateServiceOptions("5454:127.0.0.1:5354", ec);

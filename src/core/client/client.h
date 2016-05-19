@@ -8,8 +8,10 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
+
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/config/config.h"
 
 #include "core/async_engine.h"
 #include "core/service_manager/service_manager.h"
@@ -39,6 +41,7 @@ class SSFClient
 
  public:
   SSFClient(std::vector<BaseUserServicePtr> user_services,
+            const ssf::config::Services& services_config,
             ClientCallback callback);
 
   ~SSFClient();
@@ -50,8 +53,6 @@ class SSFClient
   boost::asio::io_service& get_io_service();
 
  private:
-  void AsyncWaitIntTerm(const boost::system::error_code& ec, int signum);
-
   void NetworkToTransport(const boost::system::error_code& ec,
                           NetworkSocketPtr p_socket);
 
@@ -71,6 +72,8 @@ class SSFClient
   Demux fiber_demux_;
 
   std::vector<BaseUserServicePtr> user_services_;
+
+  ssf::config::Services services_config_;
 
   ClientCallback callback_;
 };

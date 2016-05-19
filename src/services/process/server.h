@@ -12,6 +12,7 @@
 
 #include "services/base_service.h"
 
+#include "common/config/config.h"
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
@@ -19,12 +20,10 @@
 
 #include "services/admin/requests/create_service_request.h"
 
-#if defined(BOOST_ASIO_HAS_IOCP)
+#if defined(BOOST_ASIO_WINDOWS)
 #include "services/process/windows/session.h"
-#define BINARY_PATH "C:\\windows\\system32\\cmd.exe"
 #else
 #include "services/process/posix/session.h"
-#define BINARY_PATH "/bin/bash"
 #endif
 
 namespace ssf {
@@ -61,19 +60,24 @@ class Server : public BaseService<Demux> {
  public:
   // Create a new instance of the service
   static ServerPtr Create(boost::asio::io_service& io_service,
-                          demux& fiber_demux, Parameters parameters) {
+                          demux& fiber_demux, Parameters parameters,
+                          const std::string& binary_path) {
     if (!parameters.count("local_port")) {
       return ServerPtr(nullptr);
     } else {
-      return std::shared_ptr<Server>(new Server(
-          io_service, fiber_demux, std::stoul(parameters["local_port"])));
+      return std::shared_ptr<Server>(
+          new Server(io_service, fiber_demux,
+                     std::stoul(parameters["local_port"]), binary_path));
     }
   }
 
   // Function used to register the micro service to the given factory
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory) {
-    p_factory->RegisterServiceCreator(factory_id, &Server::Create);
+      std::shared_ptr<ServiceFactory<demux>> p_factory,
+      const ssf::config::ProcessService& config) {
+    p_factory->RegisterServiceCreator(
+        factory_id,
+        boost::bind(&Server::Create, _1, _2, _3, config.path()));
   }
 
   // Function used to generate create service request
@@ -97,7 +101,7 @@ class Server : public BaseService<Demux> {
 
  private:
   Server(boost::asio::io_service& io_service, demux& fiber_demux,
-         const local_port_type& port);
+         const local_port_type& port, const std::string& binary_path);
 
  private:
   void StartAccept();
