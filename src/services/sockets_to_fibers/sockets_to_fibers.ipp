@@ -37,21 +37,24 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
   }
 
   boost::asio::socket_base::reuse_address option(true);
-
-  socket_acceptor_.bind(endpoint, ec);
+  socket_acceptor_.set_option(option, ec);
   if (ec) {
+    SSF_LOG(kLogError)
+      << "service[sockets to fibers]: could not set reuse address option";
     socket_acceptor_.close(close_ec);
     return;
   }
 
-  socket_acceptor_.set_option(option, ec);
+  socket_acceptor_.bind(endpoint, ec);
   if (ec) {
+    SSF_LOG(kLogError) << "service[sockets to fibers]: could not bind acceptor";
     socket_acceptor_.close(close_ec);
     return;
   }
 
   socket_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
   if (ec) {
+    SSF_LOG(kLogError) << "service[sockets to fibers]: could not listen";
     socket_acceptor_.close(close_ec);
     return;
   }
