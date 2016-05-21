@@ -96,6 +96,12 @@ class Socks : public BaseUserService<Demux> {
     boost::system::error_code ec;
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
+        
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service[socks]: "
+                         << "local_service[sockets to fibers]: start failed: "
+                         << ec.message();
+    }
     return !ec;
   }
 

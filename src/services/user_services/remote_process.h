@@ -103,6 +103,11 @@ class RemoteProcess : public BaseUserService<Demux> {
     boost::system::error_code ec;
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_process_server.service_id(), l_process_server.parameters(), ec);
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service[remote process]: "
+                         << "local_service[process]: start failed: "
+                         << ec.message();
+    }
     return !ec;
   };
 
