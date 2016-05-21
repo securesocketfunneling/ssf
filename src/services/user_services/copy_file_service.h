@@ -82,7 +82,7 @@ class CopyFileService : public BaseUserService<Demux> {
       local_service_ids_.insert(p_service_factory->CreateRunNewService(
           local_service_request.service_id(),
           local_service_request.parameters(), ec));
-          
+
       if (ec) {
         SSF_LOG(kLogError) << "user_service[copy file]: "
                            << "local_service[file to fibers]: start failed: "

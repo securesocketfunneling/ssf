@@ -14,7 +14,7 @@
 namespace ssf {
 namespace services {
 namespace admin {
-//----------------------------------------------------------------------------
+
 template <typename Demux>
 Admin<Demux>::Admin(boost::asio::io_service& io_service, Demux& fiber_demux)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
@@ -31,7 +31,6 @@ Admin<Demux>::Admin(boost::asio::io_service& io_service, Demux& fiber_demux)
       stopped_(false),
       callback_() {}
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::set_server() {
   is_server_ = 1;
@@ -40,7 +39,6 @@ void Admin<Demux>::set_server() {
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, init_ec_);
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::set_client(std::vector<BaseUserServicePtr> user_services,
                               AdminCallbackType callback) {
@@ -48,7 +46,6 @@ void Admin<Demux>::set_client(std::vector<BaseUserServicePtr> user_services,
   callback_ = std::move(callback);
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::start(boost::system::error_code& ec) {
   ec = init_ec_;
@@ -62,7 +59,6 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo) << "service[admin]: stopping";
@@ -71,20 +67,17 @@ void Admin<Demux>::stop(boost::system::error_code& ec) {
   HandleStop();
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 uint32_t Admin<Demux>::service_type_id() {
   return factory_id;
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::StartAccept() {
   fiber_acceptor_.async_accept(
       fiber_, Then(&Admin::HandleAccept, this->SelfFromThis()));
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::HandleAccept(const boost::system::error_code& ec) {
   SSF_LOG(kLogTrace) << "service[admin]: handleAccept";
@@ -102,14 +95,12 @@ void Admin<Demux>::HandleAccept(const boost::system::error_code& ec) {
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::StartConnect() {
   fiber_.async_connect(endpoint(this->get_demux(), service_port),
                        Then(&Admin::HandleConnect, this->SelfFromThis()));
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::HandleConnect(const boost::system::error_code& ec) {
   SSF_LOG(kLogTrace) << "service[admin]: handle connect";
@@ -129,7 +120,6 @@ void Admin<Demux>::HandleConnect(const boost::system::error_code& ec) {
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::Initialize() {
   // Initialize the command reception processes
@@ -139,7 +129,6 @@ void Admin<Demux>::Initialize() {
   this->PostKeepAlive(boost::system::error_code(), 0);
 }
 
-//-----------------------------------------------------------------------------
 #include <boost/asio/yield.hpp>  // NOLINT
 
 /// Initialize micro services (local and remote) asked by the client
@@ -227,7 +216,6 @@ void Admin<Demux>::InitializeRemoteServices(
 }
 #include <boost/asio/unyield.hpp>  // NOLINT
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::ListenForCommand() {
   status_ = 101;
@@ -235,7 +223,6 @@ void Admin<Demux>::ListenForCommand() {
                                           boost::system::error_code(), 0));
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
   switch (status_) {
@@ -282,7 +269,6 @@ void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::ReceiveInstructionHeader() {
   status_ = 102;  // Receive current instruction parameter size
@@ -299,7 +285,6 @@ void Admin<Demux>::ReceiveInstructionHeader() {
                           boost::bind(&Admin::DoAdmin, SelfFromThis(), _1, _2));
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::ReceiveInstructionParameters() {
   status_ = 103;  // Handler current instruction
@@ -370,7 +355,6 @@ void Admin<Demux>::TreatInstructionId() {
   this->ListenForCommand();
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::StartRemoteService(
     const admin::CreateServiceRequest<demux>& create_request,
@@ -378,7 +362,6 @@ void Admin<Demux>::StartRemoteService(
   this->Command(create_request, handler);
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::StopRemoteService(
     const admin::StopServiceRequest<demux>& stop_request,
@@ -386,10 +369,6 @@ void Admin<Demux>::StopRemoteService(
   this->Command(stop_request, handler);
 }
 
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
   if (!ec) {
@@ -412,7 +391,6 @@ void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
                                  size_t length) {
@@ -428,7 +406,6 @@ void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::ShutdownServices() {
   boost::recursive_mutex::scoped_lock lock(stopping_mutex_);
@@ -443,7 +420,6 @@ void Admin<Demux>::ShutdownServices() {
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void Admin<Demux>::HandleStop() {
   reserved_keep_alive_timer_.cancel();

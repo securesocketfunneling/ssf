@@ -6,7 +6,9 @@
 
 #include "common/error/error.h"
 
-namespace ssf { namespace services { namespace fibers_to_sockets {
+namespace ssf {
+namespace services {
+namespace fibers_to_sockets {
 
 template <typename Demux>
 FibersToSockets<Demux>::FibersToSockets(boost::asio::io_service& io_service,
@@ -48,8 +50,7 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
 template <typename Demux>
 void FibersToSockets<Demux>::stop(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo) << "service[fibers to sockets]: stopping";
-  ec.assign(::error::success,
-            ::error::get_ssf_category());
+  ec.assign(::error::success, ::error::get_ssf_category());
 
   fiber_acceptor_.close();
   manager_.stop_all();
@@ -78,9 +79,9 @@ void FibersToSockets<Demux>::FiberAcceptHandler(
   }
 
   if (!ec) {
-    socket_.async_connect(endpoint_,
-                          Then(&FibersToSockets::SocketConnectHandler,
-                               this->SelfFromThis()));
+    socket_.async_connect(
+        endpoint_,
+        Then(&FibersToSockets::SocketConnectHandler, this->SelfFromThis()));
   }
 }
 

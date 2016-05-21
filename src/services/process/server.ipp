@@ -94,8 +94,8 @@ void Server<Demux>::HandleAccept(const boost::system::error_code& ec) {
 
   SSF_LOG(kLogInfo) << "service[process]: start session";
   ssf::BaseSessionPtr new_process_session = std::make_shared<session_impl>(
-      &(this->session_manager_), std::move(this->new_connection_),
-      binary_path_, binary_args_);
+      &(this->session_manager_), std::move(this->new_connection_), binary_path_,
+      binary_args_);
   boost::system::error_code e;
   this->session_manager_.start(new_process_session, e);
 

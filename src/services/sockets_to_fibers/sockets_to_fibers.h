@@ -16,13 +16,13 @@
 
 #include "services/admin/requests/create_service_request.h"
 
-namespace ssf { 
-namespace services { 
+namespace ssf {
+namespace services {
 namespace sockets_to_fibers {
 
 template <typename Demux>
 class SocketsToFibers : public BaseService<Demux> {
-public:
+ public:
   typedef typename Demux::remote_port_type remote_port_type;
 
   typedef std::shared_ptr<SocketsToFibers> SocketsToFibersPtr;
@@ -35,12 +35,10 @@ public:
   typedef boost::asio::ip::tcp::socket socket;
   typedef boost::asio::ip::tcp::acceptor socket_acceptor;
 
-public:
+ public:
   static SocketsToFibersPtr Create(boost::asio::io_service& io_service,
-                                         demux& fiber_demux,
-                                         Parameters parameters) {
-    if (!parameters.count("local_port") ||
-      !parameters.count("remote_port")) {
+                                   demux& fiber_demux, Parameters parameters) {
+    if (!parameters.count("local_port") || !parameters.count("remote_port")) {
       return SocketsToFibersPtr(nullptr);
     } else {
       return std::shared_ptr<SocketsToFibers>(
@@ -50,14 +48,11 @@ public:
     }
   }
 
-  enum {
-    factory_id = 4
-  };
+  enum { factory_id = 4 };
 
   static void RegisterToServiceFactory(
-    std::shared_ptr<ServiceFactory<demux>> p_factory) {
-    p_factory->RegisterServiceCreator(factory_id, 
-                                      &SocketsToFibers::Create);
+      std::shared_ptr<ServiceFactory<demux>> p_factory) {
+    p_factory->RegisterServiceCreator(factory_id, &SocketsToFibers::Create);
   }
 
   virtual void start(boost::system::error_code& ec);
@@ -65,7 +60,7 @@ public:
   virtual uint32_t service_type_id();
 
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
-    uint16_t local_port, remote_port_type remote_port) {
+      uint16_t local_port, remote_port_type remote_port) {
     ssf::services::admin::CreateServiceRequest<demux> create(factory_id);
     create.add_parameter("local_port", std::to_string(local_port));
     create.add_parameter("remote_port", std::to_string(remote_port));
@@ -73,11 +68,11 @@ public:
     return create;
   }
 
-private:
- SocketsToFibers(boost::asio::io_service& io_service, demux& fiber_demux,
-                 uint16_t local, remote_port_type remote_port);
+ private:
+  SocketsToFibers(boost::asio::io_service& io_service, demux& fiber_demux,
+                  uint16_t local, remote_port_type remote_port);
 
-private:
+ private:
   void StartAcceptSockets();
 
   void SocketAcceptHandler(const boost::system::error_code& ec);
@@ -91,8 +86,7 @@ private:
   }
 
   std::shared_ptr<SocketsToFibers> SelfFromThis() {
-    return std::static_pointer_cast<SocketsToFibers>(
-      this->shared_from_this());
+    return std::static_pointer_cast<SocketsToFibers>(this->shared_from_this());
   }
 
   uint16_t local_port_;

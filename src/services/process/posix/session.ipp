@@ -101,10 +101,11 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     std::vector<char*> argv;
     std::list<std::string> splitted_args;
     if (binary_args_ != "") {
-      boost::split(splitted_args, binary_args_, boost::algorithm::is_any_of(" "));
+      boost::split(splitted_args, binary_args_,
+                   boost::algorithm::is_any_of(" "));
       argv.resize(splitted_args.size() + 2);
       std::size_t i = 1;
-      for (auto& arg: splitted_args) {
+      for (auto& arg : splitted_args) {
         argv[i] = const_cast<char*>(arg.c_str());
         ++i;
       }

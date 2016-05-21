@@ -38,15 +38,14 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   socket_.set_option(reuse_address_option, ec);
   if (ec) {
     SSF_LOG(kLogError)
-      << "service[datagrams to fibers]: could not set reuse address option";
+        << "service[datagrams to fibers]: could not set reuse address option";
     socket_.close(ec);
     return;
   }
-  
+
   socket_.bind(endpoint_, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-      << "service[datagrams to fibers]: could not bind socket";
+    SSF_LOG(kLogError) << "service[datagrams to fibers]: could not bind socket";
     socket_.close(ec);
     return;
   }

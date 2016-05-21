@@ -40,7 +40,7 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
   socket_acceptor_.set_option(option, ec);
   if (ec) {
     SSF_LOG(kLogError)
-      << "service[sockets to fibers]: could not set reuse address option";
+        << "service[sockets to fibers]: could not set reuse address option";
     socket_acceptor_.close(close_ec);
     return;
   }

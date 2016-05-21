@@ -34,7 +34,8 @@ SocksServer<Demux>::SocksServer(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void SocksServer<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service[socks]: starting server on port " << local_port_;
+  SSF_LOG(kLogInfo) << "service[socks]: starting server on port "
+                    << local_port_;
   ec = init_ec_;
 
   if (!init_ec_) {
