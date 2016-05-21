@@ -31,12 +31,21 @@ class ServiceFixtureTest : public ::testing::Test {
   virtual ~ServiceFixtureTest() {}
 
   virtual void SetUp() {
-    if (!StartServer("127.0.0.1", "10000") ||
-        !StartClient("127.0.0.1", "10000")) {
-      SSF_LOG(kLogCritical) << "Could not start client or server";
+    auto cleanup = [this]() {
       network_set_.set_value(false);
       service_set_.set_value(false);
       transport_set_.set_value(false);
+    };
+
+    if (!StartServer("127.0.0.1", "10000")) {
+      cleanup();
+      FAIL() << "Could not start server";
+      return;
+    }
+    if (!StartClient("127.0.0.1", "10000")) {
+      cleanup();
+      FAIL() << "Could not start client";
+      return;
     }
   }
 

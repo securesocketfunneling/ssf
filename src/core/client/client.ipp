@@ -58,14 +58,13 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
   // resolve remote endpoint with query
   NetworkResolver resolver(async_engine_.get_io_service());
   auto endpoint_it = resolver.resolve(query, ec);
-
-  async_engine_.Start();
-
   if (ec) {
     Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
     SSF_LOG(kLogError) << "client: could not resolve network endpoint";
     return;
   }
+
+  async_engine_.Start();
 
   // async connect client to given endpoint
   p_socket->async_connect(
