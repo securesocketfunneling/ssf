@@ -35,7 +35,8 @@ class Session : public ssf::BaseSession {
   typedef ItemManager<BaseSessionPtr> SessionManager;
 
  public:
-  Session(SessionManager* sm, fiber client, const std::string& binary_path);
+  Session(SessionManager* sm, fiber client, const std::string& binary_path,
+          const std::string& binary_args);
 
  public:
   void start(boost::system::error_code&) override;
@@ -68,6 +69,7 @@ class Session : public ssf::BaseSession {
   fiber client_;
 
   std::string binary_path_;
+  std::string binary_args_;
 
   std::string out_pipe_name_;
   std::string err_pipe_name_;

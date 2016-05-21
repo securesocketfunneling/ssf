@@ -109,8 +109,12 @@ class ProcessService {
   inline std::string path() const { return path_; }
   inline void set_path(const std::string& path) { path_ = path; }
 
+  inline std::string args() const { return args_; }
+  inline void set_args(const std::string& args) { args_ = args; }
+
  private:
   std::string path_;
+  std::string args_;
 };
 
 class Services {
@@ -156,7 +160,8 @@ class Config {
    *     },
    *     "services": {
    *       "process": {
-   *         "path": "/bin/bash"
+   *         "path": "/bin/bash",
+   *         "args": ""
    *       }
    *     }
    *   }

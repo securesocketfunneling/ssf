@@ -23,13 +23,15 @@ namespace posix {
 
 template <typename Demux>
 Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
-                        const std::string& binary_path)
+                        const std::string& binary_path,
+                        const std::string& binary_args)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
       p_session_manager_(p_session_manager),
       client_(std::move(client)),
       signal_(io_service_, SIGCHLD),
       binary_path_(binary_path),
+      binary_args_(binary_args),
       child_pid_(kInvalidProcessId),
       master_tty_(kInvalidTtyDescriptor),
       sd_(io_service_) {}

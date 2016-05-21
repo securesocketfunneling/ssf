@@ -74,6 +74,7 @@ TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
   ASSERT_EQ(config_.proxy().http_port(), "");
   ASSERT_EQ(config_.services().process().path(),
             SSF_PROCESS_SERVICE_BINARY_PATH);
+  ASSERT_EQ(config_.services().process().args(), "");
 }
 
 TEST_F(LoadConfigTest, LoadProxyFileTest) {
@@ -92,6 +93,7 @@ TEST_F(LoadConfigTest, LoadServicesFileTest) {
 
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
   ASSERT_EQ(config_.services().process().path(), "/bin/custom_path");
+  ASSERT_EQ(config_.services().process().args(), "-custom args");
 }
 
 TEST_F(LoadConfigTest, LoadCompleteFileTest) {
@@ -109,4 +111,5 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   ASSERT_EQ(config_.proxy().http_addr(), "127.0.0.1");
   ASSERT_EQ(config_.proxy().http_port(), "8080");
   ASSERT_EQ(config_.services().process().path(), "/bin/custom_path");
+  ASSERT_EQ(config_.services().process().args(), "-custom args");
 }

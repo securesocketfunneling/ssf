@@ -18,12 +18,14 @@ namespace windows {
 
 template <typename Demux>
 Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
-                        const std::string& binary_path)
+                        const std::string& binary_path,
+                        const std::string& binary_args)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
       p_session_manager_(p_session_manager),
       client_(std::move(client)),
       binary_path_(binary_path),
+      binary_args_(binary_args),
       out_pipe_name_("\\\\.\\pipe\\ssf_out_pipe_"),
       err_pipe_name_("\\\\.\\pipe\\ssf_err_pipe_"),
       in_pipe_name_("\\\\.\\pipe\\ssf_in_pipe_"),
@@ -175,10 +177,12 @@ void Session<Demux>::StartProcess(boost::system::error_code& ec) {
   startup_info.hStdError = proc_err_;
   startup_info.hStdInput = proc_in_;
 
-  if (!::CreateProcessA(NULL, const_cast<char*>(binary_path_.c_str()), NULL,
+  std::string command_line = binary_path_ + " " + binary_args_;
+
+  if (!::CreateProcessA(NULL, const_cast<char*>(command_line.c_str()), NULL,
                         NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL,
                         &startup_info, &process_info_)) {
-    SSF_LOG(kLogError) << "session[process]: create process <" << binary_path_
+    SSF_LOG(kLogError) << "session[process]: create process <" << command_line
                        << "> failed";
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
   }

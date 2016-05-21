@@ -40,7 +40,8 @@ class Session : public ssf::BaseSession {
   enum { kInvalidProcessId = -1, kInvalidTtyDescriptor = -1 };
 
  public:
-  Session(SessionManager* sm, fiber client, const std::string& binary_path);
+  Session(SessionManager* sm, fiber client, const std::string& binary_path,
+          const std::string& binary_args);
 
  public:
   void start(boost::system::error_code&) override;
@@ -74,6 +75,8 @@ class Session : public ssf::BaseSession {
   boost::asio::signal_set signal_;
 
   std::string binary_path_;
+  std::string binary_args_;
+
   pid_t child_pid_;
 
   int master_tty_;

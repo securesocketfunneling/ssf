@@ -42,10 +42,11 @@ void Proxy::Log() const {
   }
 }
 
-ProcessService::ProcessService() : path_(SSF_PROCESS_SERVICE_BINARY_PATH) {}
+ProcessService::ProcessService()
+    : path_(SSF_PROCESS_SERVICE_BINARY_PATH), args_("") {}
 
 ProcessService::ProcessService(const ProcessService& process_service)
-    : path_(process_service.path_) {}
+    : path_(process_service.path_), args_(process_service.args_) {}
 
 Services::Services() : process_() {}
 
@@ -64,11 +65,17 @@ void Services::UpdateProcessService(const boost::property_tree::ptree& pt) {
   if (path) {
     process_.set_path(path.get().data());
   }
+  auto args = process_prop.get_child_optional("args");
+  if (args) {
+    process_.set_args(args.get().data());
+  }
 }
 
 void Services::Log() const {
-  SSF_LOG(kLogInfo) << "config[services][process]: <"
+  SSF_LOG(kLogInfo) << "config[services][process]: path: <"
                     << process_service().path() << ">";
+  SSF_LOG(kLogInfo) << "config[services][process]: args: <"
+                    << process_service().args() << ">";
 }
 
 Config::Config() : tls_(), proxy_(), services_() {}

@@ -2,7 +2,8 @@
     "ssf": {
         "services" : {
             "process": {
-                "path": "/bin/custom_path"
+                "path": "/bin/custom_path",
+                "args": "-custom args"
             }
         }
     }

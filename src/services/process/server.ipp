@@ -17,13 +17,15 @@ namespace process {
 template <typename Demux>
 Server<Demux>::Server(boost::asio::io_service& io_service, demux& fiber_demux,
                       const local_port_type& port,
-                      const std::string& binary_path)
+                      const std::string& binary_path,
+                      const std::string& binary_args)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
       fiber_acceptor_(io_service),
       session_manager_(),
       new_connection_(io_service, endpoint(fiber_demux, 0)),
       local_port_(port),
-      binary_path_(binary_path) {}
+      binary_path_(binary_path),
+      binary_args_(binary_args) {}
 
 template <typename Demux>
 void Server<Demux>::start(boost::system::error_code& ec) {
@@ -93,7 +95,7 @@ void Server<Demux>::HandleAccept(const boost::system::error_code& ec) {
   SSF_LOG(kLogInfo) << "service[process]: start session";
   ssf::BaseSessionPtr new_process_session = std::make_shared<session_impl>(
       &(this->session_manager_), std::move(this->new_connection_),
-      binary_path_);
+      binary_path_, binary_args_);
   boost::system::error_code e;
   this->session_manager_.start(new_process_session, e);
 

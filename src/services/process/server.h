@@ -61,13 +61,14 @@ class Server : public BaseService<Demux> {
   // Create a new instance of the service
   static ServerPtr Create(boost::asio::io_service& io_service,
                           demux& fiber_demux, Parameters parameters,
-                          const std::string& binary_path) {
-    if (!parameters.count("local_port")) {
+                          const std::string& binary_path,
+                          const std::string& binary_args) {
+    if (!parameters.count("local_port") || binary_path == "") {
       return ServerPtr(nullptr);
     } else {
-      return std::shared_ptr<Server>(
-          new Server(io_service, fiber_demux,
-                     std::stoul(parameters["local_port"]), binary_path));
+      return std::shared_ptr<Server>(new Server(
+          io_service, fiber_demux, std::stoul(parameters["local_port"]),
+          binary_path, binary_args));
     }
   }
 
@@ -76,7 +77,8 @@ class Server : public BaseService<Demux> {
       std::shared_ptr<ServiceFactory<demux>> p_factory,
       const ssf::config::ProcessService& config) {
     p_factory->RegisterServiceCreator(
-        factory_id, boost::bind(&Server::Create, _1, _2, _3, config.path()));
+        factory_id,
+        boost::bind(&Server::Create, _1, _2, _3, config.path(), config.args()));
   }
 
   // Function used to generate create service request
@@ -100,7 +102,8 @@ class Server : public BaseService<Demux> {
 
  private:
   Server(boost::asio::io_service& io_service, demux& fiber_demux,
-         const local_port_type& port, const std::string& binary_path);
+         const local_port_type& port, const std::string& binary_path,
+         const std::string& binary_args);
 
  private:
   void StartAccept();
@@ -122,6 +125,7 @@ class Server : public BaseService<Demux> {
   boost::system::error_code init_ec_;
   local_port_type local_port_;
   std::string binary_path_;
+  std::string binary_args_;
 };
 
 }  // process
