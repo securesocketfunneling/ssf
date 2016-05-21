@@ -5,6 +5,8 @@
 
 #include <gtest/gtest.h>
 
+#include <ssf/log/log.h>
+
 #include "services/base_service.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
@@ -29,8 +31,13 @@ class ServiceFixtureTest : public ::testing::Test {
   virtual ~ServiceFixtureTest() {}
 
   virtual void SetUp() {
-    StartServer("127.0.0.1", "10000");
-    StartClient("127.0.0.1", "10000");
+    if (!StartServer("127.0.0.1", "10000") ||
+        !StartClient("127.0.0.1", "10000")) {
+      SSF_LOG(kLogCritical) << "Could not start client or server";
+      network_set_.set_value(false);
+      service_set_.set_value(false);
+      transport_set_.set_value(false);
+    }
   }
 
   virtual void TearDown() {
@@ -38,7 +45,7 @@ class ServiceFixtureTest : public ::testing::Test {
     p_ssf_server_->Stop();
   }
 
-  void StartServer(const std::string& host_addr, const std::string& host_port) {
+  bool StartServer(const std::string& host_addr, const std::string& host_port) {
     ssf::config::Config ssf_config;
 
     auto endpoint_query =
@@ -48,9 +55,13 @@ class ServiceFixtureTest : public ::testing::Test {
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
+    if (run_ec) {
+      SSF_LOG(kLogError) << "Could not run server";
+    }
+    return run_ec.value() == 0;
   }
 
-  void StartClient(const std::string& target_addr,
+  bool StartClient(const std::string& target_addr,
                    const std::string target_host) {
     std::vector<BaseUserServicePtr> client_options;
     boost::system::error_code ec;
@@ -69,6 +80,10 @@ class ServiceFixtureTest : public ::testing::Test {
         boost::bind(&ServiceFixtureTest::SSFClientCallback, this, _1, _2, _3)));
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);
+    if (run_ec) {
+      SSF_LOG(kLogError) << "Could not run client";
+    }
+    return run_ec.value() == 0;
   }
 
   virtual std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
@@ -93,6 +108,7 @@ class ServiceFixtureTest : public ::testing::Test {
     if (type == ssf::services::initialisation::NETWORK) {
       network_set_.set_value(!ec);
       if (ec) {
+        SSF_LOG(kLogCritical) << "Network initialization failed";
         service_set_.set_value(false);
         transport_set_.set_value(false);
       }
@@ -102,14 +118,22 @@ class ServiceFixtureTest : public ::testing::Test {
 
     if (type == ssf::services::initialisation::TRANSPORT) {
       transport_set_.set_value(!ec);
+      if (ec) {
+        SSF_LOG(kLogCritical) << "Transport initialization failed";
+      }
 
       return;
     }
 
-    if (type == ssf::services::initialisation::SERVICE &&
-        p_user_service->GetName() == ServiceTested::GetParseName()) {
-      service_set_.set_value(!ec);
-
+    if (type == ssf::services::initialisation::SERVICE) {
+      if(ec) {
+        SSF_LOG(kLogCritical) << "user_service[" << p_user_service->GetName()
+                              << "]: initialization failed";
+      }
+      if (p_user_service->GetName() == ServiceTested::GetParseName()) {
+        service_set_.set_value(!ec);
+      }
+    
       return;
     }
   }
