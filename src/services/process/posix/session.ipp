@@ -10,6 +10,10 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <vector>
+
+#include <boost/algorithm/string.hpp>
+
 #include <ssf/log/log.h>
 #include <ssf/network/session_forwarder.h>
 #include <ssf/network/socket_link.h>
@@ -89,14 +93,29 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     // dup2 done, close descriptor
     close(slave_tty);
 
-    fprintf(stderr, "* SSF process: %s\n\n", binary_path_.c_str());
-
     std::size_t slash_pos = binary_path_.rfind('/');
     std::string binary_name = std::string::npos != slash_pos
                                   ? binary_path_.substr(slash_pos + 1)
                                   : binary_path_;
 
-    execl(binary_path_.c_str(), binary_name.c_str(), (char*)NULL);
+    std::vector<char*> argv;
+    std::list<std::string> splitted_args;
+    if (binary_args_ != "") {
+      boost::split(splitted_args, binary_args_, boost::algorithm::is_any_of(" "));
+      argv.resize(splitted_args.size() + 2);
+      std::size_t i = 1;
+      for (auto& arg: splitted_args) {
+        argv[i] = const_cast<char*>(arg.c_str());
+        ++i;
+      }
+    } else {
+      argv.resize(2);
+    }
+
+    argv[0] = const_cast<char*>(binary_name.c_str());
+    argv[argv.size() - 1] = nullptr;
+
+    execv(binary_path_.c_str(), argv.data());
 
     fprintf(stderr, "Exiting: fail to exec <%s>\n", binary_path_.c_str());
     exit(1);

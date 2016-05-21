@@ -26,8 +26,6 @@ class ServiceFixtureTest : public ::testing::Test {
   using ServiceTested = TServiceTested<demux>;
 
  public:
-  ServiceFixtureTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
-
   virtual ~ServiceFixtureTest() {}
 
   virtual void SetUp() {
@@ -57,7 +55,7 @@ class ServiceFixtureTest : public ::testing::Test {
     std::vector<BaseUserServicePtr> client_options;
     boost::system::error_code ec;
 
-    auto p_service = ServiceCreateServiceOptions(ec);
+    BaseUserServicePtr p_service = ServiceCreateServiceOptions(ec);
 
     client_options.push_back(p_service);
 
@@ -115,6 +113,9 @@ class ServiceFixtureTest : public ::testing::Test {
       return;
     }
   }
+
+ protected:
+  ServiceFixtureTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
  protected:
   std::unique_ptr<Client> p_ssf_client_;

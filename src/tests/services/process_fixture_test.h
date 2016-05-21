@@ -9,12 +9,17 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/deadline_timer.hpp>
 
+#include <gtest/gtest.h>
+
 #include "tests/services/service_fixture_test.h"
 
 template <template <typename> class TServiceTested>
 class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
  public:
-  ProcessFixtureTest() : ServiceFixtureTest() {}
+  using ServiceTested = typename ServiceFixtureTest<TServiceTested>::ServiceTested;
+
+ public:
+  ProcessFixtureTest() : ServiceFixtureTest<TServiceTested>() {}
 
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) {
@@ -22,7 +27,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
   }
 
   void ExecuteCmd() {
-    ASSERT_TRUE(Wait());
+    ASSERT_TRUE(this->Wait());
 
     boost::asio::io_service io_service;
     boost::thread t([&]() { io_service.run(); });
