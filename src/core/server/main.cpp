@@ -1,4 +1,5 @@
-#include <future>
+#include <condition_variable>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -62,23 +63,26 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::promise<bool> stopped;
+  std::condition_variable wait_stop_cv;
+  std::mutex mutex;
   boost::asio::signal_set signal(server.get_io_service(), SIGINT, SIGTERM);
 
   signal.async_wait(
-      [&stopped](const boost::system::error_code& ec, int signum) {
+      [&wait_stop_cv](const boost::system::error_code& ec, int signum) {
         if (ec) {
           return;
         }
 
-        stopped.set_value(true);
+        wait_stop_cv.notify_all();
       });
 
   SSF_LOG(kLogInfo) << "server: running (Ctrl + C to stop)";
-  std::future<bool> stop = stopped.get_future();
-  stop.wait();
+  
+  std::unique_lock<std::mutex> lock(mutex);
+  wait_stop_cv.wait(lock);
 
   SSF_LOG(kLogInfo) << "server: stop";
+  signal.cancel(ec);
   server.Stop();
 
   return 0;

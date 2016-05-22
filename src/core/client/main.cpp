@@ -1,4 +1,5 @@
-#include <future>
+#include <condition_variable>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -116,13 +117,17 @@ int main(int argc, char** argv) {
   auto endpoint_query = GenerateNetworkQuery(
       cmd.addr(), std::to_string(cmd.port()), ssf_config, circuit_config);
 
+  std::condition_variable wait_stop_cv;
+  std::mutex mutex;
+
   auto callback =
-      [](ssf::services::initialisation::type type, BaseUserServicePtr p_service,
+      [&wait_stop_cv](ssf::services::initialisation::type type, BaseUserServicePtr p_service,
          const boost::system::error_code& ec) {
         switch (type) {
           case ssf::services::initialisation::NETWORK:
             if (ec) {
               SSF_LOG(kLogError) << "client: connected to remote server NOK";
+              wait_stop_cv.notify_all();
             } else {
               SSF_LOG(kLogInfo) << "client: connected to remote server OK";
             }
@@ -157,23 +162,24 @@ int main(int argc, char** argv) {
   SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
                     << cmd.port() << ">";
 
-  std::promise<bool> stopped;
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
 
   signal.async_wait(
-      [&stopped](const boost::system::error_code& ec, int signum) {
+      [&wait_stop_cv](const boost::system::error_code& ec, int signum) {
         if (ec) {
           return;
         }
 
-        stopped.set_value(true);
+        wait_stop_cv.notify_all();
       });
 
   SSF_LOG(kLogInfo) << "client: running (Ctrl + C to stop)";
-  std::future<bool> stop = stopped.get_future();
-  stop.wait();
+
+  std::unique_lock<std::mutex> lock(mutex);
+  wait_stop_cv.wait(lock);
 
   SSF_LOG(kLogInfo) << "client: stop";
+  signal.cancel(ec);
   client.Stop();
 
   return 0;

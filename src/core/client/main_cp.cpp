@@ -1,6 +1,8 @@
-#include <future>
+#include <condition_variable>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
@@ -97,22 +99,25 @@ int main(int argc, char** argv) {
   auto endpoint_query = GenerateNetworkQuery(
       cmd.addr(), std::to_string(cmd.port()), ssf_config, circuit_config);
 
+  std::condition_variable wait_stop_cv;
+  std::mutex mutex;
+
   auto callback =
-      [&closed](ssf::services::initialisation::type type, BaseUserServicePtr,
-                const boost::system::error_code& ec) {
+      [&wait_stop_cv](ssf::services::initialisation::type type,
+                      BaseUserServicePtr, const boost::system::error_code& ec) {
         switch (type) {
           case ssf::services::initialisation::NETWORK:
             SSF_LOG(kLogInfo) << "client: connected to remote server "
                               << (!ec ? "OK" : "NOK");
             break;
           case ssf::services::initialisation::CLOSE:
-            closed.set_value(true);
+            wait_stop_cv.notify_all();
             return;
           default:
             break;
         }
         if (ec) {
-          closed.set_value(true);
+          wait_stop_cv.notify_all();
         }
       };
 
@@ -121,17 +126,30 @@ int main(int argc, char** argv) {
 
   client.Run(endpoint_query, ec);
 
-  if (!ec) {
-    SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
-                      << cmd.port() << ">";
-    // wait end transfer
-    SSF_LOG(kLogInfo) << "client: wait end of file transfer";
-    closed.get_future().get();
-  } else {
-    SSF_LOG(kLogError) << "client: error happened when running client: "
+  if (ec) {
+    SSF_LOG(kLogError) << "client: error happened when running client : "
                        << ec.message();
+    return 1;
   }
 
+  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
+                    << cmd.port() << ">";
+
+  boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
+  signal.async_wait(
+      [&wait_stop_cv](const boost::system::error_code& ec, int signum) {
+        if (ec) {
+          return;
+        }
+
+        wait_stop_cv.notify_all();
+      });
+
+  // wait end transfer
+  SSF_LOG(kLogInfo) << "client: wait end of file transfer";
+  std::unique_lock<std::mutex> lock(mutex);
+  wait_stop_cv.wait(lock);
+  signal.cancel(ec);
   client.Stop();
 
   return 0;
