@@ -53,8 +53,11 @@ class Session : public ssf::BaseSession {
     return std::static_pointer_cast<Session>(this->shared_from_this());
   }
 
-  void InitPipes(int pipe_out[2], int pipe_err[2], int pipe_in[2],
-                 boost::system::error_code& ec);
+  static void ChdirHome(boost::system::error_code& ec);
+  
+  static void GenerateArgv(const std::string& binary_name,
+                           const std::list<std::string>& splitted_argv,
+                           std::vector<char*>& argv);
 
   void InitMasterSlaveTty(int* p_master, int* p_slave,
                           boost::system::error_code& ec);

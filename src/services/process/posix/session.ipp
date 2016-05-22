@@ -1,12 +1,13 @@
 #ifndef SSF_SERVICES_PROCESS_POSIX_SESSION_IPP_
 #define SSF_SERVICES_PROCESS_POSIX_SESSION_IPP_
 
+#include <fcntl.h>
+#include <pwd.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
 #include <stdlib.h>
-#include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -64,6 +65,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
   if (child_pid_ == 0) {
     // child
+    boost::system::error_code ec;
     struct termios new_term_settings;
     close(master_tty);
 
@@ -93,29 +95,23 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     // dup2 done, close descriptor
     close(slave_tty);
 
+    // Change dir to user home
+    ChdirHome(ec);
+
     std::size_t slash_pos = binary_path_.rfind('/');
     std::string binary_name = std::string::npos != slash_pos
                                   ? binary_path_.substr(slash_pos + 1)
                                   : binary_path_;
 
+    // Generate argv array
     std::vector<char*> argv;
-    std::list<std::string> splitted_args;
+    std::list<std::string> split_args;
     if (binary_args_ != "") {
-      boost::split(splitted_args, binary_args_,
+      boost::split(split_args, binary_args_,
                    boost::algorithm::is_any_of(" "));
-      argv.resize(splitted_args.size() + 2);
-      std::size_t i = 1;
-      for (auto& arg : splitted_args) {
-        argv[i] = const_cast<char*>(arg.c_str());
-        ++i;
-      }
-    } else {
-      argv.resize(2);
     }
-
-    argv[0] = const_cast<char*>(binary_name.c_str());
-    argv[argv.size() - 1] = nullptr;
-
+    GenerateArgv(binary_name, split_args, argv);
+    
     execv(binary_path_.c_str(), argv.data());
 
     fprintf(stderr, "Exiting: fail to exec <%s>\n", binary_path_.c_str());
@@ -192,6 +188,52 @@ void Session<Demux>::SigchldHandler(const boost::system::error_code& ec,
   // child terminated, close session
   child_pid_ = kInvalidProcessId;
   StopHandler(ec);
+}
+
+template <typename Demux>
+void Session<Demux>::ChdirHome(boost::system::error_code& ec) {
+  const char* home_dir = getenv("HOME");
+  
+  if (home_dir == NULL) {
+    struct passwd* p_pw = getpwuid(getuid());
+    if (p_pw == NULL) {
+      fprintf(stderr, "Could not find passwd entry for current user\n");
+      ec.assign(::error::file_not_found, ::error::get_ssf_category());
+      return;
+    }
+    
+    home_dir = p_pw->pw_dir;
+  }
+  
+  if (chdir(home_dir) < 0) {
+    fprintf(stderr, "Could not chdir to user home <%s>\n", home_dir);
+    ec.assign(::error::file_not_found, ::error::get_ssf_category());
+    return;
+  }
+  
+  // overwrite PWD env var after chdir
+  if (setenv("PWD", home_dir, 1) < 0) {
+    fprintf(stderr, "Could not set PWD env var <%s>\n", home_dir);
+  }
+}
+
+template <typename Demux>
+void Session<Demux>::GenerateArgv(const std::string& binary_name,
+                                  const std::list<std::string>& split_args,
+                                  std::vector<char*>& argv) {
+  if (split_args.size() > 0) {
+    argv.resize(split_args.size() + 2);
+    std::size_t i = 1;
+    for (auto& arg : split_args) {
+      argv[i] = const_cast<char*>(arg.c_str());
+      ++i;
+    }
+  } else {
+    argv.resize(2);
+  }
+
+  argv[0] = const_cast<char*>(binary_name.c_str());
+  argv[argv.size() - 1] = nullptr;
 }
 
 template <typename Demux>
