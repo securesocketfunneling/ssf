@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <wincon.h>
+#include <shlobj.h>
 
 #include <ssf/log/log.h>
 #include <ssf/network/session_forwarder.h>
@@ -177,11 +178,17 @@ void Session<Demux>::StartProcess(boost::system::error_code& ec) {
   startup_info.hStdError = proc_err_;
   startup_info.hStdInput = proc_in_;
 
+  // chdir to home dir at process creation
+  char home_dir[MAX_PATH];
+  bool home_dir_set = SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL,
+                                                 SHGFP_TYPE_CURRENT, home_dir));
+
   std::string command_line = binary_path_ + " " + binary_args_;
 
   if (!::CreateProcessA(NULL, const_cast<char*>(command_line.c_str()), NULL,
-                        NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL,
-                        &startup_info, &process_info_)) {
+                        NULL, TRUE, CREATE_NEW_CONSOLE, NULL,
+                        (home_dir_set ? home_dir : NULL), &startup_info,
+                        &process_info_)) {
     SSF_LOG(kLogError) << "session[process]: create process <" << command_line
                        << "> failed";
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
