@@ -65,21 +65,25 @@ int main(int argc, char** argv) {
 
   std::condition_variable wait_stop_cv;
   std::mutex mutex;
+  bool stopped = false;
   boost::asio::signal_set signal(server.get_io_service(), SIGINT, SIGTERM);
 
-  signal.async_wait(
-      [&wait_stop_cv](const boost::system::error_code& ec, int signum) {
-        if (ec) {
-          return;
-        }
-
-        wait_stop_cv.notify_all();
-      });
+  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
+      const boost::system::error_code& ec, int signum) {
+    if (ec) {
+      return;
+    }
+    {
+      boost::lock_guard<std::mutex> lock(mutex);
+      stopped = true;
+    }
+    wait_stop_cv.notify_all();
+  });
 
   SSF_LOG(kLogInfo) << "server: running (Ctrl + C to stop)";
-  
+
   std::unique_lock<std::mutex> lock(mutex);
-  wait_stop_cv.wait(lock);
+  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
 
   SSF_LOG(kLogInfo) << "server: stop";
   signal.cancel(ec);

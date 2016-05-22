@@ -101,25 +101,36 @@ int main(int argc, char** argv) {
 
   std::condition_variable wait_stop_cv;
   std::mutex mutex;
+  bool stopped = false;
 
-  auto callback =
-      [&wait_stop_cv](ssf::services::initialisation::type type,
-                      BaseUserServicePtr, const boost::system::error_code& ec) {
-        switch (type) {
-          case ssf::services::initialisation::NETWORK:
-            SSF_LOG(kLogInfo) << "client: connected to remote server "
-                              << (!ec ? "OK" : "NOK");
-            break;
-          case ssf::services::initialisation::CLOSE:
-            wait_stop_cv.notify_all();
-            return;
-          default:
-            break;
+  auto callback = [&wait_stop_cv, &mutex, &stopped](
+      ssf::services::initialisation::type type, BaseUserServicePtr,
+      const boost::system::error_code& ec) {
+    switch (type) {
+      case ssf::services::initialisation::NETWORK: {
+        SSF_LOG(kLogInfo) << "client: connected to remote server "
+                          << (!ec ? "OK" : "NOK");
+        break;
+      }
+      case ssf::services::initialisation::CLOSE: {
+        {
+          boost::lock_guard<std::mutex> lock(mutex);
+          stopped = true;
         }
-        if (ec) {
-          wait_stop_cv.notify_all();
-        }
-      };
+        wait_stop_cv.notify_all();
+        return;
+      }
+      default:
+        break;
+    }
+    if (ec) {
+      {
+        boost::lock_guard<std::mutex> lock(mutex);
+        stopped = true;
+      }
+      wait_stop_cv.notify_all();
+    }
+  };
 
   // Initiating and starting the client
   Client client(user_services, ssf_config.services(), callback);
@@ -136,19 +147,22 @@ int main(int argc, char** argv) {
                     << cmd.port() << ">";
 
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
-  signal.async_wait(
-      [&wait_stop_cv](const boost::system::error_code& ec, int signum) {
-        if (ec) {
-          return;
-        }
-
-        wait_stop_cv.notify_all();
-      });
+  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
+      const boost::system::error_code& ec, int signum) {
+    if (ec) {
+      return;
+    }
+    {
+      boost::lock_guard<std::mutex> lock(mutex);
+      stopped = true;
+    }
+    wait_stop_cv.notify_all();
+  });
 
   // wait end transfer
   SSF_LOG(kLogInfo) << "client: wait end of file transfer";
   std::unique_lock<std::mutex> lock(mutex);
-  wait_stop_cv.wait(lock);
+  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
   signal.cancel(ec);
   client.Stop();
 

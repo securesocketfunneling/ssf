@@ -119,34 +119,41 @@ int main(int argc, char** argv) {
 
   std::condition_variable wait_stop_cv;
   std::mutex mutex;
+  bool stopped = false;
 
-  auto callback =
-      [&wait_stop_cv](ssf::services::initialisation::type type, BaseUserServicePtr p_service,
-         const boost::system::error_code& ec) {
-        switch (type) {
-          case ssf::services::initialisation::NETWORK:
-            if (ec) {
-              SSF_LOG(kLogError) << "client: connected to remote server NOK";
-              wait_stop_cv.notify_all();
-            } else {
-              SSF_LOG(kLogInfo) << "client: connected to remote server OK";
-            }
-            break;
-          case ssf::services::initialisation::SERVICE:
-            if (p_service.get() != nullptr) {
-              if (ec) {
-                SSF_LOG(kLogError) << "client: service <"
-                                   << p_service->GetName() << "> NOK";
-              } else {
-                SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
-                                  << "> OK";
-              }
-            }
-            break;
-          default:
-            break;
+  auto callback = [&wait_stop_cv, &mutex, &stopped](
+      ssf::services::initialisation::type type, BaseUserServicePtr p_service,
+      const boost::system::error_code& ec) {
+    switch (type) {
+      case ssf::services::initialisation::NETWORK: {
+        if (ec) {
+          SSF_LOG(kLogError) << "client: connected to remote server NOK";
+          {
+            boost::lock_guard<std::mutex> lock(mutex);
+            stopped = true;
+          }
+          wait_stop_cv.notify_all();
+        } else {
+          SSF_LOG(kLogInfo) << "client: connected to remote server OK";
         }
-      };
+        break;
+      }
+      case ssf::services::initialisation::SERVICE: {
+        if (p_service.get() != nullptr) {
+          if (ec) {
+            SSF_LOG(kLogError) << "client: service <" << p_service->GetName()
+                               << "> NOK";
+          } else {
+            SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
+                              << "> OK";
+          }
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
 
   // Initiate and run client
   Client client(user_services, ssf_config.services(), callback);
@@ -164,19 +171,22 @@ int main(int argc, char** argv) {
 
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
 
-  signal.async_wait(
-      [&wait_stop_cv](const boost::system::error_code& ec, int signum) {
-        if (ec) {
-          return;
-        }
-
-        wait_stop_cv.notify_all();
-      });
+  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
+      const boost::system::error_code& ec, int signum) {
+    if (ec) {
+      return;
+    }
+    {
+      boost::lock_guard<std::mutex> lock(mutex);
+      stopped = true;
+    }
+    wait_stop_cv.notify_all();
+  });
 
   SSF_LOG(kLogInfo) << "client: running (Ctrl + C to stop)";
 
   std::unique_lock<std::mutex> lock(mutex);
-  wait_stop_cv.wait(lock);
+  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
 
   SSF_LOG(kLogInfo) << "client: stop";
   signal.cancel(ec);
