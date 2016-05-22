@@ -68,6 +68,10 @@ int main(int argc, char** argv) {
   boost::system::error_code ec;
   ParsedParameters parameters = cmd.parse(argc, argv, options, ec);
 
+  if (ec.value() == ::error::operation_canceled) {
+    return 0;
+  }
+
   if (ec) {
     SSF_LOG(kLogError) << "client: wrong command line arguments";
     return 1;

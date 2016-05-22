@@ -25,12 +25,13 @@ class RemoteProcess : public BaseUserService<Demux> {
       : remote_port_(remote_port), remoteServiceId_(0), localServiceId_(0) {}
 
  public:
-  static std::string GetFullParseName() { return "remote_process,Q"; }
+  static std::string GetFullParseName() { return "remote_process,Y"; }
 
   static std::string GetParseName() { return "remote_process"; }
 
   static std::string GetParseDesc() {
-    return "Bind a process on local host to a remote connection";
+    return "Open a port on the server side, each connection to that port "
+           "creates a process with I/O forwarded to/from the client side";
   }
 
   static std::shared_ptr<RemoteProcess> CreateServiceOptions(

@@ -30,6 +30,10 @@ int main(int argc, char** argv) {
   boost::system::error_code ec;
   cmd.parse(argc, argv, ec);
 
+  if (ec.value() == ::error::operation_canceled) {
+    return 0;
+  }
+
   if (ec) {
     SSF_LOG(kLogError) << "server: wrong arguments -- Exiting";
     return 1;
@@ -53,7 +57,9 @@ int main(int argc, char** argv) {
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(
       cmd.addr(), std::to_string(cmd.port()), ssf_config);
 
-  SSF_LOG(kLogInfo) << "server: listening on port " << cmd.port();
+  SSF_LOG(kLogInfo) << "server: listening on <"
+                    << ((cmd.addr() != "") ? cmd.addr() : "*") << ":"
+                    << cmd.port() << ">";
 
   server.Run(endpoint_query, ec);
 
