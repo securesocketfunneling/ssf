@@ -1,4 +1,5 @@
 /build
 /build-no-security
+/build32
 /build64
 /third_party

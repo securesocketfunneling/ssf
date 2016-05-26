@@ -19,6 +19,7 @@
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
+#include "services/process/server.h"
 
 #include "ssf/log/log.h"
 
@@ -26,12 +27,14 @@ namespace ssf {
 
 template <class N, template <class> class T>
 SSFClient<N, T>::SSFClient(std::vector<BaseUserServicePtr> user_services,
+                           const ssf::config::Services& services_config,
                            ClientCallback callback)
     : T<typename N::socket>(
           boost::bind(&SSFClient<N, T>::DoSSFStart, this, _1, _2)),
       async_engine_(),
       fiber_demux_(async_engine_.get_io_service()),
       user_services_(user_services),
+      services_config_(services_config),
       callback_(std::move(callback)) {}
 
 template <class N, template <class> class T>
@@ -55,14 +58,13 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
   // resolve remote endpoint with query
   NetworkResolver resolver(async_engine_.get_io_service());
   auto endpoint_it = resolver.resolve(query, ec);
-
-  async_engine_.Start();
-
   if (ec) {
     Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
     SSF_LOG(kLogError) << "client: could not resolve network endpoint";
     return;
   }
+
+  async_engine_.Start();
 
   // async connect client to given endpoint
   p_socket->async_connect(
@@ -75,6 +77,11 @@ void SSFClient<N, T>::Stop() {
   fiber_demux_.close();
 
   async_engine_.Stop();
+}
+
+template <class N, template <class> class T>
+boost::asio::io_service& SSFClient<N, T>::get_io_service() {
+  return async_engine_.get_io_service();
 }
 
 template <class N, template <class> class T>
@@ -147,6 +154,8 @@ void SSFClient<N, T>::DoFiberize(NetworkSocketPtr p_socket,
       Demux>::RegisterToServiceFactory(p_service_factory);
   services::copy_file::file_enquirer::FileEnquirer<
       Demux>::RegisterToServiceFactory(p_service_factory);
+  services::process::Server<Demux>::RegisterToServiceFactory(
+      p_service_factory, services_config_.process());
 
   // Start the admin micro service
   std::map<std::string, std::string> empty_map;

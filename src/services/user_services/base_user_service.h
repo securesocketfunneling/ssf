@@ -11,7 +11,6 @@
 namespace ssf {
 namespace services {
 
-//----------------------------------------------------------------------------
 template <typename Demux>
 class BaseUserService
     : public std::enable_shared_from_this<BaseUserService<Demux>> {

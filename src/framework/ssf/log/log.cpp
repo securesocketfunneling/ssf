@@ -21,7 +21,7 @@ std::ostream& Log::GetLog(LogLevel level) {
   struct tm* timeinfo;
   time(&current_time);
   timeinfo = localtime(&current_time);
-  strftime(time_str, sizeof(time_str), "[%F %T]", timeinfo);
+  strftime(time_str, sizeof(time_str), "[%Y-%m-%d %H:%M:%S]", timeinfo);
 
   os_ << time_str;
   os_ << "[" << LevelToString(level) << "] ";

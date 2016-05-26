@@ -48,7 +48,7 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     auto endpoint_query =
         NetworkProtocol::GenerateServerTLSQuery("", "8000", config);
 
-    p_ssf_server_.reset(new Server());
+    p_ssf_server_.reset(new Server(config.services()));
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
@@ -61,7 +61,7 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
         "127.0.0.1", "8000", config, {});
 
-    p_ssf_client_.reset(new Client(client_options, callback));
+    p_ssf_client_.reset(new Client(client_options, config.services(), callback));
 
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);

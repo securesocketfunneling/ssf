@@ -2,13 +2,16 @@
 #define SSF_CORE_CLIENT_CLIENT_H_
 
 #include <functional>
+#include <future>
 #include <map>
 #include <string>
 
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/signal_set.hpp>
 
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/config/config.h"
 
 #include "core/async_engine.h"
 #include "core/service_manager/service_manager.h"
@@ -38,6 +41,7 @@ class SSFClient
 
  public:
   SSFClient(std::vector<BaseUserServicePtr> user_services,
+            const ssf::config::Services& services_config,
             ClientCallback callback);
 
   ~SSFClient();
@@ -45,6 +49,8 @@ class SSFClient
   void Run(const NetworkQuery& query, boost::system::error_code& ec);
 
   void Stop();
+
+  boost::asio::io_service& get_io_service();
 
  private:
   void NetworkToTransport(const boost::system::error_code& ec,
@@ -62,9 +68,12 @@ class SSFClient
 
  private:
   AsyncEngine async_engine_;
+
   Demux fiber_demux_;
 
   std::vector<BaseUserServicePtr> user_services_;
+
+  ssf::config::Services services_config_;
 
   ClientCallback callback_;
 };

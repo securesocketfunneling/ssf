@@ -1,4 +1,8 @@
+#include <condition_variable>
+#include <mutex>
+
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
@@ -19,6 +23,8 @@
 #include "services/user_services/remote_socks.h"
 #include "services/user_services/port_forwarding.h"
 #include "services/user_services/remote_port_forwarding.h"
+#include "services/user_services/process.h"
+#include "services/user_services/remote_process.h"
 #include "services/user_services/udp_port_forwarding.h"
 #include "services/user_services/udp_remote_port_forwarding.h"
 
@@ -61,6 +67,10 @@ int main(int argc, char** argv) {
 
   boost::system::error_code ec;
   ParsedParameters parameters = cmd.parse(argc, argv, options, ec);
+
+  if (ec.value() == ::error::operation_canceled) {
+    return 0;
+  }
 
   if (ec) {
     SSF_LOG(kLogError) << "client: wrong command line arguments";
@@ -111,49 +121,87 @@ int main(int argc, char** argv) {
   auto endpoint_query = GenerateNetworkQuery(
       cmd.addr(), std::to_string(cmd.port()), ssf_config, circuit_config);
 
-  auto callback =
-      [](ssf::services::initialisation::type type, BaseUserServicePtr p_service,
-         const boost::system::error_code& ec) {
-        switch (type) {
-          case ssf::services::initialisation::NETWORK:
-            if (ec) {
-              SSF_LOG(kLogError) << "client: connected to remote server NOK";
-            } else {
-              SSF_LOG(kLogInfo) << "client: connected to remote server OK";
-            }
-            break;
-          case ssf::services::initialisation::SERVICE:
-            if (p_service.get() != nullptr) {
-              if (ec) {
-                SSF_LOG(kLogError) << "client: service <"
-                                   << p_service->GetName() << "> NOK";
-              } else {
-                SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
-                                  << "> OK";
-              }
-            }
-            break;
-          default:
-            break;
+  std::condition_variable wait_stop_cv;
+  std::mutex mutex;
+  bool stopped = false;
+
+  auto callback = [&wait_stop_cv, &mutex, &stopped](
+      ssf::services::initialisation::type type, BaseUserServicePtr p_service,
+      const boost::system::error_code& ec) {
+    switch (type) {
+      case ssf::services::initialisation::NETWORK: {
+        if (ec) {
+          SSF_LOG(kLogError) << "client: connected to remote server NOK";
+          {
+            boost::lock_guard<std::mutex> lock(mutex);
+            stopped = true;
+          }
+          wait_stop_cv.notify_all();
+        } else {
+          SSF_LOG(kLogInfo) << "client: connected to remote server OK";
         }
-      };
+        break;
+      }
+      case ssf::services::initialisation::SERVICE: {
+        if (p_service.get() != nullptr) {
+          if (ec) {
+            SSF_LOG(kLogError) << "client: service <" << p_service->GetName()
+                               << "> NOK";
+          } else {
+            SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
+                              << "> OK";
+          }
+        }
+        break;
+      }
+      case ssf::services::initialisation::CLOSE: {
+        SSF_LOG(kLogInfo) << "client: connection closed";
+        {
+          boost::lock_guard<std::mutex> lock(mutex);
+          stopped = true;
+        }
+        wait_stop_cv.notify_all();
+      }
+      default:
+        break;
+    }
+  };
 
   // Initiate and run client
-  Client client(user_services, callback);
+  Client client(user_services, ssf_config.services(), callback);
 
   client.Run(endpoint_query, ec);
 
-  if (!ec) {
-    SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
-                      << cmd.port() << ">";
-    SSF_LOG(kLogInfo) << "client: press [ENTER] to stop";
-    getchar();
-  } else {
+  if (ec) {
     SSF_LOG(kLogError) << "client: error happened when running client : "
                        << ec.message();
+    return 1;
   }
 
+  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
+                    << cmd.port() << ">";
+
+  boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
+
+  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
+      const boost::system::error_code& ec, int signum) {
+    if (ec) {
+      return;
+    }
+    {
+      boost::lock_guard<std::mutex> lock(mutex);
+      stopped = true;
+    }
+    wait_stop_cv.notify_all();
+  });
+
+  SSF_LOG(kLogInfo) << "client: running (Ctrl + C to stop)";
+
+  std::unique_lock<std::mutex> lock(mutex);
+  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
+
   SSF_LOG(kLogInfo) << "client: stop";
+  signal.cancel(ec);
   client.Stop();
 
   return 0;
@@ -167,6 +215,8 @@ void RegisterSupportedClientServices() {
   ssf::services::UdpPortForwading<Demux>::RegisterToServiceOptionFactory();
   ssf::services::UdpRemotePortForwading<
       Demux>::RegisterToServiceOptionFactory();
+  ssf::services::Process<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::RemoteProcess<Demux>::RegisterToServiceOptionFactory();
 }
 
 void InitializeClientServices(ClientServices* p_client_services,

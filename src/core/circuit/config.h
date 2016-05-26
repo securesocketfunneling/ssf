@@ -29,7 +29,6 @@ using NodeList = std::list<CircuitNode>;
 
 class Config {
  public:
-
  public:
   Config();
 
@@ -40,7 +39,7 @@ class Config {
    * @param filepath
    */
   void Update(const std::string& filepath, boost::system::error_code& ec);
-  
+
   /**
    * Log configuration
    */

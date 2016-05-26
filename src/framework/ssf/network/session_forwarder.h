@@ -8,6 +8,8 @@
 
 #include <boost/asio/socket_base.hpp>
 
+#include <ssf/log/log.h>
+
 #include "ssf/network/base_session.h"  // NOLINT
 #include "ssf/network/socket_link.h"
 #include "ssf/network/manager.h"
@@ -38,10 +40,14 @@ class SessionForwarder : public ssf::BaseSession {
   virtual ~SessionForwarder() {}
 
   /// Start forwarding
-  virtual void start(boost::system::error_code&) { DoForward(); }
+  void start(boost::system::error_code&) override {
+    SSF_LOG(kLogInfo) << "session[forwarder]: start";
+    DoForward();
+  }
 
   /// Stop forwarding
-  virtual void stop(boost::system::error_code&) {
+  void stop(boost::system::error_code&) override {
+    SSF_LOG(kLogInfo) << "session[forwarder]: stop";
     boost::system::error_code ec;
     if (inbound_.lowest_layer().is_open()) {
       inbound_.lowest_layer().shutdown(boost::asio::socket_base::shutdown_both,
@@ -72,8 +78,8 @@ class SessionForwarder : public ssf::BaseSession {
   //}
 
   template <typename Handler, typename This>
-  auto Then(Handler handler, This me)
-      -> decltype(boost::bind(handler, me -> SelfFromThis(), _1)) {
+  auto Then(Handler handler,
+            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
     return boost::bind(handler, me->SelfFromThis(), _1);
   }
 

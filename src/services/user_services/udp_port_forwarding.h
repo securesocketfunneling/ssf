@@ -129,6 +129,13 @@ class UdpPortForwading : public BaseUserService<Demux> {
     boost::system::error_code ec;
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
+
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service[udp forward]: "
+                         << "local_service[datagrams to fibers]: start failed: "
+                         << ec.message();
+    }
+
     return !ec;
   }
 

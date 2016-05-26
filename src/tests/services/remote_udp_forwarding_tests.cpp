@@ -1,16 +1,11 @@
-#include <vector>
-#include <functional>
-#include <array>
-#include <future>
 #include <list>
 
-#include <gtest/gtest.h>
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 
-#include "services/initialisation.h"
 #include "services/user_services/udp_remote_port_forwarding.h"
 
-#include "tests/services/service_test_fixture.h"
+#include "tests/services/service_fixture_test.h"
 #include "tests/services/udp_helpers.h"
 
 class RemoteUdpForwardTest
@@ -19,11 +14,6 @@ class RemoteUdpForwardTest
   RemoteUdpForwardTest() {}
 
   ~RemoteUdpForwardTest() {}
-
-  virtual void SetUp() {
-    StartServer("127.0.0.1", "8000");
-    StartClient("127.0.0.1", "8000");
-  }
 
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) {

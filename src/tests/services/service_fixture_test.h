@@ -1,9 +1,11 @@
-#ifndef TESTS_SERVICE_TEST_FIXTURE_H_
-#define TESTS_SERVICE_TEST_FIXTURE_H_
+#ifndef TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
+#define TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
 
 #include <utility>
 
 #include <gtest/gtest.h>
+
+#include <ssf/log/log.h>
 
 #include "services/base_service.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
@@ -26,33 +28,54 @@ class ServiceFixtureTest : public ::testing::Test {
   using ServiceTested = TServiceTested<demux>;
 
  public:
-  ServiceFixtureTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
-
   virtual ~ServiceFixtureTest() {}
+
+  virtual void SetUp() {
+    auto cleanup = [this]() {
+      network_set_.set_value(false);
+      service_set_.set_value(false);
+      transport_set_.set_value(false);
+    };
+
+    if (!StartServer("127.0.0.1", "10000")) {
+      cleanup();
+      FAIL() << "Could not start server";
+      return;
+    }
+    if (!StartClient("127.0.0.1", "10000")) {
+      cleanup();
+      FAIL() << "Could not start client";
+      return;
+    }
+  }
 
   virtual void TearDown() {
     p_ssf_client_->Stop();
     p_ssf_server_->Stop();
   }
 
-  void StartServer(const std::string& host_addr, const std::string& host_port) {
+  bool StartServer(const std::string& host_addr, const std::string& host_port) {
     ssf::config::Config ssf_config;
 
     auto endpoint_query =
         NetworkProtocol::GenerateServerQuery(host_addr, host_port, ssf_config);
 
-    p_ssf_server_.reset(new Server());
+    p_ssf_server_.reset(new Server(ssf_config.services()));
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
+    if (run_ec) {
+      SSF_LOG(kLogError) << "Could not run server";
+    }
+    return run_ec.value() == 0;
   }
 
-  void StartClient(const std::string& target_addr,
+  bool StartClient(const std::string& target_addr,
                    const std::string target_host) {
     std::vector<BaseUserServicePtr> client_options;
     boost::system::error_code ec;
 
-    auto p_service = ServiceCreateServiceOptions(ec);
+    BaseUserServicePtr p_service = ServiceCreateServiceOptions(ec);
 
     client_options.push_back(p_service);
 
@@ -62,10 +85,14 @@ class ServiceFixtureTest : public ::testing::Test {
         target_addr, target_host, ssf_config, {});
 
     p_ssf_client_.reset(new Client(
-        client_options,
+        client_options, ssf_config.services(),
         boost::bind(&ServiceFixtureTest::SSFClientCallback, this, _1, _2, _3)));
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);
+    if (run_ec) {
+      SSF_LOG(kLogError) << "Could not run client";
+    }
+    return run_ec.value() == 0;
   }
 
   virtual std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
@@ -90,6 +117,7 @@ class ServiceFixtureTest : public ::testing::Test {
     if (type == ssf::services::initialisation::NETWORK) {
       network_set_.set_value(!ec);
       if (ec) {
+        SSF_LOG(kLogCritical) << "Network initialization failed";
         service_set_.set_value(false);
         transport_set_.set_value(false);
       }
@@ -99,17 +127,28 @@ class ServiceFixtureTest : public ::testing::Test {
 
     if (type == ssf::services::initialisation::TRANSPORT) {
       transport_set_.set_value(!ec);
+      if (ec) {
+        SSF_LOG(kLogCritical) << "Transport initialization failed";
+      }
 
       return;
     }
 
-    if (type == ssf::services::initialisation::SERVICE &&
-        p_user_service->GetName() == ServiceTested::GetParseName()) {
-      service_set_.set_value(!ec);
-
+    if (type == ssf::services::initialisation::SERVICE) {
+      if(ec) {
+        SSF_LOG(kLogCritical) << "user_service[" << p_user_service->GetName()
+                              << "]: initialization failed";
+      }
+      if (p_user_service->GetName() == ServiceTested::GetParseName()) {
+        service_set_.set_value(!ec);
+      }
+    
       return;
     }
   }
+
+ protected:
+  ServiceFixtureTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
  protected:
   std::unique_ptr<Client> p_ssf_client_;
@@ -120,4 +159,4 @@ class ServiceFixtureTest : public ::testing::Test {
   std::promise<bool> service_set_;
 };
 
-#endif  // TESTS_SERVICE_TEST_FIXTURE_H_
+#endif  // TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_

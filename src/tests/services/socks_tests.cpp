@@ -1,18 +1,14 @@
 #include <vector>
 #include <functional>
 #include <array>
-#include <future>
 #include <list>
 
-#include <gtest/gtest.h>
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 
-#include <ssf/log/log.h>
-
-#include "services/initialisation.h"
 #include "services/user_services/socks.h"
 
-#include "tests/services/service_test_fixture.h"
+#include "tests/services/service_fixture_test.h"
 #include "tests/services/socks_helpers.h"
 #include "tests/services/tcp_helpers.h"
 
@@ -21,11 +17,6 @@ class SocksTest : public ServiceFixtureTest<ssf::services::Socks> {
   SocksTest() {}
 
   ~SocksTest() {}
-
-  virtual void SetUp() {
-    StartServer("127.0.0.1", "9000");
-    StartClient("127.0.0.1", "9000");
-  }
 
   virtual std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) {

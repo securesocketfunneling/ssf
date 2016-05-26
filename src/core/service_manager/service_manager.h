@@ -20,7 +20,7 @@ template <typename Demux>
 class ServiceManager
     : public ItemManager<typename BaseService<Demux>::BaseServicePtr> {
  private:
-  using Parameters = std::map<std::string, std::string> ;
+  using Parameters = std::map<std::string, std::string>;
   using ParametersIdPair = std::pair<Parameters, uint32_t>;
   using ServiceInstanceIdList = std::list<ParametersIdPair>;
   using ServiceTypeIdToInstancesListMap =
@@ -122,8 +122,7 @@ class ServiceManager
       status_[id] = error_code_value;
     } else {
       auto& instance_list = error_lists_[service_type_id];
-      instance_list.push_front(
-          ParametersIdPair(parameters, error_code_value));
+      instance_list.push_front(ParametersIdPair(parameters, error_code_value));
       if (instance_list.size() > 100) {
         instance_list.pop_back();
       }

@@ -18,17 +18,19 @@
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
+#include "services/process/server.h"
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
 
 namespace ssf {
 
 template <class N, template <class> class T>
-SSFServer<N, T>::SSFServer()
+SSFServer<N, T>::SSFServer(const ssf::config::Services& services_config)
     : T<typename N::socket>(
           boost::bind(&SSFServer<N, T>::DoSSFStart, this, _1, _2)),
       async_engine_(),
-      network_acceptor_(async_engine_.get_io_service()) {}
+      network_acceptor_(async_engine_.get_io_service()),
+      services_config_(services_config) {}
 
 template <class N, template <class> class T>
 SSFServer<N, T>::~SSFServer() {
@@ -86,6 +88,11 @@ void SSFServer<N, T>::Stop() {
   network_acceptor_.close(close_ec);
 
   async_engine_.Stop();
+}
+
+template <class N, template <class> class T>
+boost::asio::io_service& SSFServer<N, T>::get_io_service() {
+  return async_engine_.get_io_service();
 }
 
 template <class N, template <class> class T>
@@ -170,6 +177,8 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
       demux>::RegisterToServiceFactory(p_service_factory);
   services::copy_file::fiber_to_file::FiberToFile<
       demux>::RegisterToServiceFactory(p_service_factory);
+  services::process::Server<demux>::RegisterToServiceFactory(
+      p_service_factory, services_config_.process());
 
   // Start the admin micro service
   std::map<std::string, std::string> empty_map;

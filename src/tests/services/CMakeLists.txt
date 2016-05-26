@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-set(services_tests_group_name "Unit Tests/Services")  
+set(services_tests_group_name "Unit Tests/Services")
 
 set(project_BINARY_SERVICES_TESTS_DIR "${project_BINARY_DIR}/src/tests/services")
 
@@ -14,21 +14,22 @@ file(COPY ${SSF_CERT_TEST_ROOT_FILES}
      DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR})
 file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
      DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
-     
+
 set(TCP_HELPERS_FILES
   "tcp_helpers.h"
   "tcp_helpers.cpp")
-  
+
 set(UDP_HELPERS_FILES
   "udp_helpers.h"
   "udp_helpers.cpp")
-  
+
 set(SOCKS_HELPERS_FILES
   "socks_helpers.h"
   "socks_helpers.cpp")
-  
+
 set(SERVICE_TESTS_FILES
-  "service_test_fixture.h"
+  "service_fixture_test.h"
+  "process_fixture_test.h"
 )
 
 # --- Service tests
@@ -185,8 +186,8 @@ file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${project_BINARY_DIR}/src/tests/serv
 
 set(file_copy_from_client_files
   "file_copy_from_client_tests.cpp"
-  "file_copy_test_fixture.h"
-  "file_copy_test_fixture.cpp"
+  "file_copy_fixture_test.h"
+  "file_copy_fixture_test.cpp"
   ${SSF_SOURCES}
 )
 
@@ -204,3 +205,47 @@ add_target("file_copy_from_client_tests"
     ${file_copy_from_client_files}
 )
 project_group(${services_tests_group_name} file_copy_from_client_tests)
+
+# --- Process test
+set(process_test_source_files
+  "process_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("process_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${process_test_source_files}
+)
+project_group(${services_tests_group_name} process_tests)
+
+# --- Remote process test
+set(remote_process_test_source_files
+  "remote_process_tests.cpp"
+  ${SERVICE_TESTS_FILES}
+  ${SSF_SOURCES}
+)
+
+add_target("remote_process_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${remote_process_test_source_files}
+)
+project_group(${services_tests_group_name} remote_process_tests)

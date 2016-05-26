@@ -97,6 +97,12 @@ class RemoteSocks : public BaseUserService<Demux> {
     boost::system::error_code ec;
     local_service_id_ = p_service_factory->CreateRunNewService(
         l_socks.service_id(), l_socks.parameters(), ec);
+
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service[remote socks]: "
+                         << "local_service[socks server]: start failed: "
+                         << ec.message();
+    }
     return !ec;
   }
 

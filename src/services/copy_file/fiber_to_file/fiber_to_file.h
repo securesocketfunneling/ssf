@@ -31,7 +31,7 @@ class FiberToFile : public BaseService<Demux> {
   using fiber_acceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
 
  public:
-  enum { factory_id = 7, kServicePort = 40 };
+  enum { factory_id = 7, kServicePort = 40 + ((1 << 17) + 1) };
 
  public:
   // Factory method to create the service

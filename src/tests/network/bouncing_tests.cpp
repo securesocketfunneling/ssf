@@ -51,7 +51,7 @@ TEST(BouncingTests, BouncingChain) {
   ++initial_server_port;
   auto server_endpoint_query = NetworkProtocol::GenerateServerQuery(
       "", std::to_string(initial_server_port), ssf_config);
-  servers.emplace_front();
+  servers.emplace_front(ssf_config.services());
   servers.front().Run(server_endpoint_query, server_ec);
   ASSERT_EQ(server_ec.value(), 0) << "Server could not run";
 
@@ -62,7 +62,7 @@ TEST(BouncingTests, BouncingChain) {
     auto circuit_endpoint_query = NetworkProtocol::GenerateServerQuery(
         "", std::to_string(initial_server_port), ssf_config);
 
-    servers.emplace_front();
+    servers.emplace_front(ssf_config.services());
     servers.front().Run(circuit_endpoint_query, circuit_ec);
     ASSERT_EQ(server_ec.value(), 0) << "Circuit node " << i << "could not run";
     node_list.emplace_front("127.0.0.1", std::to_string(initial_server_port));
@@ -117,7 +117,7 @@ TEST(BouncingTests, BouncingChain) {
   auto client_endpoint_query = NetworkProtocol::GenerateClientQuery(
       first_node.addr(), first_node.port(), ssf_config, node_list);
 
-  Client client(client_options, std::move(callback));
+  Client client(client_options, ssf_config.services(), std::move(callback));
   client.Run(client_endpoint_query, client_ec);
   ASSERT_EQ(client_ec.value(), 0) << "Client could not run";
 

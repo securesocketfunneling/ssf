@@ -63,6 +63,12 @@ std::string error::detail::ssf_category::message(int value) const {
     case error::out_of_range:
       return "out of range";
       break;
+    case error::process_not_created:
+      return "process not created";
+      break;
+    case error::file_not_found:
+      return "file not found";
+      break;
     default:
       return "ssf error";
   }
