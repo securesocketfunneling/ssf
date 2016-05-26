@@ -17,7 +17,7 @@ DatagramsToFibers<Demux>::DatagramsToFibers(boost::asio::io_service& io_service,
       local_port_(local_port),
       remote_port_(remote_port),
       socket_(io_service),
-      endpoint_(boost::asio::ip::udp::v4(), local_port_),
+      endpoint_(),
       send_to_(fiber_demux, remote_port),
       p_udp_operator_(UdpOperator::Create(socket_)) {}
 
@@ -27,11 +27,25 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
       << "service[datagrams to fibers]: starting relay on local port udp "
       << local_port_;
 
-  // Listen on all interfaces
+  boost::asio::ip::udp::resolver resolver(socket_.get_io_service());
+  boost::asio::ip::udp::resolver::query query(
+      boost::asio::ip::udp::v4(), "localhost", std::to_string(local_port_));
+  auto ep_it = resolver.resolve(query, ec);
+
+  if (ec) {
+    SSF_LOG(kLogError)
+        << "service[datagrams to fibers]: could not resolve query <localhost, "
+        << local_port_ << ">";
+    return;
+  }
+
+  endpoint_ = *ep_it;
+
+  boost::system::error_code close_ec;
   socket_.open(boost::asio::ip::udp::v4(), ec);
   if (ec) {
     SSF_LOG(kLogError) << "service[datagrams to fibers]: could not open socket";
-    socket_.close(ec);
+    socket_.close(close_ec);
     return;
   }
   boost::asio::socket_base::reuse_address reuse_address_option(true);
@@ -39,14 +53,14 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   if (ec) {
     SSF_LOG(kLogError)
         << "service[datagrams to fibers]: could not set reuse address option";
-    socket_.close(ec);
+    socket_.close(close_ec);
     return;
   }
 
   socket_.bind(endpoint_, ec);
   if (ec) {
     SSF_LOG(kLogError) << "service[datagrams to fibers]: could not bind socket";
-    socket_.close(ec);
+    socket_.close(close_ec);
     return;
   }
 

@@ -25,11 +25,21 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
       << "service[sockets to fibers]: starting relay on local port tcp "
       << local_port_;
 
-  boost::system::error_code close_ec;
-  // Accept on all local interfaces
-  boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(),
-                                          local_port_);
+  boost::asio::ip::tcp::resolver resolver(socket_.get_io_service());
+  boost::asio::ip::tcp::resolver::query query(
+      boost::asio::ip::tcp::v4(), "localhost", std::to_string(local_port_));
+  auto ep_it = resolver.resolve(query, ec);
 
+  if (ec) {
+    SSF_LOG(kLogError)
+        << "service[sockets to fibers]: could not resolve query <localhost, "
+        << local_port_ << ">";
+    return;
+  }
+
+  boost::asio::ip::tcp::endpoint endpoint(*ep_it);
+
+  boost::system::error_code close_ec;
   socket_acceptor_.open(endpoint.protocol(), ec);
   if (ec) {
     socket_acceptor_.close(close_ec);
