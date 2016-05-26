@@ -1,23 +1,22 @@
 #ifndef SSF_SERVICES_PROCESS_POSIX_SESSION_H_
 #define SSF_SERVICES_PROCESS_POSIX_SESSION_H_
 
-#include <unistd.h>
-#include <sys/wait.h>
-#include <memory>
-#include <map>
+#include <sys/types.h>
 
-#include <boost/noncopyable.hpp>  // NOLINT
+#include <array>
+#include <memory>
+
 #include <boost/system/error_code.hpp>
-#include <boost/asio.hpp>  // NOLINT
+#include <boost/asio.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
 #include <boost/asio/signal_set.hpp>
 
-#include <ssf/network/base_session.h>  // NOLINT
-#include <ssf/network/socket_link.h>   // NOLINT
+#include <ssf/network/base_session.h>
+#include <ssf/network/socket_link.h>
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
-#include "services/socks/v4/request.h"  // NOLINT
+#include "services/socks/v4/request.h"
 
 #include "common/boost/fiber/stream_fiber.hpp"
 
@@ -49,12 +48,10 @@ class Session : public ssf::BaseSession {
   void stop(boost::system::error_code&) override;
 
  private:
-  std::shared_ptr<Session> SelfFromThis() {
-    return std::static_pointer_cast<Session>(this->shared_from_this());
-  }
+  std::shared_ptr<Session> SelfFromThis();
 
   static void ChdirHome(boost::system::error_code& ec);
-  
+
   static void GenerateArgv(const std::string& binary_name,
                            const std::list<std::string>& splitted_argv,
                            std::vector<char*>& argv);

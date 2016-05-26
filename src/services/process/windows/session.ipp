@@ -3,7 +3,6 @@
 
 #include <sstream>
 
-#include <wincon.h>
 #include <shlobj.h>
 
 #include <ssf/log/log.h>
@@ -263,9 +262,9 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
     goto cleanup;
   }
 
-  *p_write_pipe =
-      ::CreateFileA(pipe_name.c_str(), FILE_WRITE_DATA | SYNCHRONIZE, 0,
-                    p_pipe_attributes, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  *p_write_pipe = ::CreateFileA(
+      pipe_name.c_str(), FILE_WRITE_DATA | SYNCHRONIZE, 0, p_pipe_attributes,
+      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, 0);
 
   if (*p_write_pipe == INVALID_HANDLE_VALUE) {
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
@@ -308,9 +307,9 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
     goto cleanup;
   }
 
-  *p_read_pipe =
-      ::CreateFileA(pipe_name.c_str(), FILE_READ_DATA | SYNCHRONIZE, 0,
-                    p_pipe_attributes, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  *p_read_pipe = ::CreateFileA(pipe_name.c_str(), FILE_READ_DATA | SYNCHRONIZE,
+                               0, p_pipe_attributes, OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, 0);
 
   if (*p_read_pipe == INVALID_HANDLE_VALUE) {
     SSF_LOG(kLogError) << "session[process]: create read side of named pipe <"

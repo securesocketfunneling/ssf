@@ -2,10 +2,9 @@
 #define SSF_SERVICES_PROCESS_PROCESS_SERVER_H_
 
 #include <string>
-#include <map>
 
 #include <boost/system/error_code.hpp>
-#include <boost/asio.hpp>  // NOLINT
+#include <boost/asio/io_service.hpp>
 
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
@@ -24,7 +23,7 @@
 #include "services/process/windows/session.h"
 #else
 #include "services/process/posix/session.h"
-#endif
+#endif  // defined(BOOST_ASIO_WINDOWS)
 
 namespace ssf {
 namespace services {
@@ -33,11 +32,11 @@ namespace process {
 template <typename Demux>
 class Server : public BaseService<Demux> {
  private:
-#if defined(BOOST_ASIO_HAS_IOCP)
+#if defined(BOOST_ASIO_WINDOWS)
   using session_impl = windows::Session<Demux>;
 #else
-  using session_impl = class posix::Session<Demux>;
-#endif
+  using session_impl = posix::Session<Demux>;
+#endif  // defined(BOOST_ASIO_WINDOWS)
 
   using local_port_type = typename Demux::local_port_type;
 

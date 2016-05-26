@@ -4,8 +4,7 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <signal.h>
-#include <sys/types.h>
-#include <sys/select.h>
+#include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -34,7 +33,7 @@ Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
       io_service_(client.get_io_service()),
       p_session_manager_(p_session_manager),
       client_(std::move(client)),
-      signal_(io_service_, SIGCHLD),
+      signal_(io_service_),
       binary_path_(binary_path),
       binary_args_(binary_args),
       child_pid_(kInvalidProcessId),
@@ -51,6 +50,14 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
   if (ec) {
     SSF_LOG(kLogError) << "session[process]: init tty failed";
+    stop(ec);
+    return;
+  }
+
+  signal_.add(SIGCHLD, ec);
+  if (ec) {
+    SSF_LOG(kLogError)
+        << "session[process]: init signal handler on SIGCHLD failed";
     stop(ec);
     return;
   }
@@ -85,6 +92,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     close(STDERR_FILENO);
     close(STDIN_FILENO);
 
+    // set slave_tty as process I/O
     while ((dup2(slave_tty, STDOUT_FILENO) == -1) && (errno == EINTR)) {
     }
     while ((dup2(slave_tty, STDERR_FILENO) == -1) && (errno == EINTR)) {
@@ -107,11 +115,10 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     std::vector<char*> argv;
     std::list<std::string> split_args;
     if (binary_args_ != "") {
-      boost::split(split_args, binary_args_,
-                   boost::algorithm::is_any_of(" "));
+      boost::split(split_args, binary_args_, boost::algorithm::is_any_of(" "));
     }
     GenerateArgv(binary_name, split_args, argv);
-    
+
     execv(binary_path_.c_str(), argv.data());
 
     fprintf(stderr, "Exiting: fail to exec <%s>\n", binary_path_.c_str());
@@ -154,6 +161,11 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
 }
 
 template <typename Demux>
+std::shared_ptr<Session<Demux>> Session<Demux>::SelfFromThis() {
+  return std::static_pointer_cast<Session>(this->shared_from_this());
+}
+
+template <typename Demux>
 void Session<Demux>::StopHandler(const boost::system::error_code& ec) {
   boost::system::error_code e;
   p_session_manager_->stop(this->SelfFromThis(), e);
@@ -193,7 +205,7 @@ void Session<Demux>::SigchldHandler(const boost::system::error_code& ec,
 template <typename Demux>
 void Session<Demux>::ChdirHome(boost::system::error_code& ec) {
   const char* home_dir = getenv("HOME");
-  
+
   if (home_dir == NULL) {
     struct passwd* p_pw = getpwuid(getuid());
     if (p_pw == NULL) {
@@ -201,16 +213,16 @@ void Session<Demux>::ChdirHome(boost::system::error_code& ec) {
       ec.assign(::error::file_not_found, ::error::get_ssf_category());
       return;
     }
-    
+
     home_dir = p_pw->pw_dir;
   }
-  
+
   if (chdir(home_dir) < 0) {
     fprintf(stderr, "Could not chdir to user home <%s>\n", home_dir);
     ec.assign(::error::file_not_found, ::error::get_ssf_category());
     return;
   }
-  
+
   // overwrite PWD env var after chdir
   if (setenv("PWD", home_dir, 1) < 0) {
     fprintf(stderr, "Could not set PWD env var <%s>\n", home_dir);
@@ -239,6 +251,7 @@ void Session<Demux>::GenerateArgv(const std::string& binary_name,
 template <typename Demux>
 void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
                                         boost::system::error_code& ec) {
+  // open an available pseudo terminal device (master/slave pair)
   *p_master_tty = posix_openpt(O_RDWR | O_NOCTTY);
   if (*p_master_tty < 0) {
     SSF_LOG(kLogError) << "session[process]: could not open master tty";
@@ -246,15 +259,19 @@ void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
     return;
   }
 
+  // change permissions and owner of the slave side
   if (grantpt(*p_master_tty) != 0) {
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
+
+  // unlock master/slave pair
   if (unlockpt(*p_master_tty) != 0) {
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
 
+  // open slave side
   *p_slave_tty = open(ptsname(*p_master_tty), O_RDWR | O_NOCTTY);
   if (*p_slave_tty < 0) {
     SSF_LOG(kLogError) << "session[process]: could not open slave tty";

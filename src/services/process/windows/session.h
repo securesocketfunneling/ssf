@@ -1,20 +1,20 @@
 #ifndef SSF_SERVICES_PROCESS_WINDOWS_SESSION_H_
 #define SSF_SERVICES_PROCESS_WINDOWS_SESSION_H_
 
+#include <array>
 #include <memory>
 
-#include <boost/noncopyable.hpp>  // NOLINT
 #include <boost/system/error_code.hpp>
-#include <boost/asio.hpp>  // NOLINT
+#include <boost/asio.hpp>
 
 #include <windows.h>
 
-#include <ssf/network/base_session.h>  // NOLINT
-#include <ssf/network/socket_link.h>   // NOLINT
+#include <ssf/network/base_session.h>
+#include <ssf/network/socket_link.h>
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
-#include "services/socks/v4/request.h"  // NOLINT
+#include "services/socks/v4/request.h"
 
 #include "common/boost/fiber/stream_fiber.hpp"
 
