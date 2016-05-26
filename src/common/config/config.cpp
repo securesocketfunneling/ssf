@@ -74,8 +74,10 @@ void Services::UpdateProcessService(const boost::property_tree::ptree& pt) {
 void Services::Log() const {
   SSF_LOG(kLogInfo) << "config[services][process]: path: <"
                     << process_service().path() << ">";
-  SSF_LOG(kLogInfo) << "config[services][process]: args: <"
-                    << process_service().args() << ">";
+  std::string args(process_service().args());
+  if (!args.empty()) {
+    SSF_LOG(kLogInfo) << "config[services][process]: args: <" << args << ">";
+  }
 }
 
 Config::Config() : tls_(), proxy_(), services_() {}

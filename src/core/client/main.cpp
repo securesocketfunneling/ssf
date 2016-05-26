@@ -154,6 +154,14 @@ int main(int argc, char** argv) {
         }
         break;
       }
+      case ssf::services::initialisation::CLOSE: {
+        SSF_LOG(kLogInfo) << "client: connection closed";
+        {
+          boost::lock_guard<std::mutex> lock(mutex);
+          stopped = true;
+        }
+        wait_stop_cv.notify_all();
+      }
       default:
         break;
     }
