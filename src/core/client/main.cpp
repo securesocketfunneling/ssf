@@ -199,6 +199,7 @@ int main(int argc, char** argv) {
 
   std::unique_lock<std::mutex> lock(mutex);
   wait_stop_cv.wait(lock, [&stopped] { return stopped; });
+  lock.unlock();
 
   SSF_LOG(kLogInfo) << "client: stop";
   signal.cancel(ec);

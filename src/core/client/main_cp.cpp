@@ -167,7 +167,9 @@ int main(int argc, char** argv) {
   SSF_LOG(kLogInfo) << "client: wait end of file transfer";
   std::unique_lock<std::mutex> lock(mutex);
   wait_stop_cv.wait(lock, [&stopped] { return stopped; });
+  lock.unlock();
   signal.cancel(ec);
+
   client.Stop();
 
   return 0;
