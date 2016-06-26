@@ -103,6 +103,9 @@ find_package(
     ${OPENSSL_PLATFORM_FLAGS}
 )
 
+# --- http-parser components
+add_subdirectory(third_party/http-parser)
+
 # --- Setup version.h file
 set(SSF_VERSION_BOOST ${Boost_VERSION})
 set(SSF_VERSION_OPENSSL ${OpenSSL_VERSION})

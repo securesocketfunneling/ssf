@@ -47,6 +47,7 @@ add_target("lib_ssf_network"
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_http_parser
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
