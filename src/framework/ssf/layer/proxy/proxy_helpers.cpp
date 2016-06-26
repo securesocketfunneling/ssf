@@ -42,7 +42,10 @@ ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
   context.proxy_enabled = true;
   context.http_proxy.addr = http_addr;
   context.http_proxy.port = http_port;
-
+  context.http_proxy.username =
+      ssf::helpers::GetField<std::string>("http_username", parameters);
+  context.http_proxy.password =
+      ssf::helpers::GetField<std::string>("http_password", parameters);
   return context;
 }
 

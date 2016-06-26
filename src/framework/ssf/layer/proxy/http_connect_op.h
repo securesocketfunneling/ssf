@@ -1,34 +1,32 @@
 #ifndef SSF_LAYER_PROXY_HTTP_CONNECT_OP_H_
 #define SSF_LAYER_PROXY_HTTP_CONNECT_OP_H_
 
+#include <array>
 #include <exception>
 #include <memory>
 #include <string>
-#include <type_traits>
 
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
 #include <boost/asio/detail/handler_invoke_helpers.hpp>
-#include <boost/asio/read_until.hpp>
-#include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 
 #include <boost/system/error_code.hpp>
+
+#include "ssf/layer/proxy/http_response_builder.h"
+#include "ssf/layer/proxy/http_session_initializer.h"
 
 namespace ssf {
 namespace layer {
 namespace proxy {
 namespace detail {
 
-std::string GenerateHttpProxyRequest(const std::string& target_addr,
-                                     const std::string& target_port);
-
-bool CheckHttpProxyResponse(boost::asio::streambuf& streambuf,
-                            std::size_t response_size);
-
 template <class Stream, class Endpoint>
 class HttpConnectOp {
+ public:
+  using Buffer = std::array<char, 4 * 1024>;
+
  public:
   HttpConnectOp(Stream& stream, Endpoint* p_local_endpoint,
                 Endpoint peer_endpoint)
@@ -46,36 +44,63 @@ class HttpConnectOp {
       return;
     }
 
+    p_local_endpoint_->set();
+
     boost::system::error_code close_ec;
+    boost::system::error_code connect_ec;
+
     try {
+      HttpSessionInitializer session_initializer;
+      HttpResponseBuilder response_builder;
+      Buffer buffer;
+      std::size_t bytes_read;
       auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
 
-      p_local_endpoint_->set();
-
-      // Send connect request to context addr:port
-      std::string connect_str = GenerateHttpProxyRequest(
+      session_initializer.Reset(
           next_layer_remote_endpoint.address().to_string(),
-          std::to_string(next_layer_remote_endpoint.port()));
+          std::to_string(next_layer_remote_endpoint.port()), endpoint_context,
+          connect_ec);
 
-      boost::asio::write(
-          stream_, boost::asio::buffer(connect_str, connect_str.size()), ec);
+      // session initialization (connect request + auth)
+      while (session_initializer.status() ==
+             HttpSessionInitializer::Status::kContinue) {
+        // send request
+        std::string request = session_initializer.GenerateRequest(connect_ec);
+        if (connect_ec.value() != 0) {
+          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
+                                "generate connect request";
+          break;
+        }
 
-      boost::asio::streambuf buffer;
-      // Read server response status code 200
-      std::size_t read_bytes =
-          boost::asio::read_until(stream_, buffer, "\r\n", ec);
+        boost::asio::write(stream_, boost::asio::buffer(request));
 
-      std::string response = std::string(
-          boost::asio::buffer_cast<const char*>(buffer.data()), read_bytes);
+        response_builder.Reset();
 
-      // Proxy OK
-      if (CheckHttpProxyResponse(buffer, read_bytes)) {
-        return;
-      } else {
-        stream_.close(close_ec);
-        ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+        // read response
+        while (!response_builder.complete()) {
+          bytes_read = stream_.receive(boost::asio::buffer(buffer));
+          response_builder.ProcessInput(buffer.data(), bytes_read);
+        }
+
+        session_initializer.ProcessResponse(response_builder.Get(), connect_ec);
+        if (connect_ec.value() != 0) {
+          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
+                                "process connect response";
+          break;
+        }
       }
+
+      if (session_initializer.status() ==
+              HttpSessionInitializer::Status::kSuccess &&
+          connect_ec.value() == 0) {
+        return;
+      }
+
+      SSF_LOG(kLogError) << "network[proxy]: connection through proxy failed";
+      stream_.close(close_ec);
+      ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
     } catch (const std::exception&) {
+      SSF_LOG(kLogError) << "network[proxy]: connection through proxy failed";
       stream_.close(close_ec);
       ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
       return;
@@ -90,6 +115,9 @@ class HttpConnectOp {
 
 template <class Protocol, class Stream, class Endpoint, class ConnectHandler>
 class AsyncHttpConnectOp {
+ private:
+  using Buffer = std::array<char, 4 * 1024>;
+
  public:
   AsyncHttpConnectOp(Stream& stream, Endpoint* p_local_endpoint,
                      Endpoint peer_endpoint, ConnectHandler handler)
@@ -99,7 +127,9 @@ class AsyncHttpConnectOp {
         peer_endpoint_(std::move(peer_endpoint)),
         handler_(std::move(handler)),
         p_connect_str_(new std::string("")),
-        p_buffer_(new boost::asio::streambuf()) {}
+        p_buffer_(new Buffer()),
+        p_response_builder_(new detail::HttpResponseBuilder()),
+        p_session_initializer_(new detail::HttpSessionInitializer()) {}
 
   AsyncHttpConnectOp(const AsyncHttpConnectOp& other)
       : coro_(other.coro_),
@@ -108,7 +138,9 @@ class AsyncHttpConnectOp {
         peer_endpoint_(other.peer_endpoint_),
         handler_(other.handler_),
         p_connect_str_(other.p_connect_str_),
-        p_buffer_(other.p_buffer_) {}
+        p_buffer_(other.p_buffer_),
+        p_response_builder_(other.p_response_builder_),
+        p_session_initializer_(other.p_session_initializer_) {}
 
   AsyncHttpConnectOp(AsyncHttpConnectOp&& other)
       : coro_(std::move(other.coro_)),
@@ -117,55 +149,90 @@ class AsyncHttpConnectOp {
         peer_endpoint_(std::move(other.peer_endpoint_)),
         handler_(std::move(other.handler_)),
         p_connect_str_(other.p_connect_str_),
-        p_buffer_(other.p_buffer_) {}
+        p_buffer_(other.p_buffer_),
+        p_response_builder_(other.p_response_builder_),
+        p_session_initializer_(other.p_session_initializer_) {}
 
 #include <boost/asio/yield.hpp>
   void operator()(
       const boost::system::error_code& ec = boost::system::error_code(),
       std::size_t size = 0) {
-    if (!ec) {
-      boost::system::error_code endpoint_ec;
-      auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
-      auto& endpoint_context = peer_endpoint_.endpoint_context();
+    if (ec) {
+      // error
+      handler_(ec);
+      return;
+    }
 
-      reenter(coro_) {
-        yield stream_.async_connect(
-            endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
-            std::move(*this));
+    boost::system::error_code connect_ec;
+    auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
+    auto& endpoint_context = peer_endpoint_.endpoint_context();
 
-        p_local_endpoint_->set();
+    reenter(coro_) {
+      yield stream_.async_connect(
+          endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
+          std::move(*this));
 
-        // Send connect request to context addr:port
-        *p_connect_str_ = GenerateHttpProxyRequest(
-            next_layer_remote_endpoint.address().to_string(),
-            std::to_string(next_layer_remote_endpoint.port()));
+      p_local_endpoint_->set();
+
+      p_session_initializer_->Reset(
+          next_layer_remote_endpoint.address().to_string(),
+          std::to_string(next_layer_remote_endpoint.port()), endpoint_context,
+          connect_ec);
+
+      if (connect_ec) {
+        SSF_LOG(kLogError) << "network[proxy]: session initializer not reset";
+        stream_.close(close_ec_);
+        close_ec_.assign(ssf::error::broken_pipe,
+                         ssf::error::get_ssf_category());
+        handler_(close_ec_);
+        return;
+      }
+
+      // session initialization (connect request + auth)
+      while (p_session_initializer_->status() ==
+             HttpSessionInitializer::Status::kContinue) {
+        // send request
+        *p_connect_str_ = p_session_initializer_->GenerateRequest(connect_ec);
+        if (connect_ec.value() != 0) {
+          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
+                                "generate connect request";
+          break;
+        }
 
         yield boost::asio::async_write(
             stream_,
             boost::asio::buffer(*p_connect_str_, p_connect_str_->size()),
             std::move(*this));
 
-        // Read server response status code 200
-        yield boost::asio::async_read_until(stream_, *p_buffer_, "\r\n",
-                                            std::move(*this));
-
-        response_ = std::string(
-            boost::asio::buffer_cast<const char*>(p_buffer_->data()), size);
-
-        // Proxy OK
-        if (CheckHttpProxyResponse(*p_buffer_, size)) {
-          handler_(ec);
-          return;
+        // read response
+        p_response_builder_->Reset();
+        while (!p_response_builder_->complete()) {
+          yield stream_.async_receive(boost::asio::buffer(*p_buffer_),
+                                      std::move(*this));
+          p_response_builder_->ProcessInput(p_buffer_->data(), size);
         }
 
-        stream_.close(close_ec_);
-        close_ec_.assign(ssf::error::broken_pipe,
-                         ssf::error::get_ssf_category());
-        handler_(close_ec_);
+        p_session_initializer_->ProcessResponse(p_response_builder_->Get(),
+                                                connect_ec);
+        if (connect_ec.value() != 0) {
+          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
+                                "process connect response";
+          break;
+        }
       }
-    } else {
-      // error
-      handler_(ec);
+
+      // initialization finished
+      if (p_session_initializer_->status() ==
+              HttpSessionInitializer::Status::kSuccess &&
+          connect_ec.value() == 0) {
+        handler_(close_ec_);
+        return;
+      }
+
+      SSF_LOG(kLogError) << "network[proxy]: connection through proxy failed";
+      stream_.close(close_ec_);
+      close_ec_.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+      handler_(close_ec_);
     }
   }
 #include <boost/asio/unyield.hpp>
@@ -178,10 +245,11 @@ class AsyncHttpConnectOp {
   Endpoint* p_local_endpoint_;
   Endpoint peer_endpoint_;
   ConnectHandler handler_;
+
   std::shared_ptr<std::string> p_connect_str_;
-  std::shared_ptr<boost::asio::streambuf> p_buffer_;
-  std::string separator_;
-  std::string response_;
+  std::shared_ptr<Buffer> p_buffer_;
+  std::shared_ptr<detail::HttpResponseBuilder> p_response_builder_;
+  std::shared_ptr<detail::HttpSessionInitializer> p_session_initializer_;
   boost::system::error_code close_ec_;
 };
 

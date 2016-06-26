@@ -17,6 +17,8 @@ struct Proxy {
 
   std::string addr;
   std::string port;
+  std::string username;
+  std::string password;
 };
 
 struct ProxyEndpointContext {
