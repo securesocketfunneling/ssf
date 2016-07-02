@@ -110,6 +110,21 @@ add_target("proxy_layer_tests"
 )
 project_group("Unit Tests/Framework"  proxy_layer_tests)
 
+add_target("proxy_auth_strategies_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    "proxy_auth_strategies_tests.cpp"
+)
+project_group("Unit Tests/Framework"  proxy_auth_strategies_tests)
+
 # --- Link layer tests
 add_target("link_layer_tests"
   TYPE
