@@ -53,48 +53,52 @@ std::string HttpSessionInitializer::GenerateRequest(
 
 void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,
                                              boost::system::error_code& ec) {
-  if (response.Success()) {
+  if (p_current_auth_strategy_ == nullptr && response.Success()) {
+    // no proxy authentication, continue
     status_ = Status::kSuccess;
     return;
   }
 
-  if (!response.AuthenticationRequired()) {
-    SSF_LOG(kLogError) << "network[proxy]: unexpected response type";
-    status_ = Status::kError;
-    return;
-  }
-
-  // find auth strategy
-  if (p_current_auth_strategy_ == nullptr ||
-      p_current_auth_strategy_->status() ==
-          AuthStrategy::kAuthenticationFailure) {
-    p_current_auth_strategy_ = nullptr;
-    for (auto& p_auth_strategy : auth_strategies_) {
-      if (p_auth_strategy->Support(response)) {
-        p_current_auth_strategy_ = p_auth_strategy.get();
-        break;
+  if (response.AuthenticationRequired()) {
+    // find auth strategy
+    if (p_current_auth_strategy_ == nullptr ||
+        p_current_auth_strategy_->status() ==
+            AuthStrategy::kAuthenticationFailure) {
+      p_current_auth_strategy_ = nullptr;
+      for (auto& p_auth_strategy : auth_strategies_) {
+        if (p_auth_strategy->Support(response)) {
+          p_current_auth_strategy_ = p_auth_strategy.get();
+          break;
+        }
       }
+    }
+
+    if (p_current_auth_strategy_ == nullptr) {
+      SSF_LOG(kLogError) << "network[proxy]: authentication strategies failed";
+      status_ = Status::kError;
+      return;
     }
   }
 
-  if (p_current_auth_strategy_ == nullptr) {
-    SSF_LOG(kLogError) << "network[proxy]: authentication strategies failed";
-    status_ = Status::kError;
+  if (p_current_auth_strategy_ != nullptr) {
+    p_current_auth_strategy_->ProcessResponse(response);
+    switch (p_current_auth_strategy_->status()) {
+      case AuthStrategy::Status::kAuthenticating:
+      case AuthStrategy::Status::kAuthenticationFailure:
+        break;
+      case AuthStrategy::Status::kAuthenticated:
+        status_ = Status::kSuccess;
+        break;
+      default:
+        status_ = Status::kError;
+        break;
+    }
     return;
   }
 
-  p_current_auth_strategy_->ProcessResponse(response);
-  switch (p_current_auth_strategy_->status()) {
-    case AuthStrategy::Status::kAuthenticating:
-    case AuthStrategy::Status::kAuthenticationFailure:
-      break;
-    case AuthStrategy::Status::kAuthenticated:
-      status_ = Status::kSuccess;
-      break;
-    default:
-      status_ = Status::kError;
-      break;
-  }
+  // other behaviours (e.g. redirection) not implemented
+  status_ = Status::kError;
+  return;
 }
 
 }  // detail

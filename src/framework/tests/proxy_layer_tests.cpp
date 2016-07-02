@@ -25,7 +25,8 @@ TEST_F(ProxyTestFixture, ProxySetTest) {
 
   ASSERT_TRUE(Initialized()) << "Proxy test fixture was not initialized. "
                              << "Please check that the config file '"
-                             << config_file_ << "' exists";
+                             << config_file_
+                             << "' exists (cf. proxy/README.md)";
 
   ssf::tests::Address client_error_tcp_addr("127.0.0.1", "9001");
   ssf::tests::Address client_error_proxy_addr("192.168.0.0.10", "9000");
@@ -35,11 +36,11 @@ TEST_F(ProxyTestFixture, ProxySetTest) {
   acceptor_parameters.push_back(tcp_server_parameters);
 
   ssf::layer::ParameterStack client_parameters;
-  client_parameters.push_back(proxy_address_.ToProxyParam());
-  client_parameters.push_back(client_address_.ToTCPParam());
+  client_parameters.push_back(GetProxyParam());
+  client_parameters.push_back(GetTcpParam());
 
   ssf::layer::ParameterStack client_error_connection_parameters;
-  client_error_connection_parameters.push_back(client_address_.ToProxyParam());
+  client_error_connection_parameters.push_back(GetTcpParam());
   client_error_connection_parameters.push_back(
       client_error_tcp_addr.ToTCPParam());
 
@@ -47,7 +48,7 @@ TEST_F(ProxyTestFixture, ProxySetTest) {
   ssf::layer::ParameterStack client_invalid_proxy_parameters;
   client_invalid_proxy_parameters.push_back(
       client_error_proxy_addr.ToProxyParam());
-  client_invalid_proxy_parameters.push_back(proxy_address_.ToTCPParam());
+  client_invalid_proxy_parameters.push_back(GetTcpParam());
 
   TestStreamErrorConnectionProtocol<StreamStackProtocol>(
       client_error_connection_parameters);
@@ -89,7 +90,8 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
 
   ASSERT_TRUE(Initialized()) << "Proxy test fixture was not initialized. "
                              << "Please check that the config file '"
-                             << config_file_ << "' exists";
+                             << config_file_
+                             << "' exists (cf. proxy/README.md)";
 
   ssf::tests::Address client_error_tcp_addr("127.0.0.1", "9001");
 
@@ -102,18 +104,18 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(
       tests::virtual_network_helpers::tls_client_parameters);
-  client_parameters.push_back(proxy_address_.ToProxyParam());
-  client_parameters.push_back(client_address_.ToTCPParam());
+  client_parameters.push_back(GetProxyParam());
+  client_parameters.push_back(GetTcpParam());
 
   ssf::layer::ParameterStack client_error_parameters;
   client_error_parameters.push_back(
       tests::virtual_network_helpers::tls_client_parameters);
-  client_error_parameters.push_back(client_address_.ToProxyParam());
+  client_error_parameters.push_back(GetTcpParam());
   client_error_parameters.push_back(client_error_tcp_addr.ToTCPParam());
 
   ssf::layer::ParameterStack client_wrong_number_parameters;
   client_wrong_number_parameters.push_back(empty_layer);
-  client_wrong_number_parameters.push_back(client_address_.ToTCPParam());
+  client_wrong_number_parameters.push_back(GetTcpParam());
 
   TestEndpointResolverError<TLSStackProtocol>(client_wrong_number_parameters);
 
@@ -145,7 +147,8 @@ TEST_F(ProxyTestFixture, ProxyNotSetTest) {
 
   ASSERT_TRUE(Initialized()) << "Proxy test fixture was not initialized. "
                              << "Please check that the config file '"
-                             << config_file_ << "' exists";
+                             << config_file_
+                             << "' exists (cf. proxy/README.md)";
 
   ssf::tests::Address client_error_tcp_addr("127.0.0.1", "9001");
 
@@ -156,7 +159,7 @@ TEST_F(ProxyTestFixture, ProxyNotSetTest) {
 
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(empty_layer);
-  client_parameters.push_back(client_address_.ToTCPParam());
+  client_parameters.push_back(GetTcpParam());
 
   ssf::layer::ParameterStack client_error_connection_parameters;
   client_error_connection_parameters.push_back(empty_layer);

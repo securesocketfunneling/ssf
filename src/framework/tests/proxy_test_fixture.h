@@ -28,9 +28,6 @@ class Address {
   std::string port_;
 };
 
-bool ParseConfigFile(const std::string& filepath,
-                     std::vector<Address>& addresses);
-
 }  // tests
 }  // ssf
 
@@ -46,10 +43,17 @@ class ProxyTestFixture : public ::testing::Test {
 
   bool Initialized();
 
+  ssf::layer::LayerParameters GetTcpParam() const;
+
+  ssf::layer::LayerParameters GetProxyParam() const;
+
+ private:
+  bool ParseConfigFile(const std::string& filepath);
+  std::string GetOption(const std::string& name) const;
+
  protected:
   std::string config_file_;
-  ssf::tests::Address client_address_;
-  ssf::tests::Address proxy_address_;
+  std::map<std::string, std::string> config_options_;
 };
 
 #endif  // SSF_TESTS_PROXY_TEST_FIXTURE_H_

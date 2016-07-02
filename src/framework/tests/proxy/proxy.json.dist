@@ -1,0 +1,8 @@
+{
+    "target_addr": "",
+    "target_port": "9000",
+    "proxy_addr": "",
+    "proxy_port": "",
+    "username": "",
+    "password": ""
+}

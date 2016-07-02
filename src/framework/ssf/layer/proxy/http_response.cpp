@@ -20,7 +20,8 @@ bool HttpResponse::Redirected() const {
 bool HttpResponse::AuthenticationRequired() const {
   return (status_code_ == StatusCode::kUnauthorized ||
           status_code_ == StatusCode::kProxyAuthenticationRequired) &&
-         (headers_.find("proxy-authenticate") != headers_.end());
+         ((headers_.find("proxy-authenticate") != headers_.end()) ||
+          (headers_.find("www-authenticate") != headers_.end()));
 }
 
 bool HttpResponse::HeaderValueBeginWith(const std::string& header_name,
