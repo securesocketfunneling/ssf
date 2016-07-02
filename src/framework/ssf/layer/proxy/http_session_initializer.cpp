@@ -3,6 +3,7 @@
 #include "ssf/error/error.h"
 #include "ssf/layer/proxy/http_session_initializer.h"
 #include "ssf/layer/proxy/basic_auth_strategy.h"
+#include "ssf/layer/proxy/digest_auth_strategy.h"
 #include "ssf/log/log.h"
 
 namespace ssf {
@@ -27,7 +28,10 @@ void HttpSessionInitializer::Reset(const std::string& target_host,
   target_port_ = target_port;
   proxy_ep_ctx_ = proxy_ep_ctx;
 
+  // instanciate auth strategies
+  p_current_auth_strategy_ = nullptr;
   auth_strategies_.clear();
+  auth_strategies_.emplace_back(new detail::DigestAuthStrategy());
   auth_strategies_.emplace_back(new detail::BasicAuthStrategy());
 }
 
@@ -38,7 +42,7 @@ std::string HttpSessionInitializer::GenerateRequest(
     return "";
   }
 
-  HttpConnectRequest request(target_host_, target_port_);
+  HttpRequest request("CONNECT", target_host_ + ':' + target_port_);
 
   if (p_current_auth_strategy_ != nullptr) {
     p_current_auth_strategy_->PopulateRequest(proxy_ep_ctx_, &request);

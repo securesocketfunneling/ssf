@@ -8,7 +8,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include "ssf/layer/proxy/basic_auth_strategy.h"
-#include "ssf/layer/proxy/http_connect_request.h"
 
 namespace ssf {
 namespace layer {
@@ -20,18 +19,26 @@ BasicAuthStrategy::BasicAuthStrategy()
 
 bool BasicAuthStrategy::Support(const HttpResponse& response) const {
   return !request_populated_ &&
-         response.HeaderValueBeginWith("proxy-authenticate", "Basic");
+         (response.HeaderValueBeginWith("Proxy-Authenticate", "Basic") ||
+          response.HeaderValueBeginWith("WWW-Authenticate", "Basic"));
 }
 
 void BasicAuthStrategy::ProcessResponse(const HttpResponse& response) {
+  if (response.Success()) {
+    status_ = Status::kAuthenticated;
+    return;
+  }
+
   if (!Support(response)) {
     status_ = Status::kAuthenticationFailure;
     return;
   }
+
+  set_proxy_authentication(response);
 }
 
 void BasicAuthStrategy::PopulateRequest(
-    const ProxyEndpointContext& proxy_ep_ctx, HttpConnectRequest* p_request) {
+    const ProxyEndpointContext& proxy_ep_ctx, HttpRequest* p_request) {
   const auto& http_proxy = proxy_ep_ctx.http_proxy;
 
   std::stringstream ss_credentials, header_value;
@@ -39,7 +46,9 @@ void BasicAuthStrategy::PopulateRequest(
 
   header_value << "Basic " << Base64Encode(ss_credentials.str());
 
-  p_request->AddHeader("Proxy-Authorization", header_value.str());
+  p_request->AddHeader(
+      proxy_authentication() ? "Proxy-Authorization" : "Authorization",
+      header_value.str());
 
   request_populated_ = true;
 }
@@ -53,6 +62,18 @@ std::string BasicAuthStrategy::Base64Encode(const std::string& input) {
 
   std::copy(Base64Iterator(input.begin()), Base64Iterator(input.end()),
             ostream_iterator<char>(ss_encoded_input));
+
+  // padding with '='
+  switch (input.size() % 3) {
+    case 1:
+      ss_encoded_input << "==";
+      break;
+    case 2:
+      ss_encoded_input << '=';
+      break;
+    default:
+      break;
+  }
 
   return ss_encoded_input.str();
 }

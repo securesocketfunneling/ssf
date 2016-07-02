@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <sstream>
 
 #include <http-parser/http_parser.h>
 
@@ -69,6 +70,7 @@ class HttpResponseBuilder {
   bool processing_header_name_;
   std::string current_header_name_;
   std::string current_header_value_;
+  std::stringstream ss_body_;
 };
 
 }  // detail

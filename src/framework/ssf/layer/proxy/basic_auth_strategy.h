@@ -9,9 +9,6 @@ namespace proxy {
 namespace detail {
 
 class BasicAuthStrategy : public AuthStrategy {
- private:
-  enum State { kProcessing = 0, kComplete = 1 };
-
  public:
   BasicAuthStrategy();
 
@@ -22,7 +19,7 @@ class BasicAuthStrategy : public AuthStrategy {
   void ProcessResponse(const HttpResponse& response) override;
 
   void PopulateRequest(const ProxyEndpointContext& proxy_ep_ctx,
-                       HttpConnectRequest* p_request) override;
+                       HttpRequest* p_request) override;
 
  private:
   static std::string Base64Encode(const std::string& input);

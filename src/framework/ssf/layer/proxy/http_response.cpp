@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "ssf/layer/proxy/http_response.h"
 
 namespace ssf {
@@ -39,12 +41,15 @@ bool HttpResponse::HeaderValueBeginWith(const std::string& header_name,
 
 void HttpResponse::AddHeader(const std::string& name,
                              const std::string& value) {
-  auto it = headers_.find(name);
+  auto name_lower = name;
+  std::transform(name_lower.begin(), name_lower.end(), name_lower.begin(),
+                 ::tolower);
+  auto it = headers_.find(name_lower);
   if (it == headers_.end()) {
-    headers_[name] = {};
+    headers_[name_lower] = {};
   }
 
-  headers_[name].push_back(value);
+  headers_[name_lower].push_back(value);
 }
 
 void HttpResponse::Reset() {
@@ -53,7 +58,10 @@ void HttpResponse::Reset() {
 }
 
 std::list<std::string> HttpResponse::Header(const std::string& name) const {
-  HeadersMap::const_iterator it = headers_.find(name);
+  auto name_lower = name;
+  std::transform(name_lower.begin(), name_lower.end(), name_lower.begin(),
+                 ::tolower);
+  HeadersMap::const_iterator it = headers_.find(name_lower);
   if (it == headers_.end()) {
     // header not found
     return {};

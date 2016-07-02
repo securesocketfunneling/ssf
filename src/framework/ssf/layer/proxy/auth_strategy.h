@@ -1,7 +1,7 @@
 #ifndef SSF_LAYER_PROXY_AUTH_STRATEGY_H_
 #define SSF_LAYER_PROXY_AUTH_STRATEGY_H_
 
-#include "ssf/layer/proxy/http_connect_request.h"
+#include "ssf/layer/proxy/http_request.h"
 #include "ssf/layer/proxy/http_response.h"
 #include "ssf/layer/proxy/proxy_endpoint_context.h"
 
@@ -26,15 +26,23 @@ class AuthStrategy {
   virtual void ProcessResponse(const HttpResponse& response) = 0;
 
   virtual void PopulateRequest(const ProxyEndpointContext& proxy_ep_ctx,
-                               HttpConnectRequest* p_request) = 0;
+                               HttpRequest* p_request) = 0;
 
   inline Status status() const { return status_; }
 
  protected:
-  AuthStrategy(Status status) : status_(status) {}
+  AuthStrategy(Status status) : status_(status), proxy_authentication_(false) {}
+  
+  inline bool proxy_authentication() const { return proxy_authentication_; }
+  inline void set_proxy_authentication(const HttpResponse& response) {
+    proxy_authentication_ = !response.Header("Proxy-Authenticate").empty();
+  }
 
  protected:
   Status status_;
+
+ private:
+  bool proxy_authentication_;
 };
 
 }  // detail

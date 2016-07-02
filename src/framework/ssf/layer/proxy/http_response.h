@@ -11,7 +11,7 @@ namespace proxy {
 namespace detail {
 
 class HttpResponse {
- private:
+ public:
   enum StatusCode : int {
     kOk = 200,
     kMovedPermanently = 301,
@@ -20,6 +20,7 @@ class HttpResponse {
     kProxyAuthenticationRequired = 407
   };
 
+ private:
   using HeadersMap = std::map<std::string, std::list<std::string>>;
 
  public:
@@ -27,6 +28,9 @@ class HttpResponse {
 
   inline int status_code() const { return status_code_; }
   inline void set_status_code(int status_code) { status_code_ = status_code; }
+
+  inline std::string body() { return body_; }
+  inline void set_body(const std::string& body) { body_ = body; }
 
   std::list<std::string> Header(const std::string& name) const;
   void AddHeader(const std::string& name, const std::string& value);
@@ -44,6 +48,7 @@ class HttpResponse {
  private:
   int status_code_;
   HeadersMap headers_;
+  std::string body_;
 };
 
 }  // detail
