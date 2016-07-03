@@ -6,7 +6,9 @@
 #include <cstdint>
 
 #include <array>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include <boost/asio/io_service.hpp>
@@ -196,9 +198,25 @@ void PerfTestStreamProtocolHalfDuplex(
   tests::virtual_network_helpers::SendHandler sent_handler1;
   tests::virtual_network_helpers::ReceiveHandler received_handler2;
 
+  auto close_all = [&]() {
+    boost::system::error_code close_ec;
+    acceptor.close(close_ec);
+    EXPECT_FALSE(acceptor.is_open());
+    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket1.close(close_ec);
+    EXPECT_FALSE(socket1.is_open());
+    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket2.close(close_ec);
+    EXPECT_FALSE(socket2.is_open());
+  };
+
   connected = [&, p_bandwidth1](const boost::system::error_code& ec) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Connect handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     p_bandwidth1->ResetTime();
 
@@ -214,8 +232,12 @@ void PerfTestStreamProtocolHalfDuplex(
 
   sent_handler1 = [&, p_bandwidth1](const boost::system::error_code& ec,
                                     std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Send handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     s_count1 += length;
     if (s_count1 < data_size_to_send) {
@@ -231,17 +253,26 @@ void PerfTestStreamProtocolHalfDuplex(
   };
 
   accepted = [&](const boost::system::error_code& ec) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Accept handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     socket2.async_receive(boost::asio::buffer(r_buffer2), received_handler2);
   };
 
   received_handler2 = [&](const boost::system::error_code& ec,
                           std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Receive handler should not be in error: " << ec.message();
-    ASSERT_TRUE(tests::virtual_network_helpers::CheckBuffers(buffer1, r_buffer2,
+    if (ec) {
+      close_all();
+      return;
+    }
+
+    EXPECT_TRUE(tests::virtual_network_helpers::CheckBuffers(buffer1, r_buffer2,
                                                              length));
     tests::virtual_network_helpers::ResetBuffer(&r_buffer2, 0, length);
 
@@ -249,11 +280,8 @@ void PerfTestStreamProtocolHalfDuplex(
     if (count1 < data_size_to_send) {
       socket2.async_receive(boost::asio::buffer(r_buffer2), received_handler2);
     } else {
-      ASSERT_EQ(data_size_to_send, count1);
-      boost::system::error_code close_ec;
-      socket1.close(close_ec);
-      socket2.close(close_ec);
-      acceptor.close(close_ec);
+      EXPECT_EQ(data_size_to_send, count1);
+      close_all();
     }
   };
 
@@ -289,8 +317,10 @@ void PerfTestStreamProtocolFullDuplex(
 
   std::cout << "  * PerfTestStreamProtocolFullDuplex" << std::endl;
 
-  std::promise<bool> finished1;
-  std::promise<bool> finished2;
+  std::mutex cv_mutex;
+  std::condition_variable cv;
+  bool finished1 = false;
+  bool finished2 = false;
 
   boost::asio::io_service io_service;
   boost::system::error_code resolve_ec;
@@ -341,9 +371,33 @@ void PerfTestStreamProtocolFullDuplex(
   tests::virtual_network_helpers::ReceiveHandler received_handler1;
   tests::virtual_network_helpers::ReceiveHandler received_handler2;
 
+  auto close_all = [&]() {
+    boost::system::error_code close_ec;
+    acceptor.close(close_ec);
+    EXPECT_FALSE(acceptor.is_open());
+    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket1.close(close_ec);
+    EXPECT_FALSE(socket1.is_open());
+    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket2.close(close_ec);
+    EXPECT_FALSE(socket2.is_open());
+
+    {
+      std::lock_guard<std::mutex> lk(cv_mutex);
+      finished1 = true;
+      finished2 = true;
+    }
+    cv.notify_one();
+  };
+
   connected = [&, p_bandwidth1](const boost::system::error_code& ec) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Connect handler should not be in error: " << ec.message();
+
+    if (ec) {
+      close_all();
+      return;
+    }
 
     socket1.async_receive(boost::asio::buffer(r_buffer1), received_handler1);
 
@@ -360,8 +414,12 @@ void PerfTestStreamProtocolFullDuplex(
   };
 
   accepted = [&, p_bandwidth2](const boost::system::error_code& ec) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Accept handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     socket2.async_receive(boost::asio::buffer(r_buffer2), received_handler2);
 
@@ -379,8 +437,12 @@ void PerfTestStreamProtocolFullDuplex(
 
   sent_handler1 = [&, p_bandwidth1](const boost::system::error_code& ec,
                                     std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Send handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     s_count1 += length;
 
@@ -398,8 +460,12 @@ void PerfTestStreamProtocolFullDuplex(
 
   sent_handler2 = [&, p_bandwidth2](const boost::system::error_code& ec,
                                     std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Send handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     s_count2 += length;
 
@@ -417,9 +483,14 @@ void PerfTestStreamProtocolFullDuplex(
 
   received_handler1 = [&](const boost::system::error_code& ec,
                           std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Receive handler should not be in error: " << ec.message();
-    ASSERT_TRUE(tests::virtual_network_helpers::CheckBuffers(buffer2, r_buffer1,
+    if (ec) {
+      close_all();
+      return;
+    }
+
+    EXPECT_TRUE(tests::virtual_network_helpers::CheckBuffers(buffer2, r_buffer1,
                                                              length));
     tests::virtual_network_helpers::ResetBuffer(&r_buffer1, 0, length);
 
@@ -428,16 +499,25 @@ void PerfTestStreamProtocolFullDuplex(
     if (count2 < data_size_to_send) {
       socket1.async_receive(boost::asio::buffer(r_buffer1), received_handler1);
     } else {
-      ASSERT_EQ(data_size_to_send, count2);
-      finished2.set_value(true);
+      EXPECT_EQ(data_size_to_send, count2);
+      {
+        std::lock_guard<std::mutex> lk(cv_mutex);
+        finished2 = true;
+      }
+      cv.notify_one();
     }
   };
 
   received_handler2 = [&](const boost::system::error_code& ec,
                           std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Receive handler should not be in error: " << ec.message();
-    ASSERT_TRUE(tests::virtual_network_helpers::CheckBuffers(buffer1, r_buffer2,
+    if (ec) {
+      close_all();
+      return;
+    }
+
+    EXPECT_TRUE(tests::virtual_network_helpers::CheckBuffers(buffer1, r_buffer2,
                                                              length));
     tests::virtual_network_helpers::ResetBuffer(&r_buffer2, 0, length);
 
@@ -446,8 +526,12 @@ void PerfTestStreamProtocolFullDuplex(
     if (count1 < data_size_to_send) {
       socket2.async_receive(boost::asio::buffer(r_buffer2), received_handler2);
     } else {
-      ASSERT_EQ(data_size_to_send, count1);
-      finished1.set_value(true);
+      EXPECT_EQ(data_size_to_send, count1);
+      {
+        std::lock_guard<std::mutex> lk(cv_mutex);
+        finished1 = true;
+      }
+      cv.notify_one();
     }
   };
 
@@ -473,13 +557,11 @@ void PerfTestStreamProtocolFullDuplex(
     threads.create_thread([&io_service]() { io_service.run(); });
   }
 
-  finished1.get_future().wait();
-  finished2.get_future().wait();
+  std::unique_lock<std::mutex> lk(cv_mutex);
+  cv.wait(lk, [&finished1, &finished2] { return finished1 && finished2; });
+  lk.unlock();
 
-  boost::system::error_code close_ec;
-  socket1.close(close_ec);
-  socket2.close(close_ec);
-  acceptor.close(close_ec);
+  close_all();
 
   threads.join_all();
 }
@@ -537,17 +619,33 @@ void TestStreamProtocol(
   tests::virtual_network_helpers::ReceiveHandler received_handler1;
   tests::virtual_network_helpers::ReceiveHandler received_handler2;
 
+  auto close_all = [&]() {
+    boost::system::error_code close_ec;
+    acceptor.close(close_ec);
+    EXPECT_FALSE(acceptor.is_open());
+    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket1.close(close_ec);
+    EXPECT_FALSE(socket1.is_open());
+    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket2.close(close_ec);
+    EXPECT_FALSE(socket2.is_open());
+  };
+
   accepted = [&](const boost::system::error_code& ec) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Accept handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     boost::system::error_code endpoint_ec;
     socket2.local_endpoint(endpoint_ec);
-    ASSERT_EQ(0, endpoint_ec.value())
+    EXPECT_EQ(0, endpoint_ec.value())
         << "Local endpoint should be set: " << endpoint_ec.message();
 
     socket2.remote_endpoint(endpoint_ec);
-    ASSERT_EQ(0, endpoint_ec.value())
+    EXPECT_EQ(0, endpoint_ec.value())
         << "Remote endpoint should be set: " << endpoint_ec.message();
 
     boost::asio::async_read(socket2, boost::asio::buffer(r_buffer2),
@@ -555,18 +653,22 @@ void TestStreamProtocol(
   };
 
   connected = [&](const boost::system::error_code& ec) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Connect handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
 
     boost::system::error_code endpoint_ec;
     socket1.local_endpoint(endpoint_ec);
-    ASSERT_EQ(0, endpoint_ec.value())
+    EXPECT_EQ(0, endpoint_ec.value())
         << "Local endpoint should be set: " << endpoint_ec.message();
 
     auto remote_ep = socket1.remote_endpoint(endpoint_ec);
-    ASSERT_EQ(0, endpoint_ec.value())
+    EXPECT_EQ(0, endpoint_ec.value())
         << "Remote endpoint should be set: " << endpoint_ec.message();
-    ASSERT_EQ(remote_endpoint, remote_ep) << "Remote endpoint invalid";
+    EXPECT_EQ(remote_endpoint, remote_ep) << "Remote endpoint invalid";
 
     boost::asio::async_write(socket1, boost::asio::buffer(buffer1),
                              sent_handler1);
@@ -574,9 +676,14 @@ void TestStreamProtocol(
 
   received_handler1 =
       [&](const boost::system::error_code& ec, std::size_t length) {
-        ASSERT_EQ(0, ec.value())
+        EXPECT_EQ(0, ec.value())
             << "Receive handler should not be in error: " << ec.message();
-        ASSERT_TRUE(tests::virtual_network_helpers::CheckBuffers(
+        if (ec) {
+          close_all();
+          return;
+        }
+
+        EXPECT_TRUE(tests::virtual_network_helpers::CheckBuffers(
             buffer2, r_buffer1, length));
 
         {
@@ -602,27 +709,20 @@ void TestStreamProtocol(
           boost::asio::async_write(socket1, boost::asio::buffer(buffer1),
                                    sent_handler1);
         } else {
-          ASSERT_EQ(max_packets, count1);
-          boost::system::error_code close_ec;
-
-          acceptor.close(close_ec);
-          ASSERT_EQ(false, acceptor.is_open());
-
-          socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-          socket1.close(close_ec);
-          ASSERT_EQ(false, socket1.is_open());
-
-          socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-          socket2.close(close_ec);
-          ASSERT_EQ(false, socket2.is_open());
+          EXPECT_EQ(max_packets, count1);
+          close_all();
         }
       };
 
   received_handler2 =
       [&](const boost::system::error_code& ec, std::size_t length) {
-        ASSERT_EQ(0, ec.value())
+        EXPECT_EQ(0, ec.value())
             << "Receive handler should not be in error: " << ec.message();
-        ASSERT_TRUE(tests::virtual_network_helpers::CheckBuffers(
+        if (ec) {
+          close_all();
+          return;
+        }
+        EXPECT_TRUE(tests::virtual_network_helpers::CheckBuffers(
             buffer1, r_buffer2, length));
         ++count2;
         if (count2 < max_packets) {
@@ -632,21 +732,31 @@ void TestStreamProtocol(
           boost::asio::async_write(
               socket2, boost::asio::buffer(buffer2),
               [](const boost::system::error_code&, std::size_t) {});
-          ASSERT_EQ(max_packets, count2);
+          EXPECT_EQ(max_packets, count2);
         }
       };
 
   sent_handler1 = [&](const boost::system::error_code& ec, std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Send handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
+
     tests::virtual_network_helpers::ResetBuffer(&r_buffer1, 0);
     boost::asio::async_read(socket1, boost::asio::buffer(r_buffer1),
                             received_handler1);
   };
 
   sent_handler2 = [&](const boost::system::error_code& ec, std::size_t length) {
-    ASSERT_EQ(0, ec.value())
+    EXPECT_EQ(0, ec.value())
         << "Send handler should not be in error: " << ec.message();
+    if (ec) {
+      close_all();
+      return;
+    }
+
     tests::virtual_network_helpers::ResetBuffer(&r_buffer2, 0);
     boost::asio::async_read(socket2, boost::asio::buffer(r_buffer2),
                             received_handler2);
@@ -724,6 +834,19 @@ void TestStreamProtocolFuture(
   ASSERT_EQ(0, ec.value()) << "Listen acceptor should not be in error: "
                            << ec.message();
 
+  auto close_all = [&]() {
+    boost::system::error_code close_ec;
+    acceptor.close(close_ec);
+    EXPECT_FALSE(acceptor.is_open());
+    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket1.close(close_ec);
+    EXPECT_FALSE(socket1.is_open());
+    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket2.close(close_ec);
+    EXPECT_FALSE(socket2.is_open());
+    p_worker.reset();
+  };
+
   auto lambda2 = [&]() {
     try {
       auto accepted = acceptor.async_accept(socket2, boost::asio::use_future);
@@ -735,7 +858,8 @@ void TestStreamProtocolFuture(
           socket2, boost::asio::buffer(buffer2), boost::asio::use_future);
       written.get();
     } catch (const std::exception& e) {
-      std::cout << e.what() << std::endl;
+      ADD_FAILURE() << e.what();
+      close_all();
     }
   };
 
@@ -751,21 +875,10 @@ void TestStreamProtocolFuture(
           socket1, boost::asio::buffer(r_buffer1), boost::asio::use_future);
       read.get();
 
-      boost::system::error_code close_ec;
-      socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-      socket1.close(close_ec);
-      ASSERT_EQ(false, socket1.is_open());
-
-      socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-      socket2.close(close_ec);
-      ASSERT_EQ(false, socket2.is_open());
-
-      acceptor.close(close_ec);
-      ASSERT_EQ(false, acceptor.is_open());
-
-      p_worker.reset();
+      close_all();
     } catch (const std::exception& e) {
-      std::cout << e.what() << std::endl;
+      ADD_FAILURE() << e.what();
+      close_all();
     }
   };
 
@@ -826,13 +939,26 @@ void TestStreamProtocolSpawn(
   ASSERT_EQ(0, ec.value()) << "Listen acceptor should not be in error: "
                            << ec.message();
 
+  auto close_all = [&]() {
+    boost::system::error_code close_ec;
+    acceptor.close(close_ec);
+    EXPECT_FALSE(acceptor.is_open());
+    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket1.close(close_ec);
+    EXPECT_FALSE(socket1.is_open());
+    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket2.close(close_ec);
+    EXPECT_FALSE(socket2.is_open());
+  };
+
   auto lambda2 = [&](boost::asio::yield_context yield) {
     try {
       acceptor.async_accept(socket2, yield);
       boost::asio::async_read(socket2, boost::asio::buffer(r_buffer2), yield);
       boost::asio::async_write(socket2, boost::asio::buffer(buffer2), yield);
     } catch (const std::exception& e) {
-      std::cout << e.what() << std::endl;
+      ADD_FAILURE() << e.what();
+      close_all();
     }
   };
 
@@ -842,18 +968,9 @@ void TestStreamProtocolSpawn(
       boost::asio::async_write(socket1, boost::asio::buffer(buffer1), yield);
       boost::asio::async_read(socket1, boost::asio::buffer(r_buffer1), yield);
 
-      socket1.shutdown(boost::asio::socket_base::shutdown_both);
-      socket1.close();
-      ASSERT_EQ(false, socket1.is_open());
-
-      socket2.shutdown(boost::asio::socket_base::shutdown_both);
-      socket2.close();
-      ASSERT_EQ(false, socket2.is_open());
-
-      acceptor.close();
-      ASSERT_EQ(false, acceptor.is_open());
     } catch (const std::exception& e) {
-      std::cout << e.what() << std::endl;
+      ADD_FAILURE() << e.what();
+      close_all();
     }
   };
 
@@ -917,13 +1034,27 @@ void TestStreamProtocolSynchronous(
   ASSERT_EQ(0, ec.value()) << "Listen acceptor should not be in error: "
                            << ec.message();
 
+  auto close_all = [&]() {
+    boost::system::error_code close_ec;
+    acceptor.close(close_ec);
+    EXPECT_FALSE(acceptor.is_open());
+    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket1.close(close_ec);
+    EXPECT_FALSE(socket1.is_open());
+    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    socket2.close(close_ec);
+    EXPECT_FALSE(socket2.is_open());
+    p_worker.reset();
+  };
+
   auto lambda2 = [&]() {
     try {
       acceptor.accept(socket2);
       boost::asio::read(socket2, boost::asio::buffer(r_buffer2));
       boost::asio::write(socket2, boost::asio::buffer(buffer2));
     } catch (const std::exception& e) {
-      ASSERT_TRUE(false) << "An error occurred : " << e.what();
+      ADD_FAILURE() << e.what() << std::endl;
+      close_all();
     }
   };
 
@@ -933,27 +1064,16 @@ void TestStreamProtocolSynchronous(
       boost::asio::write(socket1, boost::asio::buffer(buffer1));
       boost::asio::read(socket1, boost::asio::buffer(r_buffer1));
 
-      boost::system::error_code close_ec;
-      socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-      socket1.close(close_ec);
-      ASSERT_EQ(false, socket1.is_open());
-
-      socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-      socket2.close(close_ec);
-      ASSERT_EQ(false, socket2.is_open());
-
-      acceptor.close(close_ec);
-      ASSERT_EQ(false, acceptor.is_open());
-
-      p_worker.reset();
+      close_all();
     } catch (const std::exception& e) {
-      ASSERT_TRUE(false) << "An error occurred : " << e.what();
+      ADD_FAILURE() << e.what() << std::endl;
+      close_all();
     }
   };
 
   boost::thread_group threads;
-  threads.create_thread(std::move(lambda2));
-  threads.create_thread(std::move(lambda1));
+  threads.create_thread(lambda2);
+  threads.create_thread(lambda1);
   for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
     threads.create_thread([&io_service]() { io_service.run(); });
   }
