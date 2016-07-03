@@ -19,7 +19,7 @@ class HttpRequest {
   inline std::string method() const { return method_; }
   inline std::string uri() const { return uri_; }
   inline std::string body() const { return body_; }
-  inline std::string set_body(const std::string& body) { body_ = body; }
+  inline void set_body(const std::string& body) { body_ = body; }
 
   void AddHeader(const std::string& name, const std::string& value);
 

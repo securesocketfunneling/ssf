@@ -41,7 +41,6 @@ ProxyTestFixture::ProxyTestFixture()
 ProxyTestFixture::~ProxyTestFixture() {}
 
 void ProxyTestFixture::SetUp() {
-  std::vector<ssf::tests::Address> test_addresses;
   ParseConfigFile(config_file_);
 }
 
