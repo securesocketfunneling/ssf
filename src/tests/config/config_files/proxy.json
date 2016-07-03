@@ -2,7 +2,9 @@
     "ssf": {
         "proxy" : {
             "http_addr": "127.0.0.1",
-            "http_port": "8080"
+            "http_port": "8080",
+            "http_username": "test_user",
+            "http_password": "test_password"
         }
     }
 }

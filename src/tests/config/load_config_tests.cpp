@@ -72,6 +72,8 @@ TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
   ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
   ASSERT_EQ(config_.proxy().http_addr(), "");
   ASSERT_EQ(config_.proxy().http_port(), "");
+  ASSERT_EQ(config_.proxy().http_username(), "");
+  ASSERT_EQ(config_.proxy().http_password(), "");
   ASSERT_EQ(config_.services().process().path(),
             SSF_PROCESS_SERVICE_BINARY_PATH);
   ASSERT_EQ(config_.services().process().args(), "");
@@ -84,6 +86,8 @@ TEST_F(LoadConfigTest, LoadProxyFileTest) {
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
   ASSERT_EQ(config_.proxy().http_addr(), "127.0.0.1");
   ASSERT_EQ(config_.proxy().http_port(), "8080");
+  ASSERT_EQ(config_.proxy().http_username(), "test_user");
+  ASSERT_EQ(config_.proxy().http_password(), "test_password");
 }
 
 TEST_F(LoadConfigTest, LoadServicesFileTest) {
@@ -110,6 +114,8 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
   ASSERT_EQ(config_.proxy().http_addr(), "127.0.0.1");
   ASSERT_EQ(config_.proxy().http_port(), "8080");
+  ASSERT_EQ(config_.proxy().http_username(), "test_user");
+  ASSERT_EQ(config_.proxy().http_password(), "test_password");
   ASSERT_EQ(config_.services().process().path(), "/bin/custom_path");
   ASSERT_EQ(config_.services().process().args(), "-custom args");
 }

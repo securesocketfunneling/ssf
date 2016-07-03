@@ -37,6 +37,10 @@ void Proxy::Log() const {
   if (IsSet()) {
     SSF_LOG(kLogInfo) << "config[proxy]: <" << http_addr_ << ":" << http_port_
                       << ">";
+    if (!http_username_.empty()) {
+      SSF_LOG(kLogInfo) << "config[proxy]: username: <" << http_username_
+                        << ">";
+    }
   } else {
     SSF_LOG(kLogInfo) << "config[proxy]: <None>";
   }
@@ -86,7 +90,7 @@ void Config::Update(const std::string& filepath,
                     boost::system::error_code& ec) {
   std::string conf_file("config.json");
   ec.assign(::error::success, ::error::get_ssf_category());
-  if (filepath == "") {
+  if (filepath.empty()) {
     std::ifstream ifile(conf_file);
     if (!ifile.good()) {
       return;
@@ -174,6 +178,16 @@ void Config::UpdateProxy(const boost::property_tree::ptree& pt) {
   auto http_port_optional = proxy_prop.get_child_optional("http_port");
   if (http_port_optional) {
     proxy_.set_http_port(http_port_optional.get().data());
+  }
+
+  auto http_username_optional = proxy_prop.get_child_optional("http_username");
+  if (http_username_optional) {
+    proxy_.set_http_username(http_username_optional.get().data());
+  }
+
+  auto http_password_optional = proxy_prop.get_child_optional("http_password");
+  if (http_password_optional) {
+    proxy_.set_http_password(http_password_optional.get().data());
   }
 }
 

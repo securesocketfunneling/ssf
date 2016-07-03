@@ -80,7 +80,9 @@ struct Proxy {
  public:
   void Log() const;
 
-  inline bool IsSet() const { return http_addr_ != "" && http_port_ != ""; }
+  inline bool IsSet() const {
+    return !http_addr_.empty() && !http_port_.empty();
+  }
 
   inline std::string http_addr() const { return http_addr_; }
 
@@ -94,11 +96,27 @@ struct Proxy {
     http_port_ = http_port;
   }
 
+  inline std::string http_username() const { return http_username_; }
+
+  inline void set_http_username(const std::string& http_username) {
+    http_username_ = http_username;
+  }
+
+  inline std::string http_password() const { return http_password_; }
+
+  inline void set_http_password(const std::string& http_password) {
+    http_password_ = http_password;
+  }
+
  private:
   // HTTP proxy address
   std::string http_addr_;
   // HTTP proxy port
   std::string http_port_;
+  // HTTP username
+  std::string http_username_;
+  // HTTP password
+  std::string http_password_;
 };
 
 class ProcessService {
@@ -156,7 +174,9 @@ class Config {
    *     },
    *     "proxy" : {
    *       "http_addr": "",
-   *       "http_port": ""
+   *       "http_port": "",
+   *       "http_username": "",
+   *       "http_password": ""
    *     },
    *     "services": {
    *       "process": {
