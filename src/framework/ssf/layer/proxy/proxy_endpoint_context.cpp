@@ -18,7 +18,7 @@ ProxyEndpointContext::ProxyEndpointContext()
 bool ProxyEndpointContext::IsProxyEnabled() const { return proxy_enabled; }
 
 bool ProxyEndpointContext::HttpProxyEnabled() const {
-  return proxy_enabled && http_proxy.addr != "" && http_proxy.port != "";
+  return proxy_enabled && !http_proxy.addr.empty() && !http_proxy.port.empty();
 }
 
 bool ProxyEndpointContext::operator==(const ProxyEndpointContext& rhs) const {

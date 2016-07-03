@@ -28,7 +28,7 @@ ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
   context.proxy_enabled = false;
   auto http_addr = ssf::helpers::GetField<std::string>("http_addr", parameters);
   auto http_port = ssf::helpers::GetField<std::string>("http_port", parameters);
-  if (http_port == "" || http_addr == "") {
+  if (http_port.empty() || http_addr.empty()) {
     return context;
   }
 

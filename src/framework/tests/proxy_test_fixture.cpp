@@ -22,7 +22,7 @@ Address& Address::operator=(const Address& address) {
   return *this;
 }
 
-bool Address::IsSet() { return addr_ != "" && port_ != ""; }
+bool Address::IsSet() { return !addr_.empty() && !port_.empty(); }
 
 ssf::layer::LayerParameters Address::ToProxyParam() {
   return {{"http_addr", addr_}, {"http_port", port_}};
@@ -79,7 +79,7 @@ ssf::layer::LayerParameters ProxyTestFixture::GetProxyParam() const {
 }
 
 bool ProxyTestFixture::ParseConfigFile(const std::string& filepath) {
-  if (filepath == "") {
+  if (filepath.empty()) {
     return false;
   }
 

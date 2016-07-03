@@ -99,7 +99,7 @@ class basic_RoutedProtocol {
         helpers::GetField<std::string>("network_address", *parameters_it);
     auto router_str = helpers::GetField<std::string>("router", *parameters_it);
 
-    if (network_address_str == "") {
+    if (network_address_str.empty()) {
       ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
       return endpoint();
     }

@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
       cmd.addr(), std::to_string(cmd.port()), ssf_config);
 
   SSF_LOG(kLogInfo) << "server: listening on <"
-                    << ((cmd.addr() != "") ? cmd.addr() : "*") << ":"
+                    << (!cmd.addr().empty() ? cmd.addr() : "*") << ":"
                     << cmd.port() << ">";
 
   server.Run(endpoint_query, ec);

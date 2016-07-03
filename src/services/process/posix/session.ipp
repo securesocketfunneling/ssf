@@ -114,7 +114,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     // Generate argv array
     std::vector<char*> argv;
     std::list<std::string> split_args;
-    if (binary_args_ != "") {
+    if (!binary_args_.empty()) {
       boost::split(split_args, binary_args_, boost::algorithm::is_any_of(" "));
     }
     GenerateArgv(binary_name, split_args, argv);

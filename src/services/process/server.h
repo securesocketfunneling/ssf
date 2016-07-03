@@ -62,7 +62,7 @@ class Server : public BaseService<Demux> {
                           demux& fiber_demux, Parameters parameters,
                           const std::string& binary_path,
                           const std::string& binary_args) {
-    if (!parameters.count("local_port") || binary_path == "") {
+    if (!parameters.count("local_port") || binary_path.empty()) {
       return ServerPtr(nullptr);
     } else {
       return std::shared_ptr<Server>(new Server(
