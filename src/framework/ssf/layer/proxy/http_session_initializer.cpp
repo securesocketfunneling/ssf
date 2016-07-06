@@ -31,8 +31,10 @@ void HttpSessionInitializer::Reset(const std::string& target_host,
   // instanciate auth strategies
   p_current_auth_strategy_ = nullptr;
   auth_strategies_.clear();
-  auth_strategies_.emplace_back(new detail::DigestAuthStrategy());
-  auth_strategies_.emplace_back(new detail::BasicAuthStrategy());
+  auth_strategies_.emplace_back(
+      new detail::DigestAuthStrategy(proxy_ep_ctx_.http_proxy));
+  auth_strategies_.emplace_back(
+      new detail::BasicAuthStrategy(proxy_ep_ctx_.http_proxy));
 }
 
 std::string HttpSessionInitializer::GenerateRequest(
@@ -45,7 +47,7 @@ std::string HttpSessionInitializer::GenerateRequest(
   HttpRequest request("CONNECT", target_host_ + ':' + target_port_);
 
   if (p_current_auth_strategy_ != nullptr) {
-    p_current_auth_strategy_->PopulateRequest(proxy_ep_ctx_, &request);
+    p_current_auth_strategy_->PopulateRequest(&request);
   }
 
   return request.GenerateRequest();

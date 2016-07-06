@@ -25,20 +25,21 @@ class AuthStrategy {
 
   virtual void ProcessResponse(const HttpResponse& response) = 0;
 
-  virtual void PopulateRequest(const ProxyEndpointContext& proxy_ep_ctx,
-                               HttpRequest* p_request) = 0;
+  virtual void PopulateRequest(HttpRequest* p_request) = 0;
 
   inline Status status() const { return status_; }
 
  protected:
-  AuthStrategy(Status status) : status_(status), proxy_authentication_(false) {}
-  
+  AuthStrategy(const Proxy& proxy_ctx, Status status)
+      : proxy_ctx_(proxy_ctx), status_(status), proxy_authentication_(false) {}
+
   inline bool proxy_authentication() const { return proxy_authentication_; }
   inline void set_proxy_authentication(const HttpResponse& response) {
     proxy_authentication_ = !response.Header("Proxy-Authenticate").empty();
   }
 
  protected:
+  Proxy proxy_ctx_;
   Status status_;
 
  private:
@@ -50,4 +51,4 @@ class AuthStrategy {
 }  // layer
 }  // ssf
 
-#endif  // SSF_LAYER_PROXY_AUTH_STRATEGY_H_
+#endif  // SSF_LAYER_PROXY_AUTH_STRATEGY__H

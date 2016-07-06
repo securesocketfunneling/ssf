@@ -21,7 +21,7 @@ class DigestAuthStrategy : public AuthStrategy {
   enum Qop { kNone, kAuth, kAuthInt };
 
  public:
-  DigestAuthStrategy();
+  DigestAuthStrategy(const Proxy& proxy_ctx);
 
   virtual ~DigestAuthStrategy(){};
 
@@ -31,14 +31,12 @@ class DigestAuthStrategy : public AuthStrategy {
 
   void ProcessResponse(const HttpResponse& response) override;
 
-  void PopulateRequest(const ProxyEndpointContext& proxy_ep_ctx,
-                       HttpRequest* p_request) override;
+  void PopulateRequest(HttpRequest* p_request) override;
 
  private:
   void ParseDigestChallenge(const HttpResponse& response);
-  std::string GenerateResponseDigest(const ProxyEndpointContext& proxy_ep_ctx,
-                                     const HttpRequest& request);
-  std::string GenerateA1Hash(const ProxyEndpointContext& proxy_ep_ctx);
+  std::string GenerateResponseDigest(const HttpRequest& request);
+  std::string GenerateA1Hash();
   std::string GenerateA2Hash(const HttpRequest& request);
   static std::string GenerateRandomString(std::size_t strlen);
   static std::string BufferToHex(unsigned char* buffer, std::size_t buffer_len);

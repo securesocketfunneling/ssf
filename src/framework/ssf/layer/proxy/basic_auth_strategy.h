@@ -10,7 +10,7 @@ namespace detail {
 
 class BasicAuthStrategy : public AuthStrategy {
  public:
-  BasicAuthStrategy();
+  BasicAuthStrategy(const Proxy& proxy);
 
   virtual ~BasicAuthStrategy(){};
 
@@ -18,11 +18,7 @@ class BasicAuthStrategy : public AuthStrategy {
 
   void ProcessResponse(const HttpResponse& response) override;
 
-  void PopulateRequest(const ProxyEndpointContext& proxy_ep_ctx,
-                       HttpRequest* p_request) override;
-
- private:
-  static std::string Base64Encode(const std::string& input);
+  void PopulateRequest(HttpRequest* p_request) override;
 
  private:
   bool request_populated_;

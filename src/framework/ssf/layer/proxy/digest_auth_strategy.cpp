@@ -24,8 +24,8 @@ namespace layer {
 namespace proxy {
 namespace detail {
 
-DigestAuthStrategy::DigestAuthStrategy()
-    : AuthStrategy(Status::kAuthenticating),
+DigestAuthStrategy::DigestAuthStrategy(const Proxy& proxy_ctx)
+    : AuthStrategy(proxy_ctx, Status::kAuthenticating),
       request_populated_(false),
       qop_(Qop::kNone),
       cnonce_(GenerateRandomString(32)),
@@ -74,20 +74,16 @@ void DigestAuthStrategy::ProcessResponse(const HttpResponse& response) {
   }
 }
 
-void DigestAuthStrategy::PopulateRequest(
-    const ProxyEndpointContext& proxy_ep_ctx, HttpRequest* p_request) {
-  const auto& http_proxy = proxy_ep_ctx.http_proxy;
-
+void DigestAuthStrategy::PopulateRequest(HttpRequest* p_request) {
   ++nonce_count_;
 
   // construct challenge response fields
   std::map<std::string, std::string> chal_resp;
-  chal_resp["username"] = '"' + http_proxy.username + '"';
+  chal_resp["username"] = '"' + proxy_ctx_.username + '"';
   chal_resp["realm"] = '"' + challenge_["realm"] + '"';
   chal_resp["nonce"] = '"' + challenge_["nonce"] + '"';
   chal_resp["uri"] = '"' + p_request->uri() + '"';
-  chal_resp["response"] =
-      '"' + GenerateResponseDigest(proxy_ep_ctx, *p_request) + '"';
+  chal_resp["response"] = '"' + GenerateResponseDigest(*p_request) + '"';
   if (qop_ != Qop::kNone) {
     chal_resp["cnonce"] = '"' + cnonce_ + '"';
     chal_resp["nc"] = (boost::format("%08x") % nonce_count_).str();
@@ -171,8 +167,8 @@ void DigestAuthStrategy::ParseDigestChallenge(const HttpResponse& response) {
 }
 
 std::string DigestAuthStrategy::GenerateResponseDigest(
-    const ProxyEndpointContext& proxy_ep_ctx, const HttpRequest& request) {
-  auto a1_hash = GenerateA1Hash(proxy_ep_ctx);
+    const HttpRequest& request) {
+  auto a1_hash = GenerateA1Hash();
   auto a2_hash = GenerateA2Hash(request);
 
   Md5Digest response_digest = {{0}};
@@ -205,24 +201,22 @@ std::string DigestAuthStrategy::GenerateResponseDigest(
   return BufferToHex(response_digest.data(), response_digest.size());
 }
 
-std::string DigestAuthStrategy::GenerateA1Hash(
-    const ProxyEndpointContext& proxy_ep_ctx) {
+std::string DigestAuthStrategy::GenerateA1Hash() {
   std::stringstream ss_a1;
-  const auto& http_proxy = proxy_ep_ctx.http_proxy;
   auto alg_it = challenge_.find("algorithm");
 
   Md5Digest a1_hash = {{0}};
   // md5 of username:realm:password
   MD5_CTX md5_context;
   MD5_Init(&md5_context);
-  MD5_Update(&md5_context, http_proxy.username.c_str(),
-             http_proxy.username.size());
+  MD5_Update(&md5_context, proxy_ctx_.username.c_str(),
+             proxy_ctx_.username.size());
   MD5_Update(&md5_context, ":", 1);
   MD5_Update(&md5_context, challenge_["realm"].c_str(),
              challenge_["realm"].size());
   MD5_Update(&md5_context, ":", 1);
-  MD5_Update(&md5_context, http_proxy.password.c_str(),
-             http_proxy.password.size());
+  MD5_Update(&md5_context, proxy_ctx_.password.c_str(),
+             proxy_ctx_.password.size());
   MD5_Final(a1_hash.data(), &md5_context);
 
   if (alg_it != challenge_.end() &&

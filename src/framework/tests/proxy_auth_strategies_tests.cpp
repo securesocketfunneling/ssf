@@ -1,20 +1,46 @@
 #include <gtest/gtest.h>
 
+#include "ssf/layer/proxy/base64.h"
 #include "ssf/layer/proxy/basic_auth_strategy.h"
 #include "ssf/layer/proxy/digest_auth_strategy.h"
+
 #include "ssf/layer/proxy/proxy_endpoint_context.h"
+
+TEST(Base64Test, Test) {
+  using Base64 = ssf::layer::proxy::detail::Base64;
+  std::string str("This is a test string");
+  Base64::Buffer buffer({'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't',
+                         'e', 's', 't', ' ', 's', 't', 'r', 'i', 'n', 'g', '\0',
+                         'C', 'u', 't', 't', 'e', 'd'});
+  auto empty_encoded = Base64::Encode("");
+  auto encoded_str = Base64::Encode(str);
+  auto encoded_buf = Base64::Encode(buffer);
+
+  ASSERT_EQ("VGhpcyBpcyBhIHRlc3Qgc3RyaW5n", encoded_str);
+  ASSERT_EQ("VGhpcyBpcyBhIHRlc3Qgc3RyaW5nAEN1dHRlZA==", encoded_buf);
+
+  auto empty_decoded = Base64::Decode(empty_encoded);
+  auto decoded_str_buffer = Base64::Decode(encoded_str);
+  auto decoded_buffer = Base64::Decode(encoded_buf);
+
+  std::string decoded_str(decoded_str_buffer.begin(), decoded_str_buffer.end());
+
+  ASSERT_EQ(0, empty_decoded.size());
+  ASSERT_EQ(str, decoded_str);
+  ASSERT_EQ(buffer, decoded_buffer);
+}
 
 TEST(ProxyAuthStrategiesTest, BasicAuthTest) {
   using BasicAuthStrategy = ssf::layer::proxy::detail::BasicAuthStrategy;
   using HttpRequest = ssf::layer::proxy::detail::HttpRequest;
   using HttpResponse = ssf::layer::proxy::detail::HttpResponse;
-  using EndpointContext = ssf::layer::proxy::ProxyEndpointContext;
+  using Proxy = ssf::layer::proxy::Proxy;
 
-  EndpointContext ep_ctx;
-  ep_ctx.http_proxy.username = "Aladdin";
-  ep_ctx.http_proxy.password = "open sesame";
+  Proxy proxy_ctx;
+  proxy_ctx.username = "Aladdin";
+  proxy_ctx.password = "open sesame";
 
-  BasicAuthStrategy basic_auth;
+  BasicAuthStrategy basic_auth(proxy_ctx);
 
   HttpResponse response;
   HttpRequest request("GET", "/dir/index.html");
@@ -28,7 +54,7 @@ TEST(ProxyAuthStrategiesTest, BasicAuthTest) {
   basic_auth.ProcessResponse(response);
   ASSERT_NE(basic_auth.status(), BasicAuthStrategy::kAuthenticationFailure);
 
-  basic_auth.PopulateRequest(ep_ctx, &request);
+  basic_auth.PopulateRequest(&request);
   ASSERT_NE(basic_auth.status(), BasicAuthStrategy::kAuthenticationFailure);
 
   ASSERT_FALSE(basic_auth.Support(response));
@@ -45,13 +71,13 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
   using DigestAuthStrategy = ssf::layer::proxy::detail::DigestAuthStrategy;
   using HttpRequest = ssf::layer::proxy::detail::HttpRequest;
   using HttpResponse = ssf::layer::proxy::detail::HttpResponse;
-  using EndpointContext = ssf::layer::proxy::ProxyEndpointContext;
+  using Proxy = ssf::layer::proxy::Proxy;
 
-  EndpointContext ep_ctx;
-  ep_ctx.http_proxy.username = "Mufasa";
-  ep_ctx.http_proxy.password = "Circle Of Life";
+  Proxy proxy_ctx;
+  proxy_ctx.username = "Mufasa";
+  proxy_ctx.password = "Circle Of Life";
 
-  DigestAuthStrategy digest_auth;
+  DigestAuthStrategy digest_auth(proxy_ctx);
   digest_auth.set_cnonce("0a4f113b");
 
   HttpResponse response;
@@ -70,7 +96,7 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
   digest_auth.ProcessResponse(response);
   ASSERT_NE(digest_auth.status(), DigestAuthStrategy::kAuthenticationFailure);
 
-  digest_auth.PopulateRequest(ep_ctx, &request);
+  digest_auth.PopulateRequest(&request);
   ASSERT_NE(digest_auth.status(), DigestAuthStrategy::kAuthenticationFailure);
 
   ASSERT_FALSE(digest_auth.Support(response));
@@ -88,3 +114,7 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
       std::string::npos)
       << "response digest not found";
 }
+
+TEST(ProxyAuthStrategiesTest, NtlmAuthTest) {}
+
+TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {}
