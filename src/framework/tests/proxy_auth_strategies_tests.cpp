@@ -3,6 +3,7 @@
 #include "ssf/layer/proxy/base64.h"
 #include "ssf/layer/proxy/basic_auth_strategy.h"
 #include "ssf/layer/proxy/digest_auth_strategy.h"
+#include "ssf/layer/proxy/negotiate_auth_strategy.h"
 
 #include "ssf/layer/proxy/proxy_endpoint_context.h"
 
@@ -115,6 +116,39 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
       << "response digest not found";
 }
 
-TEST(ProxyAuthStrategiesTest, NtlmAuthTest) {}
+TEST(ProxyAuthStrategiesTest, DISABLED_NtlmAuthTest) {}
 
-TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {}
+TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {
+  using NegotiateAuthStrategy = ssf::layer::proxy::detail::NegotiateAuthStrategy;
+  using HttpRequest = ssf::layer::proxy::detail::HttpRequest;
+  using HttpResponse = ssf::layer::proxy::detail::HttpResponse;
+  using Proxy = ssf::layer::proxy::Proxy;
+
+  Proxy proxy_ctx;
+  proxy_ctx.addr = "127.0.0.1";
+  proxy_ctx.port = "80";
+  proxy_ctx.username = "Mufasa";
+  proxy_ctx.password = "Circle Of Life";
+
+  NegotiateAuthStrategy negotiate_auth(proxy_ctx);
+
+  HttpResponse response;
+  HttpRequest request("GET", "/dir/index.html");
+
+  response.set_status_code(HttpResponse::kProxyAuthenticationRequired);
+  response.AddHeader("WWW-Authenticate", "Negotiate");
+
+  ASSERT_NE(negotiate_auth.status(),
+            NegotiateAuthStrategy::kAuthenticationFailure);
+  ASSERT_TRUE(negotiate_auth.Support(response));
+
+  negotiate_auth.ProcessResponse(response);
+
+  ASSERT_NE(negotiate_auth.status(),
+            NegotiateAuthStrategy::kAuthenticationFailure);
+
+  negotiate_auth.PopulateRequest(&request);
+
+  ASSERT_NE(negotiate_auth.status(),
+            NegotiateAuthStrategy::kAuthenticationFailure);
+}
