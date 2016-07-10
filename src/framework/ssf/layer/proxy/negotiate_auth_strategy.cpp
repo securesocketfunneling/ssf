@@ -1,10 +1,11 @@
 #include "ssf/layer/proxy/base64.h"
 #include "ssf/layer/proxy/negotiate_auth_strategy.h"
+#include "ssf/log/log.h"
 
 #if defined(WIN32)
 #include "ssf/layer/proxy/windows/negotiate_auth_windows_impl.h"
 #else
-
+#include "ssf/layer/proxy/unix/negotiate_auth_unix_impl.h"
 #endif
 
 namespace ssf {
@@ -17,13 +18,22 @@ NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
 #if defined(WIN32)
   p_impl_.reset(new NegotiateAuthWindowsImpl(proxy_ctx));
 #else
+  p_impl_.reset(new NegotiateAuthUnixImpl(proxy_ctx));
 #endif
-  p_impl_->Init();
+  if (p_impl_.get() != nullptr) {
+    if (!p_impl_->Init()) {
+      SSF_LOG(kLogInfo) << "network[proxy]: could not initialize negotiate "
+                        << "strategy";
+      status_ = Status::kAuthenticationFailure;
+    }
+  }
 }
 
 bool NegotiateAuthStrategy::Support(const HttpResponse& response) const {
-  return (response.HeaderValueBeginWith("Proxy-Authenticate", "Negotiate") ||
-          response.HeaderValueBeginWith("WWW-Authenticate", "Negotiate"));
+  return 
+    status_ != Status::kAuthenticationFailure &&
+    (response.HeaderValueBeginWith("Proxy-Authenticate", "Negotiate") ||
+     response.HeaderValueBeginWith("WWW-Authenticate", "Negotiate"));
 }
 
 void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
@@ -32,7 +42,7 @@ void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
     return;
   }
 
-  if (!Support(response)) {
+  if (!Support(response) || p_impl_.get() == nullptr) {
     status_ = Status::kAuthenticationFailure;
     return;
   }
@@ -55,12 +65,14 @@ void NegotiateAuthStrategy::PopulateRequest(HttpRequest* p_request) {
 
   auto auth_token = p_impl_->GetAuthToken();
   if (auth_token.empty()) {
+    status_ = Status::kAuthenticationFailure;
     return;
   }
 
+  std::string negotiate_value = "Negotiate " + Base64::Encode(auth_token);
   p_request->AddHeader(
       proxy_authentication() ? "Proxy-Authorization" : "Authorization",
-      Base64::Encode(auth_token));
+      negotiate_value);
 }
 
 std::vector<uint8_t> NegotiateAuthStrategy::ExtractNegotiateToken(

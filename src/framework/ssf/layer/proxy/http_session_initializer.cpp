@@ -4,6 +4,7 @@
 #include "ssf/layer/proxy/http_session_initializer.h"
 #include "ssf/layer/proxy/basic_auth_strategy.h"
 #include "ssf/layer/proxy/digest_auth_strategy.h"
+#include "ssf/layer/proxy/negotiate_auth_strategy.h"
 #include "ssf/log/log.h"
 
 namespace ssf {
@@ -35,6 +36,8 @@ void HttpSessionInitializer::Reset(const std::string& target_host,
       new detail::DigestAuthStrategy(proxy_ep_ctx_.http_proxy));
   auth_strategies_.emplace_back(
       new detail::BasicAuthStrategy(proxy_ep_ctx_.http_proxy));
+  auth_strategies_.emplace_back(
+      new detail::NegotiateAuthStrategy(proxy_ep_ctx_.http_proxy));
 }
 
 std::string HttpSessionInitializer::GenerateRequest(

@@ -18,10 +18,7 @@ class NtlmAuthStrategy : public AuthStrategy {
 
   void ProcessResponse(const HttpResponse& response) override;
 
-  void PopulateRequest(HttpRequest* p_request) override;
-
- private:
-  bool request_populated_;
+  void PopulateRequest(HttpRequest* p_request) override;  
 };
 
 }  // detail
