@@ -56,6 +56,7 @@ void HttpResponse::AddHeader(const std::string& name,
 void HttpResponse::Reset() {
   status_code_ = 0;
   headers_.clear();
+  body_.clear();
 }
 
 std::list<std::string> HttpResponse::Header(const std::string& name) const {

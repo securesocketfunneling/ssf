@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "ssf/layer/proxy/windows/negotiate_auth_windows_impl.h"
 
 namespace ssf {
@@ -11,13 +13,27 @@ NegotiateAuthWindowsImpl::NegotiateAuthWindowsImpl(const Proxy& proxy_ctx)
       h_sec_ctx_(),
       output_token_(),
       output_token_length_(0),
-      service_name_() {}
+      service_name_() {
+  memset(&h_sec_ctx_, 0, sizeof(CtxtHandle));
+  memset(&h_cred_, 0, sizeof(CredHandle));
+}
 
-NegotiateAuthWindowsImpl::~NegotiateAuthWindowsImpl() {}
+NegotiateAuthWindowsImpl::~NegotiateAuthWindowsImpl() {
+  if (h_sec_ctx_.dwLower != 0 || h_sec_ctx_.dwUpper != 0) {
+    ::DeleteSecurityContext(&h_sec_ctx_);
+    memset(&h_sec_ctx_, 0, sizeof(CtxtHandle));
+  }
+  if (h_cred_.dwLower != 0 || h_cred_.dwUpper != 0) {
+    ::FreeCredentialsHandle(&h_cred_);
+    memset(&h_cred_, 0, sizeof(CredHandle));
+  }
+}
 
 bool NegotiateAuthWindowsImpl::Init() {
   // determine max output token buffer size
   PSecPkgInfoA sec_package;
+  TimeStamp expiry;
+
   auto status = ::QuerySecurityPackageInfoA("Negotiate", &sec_package);
   if (status != SEC_E_OK) {
     state_ = State::kFailure;
@@ -28,7 +44,18 @@ bool NegotiateAuthWindowsImpl::Init() {
   ::FreeContextBuffer(sec_package);
 
   // build spn for proxy (HTTP/proxy_address)
-  service_name_ = "HTTP/" + proxy_ctx_.addr;
+  std::stringstream ss_spn;
+  ss_spn << "HTTP/" << proxy_ctx_.addr;
+  service_name_ = ss_spn.str();
+
+  auto cred_status =
+      ::AcquireCredentialsHandleA(NULL, "Negotiate", SECPKG_CRED_OUTBOUND, NULL,
+                                  NULL, NULL, NULL, &h_cred_, &expiry);
+
+  if (cred_status != SEC_E_OK) {
+    state_ = State::kFailure;
+    return false;
+  }
 
   return true;
 }
@@ -51,21 +78,6 @@ bool NegotiateAuthWindowsImpl::ProcessServerToken(const Token& server_token) {
     if (state_ != State::kInit) {
       return false;
     }
-
-    // first response
-    bool user_credentials = false;
-    // init identity with user credentials if provided
-    SEC_WINNT_AUTH_IDENTITY_A identity;
-
-    auto status = ::AcquireCredentialsHandleA(
-        NULL, "Negotiate", SECPKG_CRED_OUTBOUND, NULL,
-        user_credentials ? &identity : NULL, NULL, NULL, &h_cred_, &expiry);
-
-    if (status != SEC_E_OK) {
-      state_ = State::kFailure;
-      return false;
-    }
-
     state_ = State::kContinue;
   } else {
     // input token
@@ -80,10 +92,9 @@ bool NegotiateAuthWindowsImpl::ProcessServerToken(const Token& server_token) {
   // update security context
   unsigned long attrs;
   auto status = ::InitializeSecurityContextA(
-      &h_cred_, NULL, const_cast<SEC_CHAR*>(service_name_.c_str()),
-      ISC_REQ_CONFIDENTIALITY, 0, SECURITY_NATIVE_DREP,
-      server_token.empty() ? NULL : &in_sec_buf_desc, 0, &h_sec_ctx_,
-      &out_sec_buff_desc, &attrs, &expiry);
+      &h_cred_, NULL, const_cast<SEC_CHAR*>(service_name_.c_str()), 0, 0,
+      SECURITY_NATIVE_DREP, server_token.empty() ? NULL : &in_sec_buf_desc, 0,
+      &h_sec_ctx_, &out_sec_buff_desc, &attrs, &expiry);
 
   switch (status) {
     case SEC_E_OK:
