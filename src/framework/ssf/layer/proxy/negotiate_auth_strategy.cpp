@@ -30,10 +30,9 @@ NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
 }
 
 bool NegotiateAuthStrategy::Support(const HttpResponse& response) const {
-  return 
-    status_ != Status::kAuthenticationFailure &&
-    (response.HeaderValueBeginWith("Proxy-Authenticate", "Negotiate") ||
-     response.HeaderValueBeginWith("WWW-Authenticate", "Negotiate"));
+  return status_ != Status::kAuthenticationFailure &&
+         (response.HeaderValueBeginWith("Proxy-Authenticate", "Negotiate") ||
+          response.HeaderValueBeginWith("WWW-Authenticate", "Negotiate"));
 }
 
 void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
@@ -81,7 +80,7 @@ std::vector<uint8_t> NegotiateAuthStrategy::ExtractNegotiateToken(
   auto proxy_authenticate_hdr = response.Header(
       proxy_authentication() ? "Proxy-Authenticate" : "WWW-Authenticate");
   for (auto& hdr : proxy_authenticate_hdr) {
-    // find digest auth header
+    // find negotiate auth header
     if (hdr.find(negotiate_str) == 0) {
       challenge_str = hdr.substr(negotiate_str.length());
       break;
