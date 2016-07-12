@@ -5,18 +5,12 @@
 #include "ssf/log/log.h"
 #include "ssf/layer/proxy/unix/negotiate_auth_unix_impl.h"
 
-static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_VAL {
-  10,
-  const_cast<char*>("\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x04")
-};
-static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_X_VAL {
-  6,
-  const_cast<char*>("\x2b\x06\x01\x05\x06\x02")
-};
-static gss_OID_desc GSS_SPNEGO_MECH_OID_VAL {
-  6,
-  const_cast<char*>("\x2b\x06\x01\x05\x05\x02")
-};
+static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_VAL{
+    10, const_cast<char*>("\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x04")};
+static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_X_VAL{
+    6, const_cast<char*>("\x2b\x06\x01\x05\x06\x02")};
+static gss_OID_desc GSS_SPNEGO_MECH_OID_VAL{
+    6, const_cast<char*>("\x2b\x06\x01\x05\x05\x02")};
 
 #undef GSS_C_NT_HOST_BASED_SERVICE
 #undef GSS_C_NT_HOST_BASED_SERVICE_X
@@ -44,11 +38,11 @@ NegotiateAuthUnixImpl::NegotiateAuthUnixImpl(const Proxy& proxy_ctx)
 
 NegotiateAuthUnixImpl::~NegotiateAuthUnixImpl() {
   OM_uint32 minor_status;
-  
+
   if (server_name_ != GSS_C_NO_NAME) {
     fct_gss_release_name_(&minor_status, &server_name_);
   }
-  
+
   if (h_sec_ctx_ != GSS_C_NO_CONTEXT) {
     fct_gss_delete_sec_context_(&minor_status, &h_sec_ctx_, GSS_C_NO_BUFFER);
   }
@@ -58,7 +52,7 @@ NegotiateAuthUnixImpl::~NegotiateAuthUnixImpl() {
   fct_gss_release_buffer_ = nullptr;
   fct_gss_delete_sec_context_ = nullptr;
   fct_gss_release_name_ = nullptr;
-  
+
   if (h_gss_api_ != NULL) {
     dlclose(h_gss_api_);
     h_gss_api_ = NULL;
@@ -68,7 +62,7 @@ NegotiateAuthUnixImpl::~NegotiateAuthUnixImpl() {
 bool NegotiateAuthUnixImpl::Init() {
   if (!InitLibrary()) {
     SSF_LOG(kLogError) << "network[proxy]: negotiate: "
-                      << "could not init with gssapi library";
+                       << "could not init with gssapi library";
     state_ = kFailure;
     return false;
   }
@@ -79,16 +73,15 @@ bool NegotiateAuthUnixImpl::Init() {
   spn_name.length = service_name.size();
   spn_name.value = const_cast<char*>(service_name.c_str());
   server_name_ = GSS_C_NO_NAME;
-  if (GSS_S_COMPLETE != fct_gss_import_name_(&minor_status,
-                                             &spn_name,
+  if (GSS_S_COMPLETE != fct_gss_import_name_(&minor_status, &spn_name,
                                              GSS_C_NT_HOSTBASED_SERVICE,
                                              &server_name_)) {
     SSF_LOG(kLogError) << "network[proxy]: negotiate: "
-                      << "could not generate gssapi server name";
+                       << "could not generate gssapi server name";
     state_ = kFailure;
     return false;
   }
-  
+
   return true;
 }
 
@@ -96,48 +89,40 @@ bool NegotiateAuthUnixImpl::ProcessServerToken(const Token& server_token) {
   if (state_ == kFailure) {
     return false;
   }
-  
+
   OM_uint32 minor_status;
   OM_uint32 req_flags = 0;
-  
+
   gss_buffer_desc output_token;
-  
+
   gss_buffer_desc input_token;
   input_token.length = server_token.size();
   input_token.value = const_cast<uint8_t*>(server_token.data());
-  
+
   if (state_ == State::kInit && server_token.empty()) {
     // initialize context
     state_ = State::kContinue;
   }
-  
-  OM_uint32 maj_status = fct_gss_init_sec_context_(&minor_status,
-                                                   GSS_C_NO_CREDENTIAL,
-                                                   &h_sec_ctx_,
-                                                   server_name_,
-                                                   GSS_SPNEGO_MECH_OID,
-                                                   req_flags,
-                                                   GSS_C_INDEFINITE,
-                                                   GSS_C_NO_CHANNEL_BINDINGS,
-                                                   &input_token,
-                                                   nullptr,
-                                                   &output_token,
-                                                   0,
-                                                   nullptr);
-  
+
+  OM_uint32 maj_status = fct_gss_init_sec_context_(
+      &minor_status, GSS_C_NO_CREDENTIAL, &h_sec_ctx_, server_name_,
+      GSS_SPNEGO_MECH_OID, req_flags, GSS_C_INDEFINITE,
+      GSS_C_NO_CHANNEL_BINDINGS, &input_token, nullptr, &output_token, 0,
+      nullptr);
+
   if (GSS_ERROR(maj_status)) {
     LogError(maj_status);
     state_ = kFailure;
     return false;
   }
-  
+
   auth_token_.resize(output_token.length);
   std::copy(static_cast<uint8_t*>(output_token.value),
             static_cast<uint8_t*>(output_token.value) + output_token.length,
             auth_token_.begin());
 
   fct_gss_release_buffer_(&minor_status, &output_token);
-  
+
   return true;
 }
 
@@ -145,7 +130,7 @@ NegotiateAuthUnixImpl::Token NegotiateAuthUnixImpl::GetAuthToken() {
   if (state_ == kFailure) {
     return {};
   }
-  
+
   return auth_token_;
 }
 
@@ -153,7 +138,7 @@ bool NegotiateAuthUnixImpl::InitLibrary() {
   std::list<std::string> lib_names;
 #if defined(__APPLE__)
   lib_names.emplace_back(
-    "/System/Library/Frameworks/Kerberos.framework/Kerberos");
+      "/System/Library/Frameworks/Kerberos.framework/Kerberos");
 #else
   lib_names.emplace_back("libgssapi.so");
   lib_names.emplace_back("libgssapi_krb5.so.2");
@@ -161,53 +146,53 @@ bool NegotiateAuthUnixImpl::InitLibrary() {
   lib_names.emplace_back("libgssapi.so.2");
   lib_names.emplace_back("libgssapi.so.1");
 #endif
-  for (const auto& lib_name: lib_names) {
+  for (const auto& lib_name : lib_names) {
     h_gss_api_ = dlopen(lib_name.c_str(), RTLD_LAZY);
     if (h_gss_api_ != NULL) {
       break;
     }
   }
-  
+
   if (h_gss_api_ == NULL) {
     state_ = kFailure;
     return false;
   }
-  
+
   fct_gss_init_sec_context_ = reinterpret_cast<fct_gss_init_sec_context_t>(
-    dlsym(h_gss_api_, "gss_init_sec_context"));
+      dlsym(h_gss_api_, "gss_init_sec_context"));
   if (fct_gss_init_sec_context_ == NULL) {
     state_ = kFailure;
     return false;
   }
-  
+
   fct_gss_import_name_ = reinterpret_cast<fct_gss_import_name_t>(
-    dlsym(h_gss_api_, "gss_import_name"));
+      dlsym(h_gss_api_, "gss_import_name"));
   if (fct_gss_import_name_ == NULL) {
     state_ = kFailure;
     return false;
   }
-  
+
   fct_gss_release_buffer_ = reinterpret_cast<fct_gss_release_buffer_t>(
-    dlsym(h_gss_api_, "gss_release_buffer"));
+      dlsym(h_gss_api_, "gss_release_buffer"));
   if (fct_gss_release_buffer_ == NULL) {
     state_ = kFailure;
     return false;
   }
-  
+
   fct_gss_delete_sec_context_ = reinterpret_cast<fct_gss_delete_sec_context_t>(
-    dlsym(h_gss_api_, "gss_delete_sec_context"));
+      dlsym(h_gss_api_, "gss_delete_sec_context"));
   if (fct_gss_delete_sec_context_ == NULL) {
     state_ = kFailure;
     return false;
   }
-  
+
   fct_gss_release_name_ = reinterpret_cast<fct_gss_release_name_t>(
-    dlsym(h_gss_api_, "gss_release_name"));
+      dlsym(h_gss_api_, "gss_release_name"));
   if (fct_gss_release_name_ == NULL) {
     state_ = kFailure;
     return false;
   }
-  
+
   return true;
 }
 
@@ -215,14 +200,14 @@ void NegotiateAuthUnixImpl::LogError(OM_uint32 major_status) {
   if (major_status == GSS_S_COMPLETE || major_status == GSS_S_CONTINUE_NEEDED) {
     return;
   }
-  
+
   std::string error_msg;
-  
+
   if (GSS_CALLING_ERROR(major_status)) {
     SSF_LOG(kLogError) << "network[proxy]: negotiate: calling error";
     return;
   }
-  
+
   auto routine_status = GSS_ROUTINE_ERROR(major_status);
   switch (routine_status) {
     case GSS_S_DEFECTIVE_TOKEN:

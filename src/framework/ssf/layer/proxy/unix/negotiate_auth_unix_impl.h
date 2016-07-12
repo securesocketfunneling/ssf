@@ -29,7 +29,7 @@ class NegotiateAuthUnixImpl : public NegotiateAuthImpl {
   typedef decltype(&gss_release_buffer) fct_gss_release_buffer_t;
   typedef decltype(&gss_delete_sec_context) fct_gss_delete_sec_context_t;
   typedef decltype(&gss_release_name) fct_gss_release_name_t;
-  
+
  public:
   NegotiateAuthUnixImpl(const Proxy& proxy_ctx);
 
@@ -38,17 +38,17 @@ class NegotiateAuthUnixImpl : public NegotiateAuthImpl {
   bool Init() override;
   bool ProcessServerToken(const Token& server_token) override;
   Token GetAuthToken() override;
-  
+
  private:
   bool InitLibrary();
   void LogError(OM_uint32 major_status);
- 
+
  private:
   void* h_gss_api_;
   gss_ctx_id_t h_sec_ctx_;
   gss_name_t server_name_;
   Token auth_token_;
-  
+
   fct_gss_init_sec_context_t fct_gss_init_sec_context_;
   fct_gss_import_name_t fct_gss_import_name_;
   fct_gss_release_buffer_t fct_gss_release_buffer_;
