@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "ssf/layer/proxy/windows/negotiate_auth_windows_impl.h"
+#include "ssf/log/log.h"
 
 namespace ssf {
 namespace layer {
@@ -36,6 +37,8 @@ bool NegotiateAuthWindowsImpl::Init() {
 
   auto status = ::QuerySecurityPackageInfoA("Negotiate", &sec_package);
   if (status != SEC_E_OK) {
+    SSF_LOG(kLogError)
+        << "network[proxy]: negotiate: could not query security package";
     state_ = State::kFailure;
     return false;
   }
@@ -53,6 +56,8 @@ bool NegotiateAuthWindowsImpl::Init() {
                                   NULL, NULL, NULL, &h_cred_, &expiry);
 
   if (cred_status != SEC_E_OK) {
+    SSF_LOG(kLogError)
+        << "network[proxy]: negotiate: could not acquire credentials";
     state_ = State::kFailure;
     return false;
   }
@@ -111,6 +116,8 @@ bool NegotiateAuthWindowsImpl::ProcessServerToken(const Token& server_token) {
       state_ = State::kContinue;
       break;
     default:
+      SSF_LOG(kLogError)
+          << "network[proxy]: negotiate: error initializing security context";
       state_ = State::kFailure;
   }
 
