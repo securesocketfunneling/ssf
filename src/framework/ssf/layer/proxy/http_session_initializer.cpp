@@ -22,8 +22,7 @@ HttpSessionInitializer::HttpSessionInitializer()
 
 void HttpSessionInitializer::Reset(const std::string& target_host,
                                    const std::string& target_port,
-                                   const ProxyEndpointContext& proxy_ep_ctx,
-                                   boost::system::error_code& ec) {
+                                   const ProxyEndpointContext& proxy_ep_ctx) {
   status_ = Status::kContinue;
   target_host_ = target_host;
   target_port_ = target_port;
@@ -40,20 +39,17 @@ void HttpSessionInitializer::Reset(const std::string& target_host,
       new detail::NegotiateAuthStrategy(proxy_ep_ctx_.http_proxy));
 }
 
-std::string HttpSessionInitializer::GenerateRequest(
-    boost::system::error_code& ec) {
+void HttpSessionInitializer::PopulateRequest(
+    HttpRequest* p_request, boost::system::error_code& ec) {
   if (status_ != Status::kContinue) {
     ec.assign(ssf::error::interrupted, ssf::error::get_ssf_category());
-    return "";
   }
 
-  HttpRequest request("CONNECT", target_host_ + ':' + target_port_);
+  p_request->Reset("CONNECT", target_host_ + ':' + target_port_);
 
   if (p_current_auth_strategy_ != nullptr) {
-    p_current_auth_strategy_->PopulateRequest(&request);
+    p_current_auth_strategy_->PopulateRequest(p_request);
   }
-
-  return request.GenerateRequest();
 }
 
 void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,

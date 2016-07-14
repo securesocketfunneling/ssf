@@ -2,6 +2,7 @@
 #define SSF_LAYER_PROXY_HTTP_REQUEST_H_
 
 #include <map>
+#include <vector>
 #include <string>
 
 namespace ssf {
@@ -14,12 +15,14 @@ class HttpRequest {
   using HeadersMap = std::map<std::string, std::string>;
 
  public:
-  HttpRequest(const std::string& method, const std::string& uri);
+  HttpRequest();
 
   inline std::string method() const { return method_; }
   inline std::string uri() const { return uri_; }
   inline std::string body() const { return body_; }
   inline void set_body(const std::string& body) { body_ = body; }
+
+  void Reset(const std::string& method, const std::string& uri);
 
   void AddHeader(const std::string& name, const std::string& value);
 

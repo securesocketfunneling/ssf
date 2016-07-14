@@ -27,12 +27,12 @@ class HttpSessionInitializer {
   HttpSessionInitializer();
 
   void Reset(const std::string& target_host, const std::string& target_port,
-             const ProxyEndpointContext& proxy_ep_ctx,
-             boost::system::error_code& ec);
+             const ProxyEndpointContext& proxy_ep_ctx);
 
   inline Status status() { return status_; }
 
-  std::string GenerateRequest(boost::system::error_code& ec);
+  void PopulateRequest(HttpRequest* p_request,
+                              boost::system::error_code& ec);
 
   void ProcessResponse(const HttpResponse& response,
                        boost::system::error_code& ec);

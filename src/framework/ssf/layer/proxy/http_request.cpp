@@ -7,8 +7,15 @@ namespace layer {
 namespace proxy {
 namespace detail {
 
-HttpRequest::HttpRequest(const std::string& method, const std::string& uri)
-    : method_(method), uri_(uri), headers_() {
+HttpRequest::HttpRequest()
+    : method_(), uri_(), headers_() {
+}
+
+void HttpRequest::Reset(const std::string& method, const std::string& uri) {
+  method_ = method;
+  uri_ = uri;
+  headers_.clear();
+  body_.clear();
   AddHeader("Connection", "keep-alive");
 }
 
@@ -35,7 +42,7 @@ std::string HttpRequest::GenerateRequest() const {
   for (const auto& header : headers_) {
     ss_request << header.first << ": " << header.second << eol;
   }
-
+  ss_request << body_;
   ss_request << eol;
 
   return ss_request.str();
