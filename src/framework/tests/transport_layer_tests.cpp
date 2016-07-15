@@ -6,6 +6,6 @@
 
 #include "ssf/layer/parameters.h"
 
-TEST_F(TransportTestFixture, DatagramTransportTest) {}
+TEST_F(TransportTestFixture, DISABLED_DatagramTransportTest) {}
 
-TEST_F(TransportTestFixture, StreamTransportTest) {}
+TEST_F(TransportTestFixture, DISABLED_StreamTransportTest) {}

@@ -177,21 +177,21 @@ project_group("Unit Tests/Framework" interface_layer_tests)
 #project_group("Unit Tests/Framework" routing_layer_tests)
 
 # --- Transport layer tests
-add_target("transport_layer_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    "transport_layer_tests.cpp"
-    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
-)
-project_group("Unit Tests/Framework" transport_layer_tests)
+#add_target("transport_layer_tests"
+#  TYPE
+#    executable ${EXEC_FLAG} TEST
+#  LINKS
+#    ${OpenSSL_LIBRARIES}
+#    ${Boost_LIBRARIES}
+#    ${PLATFORM_SPECIFIC_LIB_DEP}
+#    lib_ssf_network
+#  PREFIX_SKIP     .*/src
+#  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+#  FILES
+#    "transport_layer_tests.cpp"
+#    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
+#)
+#project_group("Unit Tests/Framework" transport_layer_tests)
 
 # --- Interface System tests
 #add_target("interfaces_system_tests"
