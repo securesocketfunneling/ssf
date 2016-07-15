@@ -39,8 +39,8 @@ void HttpSessionInitializer::Reset(const std::string& target_host,
       new detail::NegotiateAuthStrategy(proxy_ep_ctx_.http_proxy));
 }
 
-void HttpSessionInitializer::PopulateRequest(
-    HttpRequest* p_request, boost::system::error_code& ec) {
+void HttpSessionInitializer::PopulateRequest(HttpRequest* p_request,
+                                             boost::system::error_code& ec) {
   if (status_ != Status::kContinue) {
     ec.assign(ssf::error::interrupted, ssf::error::get_ssf_category());
   }

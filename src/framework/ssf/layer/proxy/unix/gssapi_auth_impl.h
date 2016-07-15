@@ -1,5 +1,5 @@
-#ifndef SSF_LAYER_PROXY_UNIX_NEGOTIATE_AUTH_UNIX_IMPL_H_
-#define SSF_LAYER_PROXY_UNIX_NEGOTIATE_AUTH_UNIX_IMPL_H_
+#ifndef SSF_LAYER_PROXY_UNIX_GSSAPI_AUTH_IMPL_H_
+#define SSF_LAYER_PROXY_UNIX_GSSAPI_AUTH_IMPL_H_
 
 #if defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
@@ -15,14 +15,14 @@
 #include <gssapi.h>
 #endif
 
-#include "ssf/layer/proxy/negotiate_auth_impl.h"
+#include "ssf/layer/proxy/platform_auth_impl.h"
 
 namespace ssf {
 namespace layer {
 namespace proxy {
 namespace detail {
 
-class NegotiateAuthUnixImpl : public NegotiateAuthImpl {
+class GSSAPIAuthImpl : public PlatformAuthImpl {
  private:
   typedef decltype(&gss_init_sec_context) fct_gss_init_sec_context_t;
   typedef decltype(&gss_import_name) fct_gss_import_name_t;
@@ -31,9 +31,9 @@ class NegotiateAuthUnixImpl : public NegotiateAuthImpl {
   typedef decltype(&gss_release_name) fct_gss_release_name_t;
 
  public:
-  NegotiateAuthUnixImpl(const Proxy& proxy_ctx);
+  GSSAPIAuthImpl(const Proxy& proxy_ctx);
 
-  virtual ~NegotiateAuthUnixImpl();
+  virtual ~GSSAPIAuthImpl();
 
   bool Init() override;
   bool ProcessServerToken(const Token& server_token) override;
@@ -61,4 +61,4 @@ class NegotiateAuthUnixImpl : public NegotiateAuthImpl {
 }  // layer
 }  // ssf
 
-#endif  // SSF_LAYER_PROXY_UNIX_NEGOTIATE_AUTH_UNIX_IMPL_H_
+#endif  // SSF_LAYER_PROXY_UNIX_GSSAPI_AUTH_IMPL_H_

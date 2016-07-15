@@ -67,13 +67,13 @@ file(GLOB SSF_FRAMEWORK_LAYER_PROXY_FILES
 if (WIN32)
   list(APPEND PLATFORM_LIB "Secur32.lib")
   list(APPEND SSF_FRAMEWORK_LAYER_PROXY_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/windows/negotiate_auth_windows_impl.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/windows/negotiate_auth_windows_impl.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/windows/sspi_auth_impl.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/windows/sspi_auth_impl.cpp")
 endif (WIN32)
 if (UNIX)
   list(APPEND SSF_FRAMEWORK_LAYER_PROXY_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/unix/negotiate_auth_unix_impl.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/unix/negotiate_auth_unix_impl.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/unix/gssapi_auth_impl.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/unix/gssapi_auth_impl.cpp")
 endif (UNIX)
 
 file(GLOB SSF_FRAMEWORK_LAYER_QUEUE_FILES

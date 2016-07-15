@@ -31,8 +31,7 @@ class HttpSessionInitializer {
 
   inline Status status() { return status_; }
 
-  void PopulateRequest(HttpRequest* p_request,
-                              boost::system::error_code& ec);
+  void PopulateRequest(HttpRequest* p_request, boost::system::error_code& ec);
 
   void ProcessResponse(const HttpResponse& response,
                        boost::system::error_code& ec);

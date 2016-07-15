@@ -1,6 +1,6 @@
 #include <sstream>
 
-#include "ssf/layer/proxy/windows/negotiate_auth_windows_impl.h"
+#include "ssf/layer/proxy/windows/sspi_auth_impl.h"
 #include "ssf/log/log.h"
 
 namespace ssf {
@@ -8,8 +8,12 @@ namespace layer {
 namespace proxy {
 namespace detail {
 
-NegotiateAuthWindowsImpl::NegotiateAuthWindowsImpl(const Proxy& proxy_ctx)
-    : NegotiateAuthImpl(proxy_ctx),
+SSPIAuthImpl::SecPackageNames SSPIAuthImpl::sec_package_names_ = {"NTLM",
+                                                                  "Negotiate"};
+
+SSPIAuthImpl::SSPIAuthImpl(SecurityPackage sec_package, const Proxy& proxy_ctx)
+    : PlatformAuthImpl(proxy_ctx),
+      sec_package_(sec_package),
       h_cred_(),
       h_sec_ctx_(),
       output_token_(),
@@ -19,7 +23,7 @@ NegotiateAuthWindowsImpl::NegotiateAuthWindowsImpl(const Proxy& proxy_ctx)
   memset(&h_cred_, 0, sizeof(CredHandle));
 }
 
-NegotiateAuthWindowsImpl::~NegotiateAuthWindowsImpl() {
+SSPIAuthImpl::~SSPIAuthImpl() {
   if (h_sec_ctx_.dwLower != 0 || h_sec_ctx_.dwUpper != 0) {
     ::DeleteSecurityContext(&h_sec_ctx_);
     memset(&h_sec_ctx_, 0, sizeof(CtxtHandle));
@@ -30,34 +34,36 @@ NegotiateAuthWindowsImpl::~NegotiateAuthWindowsImpl() {
   }
 }
 
-bool NegotiateAuthWindowsImpl::Init() {
+bool SSPIAuthImpl::Init() {
   // determine max output token buffer size
   PSecPkgInfoA sec_package;
   TimeStamp expiry;
 
-  auto status = ::QuerySecurityPackageInfoA("Negotiate", &sec_package);
+  auto status = ::QuerySecurityPackageInfoA(
+      const_cast<char*>(GenerateSecurityPackageName(sec_package_).c_str()),
+      &sec_package);
   if (status != SEC_E_OK) {
-    SSF_LOG(kLogError)
-        << "network[proxy]: negotiate: could not query security package";
+    SSF_LOG(kLogError) << "network[proxy]: sspi["
+                       << sec_package_names_[sec_package_]
+                       << "]: could not query security package";
     state_ = State::kFailure;
     return false;
   }
 
   output_token_.resize(sec_package->cbMaxToken);
-  ::FreeContextBuffer(sec_package);
 
-  // build spn for proxy (HTTP/proxy_address)
-  std::stringstream ss_spn;
-  ss_spn << "HTTP/" << proxy_ctx_.addr;
-  service_name_ = ss_spn.str();
+  service_name_ = GenerateServiceName(sec_package_);
 
   auto cred_status =
-      ::AcquireCredentialsHandleA(NULL, "Negotiate", SECPKG_CRED_OUTBOUND, NULL,
-                                  NULL, NULL, NULL, &h_cred_, &expiry);
+      ::AcquireCredentialsHandleA(NULL, sec_package->Name, SECPKG_CRED_OUTBOUND,
+                                  NULL, NULL, NULL, NULL, &h_cred_, &expiry);
+
+  ::FreeContextBuffer(sec_package);
 
   if (cred_status != SEC_E_OK) {
-    SSF_LOG(kLogError)
-        << "network[proxy]: negotiate: could not acquire credentials";
+    SSF_LOG(kLogError) << "network[proxy]: sspi["
+                       << sec_package_names_[sec_package_]
+                       << "]: could not acquire credentials";
     state_ = State::kFailure;
     return false;
   }
@@ -65,7 +71,7 @@ bool NegotiateAuthWindowsImpl::Init() {
   return true;
 }
 
-bool NegotiateAuthWindowsImpl::ProcessServerToken(const Token& server_token) {
+bool SSPIAuthImpl::ProcessServerToken(const Token& server_token) {
   TimeStamp expiry;
   SecBufferDesc in_sec_buf_desc;
   SecBuffer in_sec_buff;
@@ -116,8 +122,9 @@ bool NegotiateAuthWindowsImpl::ProcessServerToken(const Token& server_token) {
       state_ = State::kContinue;
       break;
     default:
-      SSF_LOG(kLogError)
-          << "network[proxy]: negotiate: error initializing security context";
+      SSF_LOG(kLogError) << "network[proxy]: sspi["
+                         << sec_package_names_[sec_package_]
+                         << "]: error initializing security context";
       state_ = State::kFailure;
   }
 
@@ -126,7 +133,7 @@ bool NegotiateAuthWindowsImpl::ProcessServerToken(const Token& server_token) {
   return state_ != kFailure;
 }
 
-NegotiateAuthWindowsImpl::Token NegotiateAuthWindowsImpl::GetAuthToken() {
+SSPIAuthImpl::Token SSPIAuthImpl::GetAuthToken() {
   if (state_ == kFailure) {
     return {};
   }
@@ -135,6 +142,35 @@ NegotiateAuthWindowsImpl::Token NegotiateAuthWindowsImpl::GetAuthToken() {
   auto end_it = begin_it + output_token_length_;
 
   return Token(begin_it, end_it);
+}
+
+std::string SSPIAuthImpl::GenerateSecurityPackageName(
+    SecurityPackage sec_package) {
+  switch (sec_package) {
+    case kNTLM:
+    case kNegotiate:
+      return sec_package_names_[sec_package];
+    default:
+      return "";
+  }
+}
+
+std::string SSPIAuthImpl::GenerateServiceName(SecurityPackage sec_package) {
+  std::stringstream ss_name;
+  ss_name << "HTTP/";
+
+  switch (sec_package) {
+    case kNTLM:
+      ss_name << proxy_ctx_.addr << ":" << proxy_ctx_.port;
+      break;
+    case kNegotiate:
+      ss_name << proxy_ctx_.addr;
+      break;
+    default:
+      break;
+  }
+
+  return ss_name.str();
 }
 
 }  // detail

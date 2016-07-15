@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "ssf/layer/proxy/auth_strategy.h"
-#include "ssf/layer/proxy/negotiate_auth_impl.h"
+#include "ssf/layer/proxy/platform_auth_impl.h"
 
 namespace ssf {
 namespace layer {
@@ -28,7 +28,7 @@ class NegotiateAuthStrategy : public AuthStrategy {
   std::vector<uint8_t> ExtractNegotiateToken(const HttpResponse& response);
 
  private:
-  std::unique_ptr<NegotiateAuthImpl> p_impl_;
+  std::unique_ptr<PlatformAuthImpl> p_impl_;
 };
 
 }  // detail

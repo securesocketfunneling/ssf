@@ -3,9 +3,9 @@
 #include "ssf/log/log.h"
 
 #if defined(WIN32)
-#include "ssf/layer/proxy/windows/negotiate_auth_windows_impl.h"
+#include "ssf/layer/proxy/windows/sspi_auth_impl.h"
 #else
-#include "ssf/layer/proxy/unix/negotiate_auth_unix_impl.h"
+#include "ssf/layer/proxy/unix/gssapi_auth_impl.h"
 #endif
 
 namespace ssf {
@@ -16,9 +16,9 @@ namespace detail {
 NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating) {
 #if defined(WIN32)
-  p_impl_.reset(new NegotiateAuthWindowsImpl(proxy_ctx));
+  p_impl_.reset(new SSPIAuthImpl(SSPIAuthImpl::kNegotiate, proxy_ctx));
 #else
-  p_impl_.reset(new NegotiateAuthUnixImpl(proxy_ctx));
+  p_impl_.reset(new GSSAPIAuthImpl(proxy_ctx));
 #endif
   if (p_impl_.get() != nullptr) {
     if (!p_impl_->Init()) {
@@ -51,6 +51,8 @@ void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
   auto server_token = ExtractNegotiateToken(response);
 
   if (!p_impl_->ProcessServerToken(server_token)) {
+    SSF_LOG(kLogError)
+        << "network[proxy]: negotiate: could not process server token";
     status_ = Status::kAuthenticationFailure;
     return;
   }

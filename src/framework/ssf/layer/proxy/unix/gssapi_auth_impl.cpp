@@ -3,7 +3,7 @@
 #include <list>
 
 #include "ssf/log/log.h"
-#include "ssf/layer/proxy/unix/negotiate_auth_unix_impl.h"
+#include "ssf/layer/proxy/unix/gssapi_auth_impl.h"
 
 static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_VAL{
     10, const_cast<char*>("\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x04")};
@@ -24,8 +24,8 @@ namespace layer {
 namespace proxy {
 namespace detail {
 
-NegotiateAuthUnixImpl::NegotiateAuthUnixImpl(const Proxy& proxy_ctx)
-    : NegotiateAuthImpl(proxy_ctx),
+GSSAPIAuthImpl::GSSAPIAuthImpl(const Proxy& proxy_ctx)
+    : PlatformAuthImpl(proxy_ctx),
       h_gss_api_(NULL),
       h_sec_ctx_(GSS_C_NO_CONTEXT),
       server_name_(GSS_C_NO_NAME),
@@ -36,7 +36,7 @@ NegotiateAuthUnixImpl::NegotiateAuthUnixImpl(const Proxy& proxy_ctx)
       fct_gss_delete_sec_context_(nullptr),
       fct_gss_release_name_(nullptr) {}
 
-NegotiateAuthUnixImpl::~NegotiateAuthUnixImpl() {
+GSSAPIAuthImpl::~GSSAPIAuthImpl() {
   OM_uint32 minor_status;
 
   if (server_name_ != GSS_C_NO_NAME) {
@@ -59,10 +59,10 @@ NegotiateAuthUnixImpl::~NegotiateAuthUnixImpl() {
   }
 }
 
-bool NegotiateAuthUnixImpl::Init() {
+bool GSSAPIAuthImpl::Init() {
   if (!InitLibrary()) {
-    SSF_LOG(kLogError) << "network[proxy]: negotiate: "
-                       << "could not init with gssapi library";
+    SSF_LOG(kLogError) << "network[proxy]: gssapi: "
+                       << "could not init gssapi library";
     state_ = kFailure;
     return false;
   }
@@ -76,7 +76,7 @@ bool NegotiateAuthUnixImpl::Init() {
   if (GSS_S_COMPLETE != fct_gss_import_name_(&minor_status, &spn_name,
                                              GSS_C_NT_HOSTBASED_SERVICE,
                                              &server_name_)) {
-    SSF_LOG(kLogError) << "network[proxy]: negotiate: "
+    SSF_LOG(kLogError) << "network[proxy]: gssapi: "
                        << "could not generate gssapi server name";
     state_ = kFailure;
     return false;
@@ -85,7 +85,7 @@ bool NegotiateAuthUnixImpl::Init() {
   return true;
 }
 
-bool NegotiateAuthUnixImpl::ProcessServerToken(const Token& server_token) {
+bool GSSAPIAuthImpl::ProcessServerToken(const Token& server_token) {
   if (state_ == kFailure) {
     return false;
   }
@@ -126,7 +126,7 @@ bool NegotiateAuthUnixImpl::ProcessServerToken(const Token& server_token) {
   return true;
 }
 
-NegotiateAuthUnixImpl::Token NegotiateAuthUnixImpl::GetAuthToken() {
+GSSAPIAuthImpl::Token GSSAPIAuthImpl::GetAuthToken() {
   if (state_ == kFailure) {
     return {};
   }
@@ -134,7 +134,7 @@ NegotiateAuthUnixImpl::Token NegotiateAuthUnixImpl::GetAuthToken() {
   return auth_token_;
 }
 
-bool NegotiateAuthUnixImpl::InitLibrary() {
+bool GSSAPIAuthImpl::InitLibrary() {
   std::list<std::string> lib_names;
 #if defined(__APPLE__)
   lib_names.emplace_back(
@@ -196,7 +196,7 @@ bool NegotiateAuthUnixImpl::InitLibrary() {
   return true;
 }
 
-void NegotiateAuthUnixImpl::LogError(OM_uint32 major_status) {
+void GSSAPIAuthImpl::LogError(OM_uint32 major_status) {
   if (major_status == GSS_S_COMPLETE || major_status == GSS_S_CONTINUE_NEEDED) {
     return;
   }
@@ -204,7 +204,7 @@ void NegotiateAuthUnixImpl::LogError(OM_uint32 major_status) {
   std::string error_msg;
 
   if (GSS_CALLING_ERROR(major_status)) {
-    SSF_LOG(kLogError) << "network[proxy]: negotiate: calling error";
+    SSF_LOG(kLogError) << "network[proxy]: gssapi: calling error";
     return;
   }
 
@@ -247,7 +247,7 @@ void NegotiateAuthUnixImpl::LogError(OM_uint32 major_status) {
       error_msg = "unknown error";
       break;
   }
-  SSF_LOG(kLogError) << "network[proxy]: negotiate: " << error_msg;
+  SSF_LOG(kLogError) << "network[proxy]: gssapi: " << error_msg;
 }
 
 }  // detail
