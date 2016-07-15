@@ -44,9 +44,10 @@ TEST(ProxyAuthStrategiesTest, BasicAuthTest) {
   BasicAuthStrategy basic_auth(proxy_ctx);
 
   HttpResponse response;
-  HttpRequest request("GET", "/dir/index.html");
+  HttpRequest request;
+  request.Reset("GET", "/dir/index.html");
 
-  response.set_status_code(HttpResponse::kProxyAuthenticationRequired);
+  response.set_status_code(HttpResponse::kUnauthorized);
   response.AddHeader("WWW-Authenticate", "Basic realm=\"WallyWorld\"");
 
   ASSERT_NE(basic_auth.status(), BasicAuthStrategy::kAuthenticationFailure);
@@ -82,9 +83,10 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
   digest_auth.set_cnonce("0a4f113b");
 
   HttpResponse response;
-  HttpRequest request("GET", "/dir/index.html");
+  HttpRequest request;
+  request.Reset("GET", "/dir/index.html");
 
-  response.set_status_code(HttpResponse::kProxyAuthenticationRequired);
+  response.set_status_code(HttpResponse::kUnauthorized);
   response.AddHeader("WWW-Authenticate",
                      "Digest realm =\"testrealm@host.com\", qop"
                      "=\"auth,auth-int\", nonce "
@@ -133,9 +135,10 @@ TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {
   NegotiateAuthStrategy negotiate_auth(proxy_ctx);
 
   HttpResponse response;
-  HttpRequest request("GET", "/dir/index.html");
+  HttpRequest request;
+  request.Reset("GET", "/dir/index.html");
 
-  response.set_status_code(HttpResponse::kProxyAuthenticationRequired);
+  response.set_status_code(HttpResponse::kUnauthorized);
   response.AddHeader("WWW-Authenticate", "Negotiate");
 
   ASSERT_NE(negotiate_auth.status(),
@@ -151,4 +154,7 @@ TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {
 
   ASSERT_NE(negotiate_auth.status(),
             NegotiateAuthStrategy::kAuthenticationFailure);
+
+  auto authorization_hdr = request.Header("Authorization");
+  ASSERT_FALSE(authorization_hdr.empty());
 }
