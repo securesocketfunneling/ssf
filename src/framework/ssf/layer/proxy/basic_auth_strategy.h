@@ -14,6 +14,8 @@ class BasicAuthStrategy : public AuthStrategy {
 
   virtual ~BasicAuthStrategy(){};
 
+  std::string AuthName() const override;
+
   bool Support(const HttpResponse& response) const override;
 
   void ProcessResponse(const HttpResponse& response) override;

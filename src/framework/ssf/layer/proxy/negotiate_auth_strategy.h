@@ -18,14 +18,13 @@ class NegotiateAuthStrategy : public AuthStrategy {
 
   virtual ~NegotiateAuthStrategy(){};
 
+  std::string AuthName() const override;
+
   bool Support(const HttpResponse& response) const override;
 
   void ProcessResponse(const HttpResponse& response) override;
 
   void PopulateRequest(HttpRequest* p_request) override;
-
- private:
-  std::vector<uint8_t> ExtractNegotiateToken(const HttpResponse& response);
 
  private:
   std::unique_ptr<PlatformAuthImpl> p_impl_;

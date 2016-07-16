@@ -25,6 +25,8 @@ class DigestAuthStrategy : public AuthStrategy {
 
   virtual ~DigestAuthStrategy(){};
 
+  std::string AuthName() const override;
+
   inline void set_cnonce(const std::string& cnonce) { cnonce_ = cnonce; }
 
   bool Support(const HttpResponse& response) const override;

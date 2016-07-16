@@ -10,10 +10,15 @@ BasicAuthStrategy::BasicAuthStrategy(const Proxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating),
       request_populated_(false) {}
 
+std::string BasicAuthStrategy::AuthName() const {
+  return "Basic";
+}
+
 bool BasicAuthStrategy::Support(const HttpResponse& response) const {
+  auto auth_name = AuthName();
   return !request_populated_ &&
-         (response.HeaderValueBeginWith("Proxy-Authenticate", "Basic") ||
-          response.HeaderValueBeginWith("WWW-Authenticate", "Basic"));
+         (response.HeaderValueBeginWith("Proxy-Authenticate", auth_name) ||
+          response.HeaderValueBeginWith("WWW-Authenticate", auth_name));
 }
 
 void BasicAuthStrategy::ProcessResponse(const HttpResponse& response) {
@@ -34,7 +39,7 @@ void BasicAuthStrategy::PopulateRequest(HttpRequest* p_request) {
   std::stringstream ss_credentials, header_value;
   ss_credentials << proxy_ctx_.username << ":" << proxy_ctx_.password;
 
-  header_value << "Basic " << Base64::Encode(ss_credentials.str());
+  header_value << AuthName() << " " << Base64::Encode(ss_credentials.str());
 
   p_request->AddHeader(
       proxy_authentication() ? "Proxy-Authorization" : "Authorization",

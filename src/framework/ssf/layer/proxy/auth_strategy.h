@@ -1,6 +1,8 @@
 #ifndef SSF_LAYER_PROXY_AUTH_STRATEGY_H_
 #define SSF_LAYER_PROXY_AUTH_STRATEGY_H_
 
+#include <string>
+
 #include "ssf/layer/proxy/http_request.h"
 #include "ssf/layer/proxy/http_response.h"
 #include "ssf/layer/proxy/proxy_endpoint_context.h"
@@ -21,6 +23,8 @@ class AuthStrategy {
  public:
   virtual ~AuthStrategy() {}
 
+  virtual std::string AuthName() const = 0;
+
   virtual bool Support(const HttpResponse& response) const = 0;
 
   virtual void ProcessResponse(const HttpResponse& response) = 0;
@@ -37,6 +41,8 @@ class AuthStrategy {
   inline void set_proxy_authentication(const HttpResponse& response) {
     proxy_authentication_ = !response.Header("Proxy-Authenticate").empty();
   }
+
+  std::string ExtractAuthToken(const HttpResponse& response) const;
 
  protected:
   Proxy proxy_ctx_;

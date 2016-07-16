@@ -29,10 +29,15 @@ NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
   }
 }
 
+std::string NegotiateAuthStrategy::AuthName() const {
+  return "Negotiate";
+}
+
 bool NegotiateAuthStrategy::Support(const HttpResponse& response) const {
+  auto auth_name = AuthName();
   return status_ != Status::kAuthenticationFailure &&
-         (response.HeaderValueBeginWith("Proxy-Authenticate", "Negotiate") ||
-          response.HeaderValueBeginWith("WWW-Authenticate", "Negotiate"));
+         (response.HeaderValueBeginWith("Proxy-Authenticate", auth_name) ||
+          response.HeaderValueBeginWith("WWW-Authenticate", auth_name));
 }
 
 void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
@@ -48,7 +53,7 @@ void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
 
   set_proxy_authentication(response);
 
-  auto server_token = ExtractNegotiateToken(response);
+  auto server_token = Base64::Decode(ExtractAuthToken(response));
 
   if (!p_impl_->ProcessServerToken(server_token)) {
     SSF_LOG(kLogError)
@@ -70,30 +75,10 @@ void NegotiateAuthStrategy::PopulateRequest(HttpRequest* p_request) {
     return;
   }
 
-  std::string negotiate_value = "Negotiate " + Base64::Encode(auth_token);
+  std::string negotiate_value = AuthName() + " " + Base64::Encode(auth_token);
   p_request->AddHeader(
       proxy_authentication() ? "Proxy-Authorization" : "Authorization",
       negotiate_value);
-}
-
-std::vector<uint8_t> NegotiateAuthStrategy::ExtractNegotiateToken(
-    const HttpResponse& response) {
-  std::string challenge_str, negotiate_str("Negotiate ");
-  auto proxy_authenticate_hdr = response.Header(
-      proxy_authentication() ? "Proxy-Authenticate" : "WWW-Authenticate");
-  for (auto& hdr : proxy_authenticate_hdr) {
-    // find negotiate auth header
-    if (hdr.find(negotiate_str) == 0) {
-      challenge_str = hdr.substr(negotiate_str.length());
-      break;
-    }
-  }
-
-  if (challenge_str.empty()) {
-    return {};
-  }
-
-  return Base64::Decode(challenge_str);
 }
 
 }  // detail

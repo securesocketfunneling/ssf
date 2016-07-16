@@ -31,10 +31,15 @@ DigestAuthStrategy::DigestAuthStrategy(const Proxy& proxy_ctx)
       cnonce_(GenerateRandomString(32)),
       nonce_count_(0) {}
 
+std::string DigestAuthStrategy::AuthName() const {
+  return "Digest";
+}
+
 bool DigestAuthStrategy::Support(const HttpResponse& response) const {
+  auto auth_name = AuthName();
   return !request_populated_ &&
-         (response.HeaderValueBeginWith("WWW-Authenticate", "Digest") ||
-          response.HeaderValueBeginWith("Proxy-Authenticate", "Digest"));
+         (response.HeaderValueBeginWith("WWW-Authenticate", auth_name) ||
+          response.HeaderValueBeginWith("Proxy-Authenticate", auth_name));
 }
 
 void DigestAuthStrategy::ProcessResponse(const HttpResponse& response) {
@@ -102,7 +107,7 @@ void DigestAuthStrategy::PopulateRequest(HttpRequest* p_request) {
 
   // construct header
   std::stringstream ss_auth_hdr;
-  ss_auth_hdr << "Digest ";
+  ss_auth_hdr << AuthName() << " ";
   auto cur_it = chal_resp.begin();
   auto end_it = chal_resp.end();
   while (cur_it != end_it) {
@@ -131,16 +136,7 @@ void DigestAuthStrategy::ParseDigestChallenge(const HttpResponse& response) {
   using boost::spirit::qi::rule;
   using str_it = std::string::const_iterator;
 
-  std::string challenge_str, digest_str("Digest ");
-  auto proxy_authenticate_hdr = response.Header(
-      proxy_authentication() ? "Proxy-Authenticate" : "WWW-Authenticate");
-  for (auto& hdr : proxy_authenticate_hdr) {
-    // find digest auth header
-    if (hdr.find(digest_str) == 0) {
-      challenge_str = hdr.substr(digest_str.length());
-      break;
-    }
-  }
+  auto challenge_str = ExtractAuthToken(response);
 
   std::map<std::string, std::string> result;
 
