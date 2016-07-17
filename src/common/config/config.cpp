@@ -31,18 +31,29 @@ void Tls::Log() const {
 #endif
 }
 
-Proxy::Proxy() : http_addr_(""), http_port_("") {}
+Proxy::Proxy()
+    : host_(""),
+      port_(""),
+      username_(""),
+      domain_(""),
+      password_(""),
+      reuse_ntlm_(true),
+      reuse_kerb_(true) {}
 
 void Proxy::Log() const {
   if (IsSet()) {
-    SSF_LOG(kLogInfo) << "config[proxy]: <" << http_addr_ << ":" << http_port_
+    SSF_LOG(kLogInfo) << "config[HTTP proxy]: <" << host_ << ":" << port_
                       << ">";
-    if (!http_username_.empty()) {
-      SSF_LOG(kLogInfo) << "config[proxy]: username: <" << http_username_
+    if (!username_.empty()) {
+      SSF_LOG(kLogInfo) << "config[HTTP proxy]: username: <" << username_
                         << ">";
     }
+    SSF_LOG(kLogInfo) << "config[HTTP proxy]: reuse: NTLM credentials <"
+                      << (reuse_ntlm_ ? "true" : "false") << ">";
+    SSF_LOG(kLogInfo) << "config[HTTP proxy]: reuse: Kerberos credentials <"
+                      << (reuse_kerb_ ? "true" : "false") << ">";
   } else {
-    SSF_LOG(kLogInfo) << "config[proxy]: <None>";
+    SSF_LOG(kLogInfo) << "config[HTTP proxy]: <None>";
   }
 }
 
@@ -57,34 +68,34 @@ Services::Services() : process_() {}
 Services::Services(const Services& services) : process_(services.process_) {}
 
 void Services::UpdateProcessService(const boost::property_tree::ptree& pt) {
-  auto process_optional = pt.get_child_optional("process");
-  if (!process_optional) {
+  auto shell_optional = pt.get_child_optional("shell");
+  if (!shell_optional) {
     SSF_LOG(kLogDebug)
-        << "config[update]: process service configuration not found";
+        << "config[update]: shell service configuration not found";
     return;
   }
 
-  auto& process_prop = process_optional.get();
-  auto path = process_prop.get_child_optional("path");
+  auto& shell_prop = shell_optional.get();
+  auto path = shell_prop.get_child_optional("path");
   if (path) {
     process_.set_path(path.get().data());
   }
-  auto args = process_prop.get_child_optional("args");
+  auto args = shell_prop.get_child_optional("args");
   if (args) {
     process_.set_args(args.get().data());
   }
 }
 
 void Services::Log() const {
-  SSF_LOG(kLogInfo) << "config[services][process]: path: <"
+  SSF_LOG(kLogInfo) << "config[services][shell]: path: <"
                     << process_service().path() << ">";
   std::string args(process_service().args());
   if (!args.empty()) {
-    SSF_LOG(kLogInfo) << "config[services][process]: args: <" << args << ">";
+    SSF_LOG(kLogInfo) << "config[services][shell]: args: <" << args << ">";
   }
 }
 
-Config::Config() : tls_(), proxy_(), services_() {}
+Config::Config() : tls_(), http_proxy_(), services_() {}
 
 void Config::Update(const std::string& filepath,
                     boost::system::error_code& ec) {
@@ -106,7 +117,7 @@ void Config::Update(const std::string& filepath,
     boost::property_tree::read_json(conf_file, pt);
 
     UpdateTls(pt);
-    UpdateProxy(pt);
+    UpdateHttpProxy(pt);
     UpdateServices(pt);
   } catch (const std::exception& e) {
     SSF_LOG(kLogError) << "config[ssf]: error reading SSF config file: "
@@ -117,7 +128,7 @@ void Config::Update(const std::string& filepath,
 
 void Config::Log() const {
   tls_.Log();
-  proxy_.Log();
+  http_proxy_.Log();
   services_.Log();
 }
 
@@ -161,8 +172,8 @@ void Config::UpdateTls(const boost::property_tree::ptree& pt) {
   }
 }
 
-void Config::UpdateProxy(const boost::property_tree::ptree& pt) {
-  auto proxy_optional = pt.get_child_optional("ssf.proxy");
+void Config::UpdateHttpProxy(const boost::property_tree::ptree& pt) {
+  auto proxy_optional = pt.get_child_optional("ssf.http_proxy");
   if (!proxy_optional) {
     SSF_LOG(kLogDebug) << "config[update]: proxy configuration not found";
     return;
@@ -170,24 +181,44 @@ void Config::UpdateProxy(const boost::property_tree::ptree& pt) {
 
   auto& proxy_prop = proxy_optional.get();
 
-  auto http_addr_optional = proxy_prop.get_child_optional("http_addr");
-  if (http_addr_optional) {
-    proxy_.set_http_addr(http_addr_optional.get().data());
+  auto host_optional = proxy_prop.get_child_optional("host");
+  if (host_optional) {
+    http_proxy_.set_host(host_optional.get().data());
   }
 
-  auto http_port_optional = proxy_prop.get_child_optional("http_port");
-  if (http_port_optional) {
-    proxy_.set_http_port(http_port_optional.get().data());
+  auto port_optional = proxy_prop.get_child_optional("port");
+  if (port_optional) {
+    http_proxy_.set_port(port_optional.get().data());
   }
 
-  auto http_username_optional = proxy_prop.get_child_optional("http_username");
-  if (http_username_optional) {
-    proxy_.set_http_username(http_username_optional.get().data());
+  auto cred_username_optional =
+      proxy_prop.get_child_optional("credentials.username");
+  if (cred_username_optional) {
+    http_proxy_.set_username(cred_username_optional.get().data());
   }
 
-  auto http_password_optional = proxy_prop.get_child_optional("http_password");
-  if (http_password_optional) {
-    proxy_.set_http_password(http_password_optional.get().data());
+  auto cred_domain_optional =
+      proxy_prop.get_child_optional("credentials.domain");
+  if (cred_domain_optional) {
+    http_proxy_.set_domain(cred_domain_optional.get().data());
+  }
+
+  auto cred_password_optional =
+      proxy_prop.get_child_optional("credentials.password");
+  if (cred_password_optional) {
+    http_proxy_.set_password(cred_password_optional.get().data());
+  }
+
+  auto cred_reuse_ntlm_optional =
+      proxy_prop.get_child_optional("credentials.reuse_ntlm");
+  if (cred_reuse_ntlm_optional) {
+    http_proxy_.set_reuse_ntlm(cred_reuse_ntlm_optional.get().data() == "true");
+  }
+
+  auto cred_reuse_kerb_optional =
+      proxy_prop.get_child_optional("credentials.reuse_kerb");
+  if (cred_reuse_kerb_optional) {
+    http_proxy_.set_reuse_kerb(cred_reuse_kerb_optional.get().data() == "true");
   }
 }
 

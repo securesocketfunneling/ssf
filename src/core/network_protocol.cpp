@@ -155,10 +155,15 @@ ssf::layer::LayerParameters NetworkProtocol::TlsConfigToLayerParameters(
 
 ssf::layer::LayerParameters NetworkProtocol::ProxyConfigToLayerParameters(
     const ssf::config::Config& ssf_config) {
-  return {{"http_addr", ssf_config.proxy().http_addr()},
-          {"http_port", ssf_config.proxy().http_port()},
-          {"http_username", ssf_config.proxy().http_username()},
-          {"http_password", ssf_config.proxy().http_password()}};
+  return {{"http_host", ssf_config.http_proxy().host()},
+          {"http_port", ssf_config.http_proxy().port()},
+          {"http_username", ssf_config.http_proxy().username()},
+          {"http_domain", ssf_config.http_proxy().domain()},
+          {"http_password", ssf_config.http_proxy().password()},
+          {"http_reuse_ntlm",
+           ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
+          {"http_reuse_kerb",
+           ssf_config.http_proxy().reuse_kerb() ? "true" : "false"}};
 }
 
 }  // network
