@@ -9,7 +9,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 bool ValidateIPTarget(boost::asio::io_service& io_service,
                       const std::string& addr, const std::string& port) {
@@ -57,7 +56,6 @@ ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
   return context;
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

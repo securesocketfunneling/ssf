@@ -7,7 +7,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class NtlmAuthStrategy : public AuthStrategy {
  public:
@@ -21,13 +20,12 @@ class NtlmAuthStrategy : public AuthStrategy {
 
   void ProcessResponse(const HttpResponse& response) override;
 
-  void PopulateRequest(HttpRequest* p_request) override;  
+  void PopulateRequest(HttpRequest* p_request) override;
 
  private:
   std::unique_ptr<PlatformAuthImpl> p_impl_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

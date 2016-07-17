@@ -64,7 +64,7 @@ class basic_ProxyProtocol {
   static endpoint make_endpoint(boost::asio::io_service& io_service,
                                 typename query::const_iterator parameters_it,
                                 uint32_t, boost::system::error_code& ec) {
-    auto context = detail::MakeProxyContext(io_service, *parameters_it, ec);
+    auto context = MakeProxyContext(io_service, *parameters_it, ec);
     if (ec) {
       return endpoint();
     }

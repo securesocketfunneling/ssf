@@ -11,7 +11,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 HttpSessionInitializer::HttpSessionInitializer()
     : status_(Status::kContinue),
@@ -35,13 +34,12 @@ void HttpSessionInitializer::Reset(const std::string& target_host,
   p_current_auth_strategy_ = nullptr;
   auth_strategies_.clear();
   auth_strategies_.emplace_back(
-      new detail::NegotiateAuthStrategy(proxy_ep_ctx_.http_proxy));
+      new NegotiateAuthStrategy(proxy_ep_ctx_.http_proxy));
+  auth_strategies_.emplace_back(new NtlmAuthStrategy(proxy_ep_ctx_.http_proxy));
   auth_strategies_.emplace_back(
-      new detail::NtlmAuthStrategy(proxy_ep_ctx_.http_proxy));
+      new DigestAuthStrategy(proxy_ep_ctx_.http_proxy));
   auth_strategies_.emplace_back(
-      new detail::DigestAuthStrategy(proxy_ep_ctx_.http_proxy));
-  auth_strategies_.emplace_back(
-      new detail::BasicAuthStrategy(proxy_ep_ctx_.http_proxy));
+      new BasicAuthStrategy(proxy_ep_ctx_.http_proxy));
 }
 
 void HttpSessionInitializer::PopulateRequest(HttpRequest* p_request,
@@ -63,9 +61,9 @@ void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,
                                              boost::system::error_code& ec) {
   if (response.Success()) {
     SSF_LOG(kLogInfo) << "network[proxy]: connected (auth: "
-                       << ((p_current_auth_strategy_ != nullptr)
-                               ? (p_current_auth_strategy_->AuthName())
-                               : "None") << ")";
+                      << ((p_current_auth_strategy_ != nullptr)
+                              ? (p_current_auth_strategy_->AuthName())
+                              : "None") << ")";
     status_ = Status::kSuccess;
     return;
   }
@@ -124,13 +122,12 @@ void HttpSessionInitializer::SetAuthStrategy(const HttpResponse& response) {
     if (p_auth_strategy->Support(response)) {
       p_current_auth_strategy_ = p_auth_strategy.get();
       SSF_LOG(kLogDebug) << "network[proxy]: try "
-                        << p_current_auth_strategy_->AuthName() << " auth";
+                         << p_current_auth_strategy_->AuthName() << " auth";
       break;
     }
   }
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

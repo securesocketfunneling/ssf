@@ -6,9 +6,10 @@ namespace proxy {
 
 Proxy::Proxy() : host(""), port("") {}
 
-boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(boost::asio::io_service& io_service) {
+boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(
+    boost::asio::io_service& io_service) {
   boost::asio::ip::tcp::resolver resolver(io_service);
-  auto endpoint_it = resolver.resolve({ host, port });
+  auto endpoint_it = resolver.resolve({host, port});
   return *endpoint_it;
 }
 

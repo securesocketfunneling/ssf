@@ -10,7 +10,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class PlatformAuthImpl {
  public:
@@ -33,7 +32,6 @@ class PlatformAuthImpl {
   Proxy proxy_ctx_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

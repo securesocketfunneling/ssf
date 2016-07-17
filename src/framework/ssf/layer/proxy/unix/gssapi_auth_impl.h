@@ -20,7 +20,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class GSSAPIAuthImpl : public PlatformAuthImpl {
  private:
@@ -56,7 +55,6 @@ class GSSAPIAuthImpl : public PlatformAuthImpl {
   fct_gss_release_name_t fct_gss_release_name_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

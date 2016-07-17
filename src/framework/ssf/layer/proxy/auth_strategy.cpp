@@ -5,7 +5,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 std::string AuthStrategy::ExtractAuthToken(const HttpResponse& response) const {
   std::string challenge_str;
@@ -30,7 +29,6 @@ std::string AuthStrategy::ExtractAuthToken(const HttpResponse& response) const {
   return challenge_str;
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

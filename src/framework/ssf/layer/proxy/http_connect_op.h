@@ -21,7 +21,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 template <class Stream, class Endpoint>
 class HttpConnectOp {
@@ -147,8 +146,8 @@ class AsyncHttpConnectOp {
         handler_(std::move(handler)),
         p_request_(new std::string()),
         p_buffer_(new Buffer()),
-        p_response_builder_(new detail::HttpResponseBuilder()),
-        p_session_initializer_(new detail::HttpSessionInitializer()) {}
+        p_response_builder_(new HttpResponseBuilder()),
+        p_session_initializer_(new HttpSessionInitializer()) {}
 
   AsyncHttpConnectOp(const AsyncHttpConnectOp& other)
       : coro_(other.coro_),
@@ -271,8 +270,8 @@ class AsyncHttpConnectOp {
 
   std::shared_ptr<std::string> p_request_;
   std::shared_ptr<Buffer> p_buffer_;
-  std::shared_ptr<detail::HttpResponseBuilder> p_response_builder_;
-  std::shared_ptr<detail::HttpSessionInitializer> p_session_initializer_;
+  std::shared_ptr<HttpResponseBuilder> p_response_builder_;
+  std::shared_ptr<HttpSessionInitializer> p_session_initializer_;
   boost::system::error_code close_ec_;
 };
 
@@ -317,7 +316,6 @@ inline void asio_handler_invoke(
   boost_asio_handler_invoke_helpers::invoke(function, this_handler->handler());
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

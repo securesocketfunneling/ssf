@@ -30,7 +30,6 @@ gss_OID GSS_SPNEGO_MECH_OID = &GSS_SPNEGO_MECH_OID_VAL;
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 GSSAPIAuthImpl::GSSAPIAuthImpl(const Proxy& proxy_ctx)
     : PlatformAuthImpl(proxy_ctx),
@@ -235,7 +234,6 @@ void GSSAPIAuthImpl::LogError(OM_uint32 major_status) {
   SSF_LOG(kLogDebug) << "network[proxy]: gssapi: " << error_msg;
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

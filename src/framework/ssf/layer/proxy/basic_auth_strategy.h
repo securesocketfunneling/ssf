@@ -6,7 +6,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class BasicAuthStrategy : public AuthStrategy {
  public:
@@ -26,7 +25,6 @@ class BasicAuthStrategy : public AuthStrategy {
   bool request_populated_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

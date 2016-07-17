@@ -12,7 +12,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class DigestAuthStrategy : public AuthStrategy {
  private:
@@ -51,7 +50,6 @@ class DigestAuthStrategy : public AuthStrategy {
   uint32_t nonce_count_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

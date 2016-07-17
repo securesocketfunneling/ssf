@@ -5,11 +5,8 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
-HttpRequest::HttpRequest()
-    : method_(), uri_(), headers_() {
-}
+HttpRequest::HttpRequest() : method_(), uri_(), headers_() {}
 
 void HttpRequest::Reset(const std::string& method, const std::string& uri) {
   method_ = method;
@@ -48,7 +45,6 @@ std::string HttpRequest::GenerateRequest() const {
   return ss_request.str();
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

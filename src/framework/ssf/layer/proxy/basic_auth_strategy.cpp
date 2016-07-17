@@ -4,7 +4,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 BasicAuthStrategy::BasicAuthStrategy(const Proxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating),
@@ -46,7 +45,6 @@ void BasicAuthStrategy::PopulateRequest(HttpRequest* p_request) {
   request_populated_ = true;
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

@@ -5,7 +5,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 HttpResponse::HttpResponse() : status_code_(0), headers_() {}
 
@@ -72,7 +71,6 @@ std::list<std::string> HttpResponse::Header(const std::string& name) const {
   return it->second;
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

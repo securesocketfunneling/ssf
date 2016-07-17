@@ -8,7 +8,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class HttpResponse {
  public:
@@ -51,7 +50,6 @@ class HttpResponse {
   std::string body_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

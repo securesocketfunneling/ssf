@@ -13,7 +13,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class SSPIAuthImpl : public PlatformAuthImpl {
  private:
@@ -47,7 +46,6 @@ class SSPIAuthImpl : public PlatformAuthImpl {
   std::string service_name_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

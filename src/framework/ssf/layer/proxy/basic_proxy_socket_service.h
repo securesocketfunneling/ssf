@@ -154,9 +154,9 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
     impl.p_remote_endpoint = std::make_shared<endpoint_type>(peer_endpoint);
     impl.p_local_endpoint = std::make_shared<endpoint_type>();
 
-    detail::ConnectOp<next_socket_type, endpoint_type> (
-        *impl.p_next_layer_socket, impl.p_local_endpoint.get(),
-        peer_endpoint)(ec);
+    ConnectOp<next_socket_type, endpoint_type> (*impl.p_next_layer_socket,
+                                                impl.p_local_endpoint.get(),
+                                                peer_endpoint)(ec);
 
     return ec;
   }
@@ -173,10 +173,9 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
     impl.p_remote_endpoint = std::make_shared<endpoint_type>(peer_endpoint);
     impl.p_local_endpoint = std::make_shared<endpoint_type>();
 
-    detail::AsyncConnectOp<
-        protocol_type, next_socket_type, endpoint_type,
-        typename boost::asio::handler_type<
-            ConnectHandler, void(boost::system::error_code)>::type> (
+    AsyncConnectOp<protocol_type, next_socket_type, endpoint_type,
+                   typename boost::asio::handler_type<
+                       ConnectHandler, void(boost::system::error_code)>::type> (
         *impl.p_next_layer_socket, impl.p_local_endpoint.get(), peer_endpoint,
         init.handler)();
 

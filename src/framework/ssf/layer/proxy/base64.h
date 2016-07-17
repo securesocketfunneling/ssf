@@ -9,7 +9,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class Base64 {
  public:
@@ -21,7 +20,6 @@ class Base64 {
   static Buffer Decode(const std::string& input);
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

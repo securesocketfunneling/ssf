@@ -9,7 +9,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 NtlmAuthStrategy::NtlmAuthStrategy(const Proxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating), p_impl_(nullptr) {
@@ -23,6 +22,9 @@ NtlmAuthStrategy::NtlmAuthStrategy(const Proxy& proxy_ctx)
                          << "platform impl";
       status_ = Status::kAuthenticationFailure;
     }
+  } else {
+    SSF_LOG(kLogDebug) << "network[proxy]: ntlm: no platform impl found";
+    status_ = Status::kAuthenticationFailure;
   }
 }
 
@@ -78,7 +80,6 @@ void NtlmAuthStrategy::PopulateRequest(HttpRequest* p_request) {
       ntlm_value);
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

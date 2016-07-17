@@ -8,7 +8,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class HttpRequest {
  private:
@@ -37,7 +36,6 @@ class HttpRequest {
   std::string body_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

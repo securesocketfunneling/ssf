@@ -11,7 +11,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating) {
@@ -81,7 +80,6 @@ void NegotiateAuthStrategy::PopulateRequest(HttpRequest* p_request) {
       negotiate_value);
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

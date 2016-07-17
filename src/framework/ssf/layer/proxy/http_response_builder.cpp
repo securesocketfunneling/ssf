@@ -24,7 +24,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 HttpResponseBuilder::HttpResponseBuilder()
     : response_(),
@@ -162,7 +161,6 @@ HTTP_PARSER_C_CALLBACK_IMPL(OnHeadersComplete)
 HTTP_PARSER_C_DATA_CALLBACK_IMPL(OnBody)
 HTTP_PARSER_C_CALLBACK_IMPL(OnMessageComplete)
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

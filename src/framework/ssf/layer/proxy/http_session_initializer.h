@@ -14,7 +14,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class HttpSessionInitializer {
  private:
@@ -52,7 +51,6 @@ class HttpSessionInitializer {
   AuthStrategy* p_current_auth_strategy_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

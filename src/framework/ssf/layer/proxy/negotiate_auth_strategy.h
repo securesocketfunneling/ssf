@@ -10,7 +10,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class NegotiateAuthStrategy : public AuthStrategy {
  public:
@@ -30,7 +29,6 @@ class NegotiateAuthStrategy : public AuthStrategy {
   std::unique_ptr<PlatformAuthImpl> p_impl_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

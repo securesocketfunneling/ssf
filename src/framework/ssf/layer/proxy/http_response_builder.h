@@ -21,7 +21,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class HttpResponseBuilder {
  private:
@@ -73,7 +72,6 @@ class HttpResponseBuilder {
   std::stringstream ss_body_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

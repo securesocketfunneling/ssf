@@ -6,7 +6,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 SSPIAuthImpl::SecPackageNames SSPIAuthImpl::sec_package_names_ = {"NTLM",
                                                                   "Negotiate"};
@@ -192,7 +191,6 @@ std::string SSPIAuthImpl::GenerateServiceName(SecurityPackage sec_package) {
   return ss_name.str();
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

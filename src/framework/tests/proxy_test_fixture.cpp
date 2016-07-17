@@ -40,9 +40,7 @@ ProxyTestFixture::ProxyTestFixture()
 
 ProxyTestFixture::~ProxyTestFixture() {}
 
-void ProxyTestFixture::SetUp() {
-  ParseConfigFile(config_file_);
-}
+void ProxyTestFixture::SetUp() { ParseConfigFile(config_file_); }
 
 void ProxyTestFixture::TearDown() {}
 

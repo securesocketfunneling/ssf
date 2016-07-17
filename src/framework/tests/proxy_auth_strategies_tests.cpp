@@ -8,17 +8,17 @@
 #include "ssf/layer/proxy/proxy_endpoint_context.h"
 
 TEST(Base64Test, Test) {
-  using Base64 = ssf::layer::proxy::detail::Base64;
+  using Base64 = ssf::layer::proxy::Base64;
   std::string str("This is a test string");
   Base64::Buffer buffer({'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't',
                          'e', 's', 't', ' ', 's', 't', 'r', 'i', 'n', 'g', '\0',
-                         'C', 'u', 't', 't', 'e', 'd'});
+                         'C', 'u', 't'});
   auto empty_encoded = Base64::Encode("");
   auto encoded_str = Base64::Encode(str);
   auto encoded_buf = Base64::Encode(buffer);
 
   ASSERT_EQ("VGhpcyBpcyBhIHRlc3Qgc3RyaW5n", encoded_str);
-  ASSERT_EQ("VGhpcyBpcyBhIHRlc3Qgc3RyaW5nAEN1dHRlZA==", encoded_buf);
+  ASSERT_EQ("VGhpcyBpcyBhIHRlc3Qgc3RyaW5nAEN1dA==", encoded_buf);
 
   auto empty_decoded = Base64::Decode(empty_encoded);
   auto decoded_str_buffer = Base64::Decode(encoded_str);
@@ -32,9 +32,9 @@ TEST(Base64Test, Test) {
 }
 
 TEST(ProxyAuthStrategiesTest, BasicAuthTest) {
-  using BasicAuthStrategy = ssf::layer::proxy::detail::BasicAuthStrategy;
-  using HttpRequest = ssf::layer::proxy::detail::HttpRequest;
-  using HttpResponse = ssf::layer::proxy::detail::HttpResponse;
+  using BasicAuthStrategy = ssf::layer::proxy::BasicAuthStrategy;
+  using HttpRequest = ssf::layer::proxy::HttpRequest;
+  using HttpResponse = ssf::layer::proxy::HttpResponse;
   using Proxy = ssf::layer::proxy::Proxy;
 
   Proxy proxy_ctx;
@@ -70,9 +70,9 @@ TEST(ProxyAuthStrategiesTest, BasicAuthTest) {
 }
 
 TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
-  using DigestAuthStrategy = ssf::layer::proxy::detail::DigestAuthStrategy;
-  using HttpRequest = ssf::layer::proxy::detail::HttpRequest;
-  using HttpResponse = ssf::layer::proxy::detail::HttpResponse;
+  using DigestAuthStrategy = ssf::layer::proxy::DigestAuthStrategy;
+  using HttpRequest = ssf::layer::proxy::HttpRequest;
+  using HttpResponse = ssf::layer::proxy::HttpResponse;
   using Proxy = ssf::layer::proxy::Proxy;
 
   Proxy proxy_ctx;
@@ -121,9 +121,9 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
 TEST(ProxyAuthStrategiesTest, DISABLED_NtlmAuthTest) {}
 
 TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {
-  using NegotiateAuthStrategy = ssf::layer::proxy::detail::NegotiateAuthStrategy;
-  using HttpRequest = ssf::layer::proxy::detail::HttpRequest;
-  using HttpResponse = ssf::layer::proxy::detail::HttpResponse;
+  using NegotiateAuthStrategy = ssf::layer::proxy::NegotiateAuthStrategy;
+  using HttpRequest = ssf::layer::proxy::HttpRequest;
+  using HttpResponse = ssf::layer::proxy::HttpResponse;
   using Proxy = ssf::layer::proxy::Proxy;
 
   Proxy proxy_ctx;

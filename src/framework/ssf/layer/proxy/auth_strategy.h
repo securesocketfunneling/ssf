@@ -10,7 +10,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 class AuthStrategy {
  public:
@@ -52,7 +51,6 @@ class AuthStrategy {
   bool proxy_authentication_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

@@ -22,7 +22,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 DigestAuthStrategy::DigestAuthStrategy(const Proxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating),
@@ -286,7 +285,6 @@ std::string DigestAuthStrategy::BufferToHex(unsigned char* buffer,
   return buffer_hex;
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

@@ -16,7 +16,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 std::string Base64::Encode(const std::string& input) {
   return Encode(Buffer(input.begin(), input.end()));
@@ -74,7 +73,6 @@ Base64::Buffer Base64::Decode(const std::string& input) {
   return buf;
 }
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf
