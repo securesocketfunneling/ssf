@@ -25,11 +25,11 @@ Address& Address::operator=(const Address& address) {
 bool Address::IsSet() { return !addr_.empty() && !port_.empty(); }
 
 ssf::layer::LayerParameters Address::ToProxyParam() {
-  return {{"http_addr", addr_}, {"http_port", port_}};
+  return {{"http_host", addr_}, {"http_port", port_}};
 }
 
 ssf::layer::LayerParameters Address::ToTCPParam() {
-  return {{"addr", addr_}, {"port", port_}};
+  return {{"host", addr_}, {"port", port_}};
 }
 
 }  // tests
@@ -47,9 +47,9 @@ void ProxyTestFixture::SetUp() {
 void ProxyTestFixture::TearDown() {}
 
 bool ProxyTestFixture::Initialized() {
-  return config_options_.count("target_addr") > 0 &&
+  return config_options_.count("target_host") > 0 &&
          config_options_.count("target_port") > 0 &&
-         config_options_.count("proxy_addr") > 0 &&
+         config_options_.count("proxy_host") > 0 &&
          config_options_.count("proxy_port") > 0;
 }
 
@@ -61,7 +61,7 @@ std::string ProxyTestFixture::GetOption(const std::string& name) const {
 
 ssf::layer::LayerParameters ProxyTestFixture::GetTcpParam() const {
   ssf::layer::LayerParameters tcp_params;
-  tcp_params["addr"] = GetOption("target_addr");
+  tcp_params["addr"] = GetOption("target_host");
   tcp_params["port"] = GetOption("target_port");
 
   return tcp_params;
@@ -69,10 +69,13 @@ ssf::layer::LayerParameters ProxyTestFixture::GetTcpParam() const {
 
 ssf::layer::LayerParameters ProxyTestFixture::GetProxyParam() const {
   ssf::layer::LayerParameters proxy_params;
-  proxy_params["http_addr"] = GetOption("proxy_addr");
+  proxy_params["http_host"] = GetOption("proxy_host");
   proxy_params["http_port"] = GetOption("proxy_port");
   proxy_params["http_username"] = GetOption("username");
+  proxy_params["http_domain"] = GetOption("domain");
   proxy_params["http_password"] = GetOption("password");
+  proxy_params["http_reuse_ntlm"] = GetOption("reuse_ntlm");
+  proxy_params["http_reuse_kerb"] = GetOption("reuse_kerb");
 
   return proxy_params;
 }

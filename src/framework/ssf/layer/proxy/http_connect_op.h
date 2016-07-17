@@ -36,6 +36,7 @@ class HttpConnectOp {
 
   void operator()(boost::system::error_code& ec) {
     auto& endpoint_context = peer_endpoint_.endpoint_context();
+
     stream_.connect(
         endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
         ec);
@@ -59,12 +60,21 @@ class HttpConnectOp {
       session_initializer.Reset(
           next_layer_remote_endpoint.address().to_string(),
           std::to_string(next_layer_remote_endpoint.port()), endpoint_context);
-      
+
       HttpRequest http_request;
 
       // session initialization (connect request + auth)
       while (session_initializer.status() ==
              HttpSessionInitializer::Status::kContinue) {
+        if ((session_initializer.stage() ==
+             HttpSessionInitializer::Stage::kConnect)) {
+          if (stream_.is_open()) {
+            stream_.close(ec);
+          }
+          stream_.connect(endpoint_context.http_proxy.ToTcpEndpoint(
+                              stream_.get_io_service()));
+        }
+
         // send request
         session_initializer.PopulateRequest(&http_request, connect_ec);
         if (connect_ec.value() != 0) {
@@ -173,23 +183,33 @@ class AsyncHttpConnectOp {
     boost::system::error_code connect_ec;
     auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
     auto& endpoint_context = peer_endpoint_.endpoint_context();
-    
+
     HttpRequest http_request;
 
     reenter(coro_) {
+      p_session_initializer_->Reset(
+          next_layer_remote_endpoint.address().to_string(),
+          std::to_string(next_layer_remote_endpoint.port()), endpoint_context);
+
       yield stream_.async_connect(
           endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
           std::move(*this));
 
       p_local_endpoint_->set();
 
-      p_session_initializer_->Reset(
-          next_layer_remote_endpoint.address().to_string(),
-          std::to_string(next_layer_remote_endpoint.port()), endpoint_context);
-
       // session initialization (connect request + auth)
       while (p_session_initializer_->status() ==
              HttpSessionInitializer::Status::kContinue) {
+        if ((p_session_initializer_->stage() ==
+             HttpSessionInitializer::Stage::kConnect)) {
+          if (stream_.is_open()) {
+            stream_.close(close_ec_);
+          }
+          yield stream_.async_connect(endpoint_context.http_proxy.ToTcpEndpoint(
+                                          stream_.get_io_service()),
+                                      std::move(*this));
+        }
+
         // send request
         p_session_initializer_->PopulateRequest(&http_request, connect_ec);
         if (connect_ec.value() != 0) {

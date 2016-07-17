@@ -15,10 +15,13 @@ struct Proxy {
   boost::asio::ip::tcp::endpoint ToTcpEndpoint(
       boost::asio::io_service& io_service);
 
-  std::string addr;
+  std::string host;
   std::string port;
   std::string username;
   std::string password;
+  std::string domain;
+  bool reuse_ntlm;
+  bool reuse_kerb;
 };
 
 struct ProxyEndpointContext {

@@ -1,8 +1,11 @@
 {
-    "target_addr": "",
+    "target_host": "public.localhost.name",
     "target_port": "9000",
-    "proxy_addr": "",
-    "proxy_port": "",
+    "proxy_host": "proxy.example.com",
+    "proxy_port": "3128",
     "username": "",
-    "password": ""
+    "password": "",
+    "domain": "",
+    "reuse_ntlm": "true",
+    "reuse_kerb": "true"
 }

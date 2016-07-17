@@ -24,7 +24,11 @@ SSPIAuthImpl::SSPIAuthImpl(SecurityPackage sec_package, const Proxy& proxy_ctx)
 }
 
 SSPIAuthImpl::~SSPIAuthImpl() {
-  if (h_sec_ctx_.dwLower != 0 || h_sec_ctx_.dwUpper != 0) {
+  Clear();
+}
+
+void SSPIAuthImpl::Clear() {
+  if (IsSecurityContextSet()) {
     ::DeleteSecurityContext(&h_sec_ctx_);
     memset(&h_sec_ctx_, 0, sizeof(CtxtHandle));
   }
@@ -43,7 +47,7 @@ bool SSPIAuthImpl::Init() {
       const_cast<char*>(GenerateSecurityPackageName(sec_package_).c_str()),
       &sec_package);
   if (status != SEC_E_OK) {
-    SSF_LOG(kLogError) << "network[proxy]: sspi["
+    SSF_LOG(kLogDebug) << "network[proxy]: sspi["
                        << sec_package_names_[sec_package_]
                        << "]: could not query security package";
     state_ = State::kFailure;
@@ -51,20 +55,40 @@ bool SSPIAuthImpl::Init() {
   }
 
   output_token_.resize(sec_package->cbMaxToken);
-
   service_name_ = GenerateServiceName(sec_package_);
+  
+  SEC_WINNT_AUTH_IDENTITY_A identity;
+  memset(&identity, 0, sizeof(SEC_WINNT_AUTH_IDENTITY_A));
+  bool use_identity = false;
+  if ((SecurityPackage::kNTLM == sec_package_ &&
+       !proxy_ctx_.reuse_ntlm) ||
+      (SecurityPackage::kNegotiate == sec_package_ &&
+       !proxy_ctx_.reuse_kerb)) {
+    use_identity = true;
+    identity.Domain =
+        (unsigned char*)const_cast<char*>(proxy_ctx_.domain.c_str());
+    identity.DomainLength = proxy_ctx_.domain.size();
+    identity.User =
+        (unsigned char*)const_cast<char*>(proxy_ctx_.username.c_str());
+    identity.UserLength = proxy_ctx_.username.size();
+    identity.Password =
+        (unsigned char*)const_cast<char*>(proxy_ctx_.password.c_str());
+    identity.PasswordLength = proxy_ctx_.password.size();
+    identity.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
+  }
 
-  auto cred_status =
-      ::AcquireCredentialsHandleA(NULL, sec_package->Name, SECPKG_CRED_OUTBOUND,
-                                  NULL, NULL, NULL, NULL, &h_cred_, &expiry);
+  auto cred_status = ::AcquireCredentialsHandleA(
+      NULL, sec_package->Name, SECPKG_CRED_OUTBOUND, NULL,
+      (use_identity ? &identity : NULL), NULL, NULL, &h_cred_, &expiry);
 
   ::FreeContextBuffer(sec_package);
 
   if (cred_status != SEC_E_OK) {
-    SSF_LOG(kLogError) << "network[proxy]: sspi["
+    SSF_LOG(kLogDebug) << "network[proxy]: sspi["
                        << sec_package_names_[sec_package_]
                        << "]: could not acquire credentials";
     state_ = State::kFailure;
+    Clear();
     return false;
   }
 
@@ -85,27 +109,22 @@ bool SSPIAuthImpl::ProcessServerToken(const Token& server_token) {
   out_sec_buff.pvBuffer = output_token_.data();
   out_sec_buff.cbBuffer = output_token_.size();
 
-  if (server_token.empty()) {
-    if (state_ != State::kInit) {
-      return false;
-    }
-    state_ = State::kContinue;
-  } else {
-    // input token
-    in_sec_buf_desc.ulVersion = SECBUFFER_VERSION;
-    in_sec_buf_desc.cBuffers = 1;
-    in_sec_buf_desc.pBuffers = &in_sec_buff;
-    in_sec_buff.BufferType = SECBUFFER_TOKEN;
-    in_sec_buff.pvBuffer = const_cast<uint8_t*>(server_token.data());
-    in_sec_buff.cbBuffer = server_token.size();
-  }
+  // input token
+  in_sec_buf_desc.ulVersion = SECBUFFER_VERSION;
+  in_sec_buf_desc.cBuffers = 1;
+  in_sec_buf_desc.pBuffers = &in_sec_buff;
+  in_sec_buff.BufferType = SECBUFFER_TOKEN;
+  in_sec_buff.pvBuffer = const_cast<uint8_t*>(server_token.data());
+  in_sec_buff.cbBuffer = server_token.size();
 
   // update security context
   unsigned long attrs;
+
   auto status = ::InitializeSecurityContextA(
-      &h_cred_, NULL, const_cast<SEC_CHAR*>(service_name_.c_str()), 0, 0,
-      SECURITY_NATIVE_DREP, server_token.empty() ? NULL : &in_sec_buf_desc, 0,
-      &h_sec_ctx_, &out_sec_buff_desc, &attrs, &expiry);
+      &h_cred_, (IsSecurityContextSet() ? &h_sec_ctx_ : NULL),
+      const_cast<SEC_CHAR*>(service_name_.c_str()), 0, 0, SECURITY_NATIVE_DREP,
+      server_token.empty() ? NULL : &in_sec_buf_desc, 0, &h_sec_ctx_,
+      &out_sec_buff_desc, &attrs, &expiry);
 
   switch (status) {
     case SEC_E_OK:
@@ -122,7 +141,7 @@ bool SSPIAuthImpl::ProcessServerToken(const Token& server_token) {
       state_ = State::kContinue;
       break;
     default:
-      SSF_LOG(kLogError) << "network[proxy]: sspi["
+      SSF_LOG(kLogDebug) << "network[proxy]: sspi["
                          << sec_package_names_[sec_package_]
                          << "]: error initializing security context";
       state_ = State::kFailure;
@@ -155,16 +174,20 @@ std::string SSPIAuthImpl::GenerateSecurityPackageName(
   }
 }
 
+bool SSPIAuthImpl::IsSecurityContextSet() {
+  return h_sec_ctx_.dwLower != 0 || h_sec_ctx_.dwUpper != 0;
+}
+
 std::string SSPIAuthImpl::GenerateServiceName(SecurityPackage sec_package) {
   std::stringstream ss_name;
   ss_name << "HTTP/";
 
   switch (sec_package) {
     case kNTLM:
-      ss_name << proxy_ctx_.addr << ":" << proxy_ctx_.port;
+      ss_name << proxy_ctx_.host << ":" << proxy_ctx_.port;
       break;
     case kNegotiate:
-      ss_name << proxy_ctx_.addr;
+      ss_name << proxy_ctx_.host;
       break;
     default:
       break;

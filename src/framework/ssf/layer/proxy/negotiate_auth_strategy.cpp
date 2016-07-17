@@ -22,7 +22,7 @@ NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
 #endif
   if (p_impl_.get() != nullptr) {
     if (!p_impl_->Init()) {
-      SSF_LOG(kLogInfo) << "network[proxy]: could not initialize negotiate "
+      SSF_LOG(kLogDebug) << "network[proxy]: could not initialize negotiate "
                         << "strategy";
       status_ = Status::kAuthenticationFailure;
     }
@@ -56,7 +56,7 @@ void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
   auto server_token = Base64::Decode(ExtractAuthToken(response));
 
   if (!p_impl_->ProcessServerToken(server_token)) {
-    SSF_LOG(kLogError)
+    SSF_LOG(kLogDebug)
         << "network[proxy]: negotiate: could not process server token";
     status_ = Status::kAuthenticationFailure;
     return;

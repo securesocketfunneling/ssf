@@ -26,26 +26,34 @@ ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
                                       boost::system::error_code& ec) {
   ProxyEndpointContext context;
   context.proxy_enabled = false;
-  auto http_addr = ssf::helpers::GetField<std::string>("http_addr", parameters);
+  auto http_host = ssf::helpers::GetField<std::string>("http_host", parameters);
   auto http_port = ssf::helpers::GetField<std::string>("http_port", parameters);
-  if (http_port.empty() || http_addr.empty()) {
+  if (http_port.empty() || http_host.empty()) {
     return context;
   }
 
-  if (!ValidateIPTarget(io_service, http_addr, http_port)) {
+  if (!ValidateIPTarget(io_service, http_host, http_port)) {
     ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
     SSF_LOG(kLogError) << "network[proxy]: could not resolve target address <"
-                       << http_addr << ":" << http_port << ">";
+                       << http_host << ":" << http_port << ">";
     return context;
   }
 
   context.proxy_enabled = true;
-  context.http_proxy.addr = http_addr;
+  context.http_proxy.host = http_host;
   context.http_proxy.port = http_port;
   context.http_proxy.username =
       ssf::helpers::GetField<std::string>("http_username", parameters);
+  context.http_proxy.domain =
+      ssf::helpers::GetField<std::string>("http_domain", parameters);
   context.http_proxy.password =
       ssf::helpers::GetField<std::string>("http_password", parameters);
+  context.http_proxy.reuse_ntlm =
+      (ssf::helpers::GetField<std::string>("http_reuse_ntlm", parameters) ==
+       "true");
+  context.http_proxy.reuse_kerb =
+      (ssf::helpers::GetField<std::string>("http_reuse_kerb", parameters) ==
+       "true");
   return context;
 }
 

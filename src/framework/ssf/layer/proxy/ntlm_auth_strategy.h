@@ -2,6 +2,7 @@
 #define SSF_LAYER_PROXY_NTLM_AUTH_STRATEGY_H_
 
 #include "ssf/layer/proxy/auth_strategy.h"
+#include "ssf/layer/proxy/platform_auth_impl.h"
 
 namespace ssf {
 namespace layer {
@@ -14,11 +15,16 @@ class NtlmAuthStrategy : public AuthStrategy {
 
   virtual ~NtlmAuthStrategy(){};
 
+  std::string AuthName() const override;
+
   bool Support(const HttpResponse& response) const override;
 
   void ProcessResponse(const HttpResponse& response) override;
 
   void PopulateRequest(HttpRequest* p_request) override;  
+
+ private:
+  std::unique_ptr<PlatformAuthImpl> p_impl_;
 };
 
 }  // detail

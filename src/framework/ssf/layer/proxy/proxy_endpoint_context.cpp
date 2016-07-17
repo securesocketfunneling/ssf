@@ -4,11 +4,11 @@ namespace ssf {
 namespace layer {
 namespace proxy {
 
-Proxy::Proxy() : addr(""), port("") {}
+Proxy::Proxy() : host(""), port("") {}
 
 boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(boost::asio::io_service& io_service) {
   boost::asio::ip::tcp::resolver resolver(io_service);
-  auto endpoint_it = resolver.resolve({ addr, port });
+  auto endpoint_it = resolver.resolve({ host, port });
   return *endpoint_it;
 }
 
@@ -18,12 +18,12 @@ ProxyEndpointContext::ProxyEndpointContext()
 bool ProxyEndpointContext::IsProxyEnabled() const { return proxy_enabled; }
 
 bool ProxyEndpointContext::HttpProxyEnabled() const {
-  return proxy_enabled && !http_proxy.addr.empty() && !http_proxy.port.empty();
+  return proxy_enabled && !http_proxy.host.empty() && !http_proxy.port.empty();
 }
 
 bool ProxyEndpointContext::operator==(const ProxyEndpointContext& rhs) const {
   return proxy_enabled == rhs.proxy_enabled &&
-         http_proxy.addr == rhs.http_proxy.addr &&
+         http_proxy.host == rhs.http_proxy.host &&
          http_proxy.port == rhs.http_proxy.port;
 }
 
@@ -32,7 +32,7 @@ bool ProxyEndpointContext::operator!=(const ProxyEndpointContext& rhs) const {
 }
 
 bool ProxyEndpointContext::operator<(const ProxyEndpointContext& rhs) const {
-  return http_proxy.addr < rhs.http_proxy.addr;
+  return http_proxy.host < rhs.http_proxy.host;
 }
 
 }  // proxy

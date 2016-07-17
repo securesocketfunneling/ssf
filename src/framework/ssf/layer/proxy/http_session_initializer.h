@@ -22,6 +22,7 @@ class HttpSessionInitializer {
 
  public:
   enum Status : int { kError = -1, kSuccess = 0, kContinue = 1 };
+  enum Stage : int { kConnect = 1, kProcessing = 2 };
 
  public:
   HttpSessionInitializer();
@@ -31,13 +32,19 @@ class HttpSessionInitializer {
 
   inline Status status() { return status_; }
 
+  inline Stage stage() { return stage_; }
+
   void PopulateRequest(HttpRequest* p_request, boost::system::error_code& ec);
 
   void ProcessResponse(const HttpResponse& response,
                        boost::system::error_code& ec);
 
  private:
+  void SetAuthStrategy(const HttpResponse& response);
+
+ private:
   Status status_;
+  Stage stage_;
   std::string target_host_;
   std::string target_port_;
   ProxyEndpointContext proxy_ep_ctx_;

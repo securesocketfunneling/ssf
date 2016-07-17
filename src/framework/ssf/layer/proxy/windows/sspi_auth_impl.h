@@ -33,7 +33,9 @@ class SSPIAuthImpl : public PlatformAuthImpl {
 
  private:
   static std::string GenerateSecurityPackageName(SecurityPackage sec_package);
+  bool IsSecurityContextSet();
   std::string GenerateServiceName(SecurityPackage sec_package);
+  void Clear();
 
  private:
   static SecPackageNames sec_package_names_;
