@@ -24,11 +24,11 @@ namespace detail {
 
 class GSSAPIAuthImpl : public PlatformAuthImpl {
  private:
-  typedef decltype(&gss_init_sec_context) fct_gss_init_sec_context_t;
-  typedef decltype(&gss_import_name) fct_gss_import_name_t;
-  typedef decltype(&gss_release_buffer) fct_gss_release_buffer_t;
-  typedef decltype(&gss_delete_sec_context) fct_gss_delete_sec_context_t;
-  typedef decltype(&gss_release_name) fct_gss_release_name_t;
+  using fct_gss_init_sec_context_t = decltype(&gss_init_sec_context);
+  using fct_gss_import_name_t = decltype(&gss_import_name);
+  using fct_gss_release_buffer_t = decltype(&gss_release_buffer);
+  using fct_gss_delete_sec_context_t = decltype(&gss_delete_sec_context);
+  using fct_gss_release_name_t = decltype(&gss_release_name);
 
  public:
   GSSAPIAuthImpl(const Proxy& proxy_ctx);

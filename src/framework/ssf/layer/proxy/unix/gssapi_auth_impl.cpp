@@ -19,6 +19,14 @@ gss_OID GSS_C_NT_HOSTBASED_SERVICE = &GSS_C_NT_HOSTBASED_SERVICE_VAL;
 gss_OID GSS_C_NT_HOSTBASED_SERVICE_X = &GSS_C_NT_HOSTBASED_SERVICE_X_VAL;
 gss_OID GSS_SPNEGO_MECH_OID = &GSS_SPNEGO_MECH_OID_VAL;
 
+#define GSS_DL_SYM(lib, func) \
+  fct_gss_##func##_t func = reinterpret_cast<fct_gss_##func##_t>( \
+      dlsym(lib, "gss_" #func)); \
+  if (func == NULL) { \
+    state_ = kFailure; \
+    return false; \
+  }
+
 namespace ssf {
 namespace layer {
 namespace proxy {
@@ -61,13 +69,13 @@ GSSAPIAuthImpl::~GSSAPIAuthImpl() {
 
 bool GSSAPIAuthImpl::Init() {
   if (!InitLibrary()) {
-    SSF_LOG(kLogError) << "network[proxy]: gssapi: "
+    SSF_LOG(kLogDebug) << "network[proxy]: gssapi: "
                        << "could not init gssapi library";
     state_ = kFailure;
     return false;
   }
 
-  std::string service_name = "HTTP@" + proxy_ctx_.addr;
+  std::string service_name = "HTTP@" + proxy_ctx_.host;
   OM_uint32 minor_status;
   gss_buffer_desc spn_name;
   spn_name.length = service_name.size();
@@ -76,7 +84,7 @@ bool GSSAPIAuthImpl::Init() {
   if (GSS_S_COMPLETE != fct_gss_import_name_(&minor_status, &spn_name,
                                              GSS_C_NT_HOSTBASED_SERVICE,
                                              &server_name_)) {
-    SSF_LOG(kLogError) << "network[proxy]: gssapi: "
+    SSF_LOG(kLogDebug) << "network[proxy]: gssapi: "
                        << "could not generate gssapi server name";
     state_ = kFailure;
     return false;
@@ -158,40 +166,17 @@ bool GSSAPIAuthImpl::InitLibrary() {
     return false;
   }
 
-  fct_gss_init_sec_context_ = reinterpret_cast<fct_gss_init_sec_context_t>(
-      dlsym(h_gss_api_, "gss_init_sec_context"));
-  if (fct_gss_init_sec_context_ == NULL) {
-    state_ = kFailure;
-    return false;
-  }
-
-  fct_gss_import_name_ = reinterpret_cast<fct_gss_import_name_t>(
-      dlsym(h_gss_api_, "gss_import_name"));
-  if (fct_gss_import_name_ == NULL) {
-    state_ = kFailure;
-    return false;
-  }
-
-  fct_gss_release_buffer_ = reinterpret_cast<fct_gss_release_buffer_t>(
-      dlsym(h_gss_api_, "gss_release_buffer"));
-  if (fct_gss_release_buffer_ == NULL) {
-    state_ = kFailure;
-    return false;
-  }
-
-  fct_gss_delete_sec_context_ = reinterpret_cast<fct_gss_delete_sec_context_t>(
-      dlsym(h_gss_api_, "gss_delete_sec_context"));
-  if (fct_gss_delete_sec_context_ == NULL) {
-    state_ = kFailure;
-    return false;
-  }
-
-  fct_gss_release_name_ = reinterpret_cast<fct_gss_release_name_t>(
-      dlsym(h_gss_api_, "gss_release_name"));
-  if (fct_gss_release_name_ == NULL) {
-    state_ = kFailure;
-    return false;
-  }
+  GSS_DL_SYM(h_gss_api_, init_sec_context);
+  GSS_DL_SYM(h_gss_api_, import_name);
+  GSS_DL_SYM(h_gss_api_, release_buffer);
+  GSS_DL_SYM(h_gss_api_, delete_sec_context);
+  GSS_DL_SYM(h_gss_api_, release_name);
+  
+  fct_gss_init_sec_context_ = init_sec_context;
+  fct_gss_import_name_ = import_name;
+  fct_gss_release_buffer_ = release_buffer;
+  fct_gss_delete_sec_context_ = delete_sec_context;
+  fct_gss_release_name_ = release_name;
 
   return true;
 }
@@ -204,7 +189,7 @@ void GSSAPIAuthImpl::LogError(OM_uint32 major_status) {
   std::string error_msg;
 
   if (GSS_CALLING_ERROR(major_status)) {
-    SSF_LOG(kLogError) << "network[proxy]: gssapi: calling error";
+    SSF_LOG(kLogDebug) << "network[proxy]: gssapi: calling error";
     return;
   }
 
@@ -247,7 +232,7 @@ void GSSAPIAuthImpl::LogError(OM_uint32 major_status) {
       error_msg = "unknown error";
       break;
   }
-  SSF_LOG(kLogError) << "network[proxy]: gssapi: " << error_msg;
+  SSF_LOG(kLogDebug) << "network[proxy]: gssapi: " << error_msg;
 }
 
 }  // detail
