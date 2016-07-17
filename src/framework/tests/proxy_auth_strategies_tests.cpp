@@ -127,7 +127,7 @@ TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {
   using Proxy = ssf::layer::proxy::Proxy;
 
   Proxy proxy_ctx;
-  proxy_ctx.addr = "proxy.example.com";
+  proxy_ctx.host = "proxy.example.com";
   proxy_ctx.port = "3128";
   proxy_ctx.username = "Mufasa";
   proxy_ctx.password = "Circle Of Life";

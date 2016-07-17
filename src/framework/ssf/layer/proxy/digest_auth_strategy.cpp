@@ -31,9 +31,7 @@ DigestAuthStrategy::DigestAuthStrategy(const Proxy& proxy_ctx)
       cnonce_(GenerateRandomString(32)),
       nonce_count_(0) {}
 
-std::string DigestAuthStrategy::AuthName() const {
-  return "Digest";
-}
+std::string DigestAuthStrategy::AuthName() const { return "Digest"; }
 
 bool DigestAuthStrategy::Support(const HttpResponse& response) const {
   auto auth_name = AuthName();

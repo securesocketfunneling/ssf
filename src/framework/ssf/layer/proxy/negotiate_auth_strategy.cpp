@@ -22,20 +22,19 @@ NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
 #endif
   if (p_impl_.get() != nullptr) {
     if (!p_impl_->Init()) {
-      SSF_LOG(kLogDebug) << "network[proxy]: could not initialize negotiate "
-                        << "strategy";
+      SSF_LOG(kLogDebug) << "network[proxy]: negotiate: could not initialize "
+                         << "platform impl";
       status_ = Status::kAuthenticationFailure;
     }
   }
 }
 
-std::string NegotiateAuthStrategy::AuthName() const {
-  return "Negotiate";
-}
+std::string NegotiateAuthStrategy::AuthName() const { return "Negotiate"; }
 
 bool NegotiateAuthStrategy::Support(const HttpResponse& response) const {
   auto auth_name = AuthName();
-  return status_ != Status::kAuthenticationFailure &&
+  return p_impl_.get() != nullptr &&
+         status_ != Status::kAuthenticationFailure &&
          (response.HeaderValueBeginWith("Proxy-Authenticate", auth_name) ||
           response.HeaderValueBeginWith("WWW-Authenticate", auth_name));
 }
@@ -71,6 +70,7 @@ void NegotiateAuthStrategy::PopulateRequest(HttpRequest* p_request) {
 
   auto auth_token = p_impl_->GetAuthToken();
   if (auth_token.empty()) {
+    SSF_LOG(kLogDebug) << "network[proxy]: negotiate: response token empty";
     status_ = Status::kAuthenticationFailure;
     return;
   }

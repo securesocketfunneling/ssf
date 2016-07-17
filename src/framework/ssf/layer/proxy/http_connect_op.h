@@ -10,6 +10,7 @@
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
 #include <boost/asio/detail/handler_invoke_helpers.hpp>
+#include <boost/asio/socket_base.hpp>
 #include <boost/asio/write.hpp>
 
 #include <boost/system/error_code.hpp>
@@ -69,10 +70,11 @@ class HttpConnectOp {
         if ((session_initializer.stage() ==
              HttpSessionInitializer::Stage::kConnect)) {
           if (stream_.is_open()) {
+            stream_.shutdown(boost::asio::socket_base::shutdown_both, ec);
             stream_.close(ec);
           }
           stream_.connect(endpoint_context.http_proxy.ToTcpEndpoint(
-                              stream_.get_io_service()));
+              stream_.get_io_service()));
         }
 
         // send request
@@ -203,6 +205,8 @@ class AsyncHttpConnectOp {
         if ((p_session_initializer_->stage() ==
              HttpSessionInitializer::Stage::kConnect)) {
           if (stream_.is_open()) {
+            stream_.shutdown(boost::asio::socket_base::shutdown_both,
+                             close_ec_);
             stream_.close(close_ec_);
           }
           yield stream_.async_connect(endpoint_context.http_proxy.ToTcpEndpoint(

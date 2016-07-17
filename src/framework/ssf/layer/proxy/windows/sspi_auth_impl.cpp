@@ -23,9 +23,7 @@ SSPIAuthImpl::SSPIAuthImpl(SecurityPackage sec_package, const Proxy& proxy_ctx)
   memset(&h_cred_, 0, sizeof(CredHandle));
 }
 
-SSPIAuthImpl::~SSPIAuthImpl() {
-  Clear();
-}
+SSPIAuthImpl::~SSPIAuthImpl() { Clear(); }
 
 void SSPIAuthImpl::Clear() {
   if (IsSecurityContextSet()) {
@@ -40,12 +38,12 @@ void SSPIAuthImpl::Clear() {
 
 bool SSPIAuthImpl::Init() {
   // determine max output token buffer size
-  PSecPkgInfoA sec_package;
+  PSecPkgInfoA p_win_sec_package;
   TimeStamp expiry;
 
   auto status = ::QuerySecurityPackageInfoA(
       const_cast<char*>(GenerateSecurityPackageName(sec_package_).c_str()),
-      &sec_package);
+      &p_win_sec_package);
   if (status != SEC_E_OK) {
     SSF_LOG(kLogDebug) << "network[proxy]: sspi["
                        << sec_package_names_[sec_package_]
@@ -54,34 +52,32 @@ bool SSPIAuthImpl::Init() {
     return false;
   }
 
-  output_token_.resize(sec_package->cbMaxToken);
+  output_token_.resize(p_win_sec_package->cbMaxToken);
   service_name_ = GenerateServiceName(sec_package_);
-  
+
   SEC_WINNT_AUTH_IDENTITY_A identity;
   memset(&identity, 0, sizeof(SEC_WINNT_AUTH_IDENTITY_A));
   bool use_identity = false;
-  if ((SecurityPackage::kNTLM == sec_package_ &&
-       !proxy_ctx_.reuse_ntlm) ||
-      (SecurityPackage::kNegotiate == sec_package_ &&
-       !proxy_ctx_.reuse_kerb)) {
+  if ((SecurityPackage::kNTLM == sec_package_ && !proxy_ctx_.reuse_ntlm) ||
+      (SecurityPackage::kNegotiate == sec_package_ && !proxy_ctx_.reuse_kerb)) {
     use_identity = true;
-    identity.Domain =
-        (unsigned char*)const_cast<char*>(proxy_ctx_.domain.c_str());
+    identity.Domain = reinterpret_cast<unsigned char*>(
+        const_cast<char*>(proxy_ctx_.domain.c_str()));
     identity.DomainLength = proxy_ctx_.domain.size();
-    identity.User =
-        (unsigned char*)const_cast<char*>(proxy_ctx_.username.c_str());
+    identity.User = reinterpret_cast<unsigned char*>(
+        const_cast<char*>(proxy_ctx_.username.c_str()));
     identity.UserLength = proxy_ctx_.username.size();
-    identity.Password =
-        (unsigned char*)const_cast<char*>(proxy_ctx_.password.c_str());
+    identity.Password = reinterpret_cast<unsigned char*>(
+        const_cast<char*>(proxy_ctx_.password.c_str()));
     identity.PasswordLength = proxy_ctx_.password.size();
     identity.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
   }
 
   auto cred_status = ::AcquireCredentialsHandleA(
-      NULL, sec_package->Name, SECPKG_CRED_OUTBOUND, NULL,
+      NULL, p_win_sec_package->Name, SECPKG_CRED_OUTBOUND, NULL,
       (use_identity ? &identity : NULL), NULL, NULL, &h_cred_, &expiry);
 
-  ::FreeContextBuffer(sec_package);
+  ::FreeContextBuffer(p_win_sec_package);
 
   if (cred_status != SEC_E_OK) {
     SSF_LOG(kLogDebug) << "network[proxy]: sspi["

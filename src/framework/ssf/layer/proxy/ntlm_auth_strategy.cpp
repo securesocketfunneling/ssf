@@ -12,38 +12,37 @@ namespace proxy {
 namespace detail {
 
 NtlmAuthStrategy::NtlmAuthStrategy(const Proxy& proxy_ctx)
-    : AuthStrategy(proxy_ctx, Status::kAuthenticating) {
+    : AuthStrategy(proxy_ctx, Status::kAuthenticating), p_impl_(nullptr) {
 #if defined(WIN32)
   p_impl_.reset(new SSPIAuthImpl(SSPIAuthImpl::kNTLM, proxy_ctx));
 #endif
 
   if (p_impl_.get() != nullptr) {
     if (!p_impl_->Init()) {
-      SSF_LOG(kLogDebug) << "network[proxy]: could not initialize NTLM "
-                        << "strategy";
+      SSF_LOG(kLogDebug) << "network[proxy]: ntlm: could not initialize "
+                         << "platform impl";
       status_ = Status::kAuthenticationFailure;
     }
   }
 }
 
-std::string NtlmAuthStrategy::AuthName() const {
-  return "NTLM";
-}
+std::string NtlmAuthStrategy::AuthName() const { return "NTLM"; }
 
 bool NtlmAuthStrategy::Support(const HttpResponse& response) const {
   auto auth_name = AuthName();
-  return status_ != Status::kAuthenticationFailure &&
+  return p_impl_.get() != nullptr &&
+         status_ != Status::kAuthenticationFailure &&
          (response.HeaderValueBeginWith("Proxy-Authenticate", auth_name) ||
           response.HeaderValueBeginWith("WWW-Authenticate", auth_name));
 }
 
 void NtlmAuthStrategy::ProcessResponse(const HttpResponse& response) {
-    if (response.Success()) {
+  if (response.Success()) {
     status_ = Status::kAuthenticated;
     return;
   }
 
-  if (!Support(response) || p_impl_.get() == nullptr) {
+  if (!Support(response)) {
     status_ = Status::kAuthenticationFailure;
     return;
   }
@@ -68,6 +67,7 @@ void NtlmAuthStrategy::PopulateRequest(HttpRequest* p_request) {
 
   auto auth_token = p_impl_->GetAuthToken();
   if (auth_token.empty()) {
+    SSF_LOG(kLogDebug) << "network[proxy]: ntlm: response token empty";
     status_ = Status::kAuthenticationFailure;
     return;
   }

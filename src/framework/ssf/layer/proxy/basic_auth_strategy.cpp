@@ -10,9 +10,7 @@ BasicAuthStrategy::BasicAuthStrategy(const Proxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating),
       request_populated_(false) {}
 
-std::string BasicAuthStrategy::AuthName() const {
-  return "Basic";
-}
+std::string BasicAuthStrategy::AuthName() const { return "Basic"; }
 
 bool BasicAuthStrategy::Support(const HttpResponse& response) const {
   auto auth_name = AuthName();
