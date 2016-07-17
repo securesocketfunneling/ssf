@@ -23,8 +23,8 @@ class ConnectOp {
     auto& context = peer_endpoint_.endpoint_context();
 
     if (!context.IsProxyEnabled()) {
-      ConnectOp<Stream, Endpoint>(stream_, p_local_endpoint_,
-                                  std::move(peer_endpoint_))(ec);
+      ssf::layer::detail::ConnectOp<Stream, Endpoint>(
+        stream_, p_local_endpoint_, std::move(peer_endpoint_))(ec);
       return;
     }
 
@@ -55,7 +55,7 @@ class AsyncConnectOp {
     auto& context = peer_endpoint_.endpoint_context();
 
     if (!context.IsProxyEnabled()) {
-      AsyncConnectOp<
+      ssf::layer::detail::AsyncConnectOp<
           Protocol, Stream, Endpoint,
           typename boost::asio::handler_type<
               ConnectHandler, void(boost::system::error_code)>::type>(
