@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
+# specific platform lib
+set(PLATFORM_LIB "")
+
 file(GLOB_RECURSE SSF_FRAMEWORK_COMMON_IO_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/ssf/io/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/ssf/io/*.cpp"
@@ -24,11 +27,75 @@ file(GLOB_RECURSE SSF_FRAMEWORK_COMMON_UTILS_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/ssf/network/*.cpp"
 )
 
-file(GLOB_RECURSE SSF_FRAMEWORK_LAYER_FILES
+# layer files
+file(GLOB SSF_FRAMEWORK_LAYER_BASE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/*.cc"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/*.ipp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/*.cpp")
+
+file(GLOB SSF_FRAMEWORK_LAYER_CONGESTION_FILES
+"${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/congestion/*.h")
+
+file(GLOB_RECURSE SSF_FRAMEWORK_LAYER_CRYPTOGRAPHY_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/cryptography/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/cryptography/*.cpp")
+
+file(GLOB SSF_FRAMEWORK_LAYER_DATA_LINK_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/data_link/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/data_link/*.cpp")
+
+file(GLOB SSF_FRAMEWORK_LAYER_DATAGRAM_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/datagram/*.h")
+
+file(GLOB SSF_FRAMEWORK_LAYER_INTERFACE_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/interface_layer/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/interface_layer/*.cc")
+
+file(GLOB SSF_FRAMEWORK_LAYER_MULTIPLEXING_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/multiplexing/*.h")
+
+file(GLOB SSF_FRAMEWORK_LAYER_NETWORK_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/network/*.h")
+
+file(GLOB SSF_FRAMEWORK_LAYER_PHYSICAL_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/physical/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/physical/*.cpp")
+
+file(GLOB SSF_FRAMEWORK_LAYER_PROXY_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/*.cpp")
+
+if (WIN32)
+  list(APPEND PLATFORM_LIB "Secur32.lib")
+  list(APPEND SSF_FRAMEWORK_LAYER_PROXY_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/windows/sspi_auth_impl.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/windows/sspi_auth_impl.cpp")
+endif (WIN32)
+if (UNIX)
+  list(APPEND SSF_FRAMEWORK_LAYER_PROXY_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/unix/gssapi_auth_impl.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/proxy/unix/gssapi_auth_impl.cpp")
+endif (UNIX)
+
+file(GLOB SSF_FRAMEWORK_LAYER_QUEUE_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/queue/*.h")
+
+file(GLOB SSF_FRAMEWORK_LAYER_ROUTING_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/layer/routing/*.h")
+
+set(SSF_FRAMEWORK_LAYER_FILES
+    "${SSF_FRAMEWORK_LAYER_BASE_FILES}"
+    "${SSF_FRAMEWORK_LAYER_CONGESTION_FILES}"
+    "${SSF_FRAMEWORK_LAYER_CRYPTOGRAPHY_FILES}"
+    "${SSF_FRAMEWORK_LAYER_DATA_LINK_FILES}"
+    "${SSF_FRAMEWORK_LAYER_DATAGRAM_FILES}"
+    "${SSF_FRAMEWORK_LAYER_INTERFACE_FILES}"
+    "${SSF_FRAMEWORK_LAYER_MULTIPLEXING_FILES}"
+    "${SSF_FRAMEWORK_LAYER_NETWORK_FILES}"
+    "${SSF_FRAMEWORK_LAYER_PHYSICAL_FILES}"
+    "${SSF_FRAMEWORK_LAYER_PROXY_FILES}"
+    "${SSF_FRAMEWORK_LAYER_QUEUE_FILES}"
+    "${SSF_FRAMEWORK_LAYER_ROUTING_FILES}"
+)
 
 file(GLOB_RECURSE SSF_FRAMEWORK_INTERFACES_SYSTEM_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/ssf/system/*interface*.h"
@@ -47,6 +114,8 @@ add_target("lib_ssf_network"
     ${OpenSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_http_parser
+    ${PLATFORM_LIB}
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES

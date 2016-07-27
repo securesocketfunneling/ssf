@@ -12,13 +12,11 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
                                       const LayerParameters& parameters,
                                       boost::system::error_code& ec);
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

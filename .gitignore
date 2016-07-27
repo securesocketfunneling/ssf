@@ -3,3 +3,4 @@
 /build32
 /build64
 /third_party
+/src/framework/tests/proxy/proxy.json

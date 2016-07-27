@@ -20,7 +20,7 @@ file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
 file(GLOB_RECURSE SYSTEM_CONFIG_TEST_FILES
   "${FRAMEWORK_SRC_TESTS_DIR}/system/*.json")
 set(PROXY_CONFIG_TEST_FILES
-  "${FRAMEWORK_SRC_TESTS_DIR}/proxy/proxy.test")
+  "${FRAMEWORK_SRC_TESTS_DIR}/proxy/proxy.json")
 
 file(MAKE_DIRECTORY ${FRAMEWORK_SRC_TESTS_DIR}/proxy)
 file(MAKE_DIRECTORY ${FRAMEWORK_SRC_TESTS_DIR}/system)
@@ -110,6 +110,21 @@ add_target("proxy_layer_tests"
 )
 project_group("Unit Tests/Framework"  proxy_layer_tests)
 
+add_target("proxy_auth_strategies_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    "proxy_auth_strategies_tests.cpp"
+)
+project_group("Unit Tests/Framework"  proxy_auth_strategies_tests)
+
 # --- Link layer tests
 add_target("link_layer_tests"
   TYPE
@@ -162,21 +177,21 @@ project_group("Unit Tests/Framework" interface_layer_tests)
 #project_group("Unit Tests/Framework" routing_layer_tests)
 
 # --- Transport layer tests
-add_target("transport_layer_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    "transport_layer_tests.cpp"
-    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
-)
-project_group("Unit Tests/Framework" transport_layer_tests)
+#add_target("transport_layer_tests"
+#  TYPE
+#    executable ${EXEC_FLAG} TEST
+#  LINKS
+#    ${OpenSSL_LIBRARIES}
+#    ${Boost_LIBRARIES}
+#    ${PLATFORM_SPECIFIC_LIB_DEP}
+#    lib_ssf_network
+#  PREFIX_SKIP     .*/src
+#  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+#  FILES
+#    "transport_layer_tests.cpp"
+#    ${SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES}
+#)
+#project_group("Unit Tests/Framework" transport_layer_tests)
 
 # --- Interface System tests
 #add_target("interfaces_system_tests"

@@ -23,8 +23,8 @@ boost::asio::ip::udp::endpoint make_udp_endpoint(
   auto addr = helpers::GetField<std::string>("addr", parameters);
   auto port = helpers::GetField<std::string>("port", parameters);
 
-  if (port != "") {
-    if (addr != "") {
+  if (!port.empty()) {
+    if (!addr.empty()) {
       boost::asio::ip::udp::resolver resolver(io_service);
       boost::asio::ip::udp::resolver::query query(addr, port);
       boost::asio::ip::udp::resolver::iterator iterator(

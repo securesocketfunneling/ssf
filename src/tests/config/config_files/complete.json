@@ -8,12 +8,19 @@
             "dh_path": "test_dh_path",
             "cipher_alg": "test_cipher_alg"
         },
-        "proxy" : {
-            "http_addr": "127.0.0.1",
-            "http_port": "8080"
+        "http_proxy" : {
+            "host": "127.0.0.1",
+            "port": "8080",
+            "credentials": {
+                "username": "test_user",
+                "password": "test_password",
+                "domain": "test_domain",
+                "reuse_ntlm": "false",
+                "reuse_kerb": "false"
+            }
         },
         "services" : {
-            "process": {
+            "shell": {
                 "path": "/bin/custom_path",
                 "args": "-custom args"
             }

@@ -1,5 +1,7 @@
 #include <fstream>
 
+#include <boost/property_tree/json_parser.hpp>
+
 #include "tests/proxy_test_fixture.h"
 
 namespace ssf {
@@ -20,60 +22,81 @@ Address& Address::operator=(const Address& address) {
   return *this;
 }
 
-bool Address::IsSet() { return addr_ != "" && port_ != ""; }
+bool Address::IsSet() { return !addr_.empty() && !port_.empty(); }
 
 ssf::layer::LayerParameters Address::ToProxyParam() {
-  return {{"http_addr", addr_}, {"http_port", port_}};
+  return {{"http_host", addr_}, {"http_port", port_}};
 }
 
 ssf::layer::LayerParameters Address::ToTCPParam() {
-  return {{"addr", addr_}, {"port", port_}};
-}
-
-bool ParseConfigFile(const std::string& filepath,
-                     std::vector<Address>& addresses) {
-  if (filepath == "") {
-    return false;
-  }
-  std::ifstream file(filepath);
-
-  if (!file.is_open()) {
-    return false;
-  }
-
-  std::string line;
-  while (std::getline(file, line)) {
-    size_t position = line.find(":");
-    if (position == std::string::npos) {
-      return false;
-    }
-    addresses.emplace_back(line.substr(0, position), line.substr(position + 1));
-  }
-
-  file.close();
-  return true;
+  return {{"host", addr_}, {"port", port_}};
 }
 
 }  // tests
 }  // ssf
 
 ProxyTestFixture::ProxyTestFixture()
-    : config_file_("./proxy/proxy.test"), client_address_(), proxy_address_() {}
+    : config_file_("./proxy/proxy.json"), config_options_() {}
 
 ProxyTestFixture::~ProxyTestFixture() {}
 
-void ProxyTestFixture::SetUp() {
-  std::vector<ssf::tests::Address> test_addresses;
-  if (!ssf::tests::ParseConfigFile(config_file_, test_addresses) ||
-      test_addresses.size() < 2) {
-    return;
-  }
-  client_address_ = test_addresses[0];
-  proxy_address_ = test_addresses[1];
-}
+void ProxyTestFixture::SetUp() { ParseConfigFile(config_file_); }
 
 void ProxyTestFixture::TearDown() {}
 
 bool ProxyTestFixture::Initialized() {
-  return client_address_.IsSet() && proxy_address_.IsSet();
+  return config_options_.count("target_host") > 0 &&
+         config_options_.count("target_port") > 0 &&
+         config_options_.count("proxy_host") > 0 &&
+         config_options_.count("proxy_port") > 0;
+}
+
+std::string ProxyTestFixture::GetOption(const std::string& name) const {
+  auto opt_it = config_options_.find(name);
+
+  return opt_it != config_options_.end() ? opt_it->second : "";
+}
+
+ssf::layer::LayerParameters ProxyTestFixture::GetTcpParam() const {
+  ssf::layer::LayerParameters tcp_params;
+  tcp_params["addr"] = GetOption("target_host");
+  tcp_params["port"] = GetOption("target_port");
+
+  return tcp_params;
+}
+
+ssf::layer::LayerParameters ProxyTestFixture::GetProxyParam() const {
+  ssf::layer::LayerParameters proxy_params;
+  proxy_params["http_host"] = GetOption("proxy_host");
+  proxy_params["http_port"] = GetOption("proxy_port");
+  proxy_params["http_username"] = GetOption("username");
+  proxy_params["http_domain"] = GetOption("domain");
+  proxy_params["http_password"] = GetOption("password");
+  proxy_params["http_reuse_ntlm"] = GetOption("reuse_ntlm");
+  proxy_params["http_reuse_kerb"] = GetOption("reuse_kerb");
+
+  return proxy_params;
+}
+
+bool ProxyTestFixture::ParseConfigFile(const std::string& filepath) {
+  if (filepath.empty()) {
+    return false;
+  }
+
+  std::ifstream file(filepath);
+  if (!file.is_open()) {
+    return false;
+  }
+  file.close();
+
+  try {
+    boost::property_tree::ptree pt;
+    boost::property_tree::read_json(filepath, pt);
+    for (const auto& child : pt) {
+      config_options_[child.first] = child.second.data();
+    }
+    return true;
+  } catch (const std::exception&) {
+    return false;
+  }
 }

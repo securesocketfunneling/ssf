@@ -202,6 +202,9 @@ class basic_CircuitAcceptor_service
       }
     }
 
+    // close forwarding sessions
+    manager_.stop_all();
+
     return ec;
   }
 

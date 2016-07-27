@@ -10,7 +10,6 @@
 namespace ssf {
 namespace layer {
 namespace proxy {
-namespace detail {
 
 template <class Stream, class Endpoint>
 class ConnectOp {
@@ -25,13 +24,13 @@ class ConnectOp {
 
     if (!context.IsProxyEnabled()) {
       ssf::layer::detail::ConnectOp<Stream, Endpoint>(
-          stream_, p_local_endpoint_, std::move(peer_endpoint_))(ec);
+        stream_, p_local_endpoint_, std::move(peer_endpoint_))(ec);
       return;
     }
 
     if (context.HttpProxyEnabled()) {
-      detail::HttpConnectOp<Stream, Endpoint>(stream_, p_local_endpoint_,
-                                              std::move(peer_endpoint_))(ec);
+      HttpConnectOp<Stream, Endpoint>(stream_, p_local_endpoint_,
+                                      std::move(peer_endpoint_))(ec);
       return;
     }
   }
@@ -66,7 +65,7 @@ class AsyncConnectOp {
     }
 
     if (context.HttpProxyEnabled()) {
-      detail::AsyncHttpConnectOp<
+      AsyncHttpConnectOp<
           Protocol, Stream, Endpoint,
           typename boost::asio::handler_type<
               ConnectHandler, void(boost::system::error_code)>::type>(
@@ -83,7 +82,6 @@ class AsyncConnectOp {
   ConnectHandler handler_;
 };
 
-}  // detail
 }  // proxy
 }  // layer
 }  // ssf

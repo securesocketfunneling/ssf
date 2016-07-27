@@ -80,25 +80,67 @@ struct Proxy {
  public:
   void Log() const;
 
-  inline bool IsSet() const { return http_addr_ != "" && http_port_ != ""; }
-
-  inline std::string http_addr() const { return http_addr_; }
-
-  inline void set_http_addr(const std::string& http_addr) {
-    http_addr_ = http_addr;
+  inline bool IsSet() const {
+    return !host_.empty() && !port_.empty();
   }
 
-  inline std::string http_port() const { return http_port_; }
+  inline std::string host() const { return host_; }
 
-  inline void set_http_port(const std::string& http_port) {
-    http_port_ = http_port;
+  inline void set_host(const std::string& host) {
+    host_ = host;
+  }
+
+  inline std::string port() const { return port_; }
+
+  inline void set_port(const std::string& port) {
+    port_ = port;
+  }
+
+  inline std::string username() const { return username_; }
+
+  inline void set_username(const std::string& username) {
+    username_ = username;
+  }
+
+  inline std::string domain() const { return domain_; }
+
+  inline void set_domain(const std::string& domain) {
+    domain_ = domain;
+  }
+
+  inline std::string password() const { return password_; }
+
+  inline void set_password(const std::string& password) {
+    password_ = password;
+  }
+
+  inline bool reuse_ntlm() const { return reuse_ntlm_; }
+
+  inline void set_reuse_ntlm(bool reuse_ntlm) {
+    reuse_ntlm_ = reuse_ntlm;
+  }
+
+  inline bool reuse_kerb() const { return reuse_kerb_; }
+
+  inline void set_reuse_kerb(bool reuse_kerb) {
+    reuse_kerb_ = reuse_kerb;
   }
 
  private:
-  // HTTP proxy address
-  std::string http_addr_;
-  // HTTP proxy port
-  std::string http_port_;
+  // Proxy host
+  std::string host_;
+  // Proxy port
+  std::string port_;
+  // Credentials username
+  std::string username_;
+  // Credentials user's domain
+  std::string domain_;
+  // Credentials password
+  std::string password_;
+  // Reuse default NTLM credentials
+  bool reuse_ntlm_;
+  // Reuse default Kerberos/Negotiate credentials
+  bool reuse_kerb_;
 };
 
 class ProcessService {
@@ -155,8 +197,15 @@ class Config {
    *       "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
    *     },
    *     "proxy" : {
-   *       "http_addr": "",
-   *       "http_port": ""
+   *       "host": "",
+   *       "port": "",
+   *       "credentials": {
+   *         "username": "",
+   *         "password": "",
+   *         "domain": "",
+   *         "reuse_ntlm": "true",
+   *         "reuse_nego": "true"
+   *       }
    *     },
    *     "services": {
    *       "process": {
@@ -177,20 +226,20 @@ class Config {
   inline const Tls& tls() const { return tls_; }
   inline Tls& tls() { return tls_; }
 
-  inline const Proxy& proxy() const { return proxy_; }
-  inline Proxy& proxy() { return proxy_; }
+  inline const Proxy& http_proxy() const { return http_proxy_; }
+  inline Proxy& http_proxy() { return http_proxy_; }
 
   inline const Services& services() const { return services_; }
   inline Services& services() { return services_; }
 
  private:
   void UpdateTls(const boost::property_tree::ptree& pt);
-  void UpdateProxy(const boost::property_tree::ptree& pt);
+  void UpdateHttpProxy(const boost::property_tree::ptree& pt);
   void UpdateServices(const boost::property_tree::ptree& pt);
 
  private:
   Tls tls_;
-  Proxy proxy_;
+  Proxy http_proxy_;
   Services services_;
 };
 

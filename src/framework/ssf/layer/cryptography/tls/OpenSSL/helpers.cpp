@@ -116,7 +116,7 @@ bool SetCtxCipher(boost::asio::ssl::context& ctx,
                   const LayerParameters& parameters) {
   auto cipher_suit =
       helpers::GetField<std::string>("set_cipher_suit", parameters);
-  if (cipher_suit == "") {
+  if (cipher_suit.empty()) {
     return !!SSL_CTX_set_cipher_list(ctx.native_handle(),
                                      "DHE-RSA-AES256-GCM-SHA384");
   } else {

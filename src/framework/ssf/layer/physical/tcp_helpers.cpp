@@ -21,8 +21,8 @@ boost::asio::ip::tcp::endpoint make_tcp_endpoint(
   auto addr = ssf::helpers::GetField<std::string>("addr", parameters);
   auto port = ssf::helpers::GetField<std::string>("port", parameters);
 
-  if (port != "") {
-    if (addr != "") {
+  if (!port.empty()) {
+    if (!addr.empty()) {
       boost::asio::ip::tcp::resolver resolver(io_service);
       boost::asio::ip::tcp::resolver::query query(addr, port);
       boost::asio::ip::tcp::resolver::iterator iterator(

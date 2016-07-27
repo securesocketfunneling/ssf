@@ -12,6 +12,7 @@
   * nasm (openssl build on windows)
   * Perl | Active Perl >= 5.20 (openssl build on windows)
   * C++11 compiler (Visual Studio 2013, Clang, g++, etc.)
+  * libkrb5-dev or equivalent (gssapi on linux)
 
 SSF_SECURITY:
 

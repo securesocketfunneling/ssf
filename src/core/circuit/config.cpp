@@ -17,7 +17,7 @@ Config::Config() : nodes_() {}
 void Config::Update(const std::string& filepath,
                     boost::system::error_code& ec) {
   std::string conf_file("circuit.txt");
-  if (filepath == "") {
+  if (filepath.empty()) {
     std::ifstream ifile(conf_file);
     if (!ifile.good()) {
       return;
