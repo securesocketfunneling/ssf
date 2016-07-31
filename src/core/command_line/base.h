@@ -55,7 +55,7 @@ class BaseCommandLine {
   virtual void PopulatePositionalOptions(PosOptionDescription& pos_opts);
   virtual void PopulateCommandLine(OptionDescription& command_line);
 
-  virtual bool is_server_cli() = 0;
+  virtual bool IsServerCli() = 0;
   virtual void ParseOptions(const VariableMap& value,
                             ParsedParameters& parsed_params,
                             boost::system::error_code& ec) = 0;

@@ -185,7 +185,7 @@ void BaseCommandLine::InitLocalOptions(OptionDescription& local_opts) {
           boost::program_options::value<std::string>(),
           "Set config file");
 
-  if (!is_server_cli()) {
+  if (!IsServerCli()) {
     local_opts.add_options()
       ("port,p",
           boost::program_options::value<int>()->default_value(8011),

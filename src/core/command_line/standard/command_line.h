@@ -34,7 +34,7 @@ class CommandLine : public BaseCommandLine {
   void PopulateLocalOptions(OptionDescription& desc) override;
   void PopulatePositionalOptions(PosOptionDescription& desc) override;
   void PopulateCommandLine(OptionDescription& command_line) override;
-  bool is_server_cli() override;
+  bool IsServerCli() override;
   void ParseOptions(const VariableMap& vm, ParsedParameters& parsed_params,
                     boost::system::error_code& ec) override;
 

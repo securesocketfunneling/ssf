@@ -49,7 +49,7 @@ void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
   command_line.add(copy_options);
 }
 
-bool CommandLine::is_server_cli() { return false; }
+bool CommandLine::IsServerCli() { return false; }
 
 bool CommandLine::from_stdin() const { return from_stdin_; }
 
