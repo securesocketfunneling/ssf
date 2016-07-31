@@ -32,34 +32,38 @@ BaseCommandLine::BaseCommandLine()
 
 BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
     int argc, char* argv[], boost::system::error_code& ec) {
-  boost::program_options::options_description services;
+  OptionDescription services;
   return Parse(argc, argv, services, ec);
 }
 
 BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
     int ac, char* av[], const OptionDescription& services,
     boost::system::error_code& ec) {
-  boost::program_options::options_description basic_opts("Basic options");
+  // Basic options
+  OptionDescription basic_opts("Basic options");
   InitBasicOptions(basic_opts);
   PopulateBasicOptions(basic_opts);
 
-  boost::program_options::options_description local_opts("Local options");
+  // Local options
+  OptionDescription local_opts("Local options");
   InitLocalOptions(local_opts);
   PopulateLocalOptions(local_opts);
 
-  PosOptionDescription pos_opts;
-  PopulatePositionalOptions(pos_opts);
-
   try {
-    boost::program_options::options_description cmd_line;
+    OptionDescription cmd_line;
 
     cmd_line.add(basic_opts).add(local_opts);
 
+    // Other options
     PopulateCommandLine(cmd_line);
+
+    // Positional options
+    PosOptionDescription pos_opts;
+    PopulatePositionalOptions(pos_opts);
 
     cmd_line.add(services);
 
-    boost::program_options::variables_map vm;
+    VariableMap vm;
     boost::program_options::store(
         boost::program_options::command_line_parser(ac, av)
             .options(cmd_line)
@@ -91,6 +95,12 @@ void BaseCommandLine::PopulatePositionalOptions(
 
 void BaseCommandLine::PopulateCommandLine(OptionDescription& command_line) {}
 
+void BaseCommandLine::ParseOptions(const VariableMap& value,
+                                   ParsedParameters& parsed_params,
+                                   boost::system::error_code& ec) {}
+
+bool BaseCommandLine::IsServerCli() { return false; }
+
 bool BaseCommandLine::DisplayHelp(const VariableMap& vm,
                                   const OptionDescription& cli) {
   if (!vm.count("help")) {
@@ -109,8 +119,8 @@ bool BaseCommandLine::DisplayHelp(const VariableMap& vm,
   return true;
 }
 
-void BaseCommandLine::ParseBaseOptions(const VariableMap& vm,
-                                       boost::system::error_code& ec) {
+void BaseCommandLine::ParseBasicOptions(const VariableMap& vm,
+                                        boost::system::error_code& ec) {
   for (const auto& option : vm) {
     if (option.first == "quiet") {
       log_level_ = ssf::log::kLogNone;
@@ -140,7 +150,7 @@ BaseCommandLine::ParsedParameters BaseCommandLine::DoParse(
     boost::system::error_code& ec) {
   ParsedParameters result;
 
-  ParseBaseOptions(vm, ec);
+  ParseBasicOptions(vm, ec);
   if (ec) {
     return {};
   }
@@ -152,7 +162,7 @@ BaseCommandLine::ParsedParameters BaseCommandLine::DoParse(
 
   for (const auto& option : vm) {
     if (services.find_nothrow(option.first, false) != nullptr) {
-      // register service options
+      // Register service options
       result[option.first] = option.second.as<std::vector<std::string>>();
     }
   }
@@ -169,12 +179,12 @@ void BaseCommandLine::InitBasicOptions(OptionDescription& basic_opts) {
 
   basic_opts.add_options()
     ("verbosity,v",
-      boost::program_options::value<std::string>(),
-      "Verbosity: critical|error|warning|info|debug|trace " \
-      "[default = info]");
+        boost::program_options::value<std::string>(),
+        "Verbosity: critical|error|warning|info|debug|trace " \
+          "[default = info]");
 
   basic_opts.add_options()
-    ("quiet,q", "Do not display any log");
+    ("quiet,q", "Do not display log");
   // clang-format on
 }
 
@@ -206,7 +216,7 @@ void BaseCommandLine::InitLocalOptions(OptionDescription& local_opts) {
 
 void BaseCommandLine::set_log_level(const std::string& level) {
   if (log_level_ == ssf::log::kLogNone) {
-    // quiet set
+    // Quiet set
     return;
   }
 

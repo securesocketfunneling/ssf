@@ -35,7 +35,9 @@ void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
   // clang-format off
   boost::program_options::options_description copy_options("Copy options");
   copy_options.add_options()
-    ("stdin,t", boost::program_options::bool_switch()->default_value(false), "Input will be stdin")
+    ("stdin,t",
+        boost::program_options::bool_switch()->default_value(false),
+        "Input will be stdin")
     ("arg1",
         boost::program_options::value<std::string>()->required(),
         "[host@]/absolute/path/file if host is present, " \
@@ -80,21 +82,21 @@ void CommandLine::ParseOptions(const VariableMap& vm,
 void CommandLine::ParseFirstArgument(const std::string& first_arg,
                                      boost::system::error_code& parse_ec) {
   if (from_stdin_) {
-    // expecting host:filepath syntax
+    // Expecting host:filepath syntax
     ExtractHostPattern(first_arg, &host_, &output_pattern_, parse_ec);
     if (!parse_ec) {
       host_set_ = true;
       from_local_to_remote_ = true;
     }
   } else {
-    // expecting host:dirpath or filepath syntax
+    // Expecting host:dirpath or filepath syntax
     boost::system::error_code extract_ec;
     ExtractHostPattern(first_arg, &host_, &input_pattern_, extract_ec);
     if (!extract_ec) {
       host_set_ = true;
       from_local_to_remote_ = false;
     } else {
-      // not host:dirpath syntax so it is filepath syntax
+      // Not host:dirpath syntax so it is filepath syntax
       input_pattern_ = first_arg;
       from_local_to_remote_ = true;
     }
@@ -104,17 +106,17 @@ void CommandLine::ParseFirstArgument(const std::string& first_arg,
 void CommandLine::ParseSecondArgument(const std::string& second_arg,
                                       boost::system::error_code& parse_ec) {
   if (from_stdin_) {
-    // no second arg should be provided
-    SSF_LOG(kLogError)
-        << "command line: parsing failed: two args provided with stdin option";
+    // No second arg should be provided with stdin option
+    SSF_LOG(kLogError) << "command line: parsing failed: two args provided "
+                          "with stdin option, expecting one";
     parse_ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
     return;
   }
 
-  // expecting host:filepath or filepath syntax
+  // Expecting host:filepath or filepath syntax
   if (from_local_to_remote_) {
-    // expecting host:dirpath
+    // Expecting host:dirpath
     ExtractHostPattern(second_arg, &host_, &output_pattern_, parse_ec);
     if (parse_ec) {
       host_set_ = false;
@@ -123,14 +125,14 @@ void CommandLine::ParseSecondArgument(const std::string& second_arg,
 
     host_set_ = true;
   } else {
-    // expecting dirpath
+    // Expecting dirpath
     output_pattern_ = second_arg;
   }
 
   // Insert trailing slash if not present
   auto last_slash_pos = output_pattern_.find_last_of('/');
   if (last_slash_pos != output_pattern_.size() - 1) {
-    output_pattern_ += '/';
+    output_pattern_.append("/");
   }
 }
 

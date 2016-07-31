@@ -5,9 +5,7 @@
 namespace ssf {
 namespace log {
 
-void Configure(LogLevel level) {
-  ssf::log::Log::SetSeverityLevel(level);
-}
+void Configure(LogLevel level) { ssf::log::Log::SetSeverityLevel(level); }
 
 }  // log
 }  // ssf

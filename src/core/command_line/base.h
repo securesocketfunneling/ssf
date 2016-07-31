@@ -50,27 +50,32 @@ class BaseCommandLine {
  protected:
   BaseCommandLine();
 
+  // Populate CLI with basic options
   virtual void PopulateBasicOptions(OptionDescription& basic_opts);
+  // Populate CLI with local options
   virtual void PopulateLocalOptions(OptionDescription& local_opts);
+  // Populate CLI with positional options
   virtual void PopulatePositionalOptions(PosOptionDescription& pos_opts);
+  // Populate CLI with custom categories and options
   virtual void PopulateCommandLine(OptionDescription& command_line);
-
-  virtual bool IsServerCli() = 0;
+  // Parse custom options
   virtual void ParseOptions(const VariableMap& value,
                             ParsedParameters& parsed_params,
-                            boost::system::error_code& ec) = 0;
-
-  static bool DisplayHelp(const VariableMap& vm, const OptionDescription& cli);
-
-  void ParseBaseOptions(const VariableMap& vm, boost::system::error_code& ec);
-
-  ParsedParameters DoParse(const OptionDescription& services,
-                           const VariableMap& vm,
-                           boost::system::error_code& ec);
+                            boost::system::error_code& ec);
+  // Return true for server CLI
+  virtual bool IsServerCli();
 
  private:
   void InitBasicOptions(OptionDescription& basic_opts);
   void InitLocalOptions(OptionDescription& local_opts);
+
+  static bool DisplayHelp(const VariableMap& vm, const OptionDescription& cli);
+
+  void ParseBasicOptions(const VariableMap& vm, boost::system::error_code& ec);
+
+  ParsedParameters DoParse(const OptionDescription& services,
+                           const VariableMap& vm,
+                           boost::system::error_code& ec);
 
   void set_log_level(const std::string& level);
 
