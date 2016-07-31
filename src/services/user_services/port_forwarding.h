@@ -54,8 +54,10 @@ class PortForwading : public BaseUserService<Demux> {
 
   static std::string GetParseName() { return "forward"; }
 
+  static std::string GetValueName() { return "loc_port:dest_ip:dest_port"; }
+
   static std::string GetParseDesc() {
-    return "Forward local port on given target";
+    return "Forward local port on given target from server";
   }
 
  public:
@@ -86,7 +88,7 @@ class PortForwading : public BaseUserService<Demux> {
 
   static void RegisterToServiceOptionFactory() {
     ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetParseDesc(),
+        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
         &PortForwading::CreateServiceOptions);
   }
 

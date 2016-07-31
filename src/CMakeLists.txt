@@ -24,11 +24,18 @@ FILE(GLOB_RECURSE COMMON_NETWORK_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/common/network/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/common/network/*.cpp")
 
+set(CORE_COMMAND_LINE_BASE_FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/base.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/base.cpp"
+)
+
 FILE(GLOB CORE_COMMAND_LINE_STANDARD_FILES
+  ${CORE_COMMAND_LINE_BASE_FILES}
   "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/standard/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/standard/*.cpp")
 
 FILE(GLOB CORE_COMMAND_LINE_COPY_FILES
+  ${CORE_COMMAND_LINE_BASE_FILES}
   "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/copy/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/copy/*.cpp")
 
@@ -114,7 +121,7 @@ FILE(GLOB_RECURSE USER_SERVICE_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.ipp")
-  
+
 set(CIRCUIT_CONFIG_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/core/circuit/config.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/circuit/config.cpp")

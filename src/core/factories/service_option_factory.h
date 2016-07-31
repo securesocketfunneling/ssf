@@ -26,6 +26,7 @@ class ServiceOptionFactory {
   struct ParserDescriptor {
     ServiceParserType parser;
     std::string fullname;
+    std::string value_name;
     std::string description;
   };
 
@@ -34,6 +35,7 @@ class ServiceOptionFactory {
  public:
   static bool RegisterUserServiceParser(std::string index,
                                         std::string full_name,
+                                        std::string value_name,
                                         std::string description,
                                         ServiceParserType parser) {
     boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
@@ -41,7 +43,7 @@ class ServiceOptionFactory {
       return false;
     } else {
       service_options_[index] = {std::move(parser), std::move(full_name),
-                                 std::move(description)};
+                                 std::move(value_name), std::move(description)};
       return true;
     }
   }
@@ -66,7 +68,8 @@ class ServiceOptionFactory {
     for (auto& option : service_options_) {
       desc.add_options()(
           option.second.fullname.c_str(),
-          boost::program_options::value<std::vector<std::string>>(),
+          boost::program_options::value<std::vector<std::string>>()->value_name(
+              option.second.value_name.c_str()),
           option.second.description.c_str());
     }
 

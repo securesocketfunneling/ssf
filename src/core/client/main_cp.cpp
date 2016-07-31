@@ -36,13 +36,11 @@ NetworkProtocol::Query GenerateNetworkQuery(
     const ssf::config::Config& config, const CircuitConfig& circuit_config);
 
 int main(int argc, char** argv) {
-  ssf::log::Configure();
-
   // Parse the command line
   ssf::command_line::copy::CommandLine cmd;
 
   boost::system::error_code ec;
-  cmd.parse(argc, argv, ec);
+  cmd.Parse(argc, argv, ec);
 
   if (ec.value() == ::error::operation_canceled) {
     return 0;
@@ -52,6 +50,8 @@ int main(int argc, char** argv) {
     SSF_LOG(kLogError) << "client: wrong command line arguments";
     return 1;
   }
+  
+  ssf::log::Configure(cmd.log_level());
 
   // Create and initialize copy user service
   auto p_copy_service =
@@ -67,12 +67,12 @@ int main(int argc, char** argv) {
   std::vector<BaseUserServicePtr> user_services;
   user_services.push_back(p_copy_service);
 
-  if (!cmd.IsAddrSet()) {
+  if (!cmd.host_set()) {
     SSF_LOG(kLogError) << "client: no remote host provided -- Exiting";
     return 1;
   }
 
-  if (!cmd.IsPortSet()) {
+  if (!cmd.port_set()) {
     SSF_LOG(kLogError) << "client: no host port provided -- Exiting";
     return 1;
   }
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
   circuit_config.Log();
 
   auto endpoint_query = GenerateNetworkQuery(
-      cmd.addr(), std::to_string(cmd.port()), ssf_config, circuit_config);
+      cmd.host(), std::to_string(cmd.port()), ssf_config, circuit_config);
 
   std::condition_variable wait_stop_cv;
   std::mutex mutex;
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.addr() << ":"
+  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.host() << ":"
                     << cmd.port() << ">";
 
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);

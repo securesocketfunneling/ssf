@@ -21,15 +21,13 @@ using Server =
     ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
 int main(int argc, char** argv) {
-  ssf::log::Configure();
-
   // The command line parser
   ssf::command_line::standard::CommandLine cmd(true);
 
   // Parse the command line
   boost::system::error_code ec;
-  cmd.parse(argc, argv, ec);
-
+  cmd.Parse(argc, argv, ec);
+  
   if (ec.value() == ::error::operation_canceled) {
     return 0;
   }
@@ -38,6 +36,8 @@ int main(int argc, char** argv) {
     SSF_LOG(kLogError) << "server: wrong arguments -- Exiting";
     return 1;
   }
+  
+  ssf::log::Configure(cmd.log_level());
 
   // Load SSF config if any
   ssf::config::Config ssf_config;
@@ -55,10 +55,10 @@ int main(int argc, char** argv) {
 
   // construct endpoint parameter stack
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(
-      cmd.addr(), std::to_string(cmd.port()), ssf_config);
+      cmd.host(), std::to_string(cmd.port()), ssf_config);
 
   SSF_LOG(kLogInfo) << "server: listening on <"
-                    << (!cmd.addr().empty() ? cmd.addr() : "*") << ":"
+                    << (!cmd.host().empty() ? cmd.host() : "*") << ":"
                     << cmd.port() << ">";
 
   server.Run(endpoint_query, ec);

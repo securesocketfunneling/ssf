@@ -35,6 +35,8 @@ class RemoteSocks : public BaseUserService<Demux> {
 
   static std::string GetParseName() { return "remote_socks"; }
 
+  static std::string GetValueName() { return "remote_port"; }
+
   static std::string GetParseDesc() {
     return "Run a proxy socks on local host";
   }
@@ -56,7 +58,7 @@ class RemoteSocks : public BaseUserService<Demux> {
 
   static void RegisterToServiceOptionFactory() {
     ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetParseDesc(),
+        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
         &RemoteSocks::CreateServiceOptions);
   }
 

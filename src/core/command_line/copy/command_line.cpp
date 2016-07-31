@@ -20,84 +20,40 @@ namespace ssf {
 namespace command_line {
 namespace copy {
 
-CommandLine::CommandLine()
-    : addr_(""), circuit_file_(""), addr_set_(false), port_set_(false) {}
+CommandLine::CommandLine() : BaseCommandLine(), from_stdin_(false) {}
 
-void CommandLine::parse(int argc, char* argv[], boost::system::error_code& ec) {
-  try {
-    // clang-format off
-    int opt;
-    boost::program_options::options_description desc("Basic options");
-    desc.add_options()
-      ("help,h", "Produce help message");
+void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
-    boost::program_options::options_description options("Client options");
-    options.add_options()
-      ("port,p",
-          boost::program_options::value<int>(&opt)->default_value(8011),
-          "Set remote SSF server port")
-      ("bounces,b",
-          boost::program_options::value<std::string>(),
-          "Set circuit file")
-      ("config,c",
-          boost::program_options::value<std::string>(),
-          "Set config file");
+void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {}
 
-    boost::program_options::options_description copy_options("Copy options");
-    copy_options.add_options()
-      ("stdin,t", boost::program_options::bool_switch()->default_value(false), "Input will be stdin")
-      ("arg1",
-         boost::program_options::value<std::string>(),
-         "[host@]/absolute/path/file if host is present, the file will be copied from the remote host to local")
-      ("arg2",
-         boost::program_options::value<std::string>(),
-         "[host@]/absolute/path/file if host is present, the file will be copied from local to host");
-    // clang-format on
-
-    boost::program_options::positional_options_description position_options;
-    position_options.add("arg1", 1);
-    position_options.add("arg2", 1);
-
-    boost::program_options::options_description cmd_line;
-    cmd_line.add(desc).add(options).add(copy_options);
-    boost::program_options::variables_map vm;
-    boost::program_options::store(
-        boost::program_options::command_line_parser(argc, argv)
-            .options(cmd_line)
-            .positional(position_options)
-            .run(),
-        vm);
-    boost::program_options::notify(vm);
-
-    if (vm.count("help")) {
-      std::cout << "SSF " << ssf::versions::major << "." 
-        << ssf::versions::minor << "."
-        << ssf::versions::fix
-        << std::endl << std::endl;
-      std::cout << "usage : ssfcp  [-p port] [-b circuit_file] [-c "
-                   "config] [-h] [-t] arg1 [arg2]" << std::endl;
-      std::cout << cmd_line << std::endl;
-      std::cout << "Using Boost " << ssf::versions::boost_version <<
-        " and OpenSSL " << ssf::versions::openssl_version
-        << std::endl << std::endl;
-      ec.assign(::error::operation_canceled, ::error::get_ssf_category());
-      return;
-    }
-
-    ec.assign(::error::success, ::error::get_ssf_category());
-    InternalParsing(vm, ec);
-  } catch (const std::exception&) {
-    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-  }
+void CommandLine::PopulatePositionalOptions(PosOptionDescription& pos_opts) {
+  pos_opts.add("arg1", 1);
+  pos_opts.add("arg2", 1);
 }
 
-uint16_t CommandLine::port() const { return port_; }
+void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
+  // clang-format off
+  boost::program_options::options_description copy_options("Copy options");
+  copy_options.add_options()
+    ("stdin,t",
+        boost::program_options::bool_switch()->default_value(false),
+        "Input will be stdin")
+    ("arg1",
+        boost::program_options::value<std::string>()->required()
+          ->value_name("[host@]/absolute/path/file"),
+        "[host@]/absolute/path/file if host is present, " \
+        "the file will be copied from the remote host to local")
+    ("arg2",
+        boost::program_options::value<std::string>()
+          ->value_name("[host@]/absolute/path/file"),
+        "[host@]/absolute/path/file if host is present, " \
+        "the file will be copied from local to host");
+  // clang-format on
 
-std::string CommandLine::addr() const { return addr_; }
+  command_line.add(copy_options);
+}
 
-std::string CommandLine::circuit_file() const { return circuit_file_; }
-
-std::string CommandLine::config_file() const { return config_file_; }
+bool CommandLine::IsServerCli() { return false; }
 
 bool CommandLine::from_stdin() const { return from_stdin_; }
 
@@ -107,77 +63,47 @@ std::string CommandLine::input_pattern() const { return input_pattern_; }
 
 std::string CommandLine::output_pattern() const { return output_pattern_; }
 
-bool CommandLine::IsPortSet() const { return port_set_; }
+void CommandLine::ParseOptions(const VariableMap& vm,
+                               ParsedParameters& parsed_params,
+                               boost::system::error_code& ec) {
+  const auto& stdin_it = vm.find("stdin");
+  const auto& vm_end_it = vm.end();
 
-bool CommandLine::IsAddrSet() const { return addr_set_; }
-
-void CommandLine::InternalParsing(
-    const boost::program_options::variables_map& vm,
-    boost::system::error_code& ec) {
-  auto port_it = vm.find("port");
-  if (port_it != vm.end()) {
-    ParsePort(port_it->second.as<int>(), ec);
-  }
-
-  auto stdin_it = vm.find("stdin");
-  if (stdin_it != vm.end()) {
+  if (stdin_it != vm_end_it) {
     from_stdin_ = stdin_it->second.as<bool>();
   }
 
-  auto circuit_file_it = vm.find("bounces");
-  if (circuit_file_it != vm.end()) {
-    circuit_file_ = circuit_file_it->second.as<std::string>();
-  }
+  ParseFirstArgument(vm["arg1"].as<std::string>(), ec);
 
-  auto config_it = vm.find("config");
-  if (config_it != vm.end()) {
-    config_file_ = config_it->second.as<std::string>();
-  }
-
-  auto first_arg_it = vm.find("arg1");
-  if (first_arg_it != vm.end()) {
-    ParseFirstArgument(first_arg_it->second.as<std::string>(), ec);
-  } else {
-    // there should always exist a first arg (input file, or host:input_file or
-    // host:output_file)
-    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-    return;
-  }
-
-  auto second_arg_it = vm.find("arg2");
-  if (second_arg_it != vm.end()) {
-    ParseSecondArgument(second_arg_it->second.as<std::string>(), ec);
+  const auto& arg2_it = vm.find("arg2");
+  if (arg2_it != vm_end_it) {
+    ParseSecondArgument(arg2_it->second.as<std::string>(), ec);
   }
 }
 
-void CommandLine::ParsePort(int port, boost::system::error_code& parse_ec) {
-  if (port > 0 && port < 65536) {
-    port_ = static_cast<uint16_t>(port);
-    port_set_ = true;
-  } else {
-    parse_ec.assign(::error::invalid_argument,
-                    ::error::get_ssf_category());
-  }
+std::string CommandLine::GetUsageDesc() {
+  return "ssfcp [options] [host@]/absolute/path/file "
+         "[[host@]/absolute/path/file]";
 }
 
 void CommandLine::ParseFirstArgument(const std::string& first_arg,
                                      boost::system::error_code& parse_ec) {
   if (from_stdin_) {
-    // expecting host:filepath syntax
-    ExtractHostPattern(first_arg, &addr_, &output_pattern_, parse_ec);
+    // Expecting host:filepath syntax
+    ExtractHostPattern(first_arg, &host_, &output_pattern_, parse_ec);
     if (!parse_ec) {
-      addr_set_ = true;
+      host_set_ = true;
       from_local_to_remote_ = true;
     }
   } else {
-    // expecting host:dirpath or filepath syntax
+    // Expecting host:dirpath or filepath syntax
     boost::system::error_code extract_ec;
-    ExtractHostPattern(first_arg, &addr_, &input_pattern_, extract_ec);
+    ExtractHostPattern(first_arg, &host_, &input_pattern_, extract_ec);
     if (!extract_ec) {
-      addr_set_ = true;
+      host_set_ = true;
       from_local_to_remote_ = false;
     } else {
-      // not host:dirpath syntax so it is filepath syntax
+      // Not host:dirpath syntax so it is filepath syntax
       input_pattern_ = first_arg;
       from_local_to_remote_ = true;
     }
@@ -187,30 +113,33 @@ void CommandLine::ParseFirstArgument(const std::string& first_arg,
 void CommandLine::ParseSecondArgument(const std::string& second_arg,
                                       boost::system::error_code& parse_ec) {
   if (from_stdin_) {
-    // no second arg should be provided
-    parse_ec.assign(::error::invalid_argument,
-                    ::error::get_ssf_category());
+    // No second arg should be provided with stdin option
+    SSF_LOG(kLogError) << "command line: parsing failed: two args provided "
+                          "with stdin option, expecting one";
+    parse_ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+
+    return;
+  }
+
+  // Expecting host:filepath or filepath syntax
+  if (from_local_to_remote_) {
+    // Expecting host:dirpath
+    ExtractHostPattern(second_arg, &host_, &output_pattern_, parse_ec);
+    if (parse_ec) {
+      host_set_ = false;
+      return;
+    }
+
+    host_set_ = true;
   } else {
-    // expecting host:filepath or filepath syntax
-    if (from_local_to_remote_) {
-      // expecting host:dirpath
-      ExtractHostPattern(second_arg, &addr_, &output_pattern_, parse_ec);
-      if (parse_ec) {
-        addr_set_ = false;
-        return;
-      }
+    // Expecting dirpath
+    output_pattern_ = second_arg;
+  }
 
-      addr_set_ = true;
-    } else {
-      // expecting dirpath
-      output_pattern_ = second_arg;
-    }
-
-    // Insert trailing slash if not present
-    auto last_slash_pos = output_pattern_.find_last_of('/');
-    if (last_slash_pos != output_pattern_.size() - 1) {
-      output_pattern_ += '/';
-    }
+  // Insert trailing slash if not present
+  auto last_slash_pos = output_pattern_.find_last_of('/');
+  if (last_slash_pos != output_pattern_.size() - 1) {
+    output_pattern_.append("/");
   }
 }
 

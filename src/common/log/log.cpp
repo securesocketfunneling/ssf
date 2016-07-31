@@ -5,10 +5,7 @@
 namespace ssf {
 namespace log {
 
-void Configure() {
-  // TODO : improve with severity level param
-  ssf::log::Log::SetSeverityLevel(ssf::log::kLogInfo);
-}
+void Configure(LogLevel level) { ssf::log::Log::SetSeverityLevel(level); }
 
 }  // log
 }  // ssf

@@ -48,9 +48,9 @@ void Proxy::Log() const {
       SSF_LOG(kLogInfo) << "config[HTTP proxy]: username: <" << username_
                         << ">";
     }
-    SSF_LOG(kLogInfo) << "config[HTTP proxy]: reuse: NTLM credentials <"
+    SSF_LOG(kLogInfo) << "config[HTTP proxy]: reuse NTLM credentials <"
                       << (reuse_ntlm_ ? "true" : "false") << ">";
-    SSF_LOG(kLogInfo) << "config[HTTP proxy]: reuse: Kerberos credentials <"
+    SSF_LOG(kLogInfo) << "config[HTTP proxy]: reuse Kerberos credentials <"
                       << (reuse_kerb_ ? "true" : "false") << ">";
   } else {
     SSF_LOG(kLogInfo) << "config[HTTP proxy]: <None>";
