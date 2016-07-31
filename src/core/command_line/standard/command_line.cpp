@@ -12,12 +12,15 @@ CommandLine::CommandLine(bool is_server)
 void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
 void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
+  auto* p_host_option =
+      boost::program_options::value<std::string>(&host_)->value_name("host");
+  if (!IsServerCli()) {
+    p_host_option->required();
+  }
   // clang-format off
   local_opts.add_options()
       ("host,H",
-         (IsServerCli() ?
-           boost::program_options::value<std::string>(&host_) :
-           boost::program_options::value<std::string>(&host_)->required()),
+         p_host_option,
          "Set host");
   // clang-format on
 }
@@ -38,6 +41,11 @@ void CommandLine::ParseOptions(const VariableMap& vm,
     host_set_ = true;
   }
 }
+
+std::string CommandLine::GetUsageDesc() {
+  return "ssf[c|s] [options] [host]";
+}
+
 
 }  // standard
 }  // command_line

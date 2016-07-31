@@ -62,6 +62,9 @@ class BaseCommandLine {
   virtual void ParseOptions(const VariableMap& value,
                             ParsedParameters& parsed_params,
                             boost::system::error_code& ec);
+  // Return usage description for help message
+  virtual std::string GetUsageDesc() = 0;
+
   // Return true for server CLI
   virtual bool IsServerCli();
 
@@ -69,7 +72,7 @@ class BaseCommandLine {
   void InitBasicOptions(OptionDescription& basic_opts);
   void InitLocalOptions(OptionDescription& local_opts);
 
-  static bool DisplayHelp(const VariableMap& vm, const OptionDescription& cli);
+  bool DisplayHelp(const VariableMap& vm, const OptionDescription& cli);
 
   void ParseBasicOptions(const VariableMap& vm, boost::system::error_code& ec);
 

@@ -42,6 +42,7 @@ class CommandLine : public BaseCommandLine {
   bool IsServerCli() override;
   void ParseOptions(const VariableMap& value, ParsedParameters& parsed_params,
                     boost::system::error_code& ec) override;
+  std::string GetUsageDesc() override;
 
  private:
   void ParseFirstArgument(const std::string& first_arg,

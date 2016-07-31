@@ -108,7 +108,9 @@ bool BaseCommandLine::DisplayHelp(const VariableMap& vm,
   }
 
   std::cout << "SSF " << ssf::versions::major << "." << ssf::versions::minor
-            << "." << ssf::versions::fix << std::endl;
+            << "." << ssf::versions::fix << std::endl << std::endl;
+
+  std::cout << "Usage: " << GetUsageDesc() << std::endl;
 
   std::cout << cli << std::endl;
 
@@ -179,9 +181,10 @@ void BaseCommandLine::InitBasicOptions(OptionDescription& basic_opts) {
 
   basic_opts.add_options()
     ("verbosity,v",
-        boost::program_options::value<std::string>(),
-        "Verbosity: critical|error|warning|info|debug|trace " \
-          "[default = info]");
+        boost::program_options::value<std::string>()
+          ->value_name("level")
+          ->default_value("info"),
+        "Verbosity:\n  critical|error|warning|info|debug|trace");
 
   basic_opts.add_options()
     ("quiet,q", "Do not display log");
@@ -191,24 +194,28 @@ void BaseCommandLine::InitBasicOptions(OptionDescription& basic_opts) {
 void BaseCommandLine::InitLocalOptions(OptionDescription& local_opts) {
   // clang-format off
   local_opts.add_options()
-      ("config,c",
-          boost::program_options::value<std::string>(),
-          "Set config file");
+    ("config,c",
+        boost::program_options::value<std::string>()
+          ->value_name("config_file_path"),
+        "Set config file");
 
   if (!IsServerCli()) {
     local_opts.add_options()
-      ("port,p",
-          boost::program_options::value<int>()->default_value(8011),
-          "Set remote SSF server port");
-
-    local_opts.add_options()
       ("circuit,b",
-          boost::program_options::value<std::string>(),
+          boost::program_options::value<std::string>()
+            ->value_name("circuit_file_path"),
           "Set circuit file");
+    
+    local_opts.add_options()
+      ("port,p",
+          boost::program_options::value<int>()->default_value(8011)
+            ->value_name("port"),
+          "Set remote SSF server port");
   } else {
     local_opts.add_options()
       ("port,p",
-          boost::program_options::value<int>()->default_value(8011),
+          boost::program_options::value<int>()->default_value(8011)
+            ->value_name("port"),
           "Set local SSF server port");
   }
   // clang-format on

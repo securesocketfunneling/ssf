@@ -39,11 +39,13 @@ void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
         boost::program_options::bool_switch()->default_value(false),
         "Input will be stdin")
     ("arg1",
-        boost::program_options::value<std::string>()->required(),
+        boost::program_options::value<std::string>()->required()
+          ->value_name("[host@]/absolute/path/file"),
         "[host@]/absolute/path/file if host is present, " \
         "the file will be copied from the remote host to local")
     ("arg2",
-        boost::program_options::value<std::string>(),
+        boost::program_options::value<std::string>()
+          ->value_name("[host@]/absolute/path/file"),
         "[host@]/absolute/path/file if host is present, " \
         "the file will be copied from local to host");
   // clang-format on
@@ -77,6 +79,11 @@ void CommandLine::ParseOptions(const VariableMap& vm,
   if (arg2_it != vm_end_it) {
     ParseSecondArgument(arg2_it->second.as<std::string>(), ec);
   }
+}
+
+std::string CommandLine::GetUsageDesc() {
+  return "ssfcp [options] [host@]/absolute/path/file "
+         "[[host@]/absolute/path/file]";
 }
 
 void CommandLine::ParseFirstArgument(const std::string& first_arg,

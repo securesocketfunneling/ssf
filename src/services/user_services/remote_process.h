@@ -29,6 +29,8 @@ class RemoteProcess : public BaseUserService<Demux> {
 
   static std::string GetParseName() { return "remote_process"; }
 
+  static std::string GetValueName() { return "remote_port"; }
+
   static std::string GetParseDesc() {
     return "Open a port on the server side, each connection to that port "
            "creates a process with I/O forwarded to/from the client side";
@@ -50,7 +52,7 @@ class RemoteProcess : public BaseUserService<Demux> {
 
   static void RegisterToServiceOptionFactory() {
     ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetParseDesc(),
+        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
         &RemoteProcess::CreateServiceOptions);
   }
 
