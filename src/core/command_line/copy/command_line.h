@@ -12,23 +12,19 @@
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
+#include "core/command_line/base.h"
+
 namespace ssf {
 namespace command_line {
 namespace copy {
 
-class CommandLine {
+class CommandLine : public BaseCommandLine {
  public:
   CommandLine();
 
-  void parse(int argc, char* argv[], boost::system::error_code& ec);
-
-  uint16_t port() const;
-
-  std::string addr() const;
-
-  std::string circuit_file() const;
-
-  std::string config_file() const;
+  virtual ~CommandLine() {}
 
   bool from_stdin() const;
 
@@ -38,16 +34,16 @@ class CommandLine {
 
   std::string output_pattern() const;
 
-  bool IsPortSet() const;
-
-  bool IsAddrSet() const;
+ protected:
+  void PopulateBasicOptions(OptionDescription& desc) override;
+  void PopulateLocalOptions(OptionDescription& desc) override;
+  void PopulatePositionalOptions(PosOptionDescription& desc) override;
+  void PopulateCommandLine(OptionDescription& command_line) override;
+  bool is_server_cli() override;
+  void ParseOptions(const VariableMap& value, ParsedParameters& parsed_params,
+                    boost::system::error_code& ec) override;
 
  private:
-  void InternalParsing(const boost::program_options::variables_map& vm,
-                       boost::system::error_code& ec);
-
-  void ParsePort(int port, boost::system::error_code& parse_ec);
-
   void ParseFirstArgument(const std::string& first_arg,
                           boost::system::error_code& parse_ec);
 
@@ -61,16 +57,10 @@ class CommandLine {
   char GetHostDirectorySeparator() const;
 
  private:
-  uint16_t port_;
-  std::string addr_;
-  std::string circuit_file_;
-  std::string config_file_;
   std::string input_pattern_;
   std::string output_pattern_;
   bool from_stdin_;
   bool from_local_to_remote_;
-  bool addr_set_;
-  bool port_set_;
 };
 
 }  // copy

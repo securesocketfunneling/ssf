@@ -4,7 +4,7 @@
 namespace ssf {
 namespace log {
 
-void Configure();
+void Configure(LogLevel level = ssf::log::kLogInfo);
 
 }  // log
 }  // ssf
