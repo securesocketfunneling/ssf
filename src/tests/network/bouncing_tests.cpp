@@ -70,7 +70,7 @@ TEST(BouncingTests, BouncingChain) {
 
   std::vector<BaseUserServicePtr> client_options;
   boost::system::error_code client_option_ec;
-  auto p_service = ssf::services::PortForwading<demux>::CreateServiceOptions(
+  auto p_service = ssf::services::PortForwarding<demux>::CreateServiceOptions(
       "5454:127.0.0.1:5354", client_option_ec);
   client_options.push_back(p_service);
 

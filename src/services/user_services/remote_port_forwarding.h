@@ -34,12 +34,12 @@ namespace ssf {
 namespace services {
 
 template <typename Demux>
-class RemotePortForwading : public BaseUserService<Demux> {
+class RemotePortForwarding : public BaseUserService<Demux> {
  private:
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  private:
-  RemotePortForwading(uint16_t remote_port, std::string local_addr,
+  RemotePortForwarding(uint16_t remote_port, std::string local_addr,
                       uint16_t local_port)
       : local_port_(local_port),
         local_addr_(local_addr),
@@ -61,7 +61,7 @@ class RemotePortForwading : public BaseUserService<Demux> {
   }
 
  public:
-  static std::shared_ptr<RemotePortForwading> CreateServiceOptions(
+  static std::shared_ptr<RemotePortForwarding> CreateServiceOptions(
       std::string line, boost::system::error_code& ec) {
     using boost::spirit::qi::int_;
     using boost::spirit::qi::alnum;
@@ -78,18 +78,18 @@ class RemotePortForwading : public BaseUserService<Demux> {
         listening_port, target_addr, target_port);
 
     if (parsed) {
-      return std::shared_ptr<RemotePortForwading>(
-          new RemotePortForwading(listening_port, target_addr, target_port));
+      return std::shared_ptr<RemotePortForwarding>(
+          new RemotePortForwarding(listening_port, target_addr, target_port));
     } else {
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-      return std::shared_ptr<RemotePortForwading>(nullptr);
+      return std::shared_ptr<RemotePortForwarding>(nullptr);
     }
   }
 
   static void RegisterToServiceOptionFactory() {
     ServiceOptionFactory<Demux>::RegisterUserServiceParser(
         GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
-        &RemotePortForwading::CreateServiceOptions);
+        &RemotePortForwarding::CreateServiceOptions);
   }
 
   virtual std::string GetName() { return "remote"; }

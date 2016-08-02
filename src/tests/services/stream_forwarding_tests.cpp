@@ -9,7 +9,7 @@
 #include "tests/services/tcp_helpers.h"
 
 class StreamForwardTest
-    : public ServiceFixtureTest<ssf::services::PortForwading> {
+    : public ServiceFixtureTest<ssf::services::PortForwarding> {
  public:
   StreamForwardTest() {}
 

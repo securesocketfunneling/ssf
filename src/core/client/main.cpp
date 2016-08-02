@@ -211,10 +211,10 @@ int main(int argc, char** argv) {
 void RegisterSupportedClientServices() {
   ssf::services::Socks<Demux>::RegisterToServiceOptionFactory();
   ssf::services::RemoteSocks<Demux>::RegisterToServiceOptionFactory();
-  ssf::services::PortForwading<Demux>::RegisterToServiceOptionFactory();
-  ssf::services::RemotePortForwading<Demux>::RegisterToServiceOptionFactory();
-  ssf::services::UdpPortForwading<Demux>::RegisterToServiceOptionFactory();
-  ssf::services::UdpRemotePortForwading<
+  ssf::services::PortForwarding<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::RemotePortForwarding<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::UdpPortForwarding<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::UdpRemotePortForwarding<
       Demux>::RegisterToServiceOptionFactory();
   ssf::services::Process<Demux>::RegisterToServiceOptionFactory();
   ssf::services::RemoteProcess<Demux>::RegisterToServiceOptionFactory();

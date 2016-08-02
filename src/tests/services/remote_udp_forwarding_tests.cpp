@@ -9,7 +9,7 @@
 #include "tests/services/udp_helpers.h"
 
 class RemoteUdpForwardTest
-    : public ServiceFixtureTest<ssf::services::UdpRemotePortForwading> {
+    : public ServiceFixtureTest<ssf::services::UdpRemotePortForwarding> {
  public:
   RemoteUdpForwardTest() {}
 
