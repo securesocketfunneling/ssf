@@ -26,7 +26,7 @@ class FiberTest : public ::testing::Test {
             new boost::asio::io_service::work(io_service_client_))),
         socket_client_(io_service_client_),
         resolver_client_(io_service_client_),
-        query_client_(boost::asio::ip::tcp::v4(), "127.0.0.1", "8011"),
+        query_client_(boost::asio::ip::tcp::v4(), "127.0.0.1", "9011"),
         iterator_client_(resolver_client_.resolve(query_client_)),
         demux_client_(io_service_client_),
         client_ready_(),
@@ -37,7 +37,7 @@ class FiberTest : public ::testing::Test {
         socket_server_(io_service_server_),
         acceptor_server_(io_service_server_),
         resolver_server_(io_service_server_),
-        query_server_(boost::asio::ip::tcp::v4(), "127.0.0.1", "8011"),
+        query_server_(boost::asio::ip::tcp::v4(), "127.0.0.1", "9011"),
         endpoint_server_(*resolver_server_.resolve(query_server_)),
         demux_server_(io_service_server_),
         server_ready_() {}

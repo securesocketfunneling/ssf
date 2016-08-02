@@ -9,7 +9,7 @@
 #include "tests/services/tcp_helpers.h"
 
 class RemoteStreamForwardTest
-    : public ServiceFixtureTest<ssf::services::RemotePortForwading> {
+    : public ServiceFixtureTest<ssf::services::RemotePortForwarding> {
  public:
   RemoteStreamForwardTest() {}
 
