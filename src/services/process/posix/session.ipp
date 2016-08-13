@@ -76,10 +76,9 @@ void Session<Demux>::start(boost::system::error_code& ec) {
     struct termios new_term_settings;
     close(master_tty);
 
-    // set tty as raw (input char by char, echoing disabled, special process
-    // for input/output characters disabled.
     tcgetattr(slave_tty, &new_term_settings);
-    cfmakeraw(&new_term_settings);
+    // IGNCR: ignore  carriage return on input
+    new_term_settings.c_iflag |= ( IGNCR );
     tcsetattr(slave_tty, TCSANOW, &new_term_settings);
 
     // new process as session leader
