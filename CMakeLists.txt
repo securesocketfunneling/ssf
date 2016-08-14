@@ -3,7 +3,7 @@ set(project_name "SSF")
 project(${project_name})
 
 set(SSF_VERSION_MAJOR 2)
-set(SSF_VERSION_MINOR 0)
+set(SSF_VERSION_MINOR 1)
 set(SSF_VERSION_FIX 0)
 set(SSF_VERSION_BOUNCE 2)
 set(SSF_VERSION_TRANSPORT 1)
