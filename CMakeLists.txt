@@ -3,7 +3,7 @@ set(project_name "SSF")
 project(${project_name})
 
 set(SSF_VERSION_MAJOR 2)
-set(SSF_VERSION_MINOR 0)
+set(SSF_VERSION_MINOR 1)
 set(SSF_VERSION_FIX 0)
 set(SSF_VERSION_BOUNCE 2)
 set(SSF_VERSION_TRANSPORT 1)
@@ -43,12 +43,10 @@ set(project_EXEC_DIR "${project_BINARY_DIR}/ssf/${project_EXEC_DIR_NAME}")
 add_subdirectory("${project_THIRDPARTY_DIR}/cmake-build-system")
 include(HelpersIdeTarget)
 
-set(BOOST_ROOT
-      "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
+set(BOOST_ROOT "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
 message("** BOOST_ROOT: ${BOOST_ROOT}")
 
-set(OPENSSL_ROOT_DIR
-      "${project_THIRDPARTY_DIR}/openssl" CACHE PATH "Path of openssl library")
+set(OPENSSL_ROOT_DIR "${project_THIRDPARTY_DIR}/openssl" CACHE PATH "Path of openssl library")
 message("** OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR}")
 
 # ---- Third party parameters
@@ -115,19 +113,26 @@ include_directories(${project_BINARY_DIR})
 
 # --- Test certs
 set(SSF_CERT_TEST_ROOT_FILES
-    "${project_ROOT_DIR}/certs/certificate.crt"
-    "${project_ROOT_DIR}/certs/dh4096.pem"
-    "${project_ROOT_DIR}/certs/private.key")
+  "${project_ROOT_DIR}/certs/certificate.crt"
+  "${project_ROOT_DIR}/certs/dh4096.pem"
+  "${project_ROOT_DIR}/certs/private.key")
 set(SSF_CERT_TEST_TRUSTED_FILES
-    "${project_ROOT_DIR}/certs/trusted/ca.crt"
+  "${project_ROOT_DIR}/certs/trusted/ca.crt"
 )
+
+# --- Copy test certs in ssf install dir
+set(project_EXEC_CERTS_DIR "${project_EXEC_DIR}/certs")
+file(MAKE_DIRECTORY ${project_EXEC_CERTS_DIR})
+file(MAKE_DIRECTORY ${project_EXEC_CERTS_DIR}/trusted)
+
+file(COPY ${SSF_CERT_TEST_ROOT_FILES} DESTINATION ${project_EXEC_CERTS_DIR})
+file(COPY ${SSF_CERT_TEST_TRUSTED_FILES} DESTINATION "${project_EXEC_CERTS_DIR}/trusted")
 
 # --- Unit tests
 if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
   include(GTest)
 
-  set(GTEST_ROOT_DIR
-        "${project_THIRDPARTY_DIR}/gtest" CACHE PATH "Path of gtest library")
+  set(GTEST_ROOT_DIR "${project_THIRDPARTY_DIR}/gtest" CACHE PATH "Path of gtest library")
 
   # --- Extract GTest archive in build directory
   gtest_unpack_archive()
