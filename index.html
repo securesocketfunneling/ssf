@@ -25,7 +25,7 @@
          </script>
         <link href="./css/ssf.css" rel="stylesheet"/>
     </head>
-    
+
     <body role="tabpanel">
         <nav id="navigation" class="navbar navbar-inverse navbar-fixed-top">
             <div class="container">
@@ -52,7 +52,7 @@
                                 <li><a aria-controls="how-to-use-udp-forwarding" data-toggle="tab" href="#how-to-use-udp-forwarding">Use UDP port forwarding</a></li>
                                 <li><a aria-controls="how-to-browse-privately" data-toggle="tab" href="#how-to-browse-privately">Browse securely and privately from everywhere</a></li>
                                 <li><a aria-controls="how-to-copy-file" data-toggle="tab" href="#how-to-copy-file">Copy file</a></li>
-                            </ul>                            
+                            </ul>
                         </li>
                         <li role="presentation" class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">Build<span class="caret"></span></a>
@@ -60,7 +60,7 @@
                                 <li><a aria-controls="how-to-build-windows" data-toggle="tab" href="#how-to-build-windows"><i class="fa fa-windows fa-fw"></i> on Windows</a></li>
                                 <li><a aria-controls="how-to-build-linux" data-toggle="tab" href="#how-to-build-linux"><i class="fa fa-linux fa-fw"></i> on Linux</a></li>
                                 <li><a aria-controls="how-to-build-mac" data-toggle="tab" href="#how-to-build-mac"><i class="fa fa-apple fa-fw"></i> on Mac OS X</a></li>
-                            </ul>                            
+                            </ul>
                         </li>
                         <li role="presentation"><a aria-controls="download" data-toggle="tab" href="#download">Download</a></li>
 						<li role="presentation" class="dropdown">
@@ -70,9 +70,9 @@
                                 <li><a aria-controls="performances" data-toggle="tab" href="#performances">Performances</a></li>
                                 <li><a aria-controls="developer-corner" data-toggle="tab" href="#developer-corner">Developer corner</a></li>
                                 <li><a aria-controls="about-us" data-toggle="tab" href="#about">About the project</a></li>
-                            </ul>                            
+                            </ul>
                         </li>
-                        
+
                         <!--<li role="presentation"><a aria-controls="ID-PART" data-toggle="tab" href="#ID-PART">PART</a></li>-->
                     </ul>
                     <ul class="nav navbar-nav navbar-right">
@@ -85,50 +85,55 @@
             </div>
         </nav>
 
-        
+
         <span id="forkongithub">
             <a href="https://github.com/securesocketfunneling/ssf">Fork me on GitHub</a>
         </span>
-        
+
         <div class="container" id="top">
             <div class="row">
                 <div class="col-md-12">
                     <div class="col-md-offset-3 col-md-6"><img id="logo" src="./logo/ssf-acronym.svg"/></div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-12"><br/><br/><br/></div>
             </div>
         </div>
-                
+
         <div class="container">
             <div class="row">
                 <div class="col-md-12 tab-content">
-				
+
                     <!-- Home -->
                     <div role="tabpanel" id="home" class="tab-pane fade in">
                         <h1>What is SSF?</h1>
-                        
+
                         <div class="well col-md-12">
-                        <div class="col-md-12">
-                            <p class="text-center">Secure Socket Funneling (SSF) is a network tool and toolkit.<br/> It provides simple and efficient ways to forward data from multiple sockets (TCP or UDP)
-                            through a single secure TLS link to a remote computer.</p>
+                            <div class="col-md-12">
+                                <p class="text-center">Secure Socket Funneling (SSF) is a network tool and toolkit.<br/> It provides simple and efficient ways to forward data from multiple sockets (TCP or UDP)
+                                through a single secure TLS link to a remote computer.</p>
+                            </div>
+
+                            <div class="col-md-12">
+                                <p class="text-center">
+                                    <a class="btn btn-primary btn-lg ssf-action-button" data-action="select-download">
+                                        Download  binaries<br/>
+                                        <i class="fa fa-windows fa-2x"></i>
+                                        <i class="fa fa-linux fa-2x"></i>
+                                        <!--<i class="fa fa-apple fa-2x"></i>-->
+                                    </a>
+                                    <a href="https://github.com/securesocketfunneling/ssf" class="btn btn-success btn-lg ssf-action-button">Build your own <br/><i class="fa fa-github fa-2x"></i></a>
+                                </p>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <p class="text-center">Version <strong>2.1.0</strong></p>
+                            </div>
+                                
                         </div>
-                        
-                        <div class="col-md-12">
-                            <p class="text-center">
-                                <a class="btn btn-primary btn-lg ssf-action-button" data-action="select-download">
-                                    Download  binaries<br/>
-                                    <i class="fa fa-windows fa-2x"></i>
-                                    <i class="fa fa-linux fa-2x"></i>
-                                    <i class="fa fa-apple fa-2x"></i>
-                                </a>
-                                <a href="https://github.com/securesocketfunneling/ssf" class="btn btn-success btn-lg ssf-action-button">Build your own <br/><i class="fa fa-github fa-2x"></i></a>
-                            </p>
-                        </div>
-                        </div>
-                        
+
                         <h3>Motivations</h3>
                         <div class="col-md-12">
                             <p>The initial aim of SSF was to provide an <strong>easy way for users and developers to multiplex and demultiplex</strong> various network data flows.
@@ -144,17 +149,17 @@
                             Classic VPN software was also excluded because the requirement of administrator rights was too limiting.
                             </p>
                         </div>
-                        
+
                         <h3>Specific features</h3>
                         <div class="col-md-12">
                             <ul>
                                 <li>
                                     <p>One feature which was not present in any another equivalent network tool was UDP forwarding. UDP is nonetheless widely used in real-time services (VoIP, online gaming, ...) and for DNS.
-                                    Therefore, <strong>SSF is able to forward both TCP and UDP</strong> from the client to the server (options <strong>-L</strong> and <strong>-U</strong>) 
+                                    Therefore, <strong>SSF is able to forward both TCP and UDP</strong> from the client to the server (options <strong>-L</strong> and <strong>-U</strong>)
                                     as well as from the server to the client (options <strong>-R</strong> and <strong>-V</strong>)</p>
                                 </li>
                                 <li>
-                                    <p>SSF also allows <strong>dynamic port forwarding with a SOCKS server</strong> from the client to the server (option <strong>-D</strong> just like SSH) 
+                                    <p>SSF also allows <strong>dynamic port forwarding with a SOCKS server</strong> from the client to the server (option <strong>-D</strong> just like SSH)
                                     and <strong>from the server to the client</strong> (option <strong>-F</strong> which SSH does not allow)</p>
                                 </li>
                                 <li>
@@ -162,7 +167,7 @@
                                 </li>
                             </ul>
                         </div>
-                        
+
                         <h3>DevOps friendly</h3>
                         <div class="col-md-12">
                             <p>SSF command-line was designed as a <strong>drop-in replacement for SSH</strong> (on equivalent features, such as port forwarding or SOCKS),
@@ -170,36 +175,36 @@
                         </div>
                     </div>
                     <!-- End home -->
-					
+
                     <!-- How to configure SSF -->
                     <div role="tabpanel" id="how-to-configure" class="tab-pane fade">
                         <h1 id="bouncing">How to configure SSF</h1>
-						
+
                         <div class="col-md-12">
                             <p>SSF provides a simple way to route an SSF connection between a client and a server through a list of SSF relay servers without protocol or cryptographic overhead.
-                               At this point, the traffic is decrypted as it is received by a relay and re-encrypted to be sent to the next relay or final destination. 
-                               This means that the data will be encrypted between each relay but will transit unencrypted on the relay itself. 
+                               At this point, the traffic is decrypted as it is received by a relay and re-encrypted to be sent to the next relay or final destination.
+                               This means that the data will be encrypted between each relay but will transit unencrypted on the relay itself.
                                It is therefore essential that the relay servers be secure and controlled by the owner of the data.</p>
                             <p>If users were to express the need, future versions could add a second cryptographic layer between the client and the destination server so that the data remained encrypted by this layer on every relay.</p>
-                
+
                             <h2>Required files</h2>
                             <div class="col-md-12">
-                                <p>With default options, the following files and folders should be in the directory of execution of a client or a server 
+                                <p>With default options, the following files and folders should be in the directory of execution of a client or a server
                                 (see the <a href="#security-features" data-action="select-security-features">Security features</a> section if you do not know how to generate them):</p>
-                                <ul>                                    
+                                <ul>
                                     <li>./certs/dh4096.pem</li>
                                     <li>./certs/certificate.crt</li>
                                     <li>./certs/private.key</li>
                                     <li>./certs/trusted/ca.crt</li>
                                 </ul>
                                 <p>Where :</p>
-                                <ul>                                    
+                                <ul>
                                     <li><em>dh4096.pem</em> contains the Diffie-Hellman parameters needed for the establishment of session keys</li>
                                     <li><em>certificate.crt</em> and <em>private.key</em> are the certificate and the private key of the SSF server or client</li>
                                     <li><em>ca.crt</em> is the concatenated list of root certificates trusted by the SSF server or client</li>
                                 </ul>
-                                <div class="bs-callout bs-callout-warning"> 
-                                  The certificate and the private key should be <strong>unique</strong> to each SSF client or server. 
+                                <div class="bs-callout bs-callout-warning">
+                                  The certificate and the private key should be <strong>unique</strong> to each SSF client or server.
                                 </div>
                                 <p>Moreover, a client will be able to connect to a server if two conditions are fulfilled:</p>
                                 <ul>
@@ -213,99 +218,161 @@
                                 <p>In order to customize the paths and file names, the command line accepts a configuration file option <strong>-c</strong>.<br/>
                                 An example is given <a href="#config-file">below</a>.</p>
                             </div>
-                    
+
                             <h2 id="config-file">Configuration file</h2>
                             <div class="col-md-12">
-                                <p>The configuration file is JSON format file in which several options can be specified. 
-                                At this point, only security options relative to TLS use can be customized. 
-                                See below an example of configuration file. 
+                                <p>The configuration file is JSON format file in which several options can be specified.
+                                At this point, only security options relative to TLS use can be customized.
+                                See below an example of configuration file.
                                 For more information about TLS and SSF security see the <a href="#security-features" data-action="select-security-features">Security features</a> section.</p>
-                                   
+
 <pre>{
-	"ssf": {
-		"tls": {
-			"ca_cert_path": "./certs/trusted/ca.crt",
-			"cert_path": "./certs/certificate.crt",
-			"key_path": "./certs/private.key",
-			"key_password": "password",
-			"dh_path": "./certs/dh4096.pem",
-			"cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
-		}
-	}
+    "ssf": {
+        "tls": {
+            "ca_cert_path": "./certs/trusted/ca.crt",
+            "cert_path": "./certs/certificate.crt",
+            "key_path": "./certs/private.key",
+            "key_password": "password",
+            "dh_path": "./certs/dh4096.pem",
+            "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
+        },
+        "http_proxy": {
+            "host": "proxy.example.com",
+            "port": "3128",
+            "credentials": {
+                "username": "user",
+                "password": "password",
+                "domain": "EXAMPLE.COM",
+                "reuse_ntlm": "true",
+                "reuse_kerb": "true"
+            }
+        },
+        "services": {
+            "shell": {
+                "path": "/bin/bash",
+                "args": ""
+            }
+        }
+    }
 }</pre>
                                 <dl class="dl-horizontal">
                                     <dt>tls.ca_cert_path</dt>
                                     <dd>relative or absolute path to the CA certificate file</dd>
-                                    
+
                                     <dt>tls.cert_path</dt>
                                     <dd>relative or absolute path to the instance certificate file</dd>
-                                    
+
                                     <dt>tls.key_path</dt>
                                     <dd>relative or absolute path to the private key file</dd>
-                
+
                                     <dt>tls.key_password</dt>
                                     <dd>the password protecting the private key (if any)</dd>
-                                    
+
                                     <dt>tls.dh_path</dt>
-                                    <dd>relative or absolute path to the Diffie-Hellman file</dd>   
-                                    
+                                    <dd>relative or absolute path to the Diffie-Hellman file</dd>
+
                                     <dt>tls.cipher_alg</dt>
                                     <dd>List of allowed SSL cipher suite (see OpenSSL documentation for more information)</dd>
+
+                                    <dt>http_proxy.host</dt>
+                                    <dd>HTTP proxy host</dd>
+
+                                    <dt>http_proxy.port</dt>
+                                    <dd>HTTP proxy port</dd>
+
+                                    <dt>http_proxy.credentials.username</dt>
+                                    <dd>proxy username credentials</dd>
+
+                                    <dt>http_proxy.credentials.password</dt>
+                                    <dd>proxy password credentials</dd>
+
+                                    <dt>http_proxy.credentials.domain</dt>
+                                    <dd>user domain (NTLM and Negotiate auth on Windows only)</dd>
+
+                                    <dt>http_proxy.credentials.reuse_ntlm</dt>
+                                    <dd>reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)</dd>
+
+                                    <dt>http_proxy.credentials.reuse_kerb</dt>
+                                    <dd>reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO)</dd>
+
+                                    <dt>services.shell.path</dt>
+                                    <dd>binary path used for process creation</dd>
+
+                                    <dt>services.shell.args</dt>
+                                    <dd>binary arguments used for process creation</dd>
                                 </dl>
-                                <div class="bs-callout bs-callout-info"> 
-                                    <p>For an SSF server, if the private key is encrypted but 
-                                    no password was provided with the configuration file, 
+                                <div class="bs-callout bs-callout-info">
+                                    <p>For an SSF server, if the private key is encrypted but
+                                    no password was provided with the configuration file,
                                     all connections will fail.<br/>
-                                    However, for an SSF client, a password prompt will be 
-                                    presented to the user. It will give him the opportunity to enter 
+                                    However, for an SSF client, a password prompt will be
+                                    presented to the user. It will give him the opportunity to enter
                                     the password, if needed.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <!-- End how to configure SSF -->
-                    
+
                     <!-- How to use general -->
                     <div role="tabpanel" id="how-to-use" class="tab-pane fade">
                         <h1>How to use the command line</h1>
-                
+
                         <div class="col-md-12">
                             <h2>Standard command line options</h2>
                             <div class="col-md-12">
-                                <pre>ssf&lt;c|s&gt;[.exe] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]</pre>
+
+<pre>ssf&lt;c|s&gt;[.exe]
+    [-v verb_level] [-q]
+    [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-X port] [-Y port]
+    [-b bounce_file] [-c config_file] [-p port] [host]
+</pre>
+
                                 <dl class="dl-horizontal">
-                                    <dt>host</dt>
-                                    <dd>the IP address or the name of the remote server to connect to</dd>
-                                    
-                                    <dt>-p</dt>
-                                    <dd><code>port</code> is the port on which to listen (for the server) or to connect (for the client). The default value is 8011</dd>
-                                    
+                                    <dt>-v</dt>
+                                    <dd>Verbosity level (critical, error, warning, info, debug, trace), default is info</dd>
+
+                                    <dt>-q</dt>
+                                    <dd>Quiet mode (no log)</dd>
+
                                     <dt>-L</dt>
                                     <dd>TCP port forwarding with <code>loc</code> as the local TCP port, <code>ip</code> and <code>dest</code> as destination toward which the forward should be done from the server</dd>
-                                    
+
                                     <dt>-R</dt>
                                     <dd>TCP remote port forwarding with <code>rem</code> as the TCP port to forward from the remote host, <code>ip</code> and <code>dest</code> as destination toward which the forward should be done from the client</dd>
-                                    
+
                                     <dt>-D</dt>
                                     <dd>open a port (<code>port</code>) on the client to connect to a SOCKS server on the server from the client</dd>
-                                    
+
                                     <dt>-F</dt>
                                     <dd>open a port (<code>port</code>) on the server to connect to a SOCKS server on the client from the server</dd>
-                                    
+
                                     <dt>-U </dt>
                                     <dd>UDP port forwarding with <code>loc</code> as the UDP port to forward from the client, <code>ip</code> and <code>dest</code> as destination toward which the forward should be done from the server</dd>
-                                    
+
                                     <dt>-V</dt>
                                     <dd>UDP remote port forwarding with <code>rem</code> as the UDP port to forward from the server, <code>ip</code> and <code>dest</code> as destination toward which the forward should be done from the client</dd>
-                                    
+
+                                    <dt>-X</dt>
+                                    <dd>open a port (<code>port</code>) on the client, each connection to that port creates a process with I/O forwarded to/from the server side</dd>
+
+                                    <dt>-Y</dt>
+                                    <dd>open a port (<code>port</code>) on the server, each connection to that port creates a process with I/O forwarded to/from the client side</dd>
+
                                     <dt>-b</dt>
                                     <dd><code>bounce_file</code> is the file containing the list of relays to use</dd>
-                                    
+
                                     <dt>-c</dt>
                                     <dd><code>config_file</code> is the file containing configuration for SSF (TLS configuration)</dd>
+
+                                    <dt>-p</dt>
+                                    <dd><code>port</code> is the port on which to listen (for the server) or to connect (for the client). The default value is 8011</dd>
+
+                                    <dt>host</dt>
+                                    <dd>the IP address or the name of the remote server to connect to</dd>
                                 </dl>
                             </div>
-                            
+
                             <h3>Examples</h3>
                             <div class="col-md-12">
                                 <p>For instance, this command line will start SSF as a server on default port 8011:</p>
@@ -314,7 +381,7 @@
                                 <pre>./ssfc -D 10000 127.0.0.1</pre>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-12">
                             <h2>Copy command line options</h2>
                             <div class="col-md-12">
@@ -322,31 +389,31 @@
                                 <dl class="dl-horizontal">
                                     <dt>-b</dt>
                                     <dd><code>bounce_file</code> is the file containing the list of relays to use</dd>
-                                    
+
                                     <dt>-c</dt>
                                     <dd><code>config_file</code> is the file containing configuration for SSF (TLS configuration)</dd>
-                                    
+
                                     <dt>-t</dt>
                                     <dd>input data from stdin</dd>
                                 </dl>
                             </div>
-                            
+
                             <h3>Examples</h3>
                             <div class="col-md-12">
                                 <h4>Copy local files to remote directory</h4>
-                                <div class="col-md-12">            
+                                <div class="col-md-12">
                                     <p>This command will copy the file <strong>/tmp/test.txt</strong> in the remote directory <strong>D:\test</strong> of server 10.0.0.1</p>
                                     <pre>ssfcp /tmp/test.txt 10.0.0.1@D:\\test</pre>
                                     <p>This command will copy all local files matching the pattern <strong>/tmp/test*.txt</strong> in the remote directory <strong>D:\test</strong> of 10.0.0.1</p>
                                     <pre>ssfcp /tmp/test*.txt 10.0.0.1@D:\\test</pre>
                                 </div>
-                                
+
                                 <h4>Copy client stdin into remote file</h4>
-                                <div class="col-md-12">            
+                                <div class="col-md-12">
                                     <p>This command will pipe the resulting archive into the file <strong>D:\test\test.tar</strong> of 10.0.0.1</p>
                                     <pre>tar cf - /tmp/test | ssfcp -t 10.0.0.1@D:\\test\\test.tar</pre>
                                 </div>
-                                
+
                                 <h4>Copy remote files to local directory</h4>
                                 <div class="col-md-12">
                                     <p>This command will copy the file <strong>D:\test\test.txt</strong> of 10.0.0.1 into the local directory <strong>/tmp</strong></p>
@@ -354,22 +421,22 @@
                                     <p>This command will copy all files of 10.0.0.1 matching <strong>D:\test\test*.txt</strong> into the local directory <strong>/tmp</strong></p>
                                     <pre>ssfcp 10.0.0.1@D:\\test\\test*.txt /tmp</pre>
                                 </div>
-                            </div>                            
+                            </div>
                         </div>
                     </div>
                     <!-- End how to use general -->
-					
+
                     <!-- How to use relay servers -->
                     <div role="tabpanel" id="how-to-use-relay-servers" class="tab-pane fade">
                         <h1 id="bouncing">How to use the relay servers (the bouncing feature)</h1>
-						
+
                         <div class="col-md-12">
                             <p>SSF provides a simple way to route an SSF connection between a client and a server through a list of SSF relay servers without protocol or cryptographic overhead.
-                               At this point, the traffic is decrypted as it is received by a relay and re-encrypted to be sent to the next relay or final destination. 
-                               This means that the data will be encrypted between each relay but will transit unencrypted on the relay itself. 
+                               At this point, the traffic is decrypted as it is received by a relay and re-encrypted to be sent to the next relay or final destination.
+                               This means that the data will be encrypted between each relay but will transit unencrypted on the relay itself.
                                It is therefore essential that the relay servers have to be secure and controlled by the owner of the data.</p>
                             <p>If users express the need, future versions could add a second cryptographic layer between the client and the destination server so that the data remained encrypted by this layer on every relay.</p>
-                
+
                             <div class="row">
                               <div class="col-md-offset-2 col-md-8">
                                 <p>
@@ -379,7 +446,7 @@
                                 </p>
                               </div>
                             </div>
-                            
+
                             <h2>The bounce file</h2>
                             <div class="col-md-12">
                                 <p>In order to route an SSF client connection through a list of relay servers, the option <strong>-b</strong> must be added to the command line to specify the bounce file.
@@ -390,11 +457,11 @@ SERVER2:PORT2
 SERVER3:PORT3</pre>
                                 <p>For the file above, the relay chain will be CLIENT <-> SERVER1:PORT1 <-> SERVER2:PORT2 <-> SERVER3:PORT3 <-> DESTINATION</p>
                             </div>
-                    
+
                             <h2>Example</h2>
                             <div class="col-md-12">
-                                <p>In this example, a client located in the <mark>10.0.1.*</mark> subnet wants to connect to the SSF server on <mark>10.0.6.1:5000</mark>. 
-                                   However for this example, firewalls will only allow each subnet to communicate with the next one through a single address. 
+                                <p>In this example, a client located in the <mark>10.0.1.*</mark> subnet wants to connect to the SSF server on <mark>10.0.6.1:5000</mark>.
+                                   However for this example, firewalls will only allow each subnet to communicate with the next one through a single address.
                                    For instance, in a subnet <mark>A.B.C.*</mark>, only <mark>A.B.C.1</mark> can communicate with <mark>A.B.C-1.*</mark> and <mark>A.B.C+1.*</mark>.
                                    Therefore, to reach <mark>10.0.6.1</mark>, the client has to go through <mark>10.0.1.1</mark>, <mark>10.0.2.1</mark>, ... and <mark>10.0.6.1</mark>.</p>
                                 <ul>
@@ -410,14 +477,14 @@ SERVER3:PORT3</pre>
 10.0.5.1:5000</pre>
                                   </li>
                                   <li>Connect the SSF client to <mark>10.0.6.1:5000</mark> through all the relay servers using the following command line:
-                                      <pre>./ssfc -b bounce.txt -p 5000 10.0.6.1</pre>        
+                                      <pre>./ssfc -b bounce.txt -p 5000 10.0.6.1</pre>
                                   </li>
                               </ul>
                             </div>
                         </div>
                     </div>
                     <!-- End how to use relay servers -->
-                    
+
                     <!-- How to use SOCKS -->
                     <div role="tabpanel" id="how-to-use-socks" class="tab-pane fade">
                         <h1 id="socks">How to use the SOCKS feature</h1>
@@ -451,9 +518,9 @@ SERVER3:PORT3</pre>
                                 </p>
                               </div>
                             </div>
-                        
+
                             <h2>Command line</h2>
-                            
+
                             <div class="col-md-12">
                               <h3>No bounce feature</h3>
                               <div class="col-md-12">
@@ -467,7 +534,7 @@ SERVER3:PORT3</pre>
                                       </li>
                                   </ul>
                               </div>
-                              
+
                               <h3>With bounce feature</h3>
                               <div class="col-md-12">
                                   <ul>
@@ -482,7 +549,7 @@ SERVER3:PORT3</pre>
                                           The client will connect to SSF_SERVER_2 with a bounce on SSF_SERVER_1
                                       </li>
                                       <li>Connect SSF_CLIENT to SSF_SERVER_2 with one bounce, initialize a SOCKS server on SSF_SERVER_2 and open port 9000 on client side to communicate to SOCKS server
-                                          <pre>./ssfc -b bounce.txt -D 9000 -p 10001 127.0.0.1</pre>        
+                                          <pre>./ssfc -b bounce.txt -D 9000 -p 10001 127.0.0.1</pre>
                                           Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
                                       </li>
                                   </ul>
@@ -491,7 +558,7 @@ SERVER3:PORT3</pre>
                         </div>
                     </div>
                     <!-- End how use SOCKS -->
-                    
+
                     <!-- How to use TCP forwarding -->
                     <div role="tabpanel" id="how-to-use-tcp-forwarding" class="tab-pane fade">
                         <h1 id="tcp-port-forwarding">How to use the TCP port forwarding feature</h1>
@@ -508,7 +575,7 @@ SERVER3:PORT3</pre>
                                     </li>
                                 </ul>
                             </div>
-                            
+
                             <h2>With bounce feature</h2>
                             <div class="col-md-12">
                                 <ul>
@@ -531,7 +598,7 @@ SERVER3:PORT3</pre>
                         </div>
                     </div>
                     <!-- End how use TCP forwarding -->
-                    
+
                     <!-- How to use UDP forwarding -->
                     <div role="tabpanel" id="how-to-use-udp-forwarding" class="tab-pane fade">
                         <h1 id="udp-port-forwarding">How to use the UDP port forwarding feature</h1>
@@ -548,7 +615,7 @@ SERVER3:PORT3</pre>
                                     </li>
                                 </ul>
                             </div>
-                            
+
                             <h2>With bounce feature</h2>
                             <div class="col-md-12">
                                 <ul>
@@ -570,23 +637,23 @@ SERVER3:PORT3</pre>
                             </div>
                         </div>
                     </div>
-                    <!-- End how use UDP forwarding -->                    
-                    
+                    <!-- End how use UDP forwarding -->
+
                     <!-- How to browse privately -->
                     <div role="tabpanel" id="how-to-browse-privately" class="tab-pane fade">
                         <h1>How to browse the web securely and privately from everywhere</h1>
-                                                
+
                         <div class="col-md-12">
                             <h2>You are in a coffee shop or an hotel</h2>
                             <div class="col-md-12">
                                 <p>and you are connected to its wifi network. You do not trust this connection or don't want the hotel's proxy / router or guy next to you to know what web page you visit.</p>
                                 <p>You will need two things:</p>
-                                <ul>                                    
+                                <ul>
                                     <li>the server side: running, connected to Internet (for example, your home machine, running Windows, or Linux, or Mac)</li>
                                     <li>the client side: running on your laptop when you want to browse Internet while being locally connected to an untrusted network (e.g. public wifi networks)</li>
                                 </ul>
-                        
-                                
+
+
                                 <div class="row">
                                   <div class="col-md-offset-2 col-md-8">
                                     <p>
@@ -596,7 +663,7 @@ SERVER3:PORT3</pre>
                                     </p>
                                   </div>
                                 </div>
-                        
+
                                 <h3>Configuring the server side (e.g. your home machine, up and running, connected to internet, even when you are not at home)</h3>
                                 <div class="col-md-12">
                                     <pre>./ssfs -p port 10000</pre>
@@ -607,7 +674,7 @@ SERVER3:PORT3</pre>
                                 <div class="col-md-12">
                                     <pre>./ssfc -D 9000 -p 10000 SERVER_IP</pre>
                                     <p>Simply run this command, and configure your browser (firefox, IE, Chrome, Safari...), to use a socks server on address 127.0.0.1 port 9000</p>
-                                    <div class="bs-callout bs-callout-info"> 
+                                    <div class="bs-callout bs-callout-info">
                                         <p>This command uses <strong>-D</strong> (server side socks resolution) option.</p>
                                     </div>
                                 </div>
@@ -618,8 +685,8 @@ SERVER3:PORT3</pre>
                                     <p>Someone in the wifi network could fake DNS resolution, and redirect you to malicious websites.</p>
                                     <p>Change your DNS interface settings to 127.0.0.1, and, thanks to this command, every DNS request will go througt the secure SSF funnel, and public OpenDNS DNS server (208.67.222.222) will resolve them.<br/>
                                        No DNS request will leak on the network (wifi) you're connected to, and from DNS server view (OpenDNS provider for this example), it's your Server (SERVER_IP) that is making the DNS request.</p>
-                                    
-                                    <div class="bs-callout bs-callout-info"> 
+
+                                    <div class="bs-callout bs-callout-info">
                                         <p>This command combines both <strong>-D</strong> (server side socks) and <strong>-U</strong> (UDP forward) options. OpenDNS DNS server is given as an example. You could use any DNS server</p>
                                     </div>
                                 </div>
@@ -628,8 +695,8 @@ SERVER3:PORT3</pre>
                                 <div class="col-md-12">
                                     <p>Sometimes, public Wifi uses firewall restrictions to allow only web-related outgoing port (generaly 80-http, or 443-https).</p>
                                     <p>To comply with these restrictions and be able to browse securely using SSF, you should setup the SSF <strong>server</strong> to listen on port 80 or 443 (instead of 10000 in the basic example)</p>
-                                    
-                                    <div class="bs-callout bs-callout-info"> 
+
+                                    <div class="bs-callout bs-callout-info">
                                         <p>Binding SSF on a port below 1024 (e.g. 53, 80 or 443) will require administrative privileges. But as long as the SSF run on a machine that you control, this should not be an issue.</p>
                                     </div>
                                 </div>
@@ -737,11 +804,11 @@ SERVER3:PORT3</pre>
                         </div>
                     </div>
                     <!-- How to copy file -->
-                    
+
                     <!-- How to build windows -->
                     <div role="tabpanel" id="how-to-build-windows" class="tab-pane fade">
                         <h1>How to build on Windows</h1>
-                        
+
                         <div class="col-md-12">
                             <h2>Requirements</h2>
                             <div class="col-md-12">
@@ -756,7 +823,7 @@ SERVER3:PORT3</pre>
                                     <li>C++11 compiler (Visual Studio 2013, Clang, g++, etc.)</li>
                                 </ul>
                             </div>
-                                                    
+
                             <h2>SSF_SECURITY</h2>
                             <div class="col-md-12">
                                 <ul>
@@ -764,7 +831,7 @@ SERVER3:PORT3</pre>
                                     <li><strong>FORCE_TCP_ONLY</strong>: the project will be built without security features to facilitate debugging</li>
                                 </ul>
                             </div>
-                                                    
+
                             <h2>Process</h2>
                             <div class="col-md-12">
                                 <ul>
@@ -777,13 +844,13 @@ SERVER3:PORT3</pre>
                                         <pre>cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl</pre>
                                     </li>
 
-                                    <li>Copy <a href="http://code.google.com/p/googletest/downloads/list">GTest archive</a> in <code>third_party/gtest</code>
+                                    <li>Copy <a href="https://github.com/google/googletest/archive/release-1.7.0.zip">GTest archive</a> in <code>third_party/gtest</code>
                                         <pre>cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest</pre>
                                     </li>
                                     <li>Generate project
 <pre>mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
+cmake -G "GENERATOR" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
@@ -792,10 +859,12 @@ cmake --build . --config Debug|Release</pre>
                                     </li>
                                 </ul>
                             </div>
-                            
+
                             <h2>Known issues</h2>
                             <div class="col-md-12">
                                 <ul>
+                                    <li><strong>Boost</strong> build system needs to be patched to comply with our project (extra flags for Win32 binaries). Follow instructions in <code>third_party/boost/README.md</code></li>
+                                    <li><strong>GTest</strong> archive content has changed since its repository is on Github. Follow instructions in <code>third_party/gtest/README.md</code> to fix the build system</li>
                                     <li>If you are using <strong>openssl-1.0.2a</strong>, you need to fix the file <mark>crypto/x509v3/v3_scts.c</mark>. It contains an incorrect <code>#include</code> line.<br/>
                                         Copy <a href="https://github.com/openssl/openssl/commit/77b1f87214224689a84db21d2eb54e9497186d93.diff">the diff from OpenSSL Github</a>
                                         (ignore the 2 first lines) and put it in <code>PROJECT_PATH/third_party/openssl/patches</code>.<br/>
@@ -810,7 +879,7 @@ cmake --build . --config Debug|Release</pre>
                     <!-- How to build linux -->
                     <div role="tabpanel" id="how-to-build-linux" class="tab-pane fade">
                         <h1>How to build on Linux</h1>
-                        
+
                         <div class="col-md-12">
                             <h2>Requirements</h2>
                             <div class="col-md-12">
@@ -823,7 +892,7 @@ cmake --build . --config Debug|Release</pre>
                                     <li>C++11 compiler (Clang, g++, etc.)</li>
                                 </ul>
                             </div>
-                                                    
+
                             <h2>SSF_SECURITY</h2>
                             <div class="col-md-12">
                                 <ul>
@@ -831,7 +900,7 @@ cmake --build . --config Debug|Release</pre>
                                     <li><strong>FORCE_TCP_ONLY</strong>: the project will be built without security features to facilitate debugging</li>
                                 </ul>
                             </div>
-                            
+
                             <h2>Process</h2>
                             <div class="col-md-12">
                                 <ul>
@@ -844,19 +913,26 @@ cmake --build . --config Debug|Release</pre>
                                         <pre>cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl</pre>
                                     </li>
 
-                                    <li>Copy <a href="http://code.google.com/p/googletest/downloads/list">GTest archive</a> in <code>third_party/gtest</code>
+                                    <li>Copy <a href="https://github.com/google/googletest/archive/release-1.7.0.zip">GTest archive</a> in <code>third_party/gtest</code>
                                         <pre>cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest</pre>
                                     </li>
                                     <li>Generate project
 <pre>mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
+cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
 git submodule update --init --recursive
 cmake --build .</pre>
                                     </li>
+                                </ul>
+                            </div>
+
+                            <h2>Known issues</h2>
+                            <div class="col-md-12">
+                                <ul>
+                                    <li><strong>GTest</strong> archive content has changed since its repository is on Github. Follow instructions in <code>third_party/gtest/README.md</code> to fix the build system</li>
                                 </ul>
                             </div>
                         </div>
@@ -866,7 +942,7 @@ cmake --build .</pre>
                     <!-- How to build macos x -->
                     <div role="tabpanel" id="how-to-build-mac" class="tab-pane fade">
                         <h1>How to build on Mac OS X</h1>
-                        
+
                         <div class="col-md-12">
                             <h2>Requirements</h2>
                             <div class="col-md-12">
@@ -879,7 +955,7 @@ cmake --build .</pre>
                                     <li>C++11 compiler (Clang, g++, etc.)</li>
                                 </ul>
                             </div>
-                                                    
+
                             <h2>SSF_SECURITY</h2>
                             <div class="col-md-12">
                                 <ul>
@@ -900,13 +976,13 @@ cmake --build .</pre>
                                         <pre>cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl</pre>
                                     </li>
 
-                                    <li>Copy <a href="http://code.google.com/p/googletest/downloads/list">GTest archive</a> in <code>third_party/gtest</code>
+                                    <li>Copy <a href="https://github.com/google/googletest/archive/release-1.7.0.zip">GTest archive</a> in <code>third_party/gtest</code>
                                         <pre>cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest</pre>
                                     </li>
                                     <li>Generate project
 <pre>mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
+cmake -G "GENERATOR" -DCMAKE_BUILD_TYPE="Release|Debug" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../</pre>
                                     </li>
                                     <li>Build project
 <pre>cd PROJECT_PATH/build
@@ -915,28 +991,45 @@ cmake --build .</pre>
                                     </li>
                                 </ul>
                             </div>
-                        </div>
-                    </div>
-                    <!-- End how to build mac -->                    
-                    
-                    <!-- Download -->
-                    <div role="tabpanel" id="download" class="tab-pane fade">
-                        <h1>Download</h1>
-                        <div class="col-md-4">
-                            <div class="list-group">
-                                <a class="list-group-item" data-type="download" data-file="ssf-win-i386-1.1.0" href="download/1.1.0/ssf-win-i386-1.1.0.zip"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 32bits (1.1.0)</a>
-                                <a class="list-group-item" data-type="download" data-file="ssf-win-x86_64-1.1.0" href="download/1.1.0/ssf-win-x86_64-1.1.0.zip"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 64bits (1.1.0)</a>
-                                <a class="list-group-item disabled" href="#"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits</a>
-                                <!--<a class="list-group-item" data-type="download" data-file="ssf-linux-i386-1.1.0" href="download/1.1.0/ssf-linux-i386-1.1.0.zip"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits (1.1.0)</a>-->
-                                <a class="list-group-item" data-type="download" data-file="ssf-linux-x86_64-1.1.0" href="download/1.1.0/ssf-linux-x86_64-1.1.0.zip"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 64bits (1.1.0)</a>
-                                <a class="list-group-item disabled" href="#"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits</a>
-                                <!--<a class="list-group-item" data-type="download" data-file="ssf-macosx-x86_64-1.1.0" href="download/1.1.0/ssf-macosx-x86_64-1.1.0.zip"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits (1.1.0)</a>-->
-                                <a class="list-group-item" data-type="download" data-file="sources" href="https://github.com/securesocketfunneling/ssf"><i class="fa fa-cloud-download fa-2x fa-fw"></i> Sources</a>
+
+                            <h2>Known issues</h2>
+                            <div class="col-md-12">
+                                <ul>
+                                    <li><strong>GTest</strong> archive content has changed since its repository is on Github. Follow instructions in <code>third_party/gtest/README.md</code> to fix the build system</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
+                    <!-- End how to build mac -->
+
+                    <!-- Download -->
+                    <div role="tabpanel" id="download" class="tab-pane fade">
+                        <h1>Download</h1>
+                        <div class="col-md-12">
+                            <div class="col-md-4">
+                                <div class="list-group">
+                                    <a class="list-group-item" data-type="download" data-file="ssf-win-i386-2.1.0" href="download/2.1.0/ssf-win-i386-2.1.0.zip" title="Download SSF"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 32bits (2.1.0)</a>
+                                    <a class="list-group-item" data-type="download" data-file="ssf-win-x86_64-2.1.0" href="download/2.1.0/ssf-win-x86_64-2.1.0.zip" title="Download SSF"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 64bits (2.1.0)</a>
+                                    <a class="list-group-item" data-type="download" data-file="ssf-linux-i386-2.1.0" href="download/2.1.0/ssf-linux-i386-2.1.0.zip" title="Download SSF"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits (2.1.0)</a>
+                                    <a class="list-group-item" data-type="download" data-file="ssf-linux-x86_64-2.1.0" href="download/2.1.0/ssf-linux-x86_64-2.1.0.zip" title="Download SSF"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 64bits (2.1.0)</a>
+                                    <a class="list-group-item disabled" href="#" title="Not available"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits</a>
+                                    <!--<a class="list-group-item" data-type="download" data-file="ssf-macosx-x86_64-2.1.0" href="download/2.1.0/ssf-macosx-x86_64-2.1.0.zip"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits (2.1.0)</a>-->
+                                    <a class="list-group-item" data-type="download" data-file="sources" href="https://github.com/securesocketfunneling/ssf" title="Download sources"><i class="fa fa-cloud-download fa-2x fa-fw"></i> Sources</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h1>Archive content</h1>
+                        <div class="col-md-12">
+                            <ul>
+                                <li>Executables: <strong>ssfs</strong>, <strong>ssfc</strong>, <strong>ssfcp</strong></li>
+                                <li>UPXed executables: <strong>upx-ssfs</strong>, <strong>upx-ssfc</strong>, <strong>upx-ssfcp</strong></li>
+                                <li>Test certificates (<span class="text-danger"><i class="fa fa-warning"></i> testing purpose only</span>)</li>
+                            </ul>
+                        </div>
+                    </div>
                     <!-- End download -->
-					
+
                     <!-- Security features -->
                     <div role="tabpanel" id="security-features" class="tab-pane fade">
                         <h1>Security features</h1>
@@ -944,7 +1037,7 @@ cmake --build .</pre>
                             <h2>TLS usage</h2>
                             <div class="col-md-12">
                                 <p>
-                                  SSF is based on Boost.Asio for all its networking and it uses Asio wrapper for OpenSSL. 
+                                  SSF is based on Boost.Asio for all its networking and it uses Asio wrapper for OpenSSL.
                                   TLS connections support only certificate authentication and enforce mutual authentication.
                                 </p>
                                 <h3>TLS options</h3>
@@ -957,28 +1050,28 @@ cmake --build .</pre>
                                         <li>No ticket extension allowed</li>
                                       </ul>
                                 </div>
-                                    
+
                                 <h3>TLS cipher suggestions</h3>
                                 <div class="col-md-12">
-                                    <div class="bs-callout bs-callout-info"> 
-                                        The default cipher suite used in SSF is <strong>DHE-RSA-AES256-GCM-SHA384</strong> 
+                                    <div class="bs-callout bs-callout-info">
+                                        The default cipher suite used in SSF is <strong>DHE-RSA-AES256-GCM-SHA384</strong>
                                     </div>
                                     <p>
-                                        However, the configuration file allows for any SSL cipher suite usage 
-                                        (see the <a href="#how-to-configure" data-action="select-how-to-configure">Configuration</a> section to know how). 
+                                        However, the configuration file allows for any SSL cipher suite usage
+                                        (see the <a href="#how-to-configure" data-action="select-how-to-configure">Configuration</a> section to know how).
                                         Here are the guidelines which led to the choice of this cipher:
                                     </p>
                                     <ul>
                                         <li>
-                                          Use ephemeral Diffie-Hellman to ensure <strong>perfect forward secrecy</strong>. 
-                                          Indeed, in that case, public and private keys will only be used for authentication and a new key will be negotiated independently for each connection. 
+                                          Use ephemeral Diffie-Hellman to ensure <strong>perfect forward secrecy</strong>.
+                                          Indeed, in that case, public and private keys will only be used for authentication and a new key will be negotiated independently for each connection.
                                           Therefore, even if a user private key of a user gets compromised at some point, the previous communications remain secure.
                                         </li>
                                         <li>
                                           Avoid elliptic curves to <strong>avoid fishy NIST curves</strong>. Therefore, <strong>RSA</strong> is used for authentication.
                                         </li>
                                         <li>
-                                          Use a <strong>strong symmetric algorithm</strong> in it strongest version. 
+                                          Use a <strong>strong symmetric algorithm</strong> in it strongest version.
                                           Most computers now have more than enough computing power to support <strong>AES256</strong> (especially with AES ASM instructions) so why not use it?
                                         </li>
                                         <li>
@@ -990,26 +1083,26 @@ cmake --build .</pre>
                                     </ul>
                                 </div>
                             </div>
-							
+
                             <h2>Generate your own cryptographic elements</h2>
                             <div class="col-md-12">
                                 <h3>Cryptographic suggestions</h3>
                                                 <div class="col-md-12">
-                                  <p>It might be wise to protect private keys with passphrases, especially on client sides. 
-                                     On the server side, the passphrase will have to be specified in the configuration file 
-                                     (see the <a href="#how-to-configure" data-action="select-how-to-configure">Configuration</a> section to know how). 
-                                     However, with a client, if the passphrase is needed and not specified in a configuration file, 
+                                  <p>It might be wise to protect private keys with passphrases, especially on client sides.
+                                     On the server side, the passphrase will have to be specified in the configuration file
+                                     (see the <a href="#how-to-configure" data-action="select-how-to-configure">Configuration</a> section to know how).
+                                     However, with a client, if the passphrase is needed and not specified in a configuration file,
                                      the user will be prompted to enter the passphrase manually.</p>
                                   <p>Here is the command to encrypt an unencrypted RSA private key with the passphrase "passphrase":</p>
                                   <pre>openssl rsa -in private.key -out private.key -aes256 -passout pass:passphrase</pre>
-                                  
+
                                   <p>Here is the command to change the passphrase of an encrypted RSA private key from "passphrase" to "new_passphrase":</p>
                                   <pre>openssl rsa -in private.key -out private.key -aes256 -passin pass:passphrase -passout pass:new_passphrase</pre>
-                                  
+
                                   <p>Here is the command to remove the passphrase of an encrypted RSA private key with passphrase equal to "passphrase":</p>
                                   <pre>openssl rsa -in private.key -out private.key -passin pass:passphrase</pre>
                                 </div>
-                    
+
                                 <h3>Generate elements for TLS connections</h3>
                                 <div class="col-md-12">
                                     <p>In order to use SSF, it will be necessary to generate private keys, certificates and Diffie-Hellman parameters:</p>
@@ -1030,7 +1123,7 @@ basicConstraints = CA:TRUE
 keyUsage = nonRepudiation, digitalSignature, keyEncipherment, keyCertSign</pre>
                                         <p>It will permit to create intermediary CA if needed.</p>
                                     </div>
-                                        
+
                                     <h4>Generating an intermediary CA (<code>ca_int.crt</code>, <code>ca_int.key</code>) signed with a CA (<code>ca.crt</code>, <code>ca.key</code>)</h4>
                                     <div class="col-md-12">
                                         <p>First, generate a private key <code>ca_int.key</code> and a signing request <code>ca_int.csr</code>:</p>
@@ -1040,7 +1133,7 @@ keyUsage = nonRepudiation, digitalSignature, keyEncipherment, keyCertSign</pre>
 cat ca.crt >> ca_int.crt
 </pre>
                                     </div>
-    
+
                                     <h4>Generating a private key <code>private.key</code> and its certificate <code>certificate.cst</code> signed with a CA <code>ca.crt</code></h4>
                                     <div class="col-md-12">
                                         <p>First, generate a private key <code>private.key</code> and a signing request <code>certificate.csr</code>:</p>
@@ -1055,7 +1148,7 @@ cat ca.crt >> certificate.crt
                         </div>
                     </div>
                     <!-- End security features -->
-					
+
                     <!-- Performances -->
                     <div role="tabpanel" id="performances" class="tab-pane fade">
                         <h1>Perfomances</h1>
@@ -1065,11 +1158,11 @@ cat ca.crt >> certificate.crt
                             <p>SSF, with all its default configurations (including a higher security cipher suite than OpenSSH), reached <code>600 Mbits/s</code>.
                             It seems that the limitation comes from the underlying cryptographic library (OpenSSL).
                             Indeed, when compiled with the special flag <mark>FORCE_TCP_ONLY</mark>, the gigabit Ethernet link was saturated.</p>
-                            
+
                             <div class="col-md-12">
                               <div class="col-md-offset-2 col-md-8" id="performances-graph"></div>
                             </div>
-                            
+
                             <div class="col-md-12">
                                 <div class="bs-callout bs-callout-info">
                                     <h3>Test typology</h3>
@@ -1080,11 +1173,11 @@ cat ca.crt >> certificate.crt
                                         <li>Receive and send random data through the forwarding link during 5 minutes</li>
                                     </ul>
                                 </div>
-                            </div>                            
+                            </div>
                         </div>
                     </div>
                     <!-- End Performances -->
-					
+
                     <!-- Developer corner -->
                     <div role="tabpanel" id="developer-corner" class="tab-pane fade">
                         <h1>Developer corner</h1>
@@ -1101,7 +1194,7 @@ cat ca.crt >> certificate.crt
                                    SSF also comes with a set of unit tests so that you can fork and tweak the code, and test your changes easily.
                                 </p>
                             </div>
-                            
+
 
                             <h2>Extendible service framework and toolkit</h2>
                             <div class="col-md-12">
@@ -1117,7 +1210,7 @@ cat ca.crt >> certificate.crt
                         </div>
                     </div>
                     <!-- End developer corner -->
-                    
+
                     <!-- About -->
                     <div role="tabpanel" id="about" class="tab-pane fade">
                         <h1>About the project</h1>
@@ -1129,7 +1222,7 @@ cat ca.crt >> certificate.crt
                         </div>
                     </div>
                     <!-- End about -->
-                    
+
                     <!-- Template part -->
                     <!--<div role="tabpanel" id="ID-PART" class="tab-pane fade">
                         <h1>TITLE PART</h1>
@@ -1137,7 +1230,7 @@ cat ca.crt >> certificate.crt
                         </div>
                     </div>-->
                     <!-- End template part -->
-                    
+
                 </div>
             </div>
         </div>
@@ -1151,9 +1244,8 @@ cat ca.crt >> certificate.crt
                 </div>
             </div>
         </footer>
-        
+
         <script type="text/javascript" src="./js/ssf.js"></script>
         <script type="text/javascript" src="./js/analytics.js"></script>
     </body>
 </html>
-

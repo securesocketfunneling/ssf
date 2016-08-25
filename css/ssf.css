@@ -125,6 +125,14 @@ pre {
     margin-top: 20px;
 }
 
+.dl-horizontal dt {
+    width: 230px;
+}
+
+.dl-horizontal dd {
+    margin-left: 250px;
+}
+
 #forkongithub a{background:#244363;color:#fff;text-decoration:none;font-family:arial,sans-serif;text-align:center;font-weight:bold;padding:5px 40px;font-size:1rem;line-height:2rem;position:relative;transition:0.5s;}
 #forkongithub a:hover{background:#81b33a;color:#fff;}
 #forkongithub a::before,#forkongithub a::after{content:"";width:100%;display:block;position:absolute;bottom:1px;left:0;height:1px;background:#fff;}
