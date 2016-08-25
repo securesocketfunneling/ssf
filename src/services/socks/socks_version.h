@@ -1,12 +1,13 @@
-#ifndef SSF_SOCKS_VERSION_H_
-#define SSF_SOCKS_VERSION_H_
+#ifndef SSF_SERVICES_SOCKS_VERSION_H_
+#define SSF_SERVICES_SOCKS_VERSION_H_
 
 #include <cstdint>
 #include <array>
 #include <boost/asio/buffer.hpp>
 
-namespace ssf { namespace services { namespace socks {
-//-----------------------------------------------------------------------------
+namespace ssf {
+namespace services {
+namespace socks {
 
 class Version {
  public:
@@ -14,10 +15,7 @@ class Version {
 
   std::array<boost::asio::mutable_buffer, 1> Buffer() {
     std::array<boost::asio::mutable_buffer, 1> buf = {
-      {
-        boost::asio::buffer(&version_number_, 1)
-      }
-    };
+        {boost::asio::buffer(&version_number_, 1)}};
     return buf;
   }
 
@@ -29,5 +27,4 @@ class Version {
 }  // services
 }  // ssf
 
-
-#endif  // SSF_SOCKS_VERSION_H_
+#endif  // SSF_SERVICES_SOCKS_VERSION_H_

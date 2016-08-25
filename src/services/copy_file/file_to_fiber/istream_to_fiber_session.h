@@ -11,10 +11,11 @@
 
 #include <boost/system/error_code.hpp>
 
-#include "common/network/base_session.h"
+#include <ssf/log/log.h>
 
-#include "common/network/manager.h"
-#include "common/network/base_session.h"
+#include <ssf/network/base_session.h>
+#include <ssf/network/manager.h>
+#include <ssf/network/base_session.h>
 
 #include "services/copy_file/filename_buffer.h"
 #include "services/copy_file/packet/packet.h"
@@ -49,9 +50,9 @@ class IstreamToFiberSession : public ssf::BaseSession {
     if (!from_stdin_) {
       input_stream_.open(input_file_, InputStream::binary);
       if (!input_stream_.is_open() || !input_stream_.good()) {
-        BOOST_LOG_TRIVIAL(error) << "session istream to fiber : cannot open file "
-                                 << input_file_;
-        ec.assign(ssf::error::bad_file_descriptor, ssf::error::get_ssf_category());
+        SSF_LOG(kLogError) << "session[istream to fiber]: cannot open file "
+                           << input_file_;
+        ec.assign(::error::bad_file_descriptor, ::error::get_ssf_category());
         stop_handler_(output_file_);
 
         return;
@@ -68,7 +69,8 @@ class IstreamToFiberSession : public ssf::BaseSession {
   }
 
  private:
-  IstreamToFiberSession(SessionManager* p_manager, const std::string& input_file,
+  IstreamToFiberSession(SessionManager* p_manager,
+                        const std::string& input_file,
                         OutputSocketStream&& output_socket_stream,
                         const std::string& output_file,
                         StopSessionHandler stop_handler)

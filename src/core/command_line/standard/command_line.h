@@ -12,45 +12,34 @@
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
+#include "core/command_line/base.h"
+
 namespace ssf {
 namespace command_line {
 namespace standard {
 
-class CommandLine {
+class CommandLine : public BaseCommandLine {
+ public:
+  using ParsedParameters = std::map<std::string, std::vector<std::string>>;
+
  public:
   CommandLine(bool is_server = false);
 
-  std::map<std::string, std::vector<std::string>> parse(
-      int argc, char* argv[], boost::system::error_code& ec);
+  virtual ~CommandLine() {}
 
-  std::map<std::string, std::vector<std::string>> parse(
-      int ac, char* av[],
-      const boost::program_options::options_description& services,
-      boost::system::error_code& ec);
-
-  uint16_t port();
-
-  std::string addr();
-
-  std::string bounce_file();
-
-  std::string config_file();
-
-  bool IsPortSet();
-
-  bool IsAddrSet();
+ protected:
+  void PopulateBasicOptions(OptionDescription& desc) override;
+  void PopulateLocalOptions(OptionDescription& desc) override;
+  void PopulatePositionalOptions(PosOptionDescription& desc) override;
+  void PopulateCommandLine(OptionDescription& command_line) override;
+  bool IsServerCli() override;
+  void ParseOptions(const VariableMap& vm, ParsedParameters& parsed_params,
+                    boost::system::error_code& ec) override;
+  std::string GetUsageDesc() override;
 
  private:
-  std::map<std::string, std::vector<std::string>> InternalParsing(
-      const boost::program_options::variables_map& vm,
-      boost::system::error_code& ec);
-
-  uint16_t port_;
-  std::string addr_;
-  std::string bounce_file_;
-  std::string config_file_;
-  bool addr_set_;
-  bool port_set_;
   bool is_server_;
 };
 

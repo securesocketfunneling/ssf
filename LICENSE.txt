@@ -5,6 +5,7 @@ This software is using:
   * OpenSSL project released with OpenSSL License and SSLeay License
   * Google Test project released with BSD 3-Clause license
   * CMake modules project released with Boost Software License 1.0
+  * HTTP Parser project released with MIT license
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -1,92 +1,100 @@
-#include <stdexcept>
+#include <condition_variable>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/trivial.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/config/config.h"
+#include "common/log/log.h"
 
 #include "core/command_line/standard/command_line.h"
-
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
+#include "core/network_protocol.h"
 #include "core/server/server.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-void Init() {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-}
+using NetworkProtocol = ssf::network::NetworkProtocol;
 
-int main(int argc, char **argv) {
-#ifdef TLS_OVER_TCP_LINK
-  using Server =
-      ssf::SSFServer<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
-#elif TCP_ONLY_LINK
-  using Server =
-      ssf::SSFServer<ssf::TCPPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
-#endif
+using Server =
+    ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
-  Init();
-
+int main(int argc, char** argv) {
   // The command line parser
   ssf::command_line::standard::CommandLine cmd(true);
 
   // Parse the command line
   boost::system::error_code ec;
-  cmd.parse(argc, argv, ec);
+  cmd.Parse(argc, argv, ec);
+  
+  if (ec.value() == ::error::operation_canceled) {
+    return 0;
+  }
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "server: wrong arguments" << std::endl;
+    SSF_LOG(kLogError) << "server: wrong arguments -- Exiting";
     return 1;
   }
+  
+  ssf::log::Configure(cmd.log_level());
 
   // Load SSF config if any
-  boost::system::error_code ec_config;
-  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
+  ssf::config::Config ssf_config;
+  ssf_config.Update(cmd.config_file(), ec);
 
-  if (ec_config) {
-    BOOST_LOG_TRIVIAL(error) << "server: invalid config file format"
-                             << std::endl;
+  if (ec) {
+    SSF_LOG(kLogError) << "server: invalid config file format -- Exiting";
     return 1;
   }
 
-  // Start the asynchronous engine
-  boost::asio::io_service io_service;
-  boost::asio::io_service::work worker(io_service);
-  boost::thread_group threads;
-
-  for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    auto lambda = [&]() {
-      boost::system::error_code ec;
-      try {
-        io_service.run(ec);
-      } catch (std::exception e) {
-        BOOST_LOG_TRIVIAL(error) << "server: exception in io_service run "
-                                 << e.what();
-      }
-    };
-
-    threads.create_thread(lambda);
-  }
-
-  BOOST_LOG_TRIVIAL(info) << "Start SSF server on port " << cmd.port();
+  ssf_config.Log();
 
   // Initiate and start the server
-  Server server(io_service, ssf_config, cmd.port());
+  Server server(ssf_config.services());
 
-  server.run();
+  // construct endpoint parameter stack
+  auto endpoint_query = NetworkProtocol::GenerateServerQuery(
+      cmd.host(), std::to_string(cmd.port()), ssf_config);
 
-  getchar();
-  server.stop();
-  io_service.stop();
-  threads.join_all();
+  SSF_LOG(kLogInfo) << "server: listening on <"
+                    << (!cmd.host().empty() ? cmd.host() : "*") << ":"
+                    << cmd.port() << ">";
+
+  server.Run(endpoint_query, ec);
+
+  if (ec) {
+    SSF_LOG(kLogError) << "server: error happened when running server: "
+                       << ec.message();
+    return 1;
+  }
+
+  std::condition_variable wait_stop_cv;
+  std::mutex mutex;
+  bool stopped = false;
+  boost::asio::signal_set signal(server.get_io_service(), SIGINT, SIGTERM);
+
+  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
+      const boost::system::error_code& ec, int signum) {
+    if (ec) {
+      return;
+    }
+    {
+      boost::lock_guard<std::mutex> lock(mutex);
+      stopped = true;
+    }
+    wait_stop_cv.notify_all();
+  });
+
+  SSF_LOG(kLogInfo) << "server: running (Ctrl + C to stop)";
+
+  std::unique_lock<std::mutex> lock(mutex);
+  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
+  lock.unlock();
+
+  SSF_LOG(kLogInfo) << "server: stop";
+  signal.cancel(ec);
+  server.Stop();
 
   return 0;
 }

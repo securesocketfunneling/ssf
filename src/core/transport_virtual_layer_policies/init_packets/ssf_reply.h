@@ -11,26 +11,23 @@ namespace ssf {
 
 class SSFReply {
  public:
-  enum { 
-    field_number = 1, 
-    total_size = sizeof(bool) 
-  };
+  enum { field_number = 1, total_size = sizeof(bool) };
 
  public:
-   SSFReply();
-   SSFReply(bool result);
+  SSFReply();
+  SSFReply(bool result);
 
-   bool result() const;
+  bool result() const;
 
-   std::array<boost::asio::const_buffer, field_number> const_buffer() const;
+  std::array<boost::asio::const_buffer, field_number> const_buffer() const;
 
-   std::array<boost::asio::mutable_buffer, field_number> buffer();
+  std::array<boost::asio::mutable_buffer, field_number> buffer();
 
  private:
   bool result_;
 };
 
-typedef std::shared_ptr<SSFReply> SSFReplyPtr;
+using SSFReplyPtr = std::shared_ptr<SSFReply>;
 
 }  // ssf
 

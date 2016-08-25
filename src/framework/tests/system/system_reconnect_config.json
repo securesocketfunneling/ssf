@@ -1,0 +1,13 @@
+[
+  {
+    "interface": "tcp_connect",
+    "type": "CONNECT",
+    "layer_stack": {
+      "layer": "TCP",
+      "parameters": {
+        "port": "8000",
+        "addr": "127.0.0.1"
+      }
+    }
+  }
+]

@@ -1,64 +1,57 @@
-#include <future>
-#include <stdexcept>
+#include <condition_variable>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/trivial.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/config/config.h"
+#include "common/log/log.h"
 
+#include "core/circuit/config.h"
 #include "core/client/client.h"
-
 #include "core/command_line/copy/command_line.h"
-#include "core/parser/bounce_parser.h"
 #include "core/factories/service_option_factory.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
+#include "core/network_protocol.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
 #include "services/user_services/copy_file_service.h"
 
-void Init() {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-}
+using NetworkProtocol = ssf::network::NetworkProtocol;
+using Client =
+    ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+
+using Demux = Client::Demux;
+using BaseUserServicePtr = Client::BaseUserServicePtr;
+using CircuitNodeList = ssf::circuit::NodeList;
+using CircuitConfig = ssf::circuit::Config;
+
+// Generate network query
+NetworkProtocol::Query GenerateNetworkQuery(
+    const std::string& remote_addr, const std::string& remote_port,
+    const ssf::config::Config& config, const CircuitConfig& circuit_config);
 
 int main(int argc, char** argv) {
-#ifdef TLS_OVER_TCP_LINK
-  using Client =
-      ssf::SSFClient<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
-#elif TCP_ONLY_LINK
-  using Client =
-      ssf::SSFClient<ssf::TCPPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
-#endif
-
-  using Demux = Client::demux;
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
-  using BounceParser = ssf::parser::BounceParser;
-
-  Init();
-
   // Parse the command line
   ssf::command_line::copy::CommandLine cmd;
-  std::vector<BaseUserServicePtr> user_services;
 
   boost::system::error_code ec;
+  cmd.Parse(argc, argv, ec);
 
-  cmd.parse(argc, argv, ec);
+  if (ec.value() == ::error::operation_canceled) {
+    return 0;
+  }
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: wrong command line arguments";
+    SSF_LOG(kLogError) << "client: wrong command line arguments";
     return 1;
   }
+  
+  ssf::log::Configure(cmd.log_level());
 
   // Create and initialize copy user service
   auto p_copy_service =
@@ -67,99 +60,139 @@ int main(int argc, char** argv) {
           cmd.output_pattern(), ec);
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: copy service could not be created";
+    SSF_LOG(kLogError) << "client: copy service could not be created";
     return 1;
   }
 
+  std::vector<BaseUserServicePtr> user_services;
   user_services.push_back(p_copy_service);
 
-  if (!cmd.IsAddrSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no remote host provided -- Exiting";
+  if (!cmd.host_set()) {
+    SSF_LOG(kLogError) << "client: no remote host provided -- Exiting";
     return 1;
   }
 
-  if (!cmd.IsPortSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no host port provided -- Exiting";
+  if (!cmd.port_set()) {
+    SSF_LOG(kLogError) << "client: no host port provided -- Exiting";
     return 1;
   }
 
-  // Load SSF config if any
   boost::system::error_code ec_config;
-  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
+  ssf::config::Config ssf_config;
+  ssf_config.Update(cmd.config_file(), ec_config);
 
   if (ec_config) {
-    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format"
-                             << std::endl;
-    return 0;
+    SSF_LOG(kLogError) << "client: invalid config file format";
+    return 1;
   }
 
-  // Initialize the asynchronous engine
-  boost::asio::io_service io_service;
-  std::unique_ptr<boost::asio::io_service::work> p_worker(
-      new boost::asio::io_service::work(io_service));
-  boost::thread_group threads;
+  ssf_config.Log();
+
   std::promise<bool> closed;
 
-  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-    auto lambda = [&]() {
-      boost::system::error_code ec;
-      try {
-        io_service.run(ec);
-      } catch (std::exception e) {
-        BOOST_LOG_TRIVIAL(error) << "client: exception in io_service run "
-                                 << e.what();
-      }
-    };
+  CircuitConfig circuit_config;
+  circuit_config.Update(cmd.circuit_file(), ec);
 
-    threads.create_thread(lambda);
+  if (ec) {
+    SSF_LOG(kLogError) << "client: invalid circuit config file -- Exiting";
+    return 1;
   }
 
-  auto callback =
-      [&closed](ssf::services::initialisation::type type, BaseUserServicePtr,
-                const boost::system::error_code&) {
-        if (type == ssf::services::initialisation::CLOSE) {
-          closed.set_value(true);
-          return;
+  circuit_config.Log();
+
+  auto endpoint_query = GenerateNetworkQuery(
+      cmd.host(), std::to_string(cmd.port()), ssf_config, circuit_config);
+
+  std::condition_variable wait_stop_cv;
+  std::mutex mutex;
+  bool stopped = false;
+
+  auto callback = [&wait_stop_cv, &mutex, &stopped](
+      ssf::services::initialisation::type type, BaseUserServicePtr,
+      const boost::system::error_code& ec) {
+    switch (type) {
+      case ssf::services::initialisation::NETWORK: {
+        SSF_LOG(kLogInfo) << "client: connected to remote server "
+                          << (!ec ? "OK" : "NOK");
+        break;
+      }
+      case ssf::services::initialisation::CLOSE: {
+        {
+          boost::lock_guard<std::mutex> lock(mutex);
+          stopped = true;
         }
-      };
+        wait_stop_cv.notify_all();
+        return;
+      }
+      default:
+        break;
+    }
+    if (ec) {
+      {
+        boost::lock_guard<std::mutex> lock(mutex);
+        stopped = true;
+      }
+      wait_stop_cv.notify_all();
+    }
+  };
 
   // Initiating and starting the client
-  Client client(io_service, cmd.addr(), std::to_string(cmd.port()), ssf_config,
-                user_services, callback);
+  Client client(user_services, ssf_config.services(), callback);
 
-  std::map<std::string, std::string> params;
+  client.Run(endpoint_query, ec);
 
-  std::list<std::string> bouncers =
-      BounceParser::ParseBounceFile(cmd.bounce_file());
-
-  if (bouncers.size()) {
-    auto first = bouncers.front();
-    bouncers.pop_front();
-    params["remote_addr"] = BounceParser::GetRemoteAddress(first);
-    params["remote_port"] = BounceParser::GetRemotePort(first);
-    bouncers.push_back(cmd.addr() + ":" + std::to_string(cmd.port()));
-  } else {
-    params["remote_addr"] = cmd.addr();
-    params["remote_port"] = std::to_string(cmd.port());
+  if (ec) {
+    SSF_LOG(kLogError) << "client: error happened when running client : "
+                       << ec.message();
+    return 1;
   }
 
-  std::ostringstream ostrs;
-  boost::archive::text_oarchive ar(ostrs);
-  ar << BOOST_SERIALIZATION_NVP(bouncers);
+  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.host() << ":"
+                    << cmd.port() << ">";
 
-  params["bouncing_nodes"] = ostrs.str();
-
-  client.run(params);
+  boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
+  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
+      const boost::system::error_code& ec, int signum) {
+    if (ec) {
+      return;
+    }
+    {
+      boost::lock_guard<std::mutex> lock(mutex);
+      stopped = true;
+    }
+    wait_stop_cv.notify_all();
+  });
 
   // wait end transfer
-  closed.get_future().get();
+  SSF_LOG(kLogInfo) << "client: wait end of file transfer";
+  std::unique_lock<std::mutex> lock(mutex);
+  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
+  lock.unlock();
+  signal.cancel(ec);
 
-  p_worker.reset();
-
-  threads.join_all();
-
-  client.stop();
-  io_service.stop();
+  client.Stop();
 
   return 0;
+}
+
+NetworkProtocol::Query GenerateNetworkQuery(
+    const std::string& remote_addr, const std::string& remote_port,
+    const ssf::config::Config& ssf_config,
+    const CircuitConfig& circuit_config) {
+  std::string first_node_addr;
+  std::string first_node_port;
+  CircuitNodeList nodes = circuit_config.nodes();
+  if (nodes.size()) {
+    auto first_node = nodes.front();
+    nodes.pop_front();
+    first_node_addr = first_node.addr();
+    first_node_port = first_node.port();
+    nodes.emplace_back(remote_addr, remote_port);
+  } else {
+    first_node_addr = remote_addr;
+    first_node_port = remote_port;
+  }
+
+  return NetworkProtocol::GenerateClientQuery(first_node_addr, first_node_port,
+                                              ssf_config, nodes);
 }

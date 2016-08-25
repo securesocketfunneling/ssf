@@ -1,16 +1,16 @@
 #ifndef SSF_SERVICES_FIBERS_TO_SOCKETS_FIBERS_TO_SOCKETS_H_
 #define SSF_SERVICES_FIBERS_TO_SOCKETS_FIBERS_TO_SOCKETS_H_
 
-#include  <cstdint>
+#include <cstdint>
 
 #include <boost/asio.hpp>
 
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
-#include "common/network/socket_link.h"
-#include "common/network/manager.h"
-#include "common/network/base_session.h"
+#include <ssf/network/socket_link.h>
+#include <ssf/network/manager.h>
+#include <ssf/network/base_session.h>
 
 #include "services/base_service.h"
 
@@ -18,7 +18,9 @@
 
 #include "services/admin/requests/create_service_request.h"
 
-namespace ssf { namespace services { namespace fibers_to_sockets {
+namespace ssf {
+namespace services {
+namespace fibers_to_sockets {
 
 template <typename Demux>
 class FibersToSockets : public BaseService<Demux> {
@@ -38,8 +40,7 @@ class FibersToSockets : public BaseService<Demux> {
  public:
   static FibersToSocketsPtr create(boost::asio::io_service& io_service,
                                    demux& fiber_demux, Parameters parameters) {
-    if (!parameters.count("local_port") ||
-        !parameters.count("remote_ip") ||
+    if (!parameters.count("local_port") || !parameters.count("remote_ip") ||
         !parameters.count("remote_port")) {
       return FibersToSocketsPtr(nullptr);
     } else {
@@ -50,14 +51,11 @@ class FibersToSockets : public BaseService<Demux> {
     }
   }
 
-  enum {
-    factory_id = 3
-  };
+  enum { factory_id = 3 };
 
   static void RegisterToServiceFactory(
-    std::shared_ptr<ServiceFactory<demux>> p_factory) {
-    p_factory->RegisterServiceCreator(factory_id, 
-                                      &FibersToSockets::create);
+      std::shared_ptr<ServiceFactory<demux>> p_factory) {
+    p_factory->RegisterServiceCreator(factory_id, &FibersToSockets::create);
   }
 
   virtual void start(boost::system::error_code& ec);
@@ -65,7 +63,8 @@ class FibersToSockets : public BaseService<Demux> {
   virtual uint32_t service_type_id();
 
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
-      local_port_type local_port, std::string remote_addr, uint16_t remote_port) {
+      local_port_type local_port, std::string remote_addr,
+      uint16_t remote_port) {
     ssf::services::admin::CreateServiceRequest<demux> create(factory_id);
     create.add_parameter("local_port", std::to_string(local_port));
     create.add_parameter("remote_ip", remote_addr);
@@ -80,7 +79,7 @@ class FibersToSockets : public BaseService<Demux> {
                   uint16_t remote_port);
 
  private:
-  //No check on prioror presence implemented
+  // No check on prioror presence implemented
   void StartAcceptFibers();
 
   void FiberAcceptHandler(const boost::system::error_code& ec);
@@ -105,7 +104,7 @@ class FibersToSockets : public BaseService<Demux> {
   socket socket_;
 
   boost::asio::ip::tcp::endpoint endpoint_;
-  
+
   SessionManager manager_;
 };
 

@@ -3,6 +3,8 @@
 
 #include <boost/asio/write.hpp>
 
+#include <ssf/log/log.h>
+
 #include "core/factories/service_factory.h"
 #include "services/admin/requests/create_service_request.h"
 #include "services/copy_file/file_to_fiber/file_to_fiber.h"
@@ -84,8 +86,8 @@ class FileEnquirer : public BaseService<Demux> {
     }
 
     reenter(coroutine_) {
-      BOOST_LOG_TRIVIAL(debug)
-          << "service file enquirer: connect to remote fiber acceptor port "
+      SSF_LOG(kLogDebug)
+          << "service[file enquirer]: connect to remote fiber acceptor port "
           << remote_endpoint_.port();
 
       yield fiber_.async_connect(

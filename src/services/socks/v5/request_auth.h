@@ -1,5 +1,5 @@
-#ifndef SSF_V5_REQUEST_AUTH_H_
-#define SSF_V5_REQUEST_AUTH_H_
+#ifndef SSF_SERVICES_SOCKS_V5_REQUEST_AUTH_H_
+#define SSF_SERVICES_SOCKS_V5_REQUEST_AUTH_H_
 
 #include <cstdint>
 #include <array>  // NOLINT
@@ -11,11 +11,13 @@
 #include <boost/tuple/tuple.hpp>  // NOLINT
 #include <boost/system/error_code.hpp>
 
-namespace ssf { namespace socks { namespace v5 {
-//-----------------------------------------------------------------------------
+namespace ssf {
+namespace socks {
+namespace v5 {
+
 class RequestAuth {
  public:
-   // Authentication method constants
+  // Authentication method constants
   enum AuthMethodIds {
     kNoAuth = 0x00,
     kGSSAPI = 0x01,
@@ -36,16 +38,11 @@ class RequestAuth {
   std::vector<uint8_t> authMethods_;
 };
 
-
-//-----------------------------------------------------------------------------
-//  R E A D    A U T H E N T I C A T I O N    R E Q U E S T
-//-----------------------------------------------------------------------------
-
-template<class VerifyHandler, class StreamSocket>
+template <class VerifyHandler, class StreamSocket>
 class ReadRequestAuthCoro : public boost::asio::coroutine {
-public:
+ public:
   ReadRequestAuthCoro(StreamSocket& c, RequestAuth* p_r, VerifyHandler h)
-    : c_(c), r_(*p_r), handler_(h), total_length_(0) { }
+      : c_(c), r_(*p_r), handler_(h), total_length_(0) {}
 
 #include <boost/asio/yield.hpp>  // NOLINT
   void operator()(const boost::system::error_code& ec, std::size_t length) {
@@ -53,21 +50,22 @@ public:
     uint8_t method = 0;
 
     if (!ec) reenter(this) {
-      // Read Request fixed size number of authentication methods
-      yield boost::asio::async_read(c_, r_.Buffers(), std::move(*this));
-      total_length_ += length;
-
-      // Read each supported method
-      for (numberOfMethods = 0; numberOfMethods < r_.numberOfAuthSupported(); ++numberOfMethods) {
-        yield boost::asio::async_read(c_, 
-                                      boost::asio::mutable_buffers_1(&method, 1), 
-                                      std::move(*this));
-        r_.addAuthMethod(method);
+        // Read Request fixed size number of authentication methods
+        yield boost::asio::async_read(c_, r_.Buffers(), std::move(*this));
         total_length_ += length;
-      }
 
-      boost::get<0>(handler_)(ec, total_length_);
-    } else {
+        // Read each supported method
+        for (numberOfMethods = 0; numberOfMethods < r_.numberOfAuthSupported();
+             ++numberOfMethods) {
+          yield boost::asio::async_read(
+              c_, boost::asio::mutable_buffers_1(&method, 1), std::move(*this));
+          r_.addAuthMethod(method);
+          total_length_ += length;
+        }
+
+        boost::get<0>(handler_)(ec, total_length_);
+      }
+    else {
       boost::get<0>(handler_)(ec, total_length_);
     }
   }
@@ -80,19 +78,17 @@ public:
   std::size_t total_length_;
 };
 
-
-template<class VerifyHandler, class StreamSocket>
-void AsyncReadRequestAuth(StreamSocket& c, RequestAuth* p_r, VerifyHandler handler) {
+template <class VerifyHandler, class StreamSocket>
+void AsyncReadRequestAuth(StreamSocket& c, RequestAuth* p_r,
+                          VerifyHandler handler) {
   ReadRequestAuthCoro<boost::tuple<VerifyHandler>, StreamSocket>
-    RequestAuthReader(c, p_r, boost::make_tuple(handler));
+      RequestAuthReader(c, p_r, boost::make_tuple(handler));
 
   RequestAuthReader(boost::system::error_code(), 0);
 }
 
-//-----------------------------------------------------------------------------
 }  // v5
 }  // socks
 }  // ssf
 
-
-#endif  // SSF_V5_REQUEST_AUTH_H_
+#endif  // SSF_SERVICES_SOCKS_V5_REQUEST_AUTH_H_

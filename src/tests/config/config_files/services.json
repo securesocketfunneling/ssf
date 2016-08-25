@@ -1,0 +1,10 @@
+{
+    "ssf": {
+        "services" : {
+            "shell": {
+                "path": "/bin/custom_path",
+                "args": "-custom args"
+            }
+        }
+    }
+}

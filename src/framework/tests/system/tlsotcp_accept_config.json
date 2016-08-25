@@ -1,0 +1,19 @@
+{
+  "interface": "tlsotcp_accept",
+  "type": "ACCEPT",
+  "layer_stack": {
+    "layer": "TLS",
+    "parameters": {
+      "ca_file": "./certs/trusted/ca.crt",
+      "crt_file": "./certs/certificate.crt",
+      "key_file": "./certs/private.key",
+      "dhparam_file": "./certs/dh4096.pem"
+    },
+    "sublayer": {
+      "layer": "TCP",
+      "parameters": {
+        "port": "9000"
+      }
+    }
+  }
+}

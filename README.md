@@ -5,13 +5,14 @@
 ### Requirements
 
   * Winrar >= 5.2.1 (Third party builds on windows)
-  * Boost >= 1.56.0
+  * Boost >= 1.61.0
   * OpenSSL >= 1.0.2
-  * Google Test >= 1.7.0
+  * Google Test = 1.7.0
   * CMake >= 2.8.11
   * nasm (openssl build on windows)
   * Perl | Active Perl >= 5.20 (openssl build on windows)
   * C++11 compiler (Visual Studio 2013, Clang, g++, etc.)
+  * libkrb5-dev or equivalent (gssapi on linux)
 
 SSF_SECURITY:
 
@@ -42,7 +43,7 @@ If you are using *openssl-1.0.2a*, you need to fix the file ``crypto/x509v3/v3_s
 Copy [the diff from OpenSSL Github](https://github.com/openssl/openssl/commit/77b1f87214224689a84db21d2eb54e9497186d93.diff)
 (ignore the 2 first lines) and put it in ``PROJECT_PATH/third_party/openssl/patches``. The build script will then patch the sources.
 
-* Copy [GTest archive](http://code.google.com/p/googletest/downloads/list) in ``third_party/gtest``
+* Copy [GTest archive](https://github.com/google/googletest/archive/release-1.7.0.zip) in ``third_party/gtest``
 
  ```bash
  cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
@@ -50,18 +51,19 @@ Copy [the diff from OpenSSL Github](https://github.com/openssl/openssl/commit/77
 
 * Generate project
 
- ```bash
- mkdir PROJECT_PATH/build
- cd PROJECT_PATH/build
- cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
- ```
+```bash
+git submodule update --init --recursive
+mkdir PROJECT_PATH/build
+cd PROJECT_PATH/build
+cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+```
 
- * Build project
+* Build project
 
- ```bash
- cd PROJECT_PATH/build
- cmake --build `pwd` --config Debug|Release
- ```
+```bash
+cd PROJECT_PATH/build
+cmake --build . --config Debug|Release
+```
 
 ### Build SSF on Linux
 
@@ -83,7 +85,7 @@ cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost
 cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl
 ```
 
-* Copy [GTest archive](http://code.google.com/p/googletest/downloads/list) in ``third_party/gtest``
+* Copy [GTest archive](https://github.com/google/googletest/archive/release-1.7.0.zip) in ``third_party/gtest``
 
 ```bash
 cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
@@ -92,6 +94,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 * Generate project
 
 ```bash
+git submodule update --init --recursive
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
 cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
@@ -100,7 +103,8 @@ cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP
 * Build project
 
 ```bash
-cmake --build PROJECT_PATH/build -- -j
+cd PROJECT_PATH/build
+cmake --build . -- -j
 ```
 
 ### Build SSF on Mac OS X
@@ -123,7 +127,7 @@ cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost
 cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl
 ```
 
-* Copy [GTest archive](http://code.google.com/p/googletest/downloads/list) in ``third_party/gtest``
+* Copy [GTest archive](https://github.com/google/googletest/archive/release-1.7.0.zip) in ``third_party/gtest``
 
 ```bash
 cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
@@ -132,6 +136,7 @@ cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
 * Generate project
 
 ```bash
+git submodule update --init --recursive
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
 cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
@@ -140,9 +145,9 @@ cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP
 * Build project
 
 ```bash
-cmake --build PROJECT_PATH/build -- -j
+cd PROJECT_PATH/build
+cmake --build .
 ```
-
 
 ## How to configure
 
@@ -230,19 +235,46 @@ The chain will be CLIENT -> SERVER1:PORT1 -> SERVER2:PORT2 -> SERVER3:PORT3 -> T
 ### Standard command line
 
 ```plaintext
-ssf<c|s>[.exe] [-h] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-b bounce_file] [-c config_file] [-p port] [host]
+ssf<c|s>[.exe] [-h] [-v verb_level] [-q] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-X port] [-Y port] [-b bounce_file] [-c config_file] [-p port] [host]
 ```
 
-* host : the IP address or the name of the remote server to connect to.
-* -p : *port* is the port on which to listen (for the server) or to connect (for the client). The default value is 8011.
+* -v : Verbosity level (critical, error, warning, info, debug, trace), default is info
+* -q : Quiet mode (no log)
 * -L : TCP port forwarding with *loc* as the local TCP port, *ip* and *dest* as destination toward which the forward should be done from the server.
 * -R : TCP remote port forwarding with *rem* as the TCP port to forward from the remote host, *ip* and *dest* as destination toward which the forward should be done from the client.
 * -D : open a port (*port*) on the client to connect to a SOCKS server on the server from the client.
 * -F : open a port (*port*) on the server to connect to a SOCKS server on the client from the server.
 * -U : UDP port forwarding with *loc* as the UDP port to forward from the client, *ip* and *dest* as destination toward which the forward should be done from the server.
 * -V : UDP remote port forwarding with *rem* as the UDP port to forward from the server, *ip* and *dest* as destination toward which the forward should be done from the client.
+* -X : open a port (*port*) on the client side, each connection to that port creates a process with I/O forwarded to/from the server side (the binary used can be set with the config file)
+* -Y : open a port (*port*) on the server side, each connection to that port creates a process with I/O forwarded to/from the client side (the binary used can be set with the config file)
 * -b : *bounce_file* is the file containing the list of relays to use.
 * -c : *config_file* is the config file containing configuration for SSF (TLS configuration).
+* -p : *port* is the port on which to listen (for the server) or to connect (for the client). The default value is 8011.
+* host : the IP address or the name of the remote server to connect to.
+
+#### Server example
+
+Server will listen on all network interfaces on port **8011**
+
+```plaintext
+ssfs[.exe]
+```
+
+Server will listen on **192.168.0.1:9000**
+
+```plaintext
+ssfs[.exe] -p 9000 192.168.0.1
+```
+
+#### Client example
+
+Client will open port 9000 locally and wait SOCKS requests to be transferred to
+server **192.168.0.1:8000**
+
+```plaintext
+ssfc[.exe] -D 9000 -b bounce.txt -c config.json -p 8000 192.168.0.1
+```
 
 ### Copy command line
 
@@ -300,13 +332,39 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
             "key_path": "./certs/private.key",
             "dh_path": "./certs/dh4096.pem",
             "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
+        },
+        "http_proxy": {
+            "host": "proxy.example.com",
+            "port": "3128",
+            "credentials": {
+                "username": "user",
+                "password": "password",
+                "domain": "EXAMPLE.COM",
+                "reuse_ntlm": "true",
+                "reuse_kerb": "true"
+            }
+        },
+        "services": {
+            "shell": {
+                "path": "/bin/bash",
+                "args": ""
+            }
         }
     }
 }
 ```
 
-* *tls.ca_cert_path* : relative or absolute path to the CA certificate file
-* *tls.cert_path*    : relative or absolute path to the instance certificate file
-* *tls.key_path*     : relative or absolute path to the private key file
-* *tls.dh_path*      : relative or absolute path to the Diffie-Hellman file
-* *tls.cipher_alg*   : cypher algorithm
+* *tls.ca_cert_path*      : relative or absolute path to the CA certificate file
+* *tls.cert_path*         : relative or absolute path to the instance certificate file
+* *tls.key_path*          : relative or absolute path to the private key file
+* *tls.dh_path*           : relative or absolute path to the Diffie-Hellman file
+* *tls.cipher_alg*        : cipher algorithm
+* *http_proxy.host*                   : HTTP proxy host
+* *http_proxy.port*                   : HTTP proxy port
+* *http_proxy.credentials.username*   : proxy username credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
+* *http_proxy.credentials.password*   : proxy password credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
+* *http_proxy.credentials.domain*     : user domain (NTLM and Negotiate auth on Windows only)
+* *http_proxy.credentials.reuse_ntlm* : reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)
+* *http_proxy.credentials.reuse_kerb* : reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO)
+* *services.shell.path* : binary path used for shell creation (optional)
+* *services.shell.args* : binary arguments used for shell creation (optional)

@@ -3,17 +3,20 @@
 
 #include <string>
 
-#include <boost/bind.hpp>  // NOLINT
-#include <boost/thread.hpp>  // NOLINT
+#include <boost/bind.hpp>               // NOLINT
+#include <boost/thread.hpp>             // NOLINT
 #include <boost/system/error_code.hpp>  //NOLINT
-#include <boost/log/trivial.hpp>
+
+#include <ssf/log/log.h>
 
 #include "services/socks/socks_version.h"  // NOLINT
-#include "services/socks/v4/session.h"  // NOLINT
-#include "services/socks/v5/session.h"  // NOLINT
+#include "services/socks/v4/session.h"     // NOLINT
+#include "services/socks/v5/session.h"     // NOLINT
 
-namespace ssf { namespace services { namespace socks {
-//-----------------------------------------------------------------------------
+namespace ssf {
+namespace services {
+namespace socks {
+
 template <typename Demux>
 SocksServer<Demux>::SocksServer(boost::asio::io_service& io_service,
                                 demux& fiber_demux, const local_port_type& port)
@@ -22,18 +25,17 @@ SocksServer<Demux>::SocksServer(boost::asio::io_service& io_service,
       session_manager_(),
       new_connection_(io_service, endpoint(fiber_demux, 0)),
       local_port_(port) {
-
   // The init_ec will be returned when start() is called
-  //fiber_acceptor_.open();
+  // fiber_acceptor_.open();
   endpoint ep(this->get_demux(), port);
   fiber_acceptor_.bind(ep, init_ec_);
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, init_ec_);
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void SocksServer<Demux>::start(boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(info) << "Starting socks server on port " << local_port_;
+  SSF_LOG(kLogInfo) << "service[socks]: starting server on port "
+                    << local_port_;
   ec = init_ec_;
 
   if (!init_ec_) {
@@ -41,38 +43,36 @@ void SocksServer<Demux>::start(boost::system::error_code& ec) {
   }
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void SocksServer<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  BOOST_LOG_TRIVIAL(info) << "#### Stopping server socks ####";
+  SSF_LOG(kLogInfo) << "service[socks]: stopping server";
   this->HandleStop();
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
-uint32_t SocksServer<Demux>::service_type_id() { return factory_id; }
+uint32_t SocksServer<Demux>::service_type_id() {
+  return factory_id;
+}
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void SocksServer<Demux>::StartAccept() {
   fiber_acceptor_.async_accept(
-    new_connection_, Then(&SocksServer::HandleAccept, this->SelfFromThis()));
+      new_connection_, Then(&SocksServer::HandleAccept, this->SelfFromThis()));
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
-  BOOST_LOG_TRIVIAL(trace) << "HandleAccept";
+  SSF_LOG(kLogTrace) << "service[socks]: HandleAccept";
 
   if (!fiber_acceptor_.is_open()) {
     return;
   }
 
   if (ec) {
-    fprintf(stderr, "[!] Error accepting new connection: %s %d",
-            ec.message().c_str(), ec.value());
+    SSF_LOG(kLogError) << "service[socks]: error accepting new connection: "
+                       << ec.message() << " " << ec.value();
     this->StartAccept();
   }
 
@@ -82,20 +82,20 @@ void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
   auto start_handler = [this, self, p_version](boost::system::error_code ec,
                                                std::size_t) {
     if (ec) {
-      fprintf(stderr, "[!] Error reading protocol version: %s %d",
-              ec.message().c_str(), ec.value());
+      SSF_LOG(kLogError) << "service[socks]: error reading protocol version: "
+                         << ec.message() << " " << ec.value();
       fiber fib = std::move(this->new_connection_);
       this->StartAccept();
     } else if (p_version->Number() == 4) {
-      BOOST_LOG_TRIVIAL(trace) << "Version accepted: v4";
+      SSF_LOG(kLogTrace) << "service[socks]: version accepted: v4";
       ssf::BaseSessionPtr new_socks_session =
-          std::make_shared<ssf::socks::v4::Session<Demux>>(
+          std::make_shared<ssf::socks::v4::Session<Demux> >(
               &(this->session_manager_), std::move(this->new_connection_));
       boost::system::error_code e;
       this->session_manager_.start(new_socks_session, e);
       this->StartAccept();
     } else if (p_version->Number() == 5) {
-      BOOST_LOG_TRIVIAL(trace) << "Version accepted: v5";
+      SSF_LOG(kLogTrace) << "service[socks]: version accepted: v5";
       ssf::BaseSessionPtr new_socks_session =
           std::make_shared<ssf::socks::v5::Session<Demux> >(
               &(this->session_manager_), std::move(this->new_connection_));
@@ -103,7 +103,8 @@ void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
       this->session_manager_.start(new_socks_session, e);
       this->StartAccept();
     } else {
-      fprintf(stderr, "Protocol not supported yet: %X\n", p_version->Number());
+      SSF_LOG(kLogError) << "service[socks]: protocol not supported yet: "
+                         << p_version->Number();
       this->new_connection_.close();
       fiber fib = std::move(this->new_connection_);
       this->StartAccept();
@@ -114,7 +115,6 @@ void SocksServer<Demux>::HandleAccept(const boost::system::error_code& ec) {
   boost::asio::async_read(new_connection_, p_version->Buffer(), start_handler);
 }
 
-//-----------------------------------------------------------------------------
 template <typename Demux>
 void SocksServer<Demux>::HandleStop() {
   fiber_acceptor_.close();

@@ -1,0 +1,27 @@
+{
+  "interface": "circuit_tlsotcp_accept1",
+  "type": "ACCEPT",
+  "layer_stack": {
+    "layer": "CIRCUIT",
+    "parameters": {
+      "local_id": "server",
+      "forward": true,
+      "nodes": []
+    },
+    "sublayer": {
+      "layer": "TLS",
+      "parameters": {
+        "ca_file": "./certs/trusted/ca.crt",
+        "crt_file": "./certs/certificate.crt",
+        "key_file": "./certs/private.key",
+        "dhparam_file": "./certs/dh4096.pem"
+      },
+      "sublayer": {
+        "layer": "TCP",
+        "parameters": {
+          "port": "6000"
+        }
+      }
+    }
+  }
+}

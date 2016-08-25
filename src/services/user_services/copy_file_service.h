@@ -33,7 +33,7 @@ class CopyFileService : public BaseUserService<Demux> {
       bool from_stdin, bool from_local_to_remote,
       const std::string& input_pattern, const std::string& output_pattern,
       boost::system::error_code& ec) {
-    ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+    ec.assign(::error::success, ::error::get_ssf_category());
     return CopyFileServicePtr(new CopyFileService(
         from_stdin, from_local_to_remote, input_pattern, output_pattern));
   }
@@ -80,8 +80,14 @@ class CopyFileService : public BaseUserService<Demux> {
                                    output_pattern_);
 
       local_service_ids_.insert(p_service_factory->CreateRunNewService(
-              local_service_request.service_id(),
-              local_service_request.parameters(), ec));
+          local_service_request.service_id(),
+          local_service_request.parameters(), ec));
+
+      if (ec) {
+        SSF_LOG(kLogError) << "user_service[copy file]: "
+                           << "local_service[file to fibers]: start failed: "
+                           << ec.message();
+      }
       return !ec;
     }
 
@@ -97,10 +103,20 @@ class CopyFileService : public BaseUserService<Demux> {
     local_service_ids_.insert(p_service_factory->CreateRunNewService(
         fiber_to_file_request.service_id(), fiber_to_file_request.parameters(),
         ec));
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service[copy file]: "
+                         << "local_service[fiber to file]: start failed: "
+                         << ec.message();
+    }
 
     local_service_ids_.insert(p_service_factory->CreateRunNewService(
         file_enquirer_request.service_id(), file_enquirer_request.parameters(),
         ec));
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service[copy file]: "
+                         << "local_service[file enquirer]: start failed: "
+                         << ec.message();
+    }
 
     return !ec;
   }

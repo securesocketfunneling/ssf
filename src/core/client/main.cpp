@@ -1,22 +1,20 @@
-#include <stdexcept>
+#include <condition_variable>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/trivial.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/config/config.h"
+#include "common/log/log.h"
 
+#include "core/circuit/config.h"
 #include "core/client/client.h"
-
 #include "core/command_line/standard/command_line.h"
-#include "core/parser/bounce_parser.h"
 #include "core/factories/service_option_factory.h"
-#include "core/network_virtual_layer_policies/bounce_protocol_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/ssl_policy.h"
-#include "core/network_virtual_layer_policies/link_policies/tcp_policy.h"
-#include "core/network_virtual_layer_policies/link_authentication_policies/null_link_authentication_policy.h"
+#include "core/network_protocol.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/initialisation.h"
@@ -25,150 +23,242 @@
 #include "services/user_services/remote_socks.h"
 #include "services/user_services/port_forwarding.h"
 #include "services/user_services/remote_port_forwarding.h"
+#include "services/user_services/process.h"
+#include "services/user_services/remote_process.h"
 #include "services/user_services/udp_port_forwarding.h"
 #include "services/user_services/udp_remote_port_forwarding.h"
 
-void Init() {
-  boost::log::core::get()->set_filter(boost::log::trivial::severity >=
-                                      boost::log::trivial::info);
-}
+using NetworkProtocol = ssf::network::NetworkProtocol;
+
+using Client =
+    ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+
+using Demux = Client::Demux;
+using BaseUserServicePtr = Client::BaseUserServicePtr;
+using ClientServices = std::vector<BaseUserServicePtr>;
+using CircuitNodeList = ssf::circuit::NodeList;
+using CircuitConfig = ssf::circuit::Config;
+using ParsedParameters =
+    ssf::command_line::standard::CommandLine::ParsedParameters;
+
+// Register the supported client services (port forwarding, SOCKS)
+void RegisterSupportedClientServices();
+
+// Initialize request client services from parameters
+void InitializeClientServices(ClientServices* p_client_services,
+                              const ParsedParameters& parameters,
+                              boost::system::error_code& ec);
+
+// Generate network query
+NetworkProtocol::Query GenerateNetworkQuery(
+    const std::string& remote_addr, const std::string& remote_port,
+    const ssf::config::Config& config, const CircuitConfig& circuit_config);
 
 int main(int argc, char** argv) {
-#ifdef TLS_OVER_TCP_LINK
-  using Client =
-      ssf::SSFClient<ssf::SSLPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
-#elif TCP_ONLY_LINK
-  using Client =
-      ssf::SSFClient<ssf::TCPPolicy, ssf::NullLinkAuthenticationPolicy,
-                     ssf::BounceProtocolPolicy, ssf::TransportProtocolPolicy>;
-#endif
+  RegisterSupportedClientServices();
 
-  using demux = Client::demux;
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
-  using BounceParser = ssf::parser::BounceParser;
-
-  Init();
-
-  // Register user services supported
-  ssf::services::Socks<demux>::RegisterToServiceOptionFactory();
-  ssf::services::RemoteSocks<demux>::RegisterToServiceOptionFactory();
-  ssf::services::PortForwading<demux>::RegisterToServiceOptionFactory();
-  ssf::services::RemotePortForwading<demux>::RegisterToServiceOptionFactory();
-  ssf::services::UdpPortForwading<demux>::RegisterToServiceOptionFactory();
-  ssf::services::UdpRemotePortForwading<
-      demux>::RegisterToServiceOptionFactory();
-
+  // Generate options description from supported services
   boost::program_options::options_description options =
-      ssf::ServiceOptionFactory<demux>::GetOptionDescriptions();
+      ssf::ServiceOptionFactory<Demux>::GetOptionDescriptions();
 
-  // Parse the command line
   ssf::command_line::standard::CommandLine cmd;
-  std::vector<BaseUserServicePtr> user_services;
 
   boost::system::error_code ec;
-  auto parameters = cmd.parse(argc, argv, options, ec);
+  ParsedParameters parameters = cmd.Parse(argc, argv, options, ec);
+
+  if (ec.value() == ::error::operation_canceled) {
+    return 0;
+  }
 
   if (ec) {
-    BOOST_LOG_TRIVIAL(error) << "client: wrong command line arguments";
+    SSF_LOG(kLogError) << "client: wrong command line arguments";
     return 1;
   }
 
-  // Initialize requested user services (socks, port forwarding)
-  for (const auto& parameter : parameters) {
-    for (const auto& single_parameter : parameter.second) {
-      boost::system::error_code ec;
+  ssf::log::Configure(cmd.log_level());
 
-      auto p_service_options =
-          ssf::ServiceOptionFactory<demux>::ParseServiceLine(
-              parameter.first, single_parameter, ec);
-
-      if (!ec) {
-        user_services.push_back(p_service_options);
-      } else {
-        BOOST_LOG_TRIVIAL(error) << "client: wrong parameter "
-                                 << parameter.first << " : " << single_parameter
-                                 << " : " << ec.message();
-      }
-    }
-  }
-
-  if (!cmd.IsAddrSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no hostname provided -- Exiting";
+  if (!cmd.host_set()) {
+    SSF_LOG(kLogError) << "client: no hostname provided -- Exiting";
     return 1;
   }
 
-  if (!cmd.IsPortSet()) {
-    BOOST_LOG_TRIVIAL(error) << "client: no host port provided -- Exiting";
+  if (!cmd.port_set()) {
+    SSF_LOG(kLogError) << "client: no host port provided -- Exiting";
+    return 1;
+  }
+
+  ClientServices user_services;
+  InitializeClientServices(&user_services, parameters, ec);
+
+  if (ec) {
+    SSF_LOG(kLogError)
+        << "client: initialization of client services failed -- Exiting";
     return 1;
   }
 
   // Load SSF config if any
-  boost::system::error_code ec_config;
-  ssf::Config ssf_config = ssf::LoadConfig(cmd.config_file(), ec_config);
+  ssf::config::Config ssf_config;
 
-  if (ec_config) {
-    BOOST_LOG_TRIVIAL(error) << "client: invalid config file format"
-                             << std::endl;
-    return 0;
+  ssf_config.Update(cmd.config_file(), ec);
+
+  if (ec) {
+    SSF_LOG(kLogError) << "client: invalid config file format -- Exiting";
+    return 1;
   }
 
-  // Initialize the asynchronous engine
-  boost::asio::io_service io_service;
-  boost::asio::io_service::work worker(io_service);
-  boost::thread_group threads;
+  ssf_config.Log();
 
-  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-    auto lambda = [&]() {
-      boost::system::error_code ec;
-      try {
-        io_service.run(ec);
-      } catch (std::exception e) {
-        BOOST_LOG_TRIVIAL(error) << "client: exception in io_service run "
-                                 << e.what();
+  CircuitConfig circuit_config;
+  circuit_config.Update(cmd.circuit_file(), ec);
+
+  if (ec) {
+    SSF_LOG(kLogError) << "client: invalid circuit config file -- Exiting";
+    return 1;
+  }
+
+  circuit_config.Log();
+
+  auto endpoint_query = GenerateNetworkQuery(
+      cmd.host(), std::to_string(cmd.port()), ssf_config, circuit_config);
+
+  std::condition_variable wait_stop_cv;
+  std::mutex mutex;
+  bool stopped = false;
+
+  auto callback = [&wait_stop_cv, &mutex, &stopped](
+      ssf::services::initialisation::type type, BaseUserServicePtr p_service,
+      const boost::system::error_code& ec) {
+    switch (type) {
+      case ssf::services::initialisation::NETWORK: {
+        if (ec) {
+          SSF_LOG(kLogError) << "client: connected to remote server NOK";
+          {
+            boost::lock_guard<std::mutex> lock(mutex);
+            stopped = true;
+          }
+          wait_stop_cv.notify_all();
+        } else {
+          SSF_LOG(kLogInfo) << "client: connected to remote server OK";
+        }
+        break;
       }
-    };
+      case ssf::services::initialisation::SERVICE: {
+        if (p_service.get() != nullptr) {
+          if (ec) {
+            SSF_LOG(kLogError) << "client: service <" << p_service->GetName()
+                               << "> NOK";
+          } else {
+            SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
+                              << "> OK";
+          }
+        }
+        break;
+      }
+      case ssf::services::initialisation::CLOSE: {
+        SSF_LOG(kLogInfo) << "client: connection closed";
+        {
+          boost::lock_guard<std::mutex> lock(mutex);
+          stopped = true;
+        }
+        wait_stop_cv.notify_all();
+      }
+      default:
+        break;
+    }
+  };
 
-    threads.create_thread(lambda);
+  // Initiate and run client
+  Client client(user_services, ssf_config.services(), callback);
+
+  client.Run(endpoint_query, ec);
+
+  if (ec) {
+    SSF_LOG(kLogError) << "client: error happened when running client : "
+                       << ec.message();
+    return 1;
   }
 
-  auto callback = [](ssf::services::initialisation::type, BaseUserServicePtr,
-                     const boost::system::error_code&) {};
+  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.host() << ":"
+                    << cmd.port() << ">";
 
-  // Initiate and start client
-  Client client(io_service, cmd.addr(), std::to_string(cmd.port()), ssf_config,
-                user_services, callback);
+  boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
 
-  std::map<std::string, std::string> params;
+  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
+      const boost::system::error_code& ec, int signum) {
+    if (ec) {
+      return;
+    }
+    {
+      boost::lock_guard<std::mutex> lock(mutex);
+      stopped = true;
+    }
+    wait_stop_cv.notify_all();
+  });
 
-  std::list<std::string> bouncers =
-      BounceParser::ParseBounceFile(cmd.bounce_file());
+  SSF_LOG(kLogInfo) << "client: running (Ctrl + C to stop)";
 
-  if (bouncers.size()) {
-    auto first = bouncers.front();
-    bouncers.pop_front();
-    params["remote_addr"] = BounceParser::GetRemoteAddress(first);
-    params["remote_port"] = BounceParser::GetRemotePort(first);
-    bouncers.push_back(cmd.addr() + ":" + std::to_string(cmd.port()));
-  } else {
-    params["remote_addr"] = cmd.addr();
-    params["remote_port"] = std::to_string(cmd.port());
-  }
+  std::unique_lock<std::mutex> lock(mutex);
+  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
+  lock.unlock();
 
-  std::ostringstream ostrs;
-  boost::archive::text_oarchive ar(ostrs);
-  ar << BOOST_SERIALIZATION_NVP(bouncers);
-
-  params["bouncing_nodes"] = ostrs.str();
-
-  client.run(params);
-
-  getchar();
-
-  client.stop();
-  threads.join_all();
-  io_service.stop();
+  SSF_LOG(kLogInfo) << "client: stop";
+  signal.cancel(ec);
+  client.Stop();
 
   return 0;
+}
+
+void RegisterSupportedClientServices() {
+  ssf::services::Socks<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::RemoteSocks<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::PortForwarding<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::RemotePortForwarding<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::UdpPortForwarding<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::UdpRemotePortForwarding<
+      Demux>::RegisterToServiceOptionFactory();
+  ssf::services::Process<Demux>::RegisterToServiceOptionFactory();
+  ssf::services::RemoteProcess<Demux>::RegisterToServiceOptionFactory();
+}
+
+void InitializeClientServices(ClientServices* p_client_services,
+                              const ParsedParameters& parameters,
+                              boost::system::error_code& ec) {
+  // Initialize requested user services (socks, port forwarding)
+  for (const auto& parameter : parameters) {
+    for (const auto& single_parameter : parameter.second) {
+      auto p_service_options =
+          ssf::ServiceOptionFactory<Demux>::ParseServiceLine(
+              parameter.first, single_parameter, ec);
+
+      if (!ec) {
+        p_client_services->push_back(p_service_options);
+      } else {
+        SSF_LOG(kLogError) << "client: wrong parameter " << parameter.first
+                           << ": " << single_parameter << ": " << ec.message();
+        return;
+      }
+    }
+  }
+}
+
+NetworkProtocol::Query GenerateNetworkQuery(
+    const std::string& remote_addr, const std::string& remote_port,
+    const ssf::config::Config& ssf_config,
+    const CircuitConfig& circuit_config) {
+  std::string first_node_addr;
+  std::string first_node_port;
+  CircuitNodeList nodes = circuit_config.nodes();
+  if (nodes.size()) {
+    auto first_node = nodes.front();
+    nodes.pop_front();
+    first_node_addr = first_node.addr();
+    first_node_port = first_node.port();
+    nodes.emplace_back(remote_addr, remote_port);
+  } else {
+    first_node_addr = remote_addr;
+    first_node_port = remote_port;
+  }
+
+  return NetworkProtocol::GenerateClientQuery(first_node_addr, first_node_port,
+                                              ssf_config, nodes);
 }

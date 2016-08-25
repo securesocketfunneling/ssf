@@ -1,0 +1,15 @@
+{
+    "ssf": {
+        "http_proxy" : {
+            "host": "127.0.0.1",
+            "port": "8080",
+            "credentials": {
+                "username": "test_user",
+                "password": "test_password",
+                "domain": "test_domain",
+                "reuse_ntlm": "false",
+                "reuse_kerb": "false"
+            }
+        }
+    }
+}

@@ -18,6 +18,8 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/io_service.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 #include "common/boost/fiber/detail/fiber_id.hpp"
 #include "common/boost/fiber/basic_endpoint.hpp"
@@ -163,15 +165,14 @@ class fiber_acceptor_service
                        is_convertible<Protocol, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
-                                           init(BOOST_ASIO_MOVE_CAST(AcceptHandler)(handler));
-    
+        init(BOOST_ASIO_MOVE_CAST(AcceptHandler)(handler));
+
     {
       boost::recursive_mutex::scoped_lock lock_state(impl->state_mutex);
       if (impl->closed) {
         auto handler_to_post = [init]() mutable {
-          init.handler(
-            boost::system::error_code(ssf::error::not_connected,
-            ssf::error::get_ssf_category()));
+          init.handler(boost::system::error_code(::error::not_connected,
+                                                 ::error::get_ssf_category()));
         };
         this->get_io_service().post(handler_to_post);
 
@@ -185,10 +186,11 @@ class fiber_acceptor_service
     fiber_impl->p_fib_demux = impl->p_fib_demux;
     fiber_impl->id.set_local_port(impl->id.local_port());
 
-    BOOST_LOG_TRIVIAL(debug) << "fiber acceptor: local port set " << impl->id.local_port();
+    SSF_LOG(kLogDebug) << "fiber acceptor: local port set "
+                       << impl->id.local_port();
 
-    typedef detail::pending_accept_operation<
-        AcceptHandler, typename Protocol::socket_type> op;
+    typedef detail::pending_accept_operation<AcceptHandler,
+                                             typename Protocol::socket_type> op;
     typename op::ptr p = {
         boost::asio::detail::addressof(init.handler),
         boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),

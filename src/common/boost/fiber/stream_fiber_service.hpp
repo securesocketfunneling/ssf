@@ -21,7 +21,8 @@
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/error.hpp>
-#include <boost/log/trivial.hpp>
+
+#include <ssf/log/log.h>
 
 #include "common/boost/fiber/detail/io_fiber_read_op.hpp"
 
@@ -216,8 +217,8 @@ public:
     {
       auto handler_to_post = [init]() mutable {
         init.handler(
-          boost::system::error_code(ssf::error::bad_file_descriptor,
-                                    ssf::error::get_ssf_category()),
+          boost::system::error_code(::error::bad_file_descriptor,
+                                    ::error::get_ssf_category()),
           0);
       };
       this->get_io_service().post(handler_to_post);
@@ -230,8 +231,8 @@ public:
         if (!impl->connected) {
           auto handler_to_post = [init]() mutable {
             init.handler(
-              boost::system::error_code(ssf::error::not_connected,
-              ssf::error::get_ssf_category()),
+              boost::system::error_code(::error::not_connected,
+              ::error::get_ssf_category()),
               0);
           };
           this->get_io_service().post(handler_to_post);
@@ -244,8 +245,8 @@ public:
       {
         auto handler_to_post = [init]() mutable {
           init.handler(
-            boost::system::error_code(ssf::error::success,
-                                      ssf::error::get_ssf_category()),
+            boost::system::error_code(::error::success,
+                                      ::error::get_ssf_category()),
             0);
         };
         this->get_io_service().post(handler_to_post);
@@ -278,8 +279,8 @@ public:
       if (!impl->connected) {
         auto handler_to_post = [init]() mutable {
           init.handler(
-            boost::system::error_code(ssf::error::not_connected,
-            ssf::error::get_ssf_category()),
+            boost::system::error_code(::error::not_connected,
+            ::error::get_ssf_category()),
             0);
         };
         this->get_io_service().post(handler_to_post);
@@ -291,8 +292,8 @@ public:
     if (boost::asio::buffer_size(buffers) == 0) {
       auto handler_to_post = [init]() mutable {
         init.handler(
-          boost::system::error_code(ssf::error::success,
-                                    ssf::error::get_ssf_category()),
+          boost::system::error_code(::error::success,
+                                    ::error::get_ssf_category()),
           0);
       };
       this->get_io_service().post(handler_to_post);

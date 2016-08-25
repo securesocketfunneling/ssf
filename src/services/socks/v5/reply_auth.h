@@ -1,5 +1,5 @@
-#ifndef SSF_V5_REPLY_AUTH_H_
-#define SSF_V5_REPLY_AUTH_H_
+#ifndef SSF_SERVICES_SOCKS_V5_REPLY_AUTH_H_
+#define SSF_SERVICES_SOCKS_V5_REPLY_AUTH_H_
 
 #include <cstdint>
 #include <array>
@@ -7,8 +7,9 @@
 #include <boost/asio/write.hpp>
 #include <boost/asio/buffer.hpp>
 
-namespace ssf { namespace socks { namespace v5 {
-//-----------------------------------------------------------------------------
+namespace ssf {
+namespace socks {
+namespace v5 {
 
 class AuthReply {
  public:
@@ -21,18 +22,14 @@ class AuthReply {
   uint8_t authMethod_;
 };
 
-
-//-----------------------------------------------------------------------------
-//  S E N D   R E P L Y
-//-----------------------------------------------------------------------------
-template<class VerifyHandler, class StreamSocket>
-void AsyncSendAuthReply(StreamSocket& c, const AuthReply& r, VerifyHandler handler) {
+template <class VerifyHandler, class StreamSocket>
+void AsyncSendAuthReply(StreamSocket& c, const AuthReply& r,
+                        VerifyHandler handler) {
   boost::asio::async_write(c, r.Buffer(), handler);
 }
 
-//-----------------------------------------------------------------------------
 }  // v5
 }  // socks
 }  // ssf
 
-#endif  // SSF_V5_REPLY_AUTH_H_
+#endif  // SSF_SERVICES_SOCKS_V5_REPLY_AUTH_H_

@@ -7,31 +7,28 @@
 
 #include <boost/asio/buffer.hpp>
 
-namespace ssf { 
+namespace ssf {
 
 class SSFRequest {
  public:
-  typedef uint32_t version_field_type;
+  using VersionField = uint32_t;
 
- enum { 
-   field_number = 1, 
-   total_size = sizeof(version_field_type)
- };
+  enum { field_number = 1, total_size = sizeof(VersionField) };
 
-public:
+ public:
   SSFRequest();
-  SSFRequest(version_field_type version);
+  SSFRequest(VersionField version);
 
-  version_field_type version() const;
+  VersionField version() const;
 
   std::array<boost::asio::const_buffer, field_number> const_buffer() const;
   std::array<boost::asio::mutable_buffer, field_number> buffer();
 
-private:
-  version_field_type version_;
+ private:
+  VersionField version_;
 };
 
-typedef std::shared_ptr<SSFRequest> SSFRequestPtr;
+using SSFRequestPtr = std::shared_ptr<SSFRequest>;
 
 }  // ssf
 

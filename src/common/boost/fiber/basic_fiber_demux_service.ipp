@@ -14,11 +14,12 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/system/error_code.hpp>
 #include <ctime>
 #include <limits>
+
+#include <ssf/log/log.h>
 
 #include "common/error/error.h"
 #include "common/boost/fiber/detail/basic_fiber_demux_impl.hpp"
@@ -33,11 +34,11 @@ namespace fiber {
 template <typename S>
 void basic_fiber_demux_service<S>::fiberize(implementation_type impl) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: fiberizing NOK " << ssf::error::broken_pipe;
+    SSF_LOG(kLogDebug) << "demux: fiberizing NOK " << ::error::broken_pipe;
     return;
   }
 
-  BOOST_LOG_TRIVIAL(trace) << "demux: fiberizing";
+  SSF_LOG(kLogTrace) << "demux: fiberizing";
 
   async_poll_packets(impl);
 }
@@ -48,8 +49,8 @@ void basic_fiber_demux_service<S>::bind(implementation_type impl,
                                         fiber_impl_type fib_impl,
                                         boost::system::error_code& ec) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: bind NOK " << ssf::error::broken_pipe;
-    ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+    SSF_LOG(kLogDebug) << "demux: bind NOK " << ::error::broken_pipe;
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
 
@@ -65,11 +66,11 @@ void basic_fiber_demux_service<S>::bind(implementation_type impl,
   {
     boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
     boost::recursive_mutex::scoped_lock lock2(impl->used_ports_mutex);
-    BOOST_LOG_TRIVIAL(debug) << "demux: try to bind " << fib_impl << " to "
+    SSF_LOG(kLogDebug) << "demux: try to bind " << fib_impl << " to "
                              << id.local_port() << "," << id.remote_port()
                              << " debug " << &id << "," << &fib_impl->id;
     if (receiving_id.remote_port() && !impl->bound.count(receiving_id)) {
-      BOOST_LOG_TRIVIAL(debug) << "demux: bind OK";
+      SSF_LOG(kLogDebug) << "demux: bind OK";
       impl->bound[receiving_id] = fib_impl;
       impl->used_ports.insert(id.local_port());
 
@@ -78,12 +79,12 @@ void basic_fiber_demux_service<S>::bind(implementation_type impl,
         fib_impl->closed = false;
       }
 
-      ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+      ec.assign(::error::success, ::error::get_ssf_category());
     } else {
-      BOOST_LOG_TRIVIAL(debug) << "demux: bind NOK "
-                               << ssf::error::device_or_resource_busy;
-      ec.assign(ssf::error::device_or_resource_busy,
-                ssf::error::get_ssf_category());
+      SSF_LOG(kLogDebug) << "demux: bind NOK "
+                               << ::error::device_or_resource_busy;
+      ec.assign(::error::device_or_resource_busy,
+                ::error::get_ssf_category());
     }
   }
 }
@@ -92,7 +93,7 @@ template <typename S>
 bool basic_fiber_demux_service<S>::is_bound(implementation_type impl,
                                             const fiber_id& id) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: is_bound NOK " << ssf::error::broken_pipe;
+    SSF_LOG(kLogDebug) << "demux: is_bound NOK " << ::error::broken_pipe;
     return false;
   }
 
@@ -104,13 +105,13 @@ template <typename S>
 void basic_fiber_demux_service<S>::unbind(implementation_type impl,
                                           const fiber_id& id) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: unbind NOK " << ssf::error::broken_pipe;
+    SSF_LOG(kLogDebug) << "demux: unbind NOK " << ::error::broken_pipe;
     return;
   }
 
   boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
   boost::recursive_mutex::scoped_lock lock2(impl->used_ports_mutex);
-  BOOST_LOG_TRIVIAL(trace) << "demux: unbound " << id.local_port() << ","
+  SSF_LOG(kLogTrace) << "demux: unbound " << id.local_port() << ","
                            << id.remote_port();
 
   impl->bound.erase(id.returning_id());
@@ -122,8 +123,8 @@ void basic_fiber_demux_service<S>::listen(implementation_type impl,
                                           local_port_type local_port,
                                           boost::system::error_code& ec) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: listen NOK " << ssf::error::broken_pipe;
-    ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+    SSF_LOG(kLogDebug) << "demux: listen NOK " << ::error::broken_pipe;
+    ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
 
@@ -131,16 +132,16 @@ void basic_fiber_demux_service<S>::listen(implementation_type impl,
 
   if (!impl->listening.count(local_port) &&
       is_bound(impl, fiber_id(0, local_port))) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: listening on " << local_port;
+    SSF_LOG(kLogDebug) << "demux: listening on " << local_port;
 
     impl->listening.insert(local_port);
 
-    ec.assign(ssf::error::success, ssf::error::get_ssf_category());
+    ec.assign(::error::success, ::error::get_ssf_category());
   } else if (impl->listening.count(local_port)) {
-    ec.assign(ssf::error::device_or_resource_busy,
-              ssf::error::get_ssf_category());
+    ec.assign(::error::device_or_resource_busy,
+              ::error::get_ssf_category());
   } else {
-    ec.assign(ssf::error::protocol_error, ssf::error::get_ssf_category());
+    ec.assign(::error::protocol_error, ::error::get_ssf_category());
   }
 }
 
@@ -148,7 +149,7 @@ template <typename S>
 bool basic_fiber_demux_service<S>::is_listening(implementation_type impl,
                                                 local_port_type local_port) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: is_listening NOK " << ssf::error::broken_pipe;
+    SSF_LOG(kLogDebug) << "demux: is_listening NOK " << ::error::broken_pipe;
     return false;
   }
 
@@ -160,14 +161,14 @@ template <typename S>
 void basic_fiber_demux_service<S>::stop_listening(implementation_type impl,
                                                   local_port_type local_port) {
   if (!impl) {
-    BOOST_LOG_TRIVIAL(debug) << "demux: stop_listening NOK "
-                             << ssf::error::broken_pipe;
+    SSF_LOG(kLogDebug) << "demux: stop_listening NOK "
+                             << ::error::broken_pipe;
     return;
   }
 
   boost::recursive_mutex::scoped_lock lock1(impl->listening_mutex);
   boost::recursive_mutex::scoped_lock lock2(impl->used_ports_mutex);
-  BOOST_LOG_TRIVIAL(debug) << "demux: stopped listening on " << local_port;
+  SSF_LOG(kLogDebug) << "demux: stopped listening on " << local_port;
 
   impl->listening.erase(local_port);
   impl->used_ports.erase(local_port);
@@ -191,7 +192,7 @@ void basic_fiber_demux_service<S>::async_poll_packets(
       this->dispatch_buffer(impl, p_fiber_buff);
       this->async_poll_packets(impl);
     } else {
-      BOOST_LOG_TRIVIAL(debug) << "demux: error in dispatch handler " << ec.value()
+      SSF_LOG(kLogDebug) << "demux: error in dispatch handler " << ec.value()
                                << ":" << ec.message() << " | "
                                << " " << bytes_transferred
                                << " bytes transferred";
@@ -229,8 +230,8 @@ void basic_fiber_demux_service<S>::async_push_packets(
     boost::asio::async_write(impl->socket, toSendPriority.buffer, handler);
   } else {
     impl->socket.get_io_service().post(boost::bind(
-        handler, boost::system::error_code(ssf::error::connection_aborted,
-                                           ssf::error::get_ssf_category()),
+        handler, boost::system::error_code(::error::connection_aborted,
+                                           ::error::get_ssf_category()),
         0));
   }
 }
@@ -242,7 +243,7 @@ void basic_fiber_demux_service<S>::dispatch_buffer(
 
   const auto flags = header.flags();
 
-  BOOST_LOG_TRIVIAL(debug) << "demux: dispatch " << uint32_t(header.version()) << " "
+  SSF_LOG(kLogDebug) << "demux: dispatch " << uint32_t(header.version()) << " "
                            << header.id().remote_port() << " "
                            << header.id().local_port() << " " << uint32_t(flags)
                            << " " << header.data_size();
@@ -271,7 +272,7 @@ void basic_fiber_demux_service<S>::dispatch_buffer(
 template <typename S>
 void basic_fiber_demux_service<S>::handle_dgr(implementation_type impl,
                                               p_fiber_buffer p_fiber_buff) {
-  BOOST_LOG_TRIVIAL(debug) << "demux: handle dgr";
+  SSF_LOG(kLogDebug) << "demux: handle dgr";
   const auto& full_id = p_fiber_buff->header().id();
   const auto& half_id = fiber_id(p_fiber_buff->header().id().remote_port(), 0);
   boost::recursive_mutex::scoped_lock lock(impl->bound_mutex);
@@ -296,7 +297,7 @@ void basic_fiber_demux_service<S>::handle_dgr(implementation_type impl,
 template <typename S>
 void basic_fiber_demux_service<S>::handle_push(implementation_type impl,
                                                p_fiber_buffer p_fiber_buff) {
-  BOOST_LOG_TRIVIAL(debug) << "demux: handle push";
+  SSF_LOG(kLogDebug) << "demux: handle push";
   const auto& header = p_fiber_buff->header();
   boost::recursive_mutex::scoped_lock lock(impl->bound_mutex);
 
@@ -314,7 +315,7 @@ void basic_fiber_demux_service<S>::handle_ack(implementation_type impl,
                                               p_fiber_buffer p_fiber_buff) {
   const auto& header = p_fiber_buff->header();
   boost::recursive_mutex::scoped_lock lock_bound(impl->bound_mutex);
-  BOOST_LOG_TRIVIAL(debug) << "demux: handle ack";
+  SSF_LOG(kLogDebug) << "demux: handle ack";
 
   if (impl->bound.count(header.id())) {
     auto p_fib_impl = impl->bound[header.id()];
@@ -325,8 +326,8 @@ void basic_fiber_demux_service<S>::handle_ack(implementation_type impl,
     if (p_fib_impl->connecting) {
       p_fib_impl->set_connected();
       auto on_ack = p_fib_impl->access_connect_handler();
-      on_ack(boost::system::error_code(ssf::error::success,
-                                       ssf::error::get_ssf_category()));
+      on_ack(boost::system::error_code(::error::success,
+                                       ::error::get_ssf_category()));
     }
   } else {
     async_send_rst(impl, header.id().returning_id(),
@@ -337,7 +338,7 @@ void basic_fiber_demux_service<S>::handle_ack(implementation_type impl,
 template <typename S>
 void basic_fiber_demux_service<S>::handle_syn(implementation_type impl,
                                               p_fiber_buffer p_fiber_buff) {
-  BOOST_LOG_TRIVIAL(debug) << "demux: handle syn";
+  SSF_LOG(kLogDebug) << "demux: handle syn";
   const auto& header = p_fiber_buff->header();
   boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
   boost::recursive_mutex::scoped_lock lock2(impl->listening_mutex);
@@ -355,7 +356,7 @@ void basic_fiber_demux_service<S>::handle_syn(implementation_type impl,
 template <typename S>
 void basic_fiber_demux_service<S>::handle_rst(implementation_type impl,
                                               p_fiber_buffer p_fiber_buff) {
-  BOOST_LOG_TRIVIAL(debug) << "demux: handle rst";
+  SSF_LOG(kLogDebug) << "demux: handle rst";
   const auto& header = p_fiber_buff->header();
   auto returning_id = header.id().returning_id();
   boost::recursive_mutex::scoped_lock lock_bound(impl->bound_mutex);
@@ -369,8 +370,8 @@ void basic_fiber_demux_service<S>::handle_rst(implementation_type impl,
     if (p_fib_impl->connecting || p_fib_impl->connected) {
       if (p_fib_impl->connecting) {
         auto on_connection = p_fib_impl->access_connect_handler();
-        on_connection(boost::system::error_code(ssf::error::connection_refused,
-          ssf::error::get_ssf_category()));
+        on_connection(boost::system::error_code(::error::connection_refused,
+          ::error::get_ssf_category()));
       } else {
         p_fib_impl->set_disconnected();
         auto rst_sent = [this, impl, returning_id, p_fib_impl]() {
@@ -410,8 +411,8 @@ void basic_fiber_demux_service<S>::async_send_push(implementation_type impl,
       p_timer->async_wait(lambda);
     }
   } else {
-    handler(boost::system::error_code(ssf::error::protocol_error,
-                                      ssf::error::get_ssf_category()),
+    handler(boost::system::error_code(::error::protocol_error,
+                                      ::error::get_ssf_category()),
             0);
   }
 }
@@ -430,7 +431,7 @@ void basic_fiber_demux_service<S>::async_send_dgr(implementation_type impl,
     boost::system::error_code ec;
     bind(impl, fib_impl->id.local_port(), fib_impl, ec);
     if (ec) {
-      BOOST_LOG_TRIVIAL(debug) << "demux: error dgr " << ec.message() << ec.value();
+      SSF_LOG(kLogDebug) << "demux: error dgr " << ec.message() << ec.value();
       io_service_.post(boost::bind(handler, ec, 0));
       return;
     }
@@ -452,8 +453,8 @@ void basic_fiber_demux_service<S>::async_send_dgr(implementation_type impl,
     }
   } else {
     io_service_.post(boost::bind(
-        handler, boost::system::error_code(ssf::error::protocol_error,
-                                           ssf::error::get_ssf_category()),
+        handler, boost::system::error_code(::error::protocol_error,
+                                           ::error::get_ssf_category()),
         0));
   }
 }
@@ -469,14 +470,14 @@ void basic_fiber_demux_service<S>::async_send_ack(implementation_type impl,
     bind(impl, fib_impl->id.local_port(), fib_impl, ec);
     fib_impl->set_connected();
     if (ec) {
-      BOOST_LOG_TRIVIAL(debug) << "demux: error send ack " << ec.message() << ec.value();
+      SSF_LOG(kLogDebug) << "demux: error send ack " << ec.message() << ec.value();
       op->complete(ec, 0);
     } else {
       auto handler = [=](const boost::system::error_code& ec, std::size_t) {
         if (!!ec) {
-          BOOST_LOG_TRIVIAL(debug) << "demux: error send ack handler " << ec.message();
+          SSF_LOG(kLogDebug) << "demux: error send ack handler " << ec.message();
         } else {
-          BOOST_LOG_TRIVIAL(trace) << "demux: ack sent";
+          SSF_LOG(kLogTrace) << "demux: ack sent";
         }
 
         op->complete(ec, 0);
@@ -502,7 +503,7 @@ void basic_fiber_demux_service<S>::async_send_syn(implementation_type impl,
   // Bind reverse the id in bound map so reverse it...
   if ((impl->bound).count(id.returning_id())) {
     auto p_fib_impl = impl->bound[id.returning_id()];
-    BOOST_LOG_TRIVIAL(debug) << "demux: async send syn";
+    SSF_LOG(kLogDebug) << "demux: async send syn";
 
     boost::recursive_mutex::scoped_lock lock_state(p_fib_impl->state_mutex);
 
@@ -510,9 +511,9 @@ void basic_fiber_demux_service<S>::async_send_syn(implementation_type impl,
       p_fib_impl->set_connecting();
       auto handler = [](const boost::system::error_code& ec, std::size_t) {
         if (!!ec) {
-          BOOST_LOG_TRIVIAL(debug) << "demux: error " << ec.message();
+          SSF_LOG(kLogDebug) << "demux: error " << ec.message();
         } else {
-          BOOST_LOG_TRIVIAL(trace) << "demux: syn sent";
+          SSF_LOG(kLogTrace) << "demux: syn sent";
         }
       };
 
@@ -528,14 +529,14 @@ template <typename Handler>
 void basic_fiber_demux_service<S>::async_send_rst(
     implementation_type impl, fiber_id id, const Handler& close_handler) {
 
-  BOOST_LOG_TRIVIAL(debug) << "demux: async send rst";
+  SSF_LOG(kLogDebug) << "demux: async send rst";
   auto handler = [this, id, close_handler](const boost::system::error_code& ec,
                                            std::size_t) {
     if (!!ec) {
-      BOOST_LOG_TRIVIAL(debug) << "demux: async send rst error " << ec.value() << " : "
+      SSF_LOG(kLogDebug) << "demux: async send rst error " << ec.value() << " : "
                                << ec.message();
     } else {
-      BOOST_LOG_TRIVIAL(trace) << "demux: rst sent " << id.local_port() << " "
+      SSF_LOG(kLogTrace) << "demux: rst sent " << id.local_port() << " "
                                << id.remote_port();
     }
 
@@ -571,7 +572,7 @@ void basic_fiber_demux_service<S>::async_connect(
     implementation_type impl,
     boost::asio::fiber::detail::fiber_id::remote_port_type remote_port,
     fiber_impl_type fib_impl) {
-  BOOST_LOG_TRIVIAL(debug) << "demux: async connect to remote port : "
+  SSF_LOG(kLogDebug) << "demux: async connect to remote port : "
                            << remote_port;
 
   fib_impl->id.set_remote_port(remote_port);
@@ -599,8 +600,8 @@ void basic_fiber_demux_service<S>::async_send(
   if (buffers_size > impl->mtu) {
     if (flags & kFlagDatagram) {
       io_service_.post(boost::bind<void>(
-        handler, boost::system::error_code(ssf::error::message_too_long,
-                                           ssf::error::get_ssf_category()), 0));
+        handler, boost::system::error_code(::error::message_too_long,
+                                           ::error::get_ssf_category()), 0));
       return;
     }
     buffers_size = impl->mtu;
@@ -639,10 +640,10 @@ void basic_fiber_demux_service<S>::async_send(
   auto& header_b = p_fiber_buffer->header();
   auto flags_b = header_b.flags();
 
-  BOOST_LOG_TRIVIAL(debug) << "demux: sending " << uint32_t(header_b.version()) << " "
-                           << header_b.id().remote_port() << " "
-                           << header_b.id().local_port() << " "
-                           << uint32_t(flags_b) << " " << header_b.data_size();
+  SSF_LOG(kLogDebug) << "demux: sending " << uint32_t(header_b.version()) << " "
+                     << header_b.id().remote_port() << " "
+                     << header_b.id().local_port() << " " << uint32_t(flags_b)
+                     << " " << header_b.data_size();
 
   impl->socket.get_io_service().post(do_push_packets);
 }

@@ -9,10 +9,10 @@
 
 #include <boost/system/error_code.hpp>
 
-#include "common/network/base_session.h"  // NOLINT
-
-#include "common/network/manager.h"
-#include "common/network/base_session.h"
+#include <ssf/log/log.h>
+#include <ssf/network/base_session.h>  // NOLINT
+#include <ssf/network/manager.h>
+#include <ssf/network/base_session.h>
 
 #include "services/copy_file/filename_buffer.h"
 #include "services/copy_file/packet/packet.h"
@@ -47,7 +47,7 @@ class FiberToOstreamSession : public ssf::BaseSession {
 
   // Stop session
   virtual void stop(boost::system::error_code& ec) {
-    BOOST_LOG_TRIVIAL(debug) << "session fiber to file : stopped";
+    SSF_LOG(kLogDebug) << "session[fiber to file]: stopped";
     input_socket_stream_.close(ec);
     // connection interrupted without prior notification (broken pipe)
     // delete output file
@@ -93,16 +93,15 @@ class FiberToOstreamSession : public ssf::BaseSession {
           boost::bind(&FiberToOstreamSession::ForwardData, this->SelfFromThis(),
                       _1, _2));
 
-      BOOST_LOG_TRIVIAL(info)
-          << "session fiber to file : start receiving data and writing in file "
+      SSF_LOG(kLogInfo)
+          << "session[fiber to file]: start receiving data and writing in file "
           << request_.GetFilename();
 
       // open output_stream
       output_stream_.open(request_.GetFilename(), std::ofstream::binary);
       if (!output_stream_.is_open()) {
-        BOOST_LOG_TRIVIAL(error) << "session fiber to file : output file "
-                                 << request_.GetFilename()
-                                 << " could not be opened";
+        SSF_LOG(kLogError) << "session[fiber to file]: output file "
+                           << request_.GetFilename() << " could not be opened";
         boost::system::error_code stop_ec;
         p_manager_->stop(this->SelfFromThis(), stop_ec);
 
