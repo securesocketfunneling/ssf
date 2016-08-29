@@ -63,7 +63,8 @@
                             </ul>
                         </li>
                         <li role="presentation"><a aria-controls="download" data-toggle="tab" href="#download">Download</a></li>
-						<li role="presentation" class="dropdown">
+                        <li role="presentation"><a aria-controls="changelog" data-toggle="tab" href="#changelog">Changelog</a></li>
+                        <li role="presentation" class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">More<span class="caret"></span></a>
                             <ul class="dropdown-menu" role="menu">
                                 <li><a aria-controls="security-features" data-toggle="tab" href="#security-features">Security</a></li>
@@ -129,7 +130,9 @@
                             </div>
                             
                             <div class="col-md-12">
-                                <p class="text-center">Version <strong>2.1.0</strong></p>
+                                <p class="text-center">
+                                    <a href="#changelog" title="Go to changelog">Version <strong>2.1.0</strong></a>
+                                </p>
                             </div>
                                 
                         </div>
@@ -1004,7 +1007,7 @@ cmake --build .</pre>
 
                     <!-- Download -->
                     <div role="tabpanel" id="download" class="tab-pane fade">
-                        <h1>Download</h1>
+                        <h1>Download SSF</h1>
                         <div class="col-md-12">
                             <div class="col-md-4">
                                 <div class="list-group">
@@ -1018,7 +1021,7 @@ cmake --build .</pre>
                                 </div>
                             </div>
                         </div>
-
+                            
                         <h1>Archive content</h1>
                         <div class="col-md-12">
                             <ul>
@@ -1027,8 +1030,92 @@ cmake --build .</pre>
                                 <li>Test certificates (<span class="text-danger"><i class="fa fa-warning"></i> testing purpose only</span>)</li>
                             </ul>
                         </div>
+                        
+                        <h1><a href="#changelog" title="Go to changelog">Version history</a></h1>
                     </div>
                     <!-- End download -->
+
+                    <!-- Changelog -->
+                    <div role="tabpanel" id="changelog" class="tab-pane fade">
+                        <h1>Version history</h1>
+                        <div class="col-md-12">
+                            <h2>2.1.0</h2>
+                            <div class="col-md-12">
+                                <ul>
+                                    <li>Features:
+                                        <ul>
+                                            <li>TLS layer over circuit layer</li>
+                                            <li>HTTP proxy support (CONNECT method), cf. configuration file</li>
+                                            <li>HTTP proxy authentication support (Basic, Digest, NTLM [windows only], Negotiate), cf. configuration file</li>
+                                            <li>Basic shell through socket (-X and -Y options)</li>
+                                            <li>Server network interface option</li>
+                                        </ul>
+                                    </li>
+                                    <li>Fixed bugs:
+                                        <ul>
+                                            <li>Linux static link to libstdc++</li>
+                                            <li>Linux dependency to GLIBC2.14 (memcpy)</li>
+                                            <li>Stop behavior (signal instead of user input)</li>
+                                            <li>Port forwarding listening side on localhost only</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <h2>2.0.0</h2>
+                            <div class="col-md-12">
+                                <ul>
+                                    <li><i class="fa fa-warning"></i> BC break with version 1.*.*</li>
+                                    <li>Features:
+                                        <ul>
+                                            <li>New network layer based on SSF network framework</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <h2>1.1.0</h2>
+                            <div class="col-md-12">
+                                <ul>
+                                    <li>Features:
+                                        <ul>
+                                            <li>ssfcp: file copy between client and server</li>
+                                            <li>Rename executables:
+                                                <ul>
+                                                    <li>SSF_Client <i class="fa fa-long-arrow-right"></i> ssfc</li>
+                                                    <li>SSF_Server <i class="fa fa-long-arrow-right"></i> ssfs</li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li>Fixed bugs:
+                                        <ul>
+                                            <li>Crash issue due to exception when resolving endpoint</li>
+                                            <li>Exception safety</li>
+                                            <li>Windows compilation warnings (64bits)
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <h2>1.0.0</h2>
+                            <div class="col-md-12">
+                                <ul>
+                                    <li>Features:
+                                        <ul>
+                                            <li>Local and remote TCP port forwarding (-L and -R options)</li>
+                                            <li>Local and remote UDP port forwarding (-U and -V options)</li>
+                                            <li>Local and remote SOCKS server (-D and -F options)</li>
+                                            <li>Native relay protocol (-b option)</li>
+                                            <li>Multi platform (Windows, Linux and OSX)</li>
+                                            <li>TLS connection with the strongest cipher-suites
+                                            <li>Standalone executables</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Security features -->
                     <div role="tabpanel" id="security-features" class="tab-pane fade">
