@@ -173,8 +173,8 @@ void Admin<Demux>::InitializeRemoteServices(
                 boost::bind(&Admin::InitializeRemoteServices,
                             this->SelfFromThis(), _1));
           }
-
-          return;
+          // Try next user service
+          continue;
         }
 
         // Start local associated services
@@ -201,8 +201,8 @@ void Admin<Demux>::InitializeRemoteServices(
           }
           // Stop local services
           user_services_[i_]->StopLocalServices(this->get_demux());
-
-          return;
+          // Try next user service
+          continue;
         }
 
         Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
