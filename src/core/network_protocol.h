@@ -12,10 +12,14 @@
 #include <ssf/layer/physical/tlsotcp.h>
 #include <ssf/layer/proxy/basic_proxy_protocol.h>
 
-#include "common/config/config.h"
 #include "core/circuit/config.h"
 
 namespace ssf {
+
+namespace config {
+class Config;
+}  // config
+
 namespace network {
 
 class NetworkProtocol {

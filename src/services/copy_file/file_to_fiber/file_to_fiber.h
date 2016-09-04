@@ -25,6 +25,7 @@
 #include "services/admin/requests/create_service_request.h"
 #include "services/copy_file/file_to_fiber/istream_to_fiber_session.h"
 
+#include "services/copy_file/config.h"
 #include "services/copy_file/filename_buffer.h"
 #include "services/copy_file/filesystem/filesystem.h"
 #include "services/copy_file/fiber_to_file/fiber_to_file.h"
@@ -119,7 +120,12 @@ class FileToFiber : public BaseService<Demux> {
   virtual uint32_t service_type_id() { return factory_id; }
 
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(factory_id, &FileToFiber::Create);
   }
 

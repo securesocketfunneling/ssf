@@ -7,6 +7,7 @@
 
 #include "core/factories/service_factory.h"
 #include "services/admin/requests/create_service_request.h"
+#include "services/copy_file/config.h"
 #include "services/copy_file/file_to_fiber/file_to_fiber.h"
 
 namespace ssf {
@@ -51,7 +52,12 @@ class FileEnquirer : public BaseService<Demux> {
   virtual uint32_t service_type_id() { return factory_id; }
 
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<Demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(factory_id, &FileEnquirer::Create);
   }
 

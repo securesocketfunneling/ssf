@@ -98,8 +98,9 @@ int main(int argc, char** argv) {
 
   // Load SSF config if any
   ssf::config::Config ssf_config;
+  ssf_config.Init();
 
-  ssf_config.Update(cmd.config_file(), ec);
+  ssf_config.UpdateFromFile(cmd.config_file(), ec);
 
   if (ec) {
     SSF_LOG(kLogError) << "client: invalid config file format -- Exiting";
@@ -107,6 +108,10 @@ int main(int argc, char** argv) {
   }
 
   ssf_config.Log();
+
+  if (cmd.show_status()) {
+    ssf_config.LogStatus();
+  }
 
   CircuitConfig circuit_config;
   circuit_config.Update(cmd.circuit_file(), ec);

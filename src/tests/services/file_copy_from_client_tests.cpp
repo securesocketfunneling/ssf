@@ -55,7 +55,6 @@ void FileExistsAndIdentical(const std::string& source_filepath,
       << " are different";
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyNoFileFromClientToRemoteTest, CopyTest) {
   ASSERT_TRUE(Wait());
 
@@ -67,7 +66,6 @@ TEST_F(CopyNoFileFromClientToRemoteTest, CopyTest) {
       << "The file test_filex.txt should not exist in files_copied";
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyUniqueFileFromClientToRemoteTest, CopyTest) {
   ASSERT_TRUE(Wait());
 
@@ -77,7 +75,6 @@ TEST_F(CopyUniqueFileFromClientToRemoteTest, CopyTest) {
                          "files_copied/test_file1.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyGlobFileFromClientToRemoteTest, CopyTest) {
   ASSERT_TRUE(Wait());
 
@@ -89,7 +86,6 @@ TEST_F(CopyGlobFileFromClientToRemoteTest, CopyTest) {
                          "files_copied/test_file2.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyUniqueFileFromRemoteToClientTest, CopyTest) {
   ASSERT_TRUE(Wait());
 
@@ -99,7 +95,6 @@ TEST_F(CopyUniqueFileFromRemoteToClientTest, CopyTest) {
                          "files_copied/test_file1.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyGlobFileFromRemoteToClientTest, CopyTest) {
   ASSERT_TRUE(Wait());
 
@@ -111,7 +106,6 @@ TEST_F(CopyGlobFileFromRemoteToClientTest, CopyTest) {
                          "files_copied/test_file2.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyStdinFromClientToRemoteTest, CopyTest) {
   // stdin as test_file1.txt filebuf
   std::ifstream in("files_to_copy/test_file1.txt", std::ifstream::binary);

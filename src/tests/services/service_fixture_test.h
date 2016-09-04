@@ -54,9 +54,15 @@ class ServiceFixtureTest : public ::testing::Test {
     p_ssf_server_->Stop();
   }
 
+  virtual void SetServerConfig(ssf::config::Config& config) {}
+
+  virtual void SetClientConfig(ssf::config::Config& config) {}
+
   bool StartServer(const std::string& host_addr, const std::string& host_port) {
     ssf::config::Config ssf_config;
+    ssf_config.Init();
 
+    SetServerConfig(ssf_config);
     auto endpoint_query =
         NetworkProtocol::GenerateServerQuery(host_addr, host_port, ssf_config);
 
@@ -80,6 +86,9 @@ class ServiceFixtureTest : public ::testing::Test {
     client_options.push_back(p_service);
 
     ssf::config::Config ssf_config;
+    ssf_config.Init();
+
+    SetClientConfig(ssf_config);
 
     auto endpoint_query = NetworkProtocol::GenerateClientQuery(
         target_addr, target_host, ssf_config, {});
@@ -135,14 +144,14 @@ class ServiceFixtureTest : public ::testing::Test {
     }
 
     if (type == ssf::services::initialisation::SERVICE) {
-      if(ec) {
+      if (ec) {
         SSF_LOG(kLogCritical) << "user_service[" << p_user_service->GetName()
                               << "]: initialization failed";
       }
       if (p_user_service->GetName() == ServiceTested::GetParseName()) {
         service_set_.set_value(!ec);
       }
-    
+
       return;
     }
   }

@@ -14,6 +14,7 @@
 #include "common/boost/fiber/datagram_fiber.hpp"
 
 namespace ssf {
+
 //----------------------------------------------------------------------------
 /// Base class for services
 template <typename Demux>

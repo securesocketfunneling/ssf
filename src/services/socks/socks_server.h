@@ -19,6 +19,8 @@
 
 #include "services/admin/requests/create_service_request.h"
 
+#include "services/socks/config.h"
+
 namespace ssf {
 namespace services {
 namespace socks {
@@ -56,7 +58,12 @@ class SocksServer : public BaseService<Demux> {
 
   /// Function used to register the micro service to the given factory
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(factory_id, &SocksServer::create);
   }
 
