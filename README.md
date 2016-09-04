@@ -66,6 +66,20 @@ ssfc[.exe] -D 9000 -b bounce.txt -c config.json -p 8000 192.168.0.1
 
 ### Copy command line
 
+Copy feature must be enabled both on client and server before usage.
+
+Config file example:
+
+```
+"ssf": {
+  "services": {
+    "file_copy": { "enable": true }
+  }
+}
+```
+
+#### Command line
+
 ```plaintext
 ssfcp[.exe] [-h] [-b bounce_file] [-c config_file] [-p port] [-t] [host@]path [[host@]path]
 ```
@@ -109,53 +123,62 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
 127.0.0.1:8003
 ```
 
-#### Config file
+#### Configuration file
 
 ```plaintext
 {
-    "ssf": {
-        "tls": {
-            "ca_cert_path": "./certs/trusted/ca.crt",
-            "cert_path": "./certs/certificate.crt",
-            "key_path": "./certs/private.key",
-            "dh_path": "./certs/dh4096.pem",
-            "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
-        },
-        "http_proxy": {
-            "host": "proxy.example.com",
-            "port": "3128",
-            "credentials": {
-                "username": "user",
-                "password": "password",
-                "domain": "EXAMPLE.COM",
-                "reuse_ntlm": "true",
-                "reuse_kerb": "true"
-            }
-        },
-        "services": {
-            "shell": {
-                "path": "/bin/bash",
-                "args": ""
-            }
-        }
+  "ssf": {
+    "tls" : {
+      "ca_cert_path": "./certs/trusted/ca.crt",
+      "cert_path": "./certs/certificate.crt",
+      "key_path": "./certs/private.key",
+      "key_password": "",
+      "dh_path": "./certs/dh4096.pem",
+      "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
+    },
+    "http_proxy" : {
+      "host": "",
+      "port": "",
+      "credentials": {
+        "username": "",
+        "password": "",
+        "domain": "",
+        "reuse_ntlm": "true",
+        "reuse_nego": "true"
+      }
+    },
+    "services": {
+      "datagram_forwarder": { "enable": true },
+      "datagram_listener": { "enable": true },
+      "stream_forwarder": { "enable": true },
+      "stream_listener": { "enable": true },
+      "file_copy": { "enable": false },
+      "shell": {
+        "enable": false,
+        "path": "/bin/bash|C:\\windows\\system32\\cmd.exe",
+        "args": ""
+      },
+      "socks": { "enable": true }
     }
+  }
 }
 ```
 
-* *tls.ca_cert_path*      : relative or absolute path to the CA certificate file
-* *tls.cert_path*         : relative or absolute path to the instance certificate file
-* *tls.key_path*          : relative or absolute path to the private key file
-* *tls.dh_path*           : relative or absolute path to the Diffie-Hellman file
-* *tls.cipher_alg*        : cipher algorithm
-* *http_proxy.host*                   : HTTP proxy host
-* *http_proxy.port*                   : HTTP proxy port
-* *http_proxy.credentials.username*   : proxy username credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
-* *http_proxy.credentials.password*   : proxy password credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
-* *http_proxy.credentials.domain*     : user domain (NTLM and Negotiate auth on Windows only)
-* *http_proxy.credentials.reuse_ntlm* : reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)
-* *http_proxy.credentials.reuse_kerb* : reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO)
-* *services.shell.path* : binary path used for shell creation (optional)
-* *services.shell.args* : binary arguments used for shell creation (optional)
+* _tls.ca_cert_path_      : relative or absolute path to the CA certificate file
+* _tls.cert_path_         : relative or absolute path to the instance certificate file
+* _tls.key_path_          : relative or absolute path to the private key file
+* _tls.dh_path_           : relative or absolute path to the Diffie-Hellman file
+* _tls.cipher_alg_        : cipher algorithm
+* _http_proxy.host_                   : HTTP proxy host
+* _http_proxy.port_                   : HTTP proxy port
+* _http_proxy.credentials.username_   : proxy username credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
+* _http_proxy.credentials.password_   : proxy password credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
+* _http_proxy.credentials.domain_     : user domain (NTLM and Negotiate auth on Windows only)
+* _http_proxy.credentials.reuse_ntlm_ : reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)
+* _http_proxy.credentials.reuse_kerb_ : reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO)
+* _services.*.enable_   : [enable/disable microservice](#microservices)
+* _services.shell.path_ : binary path used for shell creation (optional)
+* _services.shell.args_ : binary arguments used for shell creation (optional)
 
 ## How to configure
 
@@ -208,12 +231,14 @@ openssl x509 -extfile extfile.txt -extensions v3_req_p -req -sha1 -days 3650 -CA
 
 ### Configuration file
 
+#### TLS
+
 With default options, the following files and folders should be in the directory of execution of a client or a server:
 
-* ./certs/dh4096.pem
-* ./certs/certificate.crt
-* ./certs/private.key
-* ./certs/trusted/ca.crt
+* `./certs/dh4096.pem`
+* `./certs/certificate.crt`
+* `./certs/private.key`
+* `./certs/trusted/ca.crt`
 
 Where:
 
@@ -224,6 +249,57 @@ Where:
 However, if you want those files at different paths, it is possible to customize them with the configuration file option *-c*.
 
 An example is given in the file example section.
+
+#### Microservices
+
+SSF is using microservices to build its features (TCP forwarding, remote SOCKS, ...)
+
+There are 7 microservices:
+* stream_forwarder
+* stream_listener
+* datagram_forwarder
+* datagram_listener
+* file_copy
+* socks
+* shell
+
+Each feature is the combination of at least one client side microservice and one server side microservice.
+
+This table sums up how each feature is assembled:
+
+| ssfc feature                | microservice client side | microservice server side |
+|:----------------------------|:-------------------------|:-------------------------|
+| `-L`: TCP forwarding        | stream_listener          | stream_forwarder         |
+| `-R`: remote TCP forwarding | stream_forwarder         | stream_listener          |
+| `-U`: UDP forwarding        | datagram_listener        | datagram_forwarder       |
+| `-V`: remote UDP forwarding | datagram_forwarder       | datagram_listener        |
+| `-D`: SOCKS                 | stream_listener          | socks                    |
+| `-F`: remote SOCKS          | socks                    | stream_listener          |
+| `-X`: shell                 | stream_listener          | shell                    |
+| `-Y`: remote shell          | shell                    | stream_listener          |
+
+This architecture makes it easier to build remote features: they use the same microservices but on the opposite side.
+
+`ssfc` and `ssfs` come with pre-enabled microservices.
+Here is the default microservices configuration:
+
+```
+"ssf": {
+  "services": {
+    "datagram_forwarder": { "enable": true },
+    "datagram_listener": { "enable": true },
+    "stream_forwarder": { "enable": true },
+    "stream_listener": { "enable": true },
+    "socks": { "enable": true },
+    "file_copy": { "enable": false },
+    "shell": { "enable": false }
+  }
+}
+```
+
+To enable or disable a microservice, set its `enable` option to `true` or `false`.
+
+Trying to use a feature requiring a disabled microservice will result in an error message.
 
 ### Relay chain file
 
