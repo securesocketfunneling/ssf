@@ -52,7 +52,7 @@ class FileEnquirer : public BaseService<Demux> {
   virtual uint32_t service_type_id() { return factory_id; }
 
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
       // service factory is not enabled
       return;

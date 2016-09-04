@@ -9,8 +9,8 @@ Services::Services()
     : datagram_forwarder_(),
       datagram_listener_(),
       file_copy_(),
-      socks_(),
       shell_(),
+      socks_(),
       stream_forwarder_(),
       stream_listener_() {}
 
@@ -18,8 +18,8 @@ Services::Services(const Services& services)
     : datagram_forwarder_(services.datagram_forwarder_),
       datagram_listener_(services.datagram_listener_),
       file_copy_(services.file_copy_),
-      socks_(services.socks_),
       shell_(services.shell_),
+      socks_(services.socks_),
       stream_forwarder_(services.stream_forwarder_),
       stream_listener_(services.stream_listener_) {}
 
