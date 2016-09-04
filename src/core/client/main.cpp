@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
         if (p_service.get() != nullptr) {
           if (ec) {
             SSF_LOG(kLogError) << "client: service <" << p_service->GetName()
-                               << "> NOK";
+                              << "> KO";
           } else {
             SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
                               << "> OK";

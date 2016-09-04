@@ -92,9 +92,8 @@ class FileEnquirer : public BaseService<Demux> {
     }
 
     reenter(coroutine_) {
-      SSF_LOG(kLogDebug)
-          << "service[file enquirer]: connect to remote fiber acceptor port "
-          << remote_endpoint_.port();
+      SSF_LOG(kLogDebug) << "microservice[file enquirer]: connect to remote "
+                            "fiber acceptor port " << remote_endpoint_.port();
 
       yield fiber_.async_connect(
           remote_endpoint_,

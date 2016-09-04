@@ -57,7 +57,7 @@ class PortForwarding : public BaseUserService<Demux> {
   static std::string GetValueName() { return "loc_port:dest_ip:dest_port"; }
 
   static std::string GetParseDesc() {
-    return "Forward local port on given target from server";
+    return "Forward TCP client port on given target from server";
   }
 
  public:

@@ -89,8 +89,9 @@ class FileToFiber : public BaseService<Demux> {
 
     if (accept_) {
       endpoint ep(this->get_demux(), kServicePort);
-      SSF_LOG(kLogInfo) << "service[file to fiber]: start accept on fiber port "
-                        << kServicePort;
+      SSF_LOG(kLogInfo)
+          << "microservice[file to fiber]: start accept on fiber port "
+          << kServicePort;
       fiber_acceptor_.bind(ep, ec);
       fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
       if (ec) {
@@ -104,7 +105,7 @@ class FileToFiber : public BaseService<Demux> {
 
   // Stop service
   virtual void stop(boost::system::error_code& ec) {
-    SSF_LOG(kLogInfo) << "service[file to fiber]: stopping";
+    SSF_LOG(kLogInfo) << "microservice[file to fiber]: stopping";
     manager_.stop_all();
     boost::system::error_code close_ec;
     fiber_acceptor_.close(close_ec);
@@ -282,7 +283,7 @@ class FileToFiber : public BaseService<Demux> {
         std::make_shared<fiber>(this->get_demux().get_io_service());
 
     SSF_LOG(kLogDebug)
-        << "service[file to fiber]: connect to remote fiber acceptor port "
+        << "microservice[file to fiber]: connect to remote fiber acceptor port "
         << ssf::services::copy_file::fiber_to_file::FiberToFile<
                Demux>::kServicePort;
 
@@ -310,11 +311,12 @@ class FileToFiber : public BaseService<Demux> {
 
     if (from_stdin) {
       SSF_LOG(kLogInfo)
-          << "service[file to fiber]: start forward data from stdin to "
+          << "microservice[file to fiber]: start forward data from stdin to "
           << output_file;
     } else {
-      SSF_LOG(kLogInfo) << "service[file to fiber]: start forward data from "
-                        << input_file << " to " << output_file;
+      SSF_LOG(kLogInfo)
+          << "microservice[file to fiber]: start forward data from "
+          << input_file << " to " << output_file;
     }
 
     if (!from_stdin) {

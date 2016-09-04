@@ -45,18 +45,18 @@ Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[process]: start";
+  SSF_LOG(kLogInfo) << "session[shell]: start";
 
   InitPipes(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: pipes initialization failed";
+    SSF_LOG(kLogError) << "session[shell]: pipes initialization failed";
     stop(ec);
     return;
   }
 
   StartProcess(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: start process failed";
+    SSF_LOG(kLogError) << "session[shell]: start process failed";
     stop(ec);
     return;
   }
@@ -64,7 +64,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
   StartForwarding(ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "session[process]: forwarding data from process to client failed";
+        << "session[shell]: forwarding data from process to client failed";
     stop(ec);
     return;
   }
@@ -72,7 +72,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[process]: stop";
+  SSF_LOG(kLogInfo) << "session[shell]: stop";
 
   if (process_info_.hProcess != INVALID_HANDLE_VALUE) {
     ::TerminateProcess(process_info_.hProcess, 0);
@@ -111,7 +111,7 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
   client_.close();
 
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: stop error " << ec.message();
+    SSF_LOG(kLogError) << "session[shell]: stop error " << ec.message();
   }
 }
 
@@ -131,21 +131,21 @@ void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   h_out_.assign(data_out_, ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "session[process]: could not initialize out stream handle";
+        << "session[shell]: could not initialize out stream handle";
     return;
   }
   data_out_ = INVALID_HANDLE_VALUE;
   h_err_.assign(data_err_, ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "session[process]: could not initialize err stream handle";
+        << "session[shell]: could not initialize err stream handle";
     return;
   }
   data_err_ = INVALID_HANDLE_VALUE;
   h_in_.assign(data_in_, ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "session[process]: could not initialize in stream handle";
+        << "session[shell]: could not initialize in stream handle";
     return;
   }
   data_in_ = INVALID_HANDLE_VALUE;
@@ -188,7 +188,7 @@ void Session<Demux>::StartProcess(boost::system::error_code& ec) {
                         NULL, TRUE, CREATE_NEW_CONSOLE, NULL,
                         (home_dir_set ? home_dir : NULL), &startup_info,
                         &process_info_)) {
-    SSF_LOG(kLogError) << "session[process]: create process <" << command_line
+    SSF_LOG(kLogError) << "session[shell]: create process <" << command_line
                        << "> failed";
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
   }
@@ -206,8 +206,7 @@ template <typename Demux>
 void Session<Demux>::InitPipes(boost::system::error_code& ec) {
   auto local_fib_ep = client_.remote_endpoint(ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "session[process]: could not get fiber local endpoint";
+    SSF_LOG(kLogError) << "session[shell]: could not get fiber local endpoint";
     return;
   }
 
@@ -225,21 +224,21 @@ void Session<Demux>::InitPipes(boost::system::error_code& ec) {
   InitOutNamedPipe(out_pipe_name_, &data_out_, &proc_out_, &sec_attr, pipe_size,
                    ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: init out pipe failed";
+    SSF_LOG(kLogError) << "session[shell]: init out pipe failed";
     return;
   }
 
   InitOutNamedPipe(err_pipe_name_, &data_err_, &proc_err_, &sec_attr, pipe_size,
                    ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: init err pipe failed";
+    SSF_LOG(kLogError) << "session[shell]: init err pipe failed";
     return;
   }
 
   InitInNamedPipe(in_pipe_name_, &proc_in_, &data_in_, &sec_attr, pipe_size,
                   ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: init in pipe failed";
+    SSF_LOG(kLogError) << "session[shell]: init in pipe failed";
     return;
   }
 }
@@ -256,7 +255,7 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
       0, p_pipe_attributes);
 
   if (read_pipe_tmp == INVALID_HANDLE_VALUE) {
-    SSF_LOG(kLogError) << "session[process]: create read side of named pipe <"
+    SSF_LOG(kLogError) << "session[shell]: create read side of named pipe <"
                        << pipe_name << "> failed";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
@@ -268,7 +267,7 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
 
   if (*p_write_pipe == INVALID_HANDLE_VALUE) {
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
-    SSF_LOG(kLogError) << "session[process]: create write side of named pipe <"
+    SSF_LOG(kLogError) << "session[shell]: create write side of named pipe <"
                        << pipe_name << "> failed";
     goto cleanup;
   }
@@ -276,9 +275,8 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
   if (!::DuplicateHandle(GetCurrentProcess(), read_pipe_tmp,
                          GetCurrentProcess(), p_read_pipe, 0, FALSE,
                          DUPLICATE_SAME_ACCESS)) {
-    SSF_LOG(kLogError)
-        << "session[process]: duplicate read side of named pipe <" << pipe_name
-        << "> failed";
+    SSF_LOG(kLogError) << "session[shell]: duplicate read side of named pipe <"
+                       << pipe_name << "> failed";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
   }
@@ -301,7 +299,7 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
       0, p_pipe_attributes);
 
   if (write_pipe_tmp == INVALID_HANDLE_VALUE) {
-    SSF_LOG(kLogError) << "session[process]: create write side of named pipe <"
+    SSF_LOG(kLogError) << "session[shell]: create write side of named pipe <"
                        << pipe_name << "> failed";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
@@ -312,7 +310,7 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, 0);
 
   if (*p_read_pipe == INVALID_HANDLE_VALUE) {
-    SSF_LOG(kLogError) << "session[process]: create read side of named pipe <"
+    SSF_LOG(kLogError) << "session[shell]: create read side of named pipe <"
                        << pipe_name << "> failed";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
@@ -321,9 +319,8 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
   if (!::DuplicateHandle(::GetCurrentProcess(), write_pipe_tmp,
                          ::GetCurrentProcess(), p_write_pipe, 0, FALSE,
                          DUPLICATE_SAME_ACCESS)) {
-    SSF_LOG(kLogError)
-        << "session[process]: duplicate write side of named pipe <" << pipe_name
-        << "> failed";
+    SSF_LOG(kLogError) << "session[shell]: duplicate write side of named pipe <"
+                       << pipe_name << "> failed";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
   }

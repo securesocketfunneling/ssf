@@ -22,7 +22,7 @@ SocketsToFibers<Demux>::SocketsToFibers(boost::asio::io_service& io_service,
 template <typename Demux>
 void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo)
-      << "service[sockets to fibers]: starting relay on local port tcp "
+      << "microservice[sockets to fibers]: start forwarding local TCP port "
       << local_port_;
 
   boost::asio::ip::tcp::resolver resolver(socket_.get_io_service());
@@ -31,9 +31,8 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
   auto ep_it = resolver.resolve(query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError)
-        << "service[sockets to fibers]: could not resolve query <localhost, "
-        << local_port_ << ">";
+    SSF_LOG(kLogError) << "microservice[sockets to fibers]: could not resolve "
+                          "query <localhost, " << local_port_ << ">";
     return;
   }
 
@@ -49,22 +48,24 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
   boost::asio::socket_base::reuse_address option(true);
   socket_acceptor_.set_option(option, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "service[sockets to fibers]: could not set reuse address option";
+    SSF_LOG(kLogError) << "microservice[sockets to fibers]: could not set "
+                          "reuse address option";
     socket_acceptor_.close(close_ec);
     return;
   }
 
   socket_acceptor_.bind(endpoint, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "service[sockets to fibers]: could not bind acceptor";
+    SSF_LOG(kLogError)
+        << "microservice[sockets to fibers]: could not bind acceptor";
     socket_acceptor_.close(close_ec);
     return;
   }
 
   socket_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "service[sockets to fibers]: could not listen";
+    SSF_LOG(kLogError)
+        << "microservice[sockets to fibers]: could not listen new connections";
     socket_acceptor_.close(close_ec);
     return;
   }
@@ -74,10 +75,10 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void SocketsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service[sockets to fibers]: stopping";
+  SSF_LOG(kLogInfo) << "microservice[sockets to fibers]: stopping";
   socket_acceptor_.close(ec);
   if (ec) {
-    SSF_LOG(kLogDebug) << "service[sockets to fibers]: " << ec.message();
+    SSF_LOG(kLogDebug) << "microservice[sockets to fibers]: " << ec.message();
   }
   manager_.stop_all();
 }
@@ -89,7 +90,8 @@ uint32_t SocketsToFibers<Demux>::service_type_id() {
 
 template <typename Demux>
 void SocketsToFibers<Demux>::StartAcceptSockets() {
-  SSF_LOG(kLogTrace) << "service[sockets to fibers]: accepting new clients";
+  SSF_LOG(kLogTrace)
+      << "microservice[sockets to fibers]: accepting new clients";
 
   if (!socket_acceptor_.is_open()) {
     return;
@@ -103,7 +105,7 @@ void SocketsToFibers<Demux>::StartAcceptSockets() {
 template <typename Demux>
 void SocketsToFibers<Demux>::SocketAcceptHandler(
     const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service[sockets to fibers]: accept handler";
+  SSF_LOG(kLogTrace) << "microservice[sockets to fibers]: accept handler";
 
   if (!socket_acceptor_.is_open()) {
     return;
@@ -119,7 +121,7 @@ void SocketsToFibers<Demux>::SocketAcceptHandler(
 template <typename Demux>
 void SocketsToFibers<Demux>::FiberConnectHandler(
     const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service[sockets to fibers]: connect handler";
+  SSF_LOG(kLogTrace) << "microservice[sockets to fibers]: connect handler";
 
   if (!ec) {
     auto session = SessionForwarder<socket, fiber>::create(

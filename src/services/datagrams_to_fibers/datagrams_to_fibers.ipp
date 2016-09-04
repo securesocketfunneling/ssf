@@ -24,7 +24,7 @@ DatagramsToFibers<Demux>::DatagramsToFibers(boost::asio::io_service& io_service,
 template <typename Demux>
 void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo)
-      << "service[datagrams to fibers]: starting relay on local port udp "
+      << "microservice[datagrams to fibers]: start forwarding local UDP port "
       << local_port_;
 
   boost::asio::ip::udp::resolver resolver(socket_.get_io_service());
@@ -33,9 +33,8 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   auto ep_it = resolver.resolve(query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError)
-        << "service[datagrams to fibers]: could not resolve query <localhost, "
-        << local_port_ << ">";
+    SSF_LOG(kLogError) << "microservice[datagrams to fibers]: could not "
+                          "resolve query <localhost, " << local_port_ << ">";
     return;
   }
 
@@ -44,22 +43,24 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   boost::system::error_code close_ec;
   socket_.open(boost::asio::ip::udp::v4(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "service[datagrams to fibers]: could not open socket";
+    SSF_LOG(kLogError)
+        << "microservice[datagrams to fibers]: could not open socket";
     socket_.close(close_ec);
     return;
   }
   boost::asio::socket_base::reuse_address reuse_address_option(true);
   socket_.set_option(reuse_address_option, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "service[datagrams to fibers]: could not set reuse address option";
+    SSF_LOG(kLogError) << "microservice[datagrams to fibers]: could not set "
+                          "reuse address option";
     socket_.close(close_ec);
     return;
   }
 
   socket_.bind(endpoint_, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "service[datagrams to fibers]: could not bind socket";
+    SSF_LOG(kLogError)
+        << "microservice[datagrams to fibers]: could not bind socket";
     socket_.close(close_ec);
     return;
   }
@@ -71,11 +72,11 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service[datagrams to fibers]: stopping";
+  SSF_LOG(kLogInfo) << "microservice[datagrams to fibers]: stopping";
   socket_.close(ec);
 
   if (ec) {
-    SSF_LOG(kLogDebug) << "service[datagrams to fibers]: error on stop "
+    SSF_LOG(kLogDebug) << "microservice[datagrams to fibers]: error on stop "
                        << ec.message();
   }
 
@@ -89,7 +90,8 @@ uint32_t DatagramsToFibers<Demux>::service_type_id() {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::StartReceivingDatagrams() {
-  SSF_LOG(kLogTrace) << "service[datagrams to fibers]: receiving new datagrams";
+  SSF_LOG(kLogTrace)
+      << "microservice[datagrams to fibers]: receiving new datagrams";
 
   socket_.async_receive_from(
       boost::asio::buffer(working_buffer_), endpoint_,

@@ -57,7 +57,7 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
   static std::string GetValueName() { return "rem_port:dest_ip:dest_port"; }
 
   static std::string GetParseDesc() {
-    return "Forward remote udp port on given target from client";
+    return "Forward UDP server port on given target from client";
   }
 
  public:

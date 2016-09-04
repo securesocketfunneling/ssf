@@ -33,7 +33,7 @@ class TransportProtocolPolicy {
   TransportProtocolPolicy(Callback callback) : callback_(callback) {}
 
   void DoSSFInitiate(SocketPtr p_socket) {
-    SSF_LOG(kLogInfo) << "transport: starting SSF protocol";
+    SSF_LOG(kLogDebug) << "transport: starting SSF protocol";
 
     uint32_t version = GetVersion();
     auto p_ssf_request = std::make_shared<SSFRequest>(version);
@@ -81,7 +81,7 @@ class TransportProtocolPolicy {
   void DoSSFValidReceive(SSFRequestPtr p_ssf_request, SocketPtr p_socket,
                          const boost::system::error_code& ec, size_t length) {
     if (!ec) {
-      SSF_LOG(kLogInfo) << "transport: SSF request sent";
+      SSF_LOG(kLogDebug) << "transport: SSF request sent";
 
       auto p_ssf_reply = std::make_shared<SSFReply>();
 
@@ -101,7 +101,7 @@ class TransportProtocolPolicy {
                              size_t length) {
     if (!ec) {
       if (p_ssf_reply->result()) {
-        SSF_LOG(kLogInfo) << "transport: SSF reply OK";
+        SSF_LOG(kLogDebug) << "transport: SSF reply OK";
         callback_(p_socket, ec);
       } else {
         boost::system::error_code result_ec(::error::wrong_protocol_type,

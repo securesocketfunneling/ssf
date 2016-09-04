@@ -25,7 +25,7 @@ void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
   local_opts.add_options()
       ("status,S",
          boost::program_options::bool_switch()->default_value(false),
-         "Display micro services statuses (on/off)");
+         "Display micro services status (on/off)");
   // clang-format on
 }
 

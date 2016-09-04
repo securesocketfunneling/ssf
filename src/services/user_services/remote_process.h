@@ -25,15 +25,15 @@ class RemoteProcess : public BaseUserService<Demux> {
       : remote_port_(remote_port), remoteServiceId_(0), localServiceId_(0) {}
 
  public:
-  static std::string GetFullParseName() { return "remote_process,Y"; }
+  static std::string GetFullParseName() { return "remote_shell,Y"; }
 
-  static std::string GetParseName() { return "remote_process"; }
+  static std::string GetParseName() { return "remote_shell"; }
 
   static std::string GetValueName() { return "remote_port"; }
 
   static std::string GetParseDesc() {
     return "Open a port on the server side, each connection to that port "
-           "creates a process with I/O forwarded to/from the client side";
+           "creates a shell with I/O forwarded to/from the client side";
   }
 
   static std::shared_ptr<RemoteProcess> CreateServiceOptions(
@@ -95,7 +95,7 @@ class RemoteProcess : public BaseUserService<Demux> {
                                         GetRemoteServiceId(demux));
   };
 
-  std::string GetName() { return "remote_process"; };
+  std::string GetName() { return "remote_shell"; };
 
   bool StartLocalServices(Demux& demux) {
     services::admin::CreateServiceRequest<Demux> l_process_server(
@@ -107,7 +107,7 @@ class RemoteProcess : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_process_server.service_id(), l_process_server.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[remote process]: "
+      SSF_LOG(kLogError) << "user_service[remote_shell]: "
                          << "local_service[process]: start failed: "
                          << ec.message();
     }
