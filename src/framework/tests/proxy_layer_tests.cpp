@@ -164,7 +164,7 @@ TEST_F(ProxyTestFixture, ProxyNotSetTest) {
   ssf::layer::ParameterStack client_error_connection_parameters;
   client_error_connection_parameters.push_back(empty_layer);
   client_error_connection_parameters.push_back(
-      GetProxyTcpParam());
+      client_error_tcp_addr.ToTCPParam());
 
   ssf::layer::ParameterStack client_wrong_number_parameters;
 

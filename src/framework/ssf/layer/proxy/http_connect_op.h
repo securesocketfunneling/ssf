@@ -55,7 +55,6 @@ class HttpConnectOp {
       HttpResponseBuilder response_builder;
       Buffer buffer;
       std::size_t bytes_read;
-      auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
 
       session_initializer.Reset(endpoint_context.remote_host().addr(),
                                 endpoint_context.remote_host().port(),
@@ -182,7 +181,6 @@ class AsyncHttpConnectOp {
     }
 
     boost::system::error_code connect_ec;
-    auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
     auto& endpoint_context = peer_endpoint_.endpoint_context();
 
     HttpRequest http_request;
