@@ -15,6 +15,7 @@
 #include "core/factories/service_factory.h"
 
 #include "services/admin/requests/create_service_request.h"
+#include "services/sockets_to_fibers/config.h"
 
 namespace ssf {
 namespace services {
@@ -51,7 +52,12 @@ class SocketsToFibers : public BaseService<Demux> {
   enum { factory_id = 4 };
 
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(factory_id, &SocketsToFibers::Create);
   }
 

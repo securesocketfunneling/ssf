@@ -164,19 +164,23 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   // Register supported micro services
   services::socks::SocksServer<demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.socks());
   services::fibers_to_sockets::FibersToSockets<demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.stream_forwarder());
   services::sockets_to_fibers::SocketsToFibers<demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.stream_listener());
   services::fibers_to_datagrams::FibersToDatagrams<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.datagram_forwarder());
   services::datagrams_to_fibers::DatagramsToFibers<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.datagram_listener());
   services::copy_file::file_to_fiber::FileToFiber<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.file_copy());
   services::copy_file::fiber_to_file::FiberToFile<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.file_copy());
   services::process::Server<demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 

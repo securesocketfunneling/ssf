@@ -1,3 +1,5 @@
+#include "common/config/config.h"
+
 #include "core/network_protocol.h"
 
 namespace ssf {

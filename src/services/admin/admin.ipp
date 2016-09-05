@@ -157,7 +157,9 @@ void Admin<Demux>::InitializeRemoteServices(
 
         // If something went wrong remote_all_started_ > 0
         if (remote_all_started_) {
-          SSF_LOG(kLogWarning) << "service[admin]: remote could not start";
+          SSF_LOG(kLogError) << "service[admin]: could not start remote "
+                                "microservice for service["
+                             << user_services_[i_]->GetName() << "]";
 
           Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
                  boost::system::error_code(::error::operation_canceled,
@@ -173,8 +175,8 @@ void Admin<Demux>::InitializeRemoteServices(
                 boost::bind(&Admin::InitializeRemoteServices,
                             this->SelfFromThis(), _1));
           }
-
-          return;
+          // Try next user service
+          continue;
         }
 
         // Start local associated services
@@ -183,7 +185,9 @@ void Admin<Demux>::InitializeRemoteServices(
 
         // If something went wrong local_all_started_ == false
         if (!local_all_started_) {
-          SSF_LOG(kLogWarning) << "service[admin]: local could not start";
+          SSF_LOG(kLogError) << "service[admin]: could not start local "
+                                "microservice for service["
+                             << user_services_[i_]->GetName() << "]";
 
           Notify(ssf::services::initialisation::SERVICE, user_services_[i_],
                  boost::system::error_code(::error::operation_canceled,
@@ -201,8 +205,8 @@ void Admin<Demux>::InitializeRemoteServices(
           }
           // Stop local services
           user_services_[i_]->StopLocalServices(this->get_demux());
-
-          return;
+          // Try next user service
+          continue;
         }
 
         Notify(ssf::services::initialisation::SERVICE, user_services_[i_],

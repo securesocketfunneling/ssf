@@ -22,6 +22,10 @@ void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
       ("host,H",
          p_host_option,
          "Set host");
+  local_opts.add_options()
+      ("status,S",
+         boost::program_options::bool_switch()->default_value(false),
+         "Display micro services status (on/off)");
   // clang-format on
 }
 
@@ -40,12 +44,12 @@ void CommandLine::ParseOptions(const VariableMap& vm,
     host_ = vm["host"].as<std::string>();
     host_set_ = true;
   }
+  if (vm.count("status")) {
+    show_status_ = vm["status"].as<bool>();
+  }
 }
 
-std::string CommandLine::GetUsageDesc() {
-  return "ssf[c|s] [options] [host]";
-}
-
+std::string CommandLine::GetUsageDesc() { return "ssf[c|s] [options] [host]"; }
 
 }  // standard
 }  // command_line

@@ -9,6 +9,9 @@
 #include "common/config/config.h"
 
 class LoadConfigTest : public ::testing::Test {
+ public:
+  virtual void SetUp() { config_.Init(); }
+
  protected:
   ssf::config::Config config_;
 };
@@ -16,14 +19,15 @@ class LoadConfigTest : public ::testing::Test {
 TEST_F(LoadConfigTest, LoadNoFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("", ec);
+  config_.UpdateFromFile("", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if no file given";
 }
 
 TEST_F(LoadConfigTest, LoadNonExistantFileTest) {
   boost::system::error_code ec;
-  config_.Update("./config_files/unknown.json", ec);
+
+  config_.UpdateFromFile("./config_files/unknown.json", ec);
 
   ASSERT_NE(ec.value(), 0) << "No success if file not existant";
 }
@@ -31,7 +35,7 @@ TEST_F(LoadConfigTest, LoadNonExistantFileTest) {
 TEST_F(LoadConfigTest, LoadEmptyFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("./config_files/empty.json", ec);
+  config_.UpdateFromFile("./config_files/empty.json", ec);
 
   ASSERT_NE(ec.value(), 0) << "No success if file empty";
 }
@@ -39,15 +43,43 @@ TEST_F(LoadConfigTest, LoadEmptyFileTest) {
 TEST_F(LoadConfigTest, LoadWrongFormatFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("./config_files/wrong_format.json", ec);
+  config_.UpdateFromFile("./config_files/wrong_format.json", ec);
 
   ASSERT_NE(ec.value(), 0) << "No success if wrong file format";
+}
+
+TEST_F(LoadConfigTest, DefaultValueTest) {
+  ASSERT_EQ(config_.tls().ca_cert_path(), "./certs/trusted/ca.crt");
+  ASSERT_EQ(config_.tls().cert_path(), "./certs/certificate.crt");
+  ASSERT_EQ(config_.tls().key_path(), "./certs/private.key");
+  ASSERT_EQ(config_.tls().key_password(), "");
+  ASSERT_EQ(config_.tls().dh_path(), "./certs/dh4096.pem");
+  ASSERT_EQ(config_.tls().cipher_alg(), "DHE-RSA-AES256-GCM-SHA384");
+  ASSERT_EQ(config_.http_proxy().host(), "");
+  ASSERT_EQ(config_.http_proxy().port(), "");
+  ASSERT_EQ(config_.http_proxy().username(), "");
+  ASSERT_EQ(config_.http_proxy().domain(), "");
+  ASSERT_EQ(config_.http_proxy().password(), "");
+  ASSERT_EQ(config_.http_proxy().reuse_kerb(), true);
+  ASSERT_EQ(config_.http_proxy().reuse_ntlm(), true);
+
+  ASSERT_TRUE(config_.services().datagram_forwarder().enabled());
+  ASSERT_TRUE(config_.services().datagram_listener().enabled());
+  ASSERT_FALSE(config_.services().file_copy().enabled());
+  ASSERT_TRUE(config_.services().socks().enabled());
+  ASSERT_TRUE(config_.services().stream_forwarder().enabled());
+  ASSERT_TRUE(config_.services().stream_listener().enabled());
+  ASSERT_FALSE(config_.services().process().enabled());
+
+  ASSERT_GT(config_.services().process().path().length(),
+            static_cast<std::size_t>(0));
+  ASSERT_EQ(config_.services().process().args(), "");
 }
 
 TEST_F(LoadConfigTest, LoadTlsPartialFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("./config_files/tls_partial.json", ec);
+  config_.UpdateFromFile("./config_files/tls_partial.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if partial file format";
   ASSERT_EQ(config_.tls().ca_cert_path(), "test_ca_path");
@@ -61,7 +93,7 @@ TEST_F(LoadConfigTest, LoadTlsPartialFileTest) {
 TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("./config_files/tls_complete.json", ec);
+  config_.UpdateFromFile("./config_files/tls_complete.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
   ASSERT_EQ(config_.tls().ca_cert_path(), "test_ca_path");
@@ -77,15 +109,24 @@ TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
   ASSERT_EQ(config_.http_proxy().password(), "");
   ASSERT_EQ(config_.http_proxy().reuse_kerb(), true);
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), true);
-  ASSERT_EQ(config_.services().process().path(),
-            SSF_PROCESS_SERVICE_BINARY_PATH);
+
+  ASSERT_TRUE(config_.services().datagram_forwarder().enabled());
+  ASSERT_TRUE(config_.services().datagram_listener().enabled());
+  ASSERT_FALSE(config_.services().file_copy().enabled());
+  ASSERT_TRUE(config_.services().socks().enabled());
+  ASSERT_TRUE(config_.services().stream_forwarder().enabled());
+  ASSERT_TRUE(config_.services().stream_listener().enabled());
+  ASSERT_FALSE(config_.services().process().enabled());
+
+  ASSERT_GT(config_.services().process().path().length(),
+            static_cast<std::size_t>(0));
   ASSERT_EQ(config_.services().process().args(), "");
 }
 
 TEST_F(LoadConfigTest, LoadProxyFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("./config_files/proxy.json", ec);
+  config_.UpdateFromFile("./config_files/proxy.json", ec);
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
   ASSERT_EQ(config_.http_proxy().host(), "127.0.0.1");
   ASSERT_EQ(config_.http_proxy().port(), "8080");
@@ -99,9 +140,17 @@ TEST_F(LoadConfigTest, LoadProxyFileTest) {
 TEST_F(LoadConfigTest, LoadServicesFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("./config_files/services.json", ec);
+  config_.UpdateFromFile("./config_files/services.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
+  ASSERT_FALSE(config_.services().datagram_forwarder().enabled());
+  ASSERT_FALSE(config_.services().datagram_listener().enabled());
+  ASSERT_TRUE(config_.services().file_copy().enabled());
+  ASSERT_FALSE(config_.services().socks().enabled());
+  ASSERT_FALSE(config_.services().stream_forwarder().enabled());
+  ASSERT_FALSE(config_.services().stream_listener().enabled());
+  ASSERT_TRUE(config_.services().process().enabled());
+
   ASSERT_EQ(config_.services().process().path(), "/bin/custom_path");
   ASSERT_EQ(config_.services().process().args(), "-custom args");
 }
@@ -109,7 +158,7 @@ TEST_F(LoadConfigTest, LoadServicesFileTest) {
 TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   boost::system::error_code ec;
 
-  config_.Update("./config_files/complete.json", ec);
+  config_.UpdateFromFile("./config_files/complete.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
   ASSERT_EQ(config_.tls().ca_cert_path(), "test_ca_path");

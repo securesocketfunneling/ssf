@@ -16,7 +16,8 @@
 template <template <typename> class TServiceTested>
 class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
  public:
-  using ServiceTested = typename ServiceFixtureTest<TServiceTested>::ServiceTested;
+  using ServiceTested =
+      typename ServiceFixtureTest<TServiceTested>::ServiceTested;
 
  public:
   ProcessFixtureTest() : ServiceFixtureTest<TServiceTested>() {}
@@ -24,6 +25,42 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) {
     return ServiceTested::CreateServiceOptions("9091", ec);
+  }
+
+  void SetServerConfig(ssf::config::Config& config) {
+    boost::system::error_code ec;
+
+    const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "shell": { "enable": true }
+        }
+    }
+}
+)RAWSTRING";
+
+    config.UpdateFromString(new_config, ec);
+    ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                             << new_config;
+  }
+
+  void SetClientConfig(ssf::config::Config& config) {
+    boost::system::error_code ec;
+
+    const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "shell": { "enable": true }
+        }
+    }
+}
+)RAWSTRING";
+
+    config.UpdateFromString(new_config, ec);
+    ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                             << new_config;
   }
 
   void ExecuteCmd() {

@@ -25,15 +25,15 @@ class Process : public BaseUserService<Demux> {
       : local_port_(local_port), remoteServiceId_(0), localServiceId_(0) {}
 
  public:
-  static std::string GetFullParseName() { return "process,X"; }
+  static std::string GetFullParseName() { return "shell,X"; }
 
-  static std::string GetParseName() { return "process"; }
+  static std::string GetParseName() { return "shell"; }
 
   static std::string GetValueName() { return "local_port"; }
 
   static std::string GetParseDesc() {
     return "Open a port on the client side, each connection to that port "
-           "creates a process with I/O forwarded to/from the server side";
+           "creates a shell with I/O forwarded to/from the server side";
   }
 
   static std::shared_ptr<Process> CreateServiceOptions(
@@ -93,7 +93,7 @@ class Process : public BaseUserService<Demux> {
                                         GetRemoteServiceId(demux));
   };
 
-  std::string GetName() { return "process"; };
+  std::string GetName() { return "shell"; };
 
   bool StartLocalServices(Demux& demux) {
     services::admin::CreateServiceRequest<Demux> l_forward(
@@ -106,7 +106,7 @@ class Process : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[process]: "
+      SSF_LOG(kLogError) << "user_service[shell]: "
                          << "local_service[sockets to fibers]: start failed: "
                          << ec.message();
     }

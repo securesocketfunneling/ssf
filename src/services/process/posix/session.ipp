@@ -42,14 +42,14 @@ Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[process]: start";
+  SSF_LOG(kLogInfo) << "session[shell]: start";
   int master_tty;
   int slave_tty;
 
   InitMasterSlaveTty(&master_tty, &slave_tty, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: init tty failed";
+    SSF_LOG(kLogError) << "session[shell]: init tty failed";
     stop(ec);
     return;
   }
@@ -57,14 +57,14 @@ void Session<Demux>::start(boost::system::error_code& ec) {
   signal_.add(SIGCHLD, ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "session[process]: init signal handler on SIGCHLD failed";
+        << "session[shell]: init signal handler on SIGCHLD failed";
     stop(ec);
     return;
   }
 
   child_pid_ = fork();
   if (child_pid_ < 0) {
-    SSF_LOG(kLogError) << "session[process]: fork failed";
+    SSF_LOG(kLogError) << "session[shell]: fork failed";
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
     stop(ec);
     return;
@@ -78,7 +78,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
     tcgetattr(slave_tty, &new_term_settings);
     // IGNCR: ignore  carriage return on input
-    new_term_settings.c_iflag |= ( IGNCR );
+    new_term_settings.c_iflag |= (IGNCR);
     tcsetattr(slave_tty, TCSANOW, &new_term_settings);
 
     // new process as session leader
@@ -138,11 +138,11 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[process]: stop";
+  SSF_LOG(kLogInfo) << "session[shell]: stop";
 
   client_.close();
   if (ec) {
-    SSF_LOG(kLogError) << "session[process]: stop error " << ec.message();
+    SSF_LOG(kLogError) << "session[shell]: stop error " << ec.message();
   }
 
   if (child_pid_ > 0) {
@@ -253,7 +253,7 @@ void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
   // open an available pseudo terminal device (master/slave pair)
   *p_master_tty = posix_openpt(O_RDWR | O_NOCTTY);
   if (*p_master_tty < 0) {
-    SSF_LOG(kLogError) << "session[process]: could not open master tty";
+    SSF_LOG(kLogError) << "session[shell]: could not open master tty";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
@@ -273,7 +273,7 @@ void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
   // open slave side
   *p_slave_tty = open(ptsname(*p_master_tty), O_RDWR | O_NOCTTY);
   if (*p_slave_tty < 0) {
-    SSF_LOG(kLogError) << "session[process]: could not open slave tty";
+    SSF_LOG(kLogError) << "session[shell]: could not open slave tty";
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
@@ -283,8 +283,7 @@ template <typename Demux>
 void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   sd_.assign(master_tty_, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "session[process]: could not initialize stream handle";
+    SSF_LOG(kLogError) << "session[shell]: could not initialize stream handle";
     return;
   }
 

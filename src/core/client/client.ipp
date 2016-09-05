@@ -139,21 +139,26 @@ void SSFClient<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   // Register supported micro services
   services::socks::SocksServer<Demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.socks());
   services::fibers_to_sockets::FibersToSockets<Demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.stream_forwarder());
   services::sockets_to_fibers::SocketsToFibers<Demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.stream_listener());
   services::fibers_to_datagrams::FibersToDatagrams<
-      Demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.datagram_forwarder());
   services::datagrams_to_fibers::DatagramsToFibers<
-      Demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.datagram_listener());
   services::copy_file::file_to_fiber::FileToFiber<
-      Demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.file_copy());
   services::copy_file::fiber_to_file::FiberToFile<
-      Demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.file_copy());
   services::copy_file::file_enquirer::FileEnquirer<
-      Demux>::RegisterToServiceFactory(p_service_factory);
+      Demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.file_copy());
   services::process::Server<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 

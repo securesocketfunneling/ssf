@@ -11,6 +11,7 @@
 
 #include "core/factories/service_factory.h"
 #include "services/admin/requests/create_service_request.h"
+#include "services/copy_file/config.h"
 #include "services/copy_file/fiber_to_file/fiber_to_ofstream_session.h"
 
 namespace ssf {
@@ -45,8 +46,9 @@ class FiberToFile : public BaseService<Demux> {
   // Start service and listen new fiber on demux port kServicePort
   virtual void start(boost::system::error_code& ec) {
     endpoint ep(this->get_demux(), kServicePort);
-    SSF_LOG(kLogInfo) << "service[fiber to file]: start accept on fiber port "
-                      << kServicePort;
+    SSF_LOG(kLogInfo)
+        << "microservice[fiber to file]: start accept on fiber port "
+        << kServicePort;
     fiber_acceptor_.bind(ep, ec);
     fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
     if (ec) {
@@ -57,7 +59,7 @@ class FiberToFile : public BaseService<Demux> {
 
   // Stop service
   virtual void stop(boost::system::error_code& ec) {
-    SSF_LOG(kLogInfo) << "service[fiber to file]: stopping";
+    SSF_LOG(kLogInfo) << "microservice[fiber to file]: stopping";
     manager_.stop_all();
     fiber_acceptor_.close(ec);
     fiber_.close(ec);
@@ -66,7 +68,12 @@ class FiberToFile : public BaseService<Demux> {
   virtual uint32_t service_type_id() { return factory_id; }
 
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(factory_id, &FiberToFile::Create);
   }
 
@@ -93,7 +100,7 @@ class FiberToFile : public BaseService<Demux> {
   // Create a session to transmit files for the new connection
   void StartDataForwarderSessionHandler(const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogInfo) << "service[fiber to file]: fail accept fiber";
+      SSF_LOG(kLogInfo) << "microservice[fiber to file]: fail accept fiber";
       return;
     }
 

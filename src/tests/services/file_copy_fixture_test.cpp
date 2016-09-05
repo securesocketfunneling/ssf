@@ -31,6 +31,21 @@ void FileCopyTestFixture::TearDown() {
 
 void FileCopyTestFixture::StartServer() {
   ssf::config::Config ssf_config;
+  boost::system::error_code ec;
+
+  const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "file_copy": { "enable": true }
+        }
+    }
+}
+)RAWSTRING";
+
+  ssf_config.UpdateFromString(new_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_config;
 
   auto endpoint_query =
       NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
@@ -52,6 +67,20 @@ void FileCopyTestFixture::StartClient() {
   client_services.push_back(p_service);
 
   ssf::config::Config ssf_config;
+
+  const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "file_copy": { "enable": true }
+        }
+    }
+}
+)RAWSTRING";
+
+  ssf_config.UpdateFromString(new_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_config;
 
   auto endpoint_query =
       NetworkProtocol::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});

@@ -1,10 +1,17 @@
 {
     "ssf": {
         "services" : {
+            "datagram_forwarder": { "enable": false },
+            "datagram_listener": { "enable": false },
+            "stream_forwarder": { "enable": false },
+            "stream_listener": { "enable": false },
+            "file_copy": { "enable": true },
             "shell": {
+                "enable": true,
                 "path": "/bin/custom_path",
                 "args": "-custom args"
-            }
+            },
+            "socks": { "enable": false }
         }
     }
 }

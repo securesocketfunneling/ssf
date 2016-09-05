@@ -61,7 +61,8 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
         "127.0.0.1", "8000", config, {});
 
-    p_ssf_client_.reset(new Client(client_options, config.services(), callback));
+    p_ssf_client_.reset(
+        new Client(client_options, config.services(), callback));
 
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);
@@ -92,7 +93,21 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
   };
   ssf::config::Config client_config;
   ssf::config::Config server_config;
-  server_config.tls().set_cipher_alg("DHE-RSA-AES256-GCM-SHA256");
+  boost::system::error_code ec;
+
+  const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "tls" : {
+            "cipher_alg": "DHE-RSA-AES256-GCM-SHA256"
+        }
+    }
+}
+)RAWSTRING";
+
+  server_config.UpdateFromString(new_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_config;
 
   StartServer(server_config);
   StartClient(client_config, callback);
@@ -126,11 +141,33 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
   };
   ssf::config::Config client_config;
   ssf::config::Config server_config;
+  boost::system::error_code ec;
+  const char* new_client_config = R"RAWSTRING(
+{
+    "ssf": {
+        "tls" : {
+            "cipher_alg": "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256"
+        }
+    }
+}
+)RAWSTRING";
 
-  client_config.tls().set_cipher_alg(
-      "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256^");
-  server_config.tls().set_cipher_alg(
-      "ECDH-ECDSA-AES128-SHA256:DHE-RSA-AES128-SHA256");
+  const char* new_server_config = R"RAWSTRING(
+{
+    "ssf": {
+        "tls" : {
+            "cipher_alg": "ECDH-ECDSA-AES128-SHA256:DHE-RSA-AES128-SHA256"
+        }
+    }
+}
+)RAWSTRING";
+
+  client_config.UpdateFromString(new_client_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update client config from string "
+                           << new_client_config;
+  server_config.UpdateFromString(new_server_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_server_config;
 
   StartServer(server_config);
   StartClient(client_config, callback);

@@ -11,13 +11,13 @@
 
 #include "services/base_service.h"
 
-#include "common/config/config.h"
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
 #include "core/factories/service_factory.h"
 
 #include "services/admin/requests/create_service_request.h"
+#include "services/process/config.h"
 
 #if defined(BOOST_ASIO_WINDOWS)
 #include "services/process/windows/session.h"
@@ -73,8 +73,12 @@ class Server : public BaseService<Demux> {
 
   // Function used to register the micro service to the given factory
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory,
-      const ssf::config::ProcessService& config) {
+      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(
         factory_id,
         boost::bind(&Server::Create, _1, _2, _3, config.path(), config.args()));
