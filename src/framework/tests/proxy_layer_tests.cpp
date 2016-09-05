@@ -37,10 +37,10 @@ TEST_F(ProxyTestFixture, ProxySetTest) {
 
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(GetProxyParam());
-  client_parameters.push_back(GetTcpParam());
+  client_parameters.push_back(GetProxyTcpParam());
 
   ssf::layer::ParameterStack client_error_connection_parameters;
-  client_error_connection_parameters.push_back(GetTcpParam());
+  client_error_connection_parameters.push_back(GetProxyTcpParam());
   client_error_connection_parameters.push_back(
       client_error_tcp_addr.ToTCPParam());
 
@@ -48,7 +48,7 @@ TEST_F(ProxyTestFixture, ProxySetTest) {
   ssf::layer::ParameterStack client_invalid_proxy_parameters;
   client_invalid_proxy_parameters.push_back(
       client_error_proxy_addr.ToProxyParam());
-  client_invalid_proxy_parameters.push_back(GetTcpParam());
+  client_invalid_proxy_parameters.push_back(GetProxyTcpParam());
 
   TestStreamErrorConnectionProtocol<StreamStackProtocol>(
       client_error_connection_parameters);
@@ -105,17 +105,17 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
   client_parameters.push_back(
       tests::virtual_network_helpers::tls_client_parameters);
   client_parameters.push_back(GetProxyParam());
-  client_parameters.push_back(GetTcpParam());
+  client_parameters.push_back(GetProxyTcpParam());
 
   ssf::layer::ParameterStack client_error_parameters;
   client_error_parameters.push_back(
       tests::virtual_network_helpers::tls_client_parameters);
-  client_error_parameters.push_back(GetTcpParam());
+  client_error_parameters.push_back(GetProxyTcpParam());
   client_error_parameters.push_back(client_error_tcp_addr.ToTCPParam());
 
   ssf::layer::ParameterStack client_wrong_number_parameters;
   client_wrong_number_parameters.push_back(empty_layer);
-  client_wrong_number_parameters.push_back(GetTcpParam());
+  client_wrong_number_parameters.push_back(GetProxyTcpParam());
 
   TestEndpointResolverError<TLSStackProtocol>(client_wrong_number_parameters);
 
@@ -159,12 +159,12 @@ TEST_F(ProxyTestFixture, ProxyNotSetTest) {
 
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(empty_layer);
-  client_parameters.push_back(GetTcpParam());
+  client_parameters.push_back(GetLocalTcpParam());
 
   ssf::layer::ParameterStack client_error_connection_parameters;
   client_error_connection_parameters.push_back(empty_layer);
   client_error_connection_parameters.push_back(
-      client_error_tcp_addr.ToTCPParam());
+      GetProxyTcpParam());
 
   ssf::layer::ParameterStack client_wrong_number_parameters;
 

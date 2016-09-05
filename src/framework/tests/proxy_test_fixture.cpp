@@ -57,9 +57,17 @@ std::string ProxyTestFixture::GetOption(const std::string& name) const {
   return opt_it != config_options_.end() ? opt_it->second : "";
 }
 
-ssf::layer::LayerParameters ProxyTestFixture::GetTcpParam() const {
+ssf::layer::LayerParameters ProxyTestFixture::GetProxyTcpParam() const {
   ssf::layer::LayerParameters tcp_params;
   tcp_params["addr"] = GetOption("target_host");
+  tcp_params["port"] = GetOption("target_port");
+
+  return tcp_params;
+}
+
+ssf::layer::LayerParameters ProxyTestFixture::GetLocalTcpParam() const {
+  ssf::layer::LayerParameters tcp_params;
+  tcp_params["addr"] = "127.0.0.1";
   tcp_params["port"] = GetOption("target_port");
 
   return tcp_params;
