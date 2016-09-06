@@ -65,12 +65,20 @@ class basic_ProxyProtocol {
                                 typename query::const_iterator parameters_it,
                                 uint32_t, boost::system::error_code& ec) {
     auto context = MakeProxyContext(io_service, *parameters_it, ec);
+
     if (ec) {
       return endpoint();
     }
 
-    return endpoint(context, next_layer_protocol::make_endpoint(
-                                 io_service, ++parameters_it, id, ec));
+    // Get next layer parameters
+    ++parameters_it;
+
+    if (context.UpdateRemoteHost(*parameters_it)) {
+      return endpoint(context);
+    } else {
+      return endpoint(context, next_layer_protocol::make_endpoint(
+                                   io_service, parameters_it, id, ec));
+    }
   }
 
   static void add_params_from_property_tree(

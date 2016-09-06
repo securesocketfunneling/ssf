@@ -33,8 +33,8 @@ class udp {
   typedef boost::asio::ip::udp::resolver resolver;
   typedef boost::asio::ip::udp::endpoint endpoint;
 
-private:
- using query = ParameterStack;
+ private:
+  using query = ParameterStack;
 
  public:
   operator boost::asio::ip::udp() { return boost::asio::ip::udp::v4(); }
@@ -42,8 +42,8 @@ private:
   static endpoint make_endpoint(boost::asio::io_service& io_service,
                                 query::const_iterator parameters_it, uint32_t,
                                 boost::system::error_code& ec) {
-    return endpoint(ssf::layer::physical::detail::make_udp_endpoint(
-        io_service, *parameters_it, ec));
+    return ssf::layer::physical::detail::make_udp_endpoint(io_service,
+                                                           *parameters_it, ec);
   }
 
   static std::string get_address(const endpoint& endpoint) {

@@ -34,12 +34,13 @@ void HttpSessionInitializer::Reset(const std::string& target_host,
   p_current_auth_strategy_ = nullptr;
   auth_strategies_.clear();
   auth_strategies_.emplace_back(
-      new NegotiateAuthStrategy(proxy_ep_ctx_.http_proxy));
-  auth_strategies_.emplace_back(new NtlmAuthStrategy(proxy_ep_ctx_.http_proxy));
+      new NegotiateAuthStrategy(proxy_ep_ctx_.http_proxy()));
   auth_strategies_.emplace_back(
-      new DigestAuthStrategy(proxy_ep_ctx_.http_proxy));
+      new NtlmAuthStrategy(proxy_ep_ctx_.http_proxy()));
   auth_strategies_.emplace_back(
-      new BasicAuthStrategy(proxy_ep_ctx_.http_proxy));
+      new DigestAuthStrategy(proxy_ep_ctx_.http_proxy()));
+  auth_strategies_.emplace_back(
+      new BasicAuthStrategy(proxy_ep_ctx_.http_proxy()));
 }
 
 void HttpSessionInitializer::PopulateRequest(HttpRequest* p_request,

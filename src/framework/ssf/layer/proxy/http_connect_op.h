@@ -38,7 +38,7 @@ class HttpConnectOp {
     auto& endpoint_context = peer_endpoint_.endpoint_context();
 
     stream_.connect(
-        endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
+        endpoint_context.http_proxy().ToTcpEndpoint(stream_.get_io_service()),
         ec);
 
     if (ec) {
@@ -55,11 +55,10 @@ class HttpConnectOp {
       HttpResponseBuilder response_builder;
       Buffer buffer;
       std::size_t bytes_read;
-      auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
 
-      session_initializer.Reset(
-          next_layer_remote_endpoint.address().to_string(),
-          std::to_string(next_layer_remote_endpoint.port()), endpoint_context);
+      session_initializer.Reset(endpoint_context.remote_host().addr(),
+                                endpoint_context.remote_host().port(),
+                                endpoint_context);
 
       HttpRequest http_request;
 
@@ -72,7 +71,7 @@ class HttpConnectOp {
             stream_.shutdown(boost::asio::socket_base::shutdown_both, ec);
             stream_.close(ec);
           }
-          stream_.connect(endpoint_context.http_proxy.ToTcpEndpoint(
+          stream_.connect(endpoint_context.http_proxy().ToTcpEndpoint(
               stream_.get_io_service()));
         }
 
@@ -182,18 +181,17 @@ class AsyncHttpConnectOp {
     }
 
     boost::system::error_code connect_ec;
-    auto& next_layer_remote_endpoint = peer_endpoint_.next_layer_endpoint();
     auto& endpoint_context = peer_endpoint_.endpoint_context();
 
     HttpRequest http_request;
 
     reenter(coro_) {
-      p_session_initializer_->Reset(
-          next_layer_remote_endpoint.address().to_string(),
-          std::to_string(next_layer_remote_endpoint.port()), endpoint_context);
+      p_session_initializer_->Reset(endpoint_context.remote_host().addr(),
+                                    endpoint_context.remote_host().port(),
+                                    endpoint_context);
 
       yield stream_.async_connect(
-          endpoint_context.http_proxy.ToTcpEndpoint(stream_.get_io_service()),
+          endpoint_context.http_proxy().ToTcpEndpoint(stream_.get_io_service()),
           std::move(*this));
 
       p_local_endpoint_->set();
@@ -208,9 +206,10 @@ class AsyncHttpConnectOp {
                              close_ec_);
             stream_.close(close_ec_);
           }
-          yield stream_.async_connect(endpoint_context.http_proxy.ToTcpEndpoint(
-                                          stream_.get_io_service()),
-                                      std::move(*this));
+          yield stream_.async_connect(
+              endpoint_context.http_proxy().ToTcpEndpoint(
+                  stream_.get_io_service()),
+              std::move(*this));
         }
 
         // send request

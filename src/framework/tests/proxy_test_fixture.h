@@ -43,7 +43,9 @@ class ProxyTestFixture : public ::testing::Test {
 
   bool Initialized();
 
-  ssf::layer::LayerParameters GetTcpParam() const;
+  ssf::layer::LayerParameters GetProxyTcpParam() const;
+
+  ssf::layer::LayerParameters GetLocalTcpParam() const;
 
   ssf::layer::LayerParameters GetProxyParam() const;
 
