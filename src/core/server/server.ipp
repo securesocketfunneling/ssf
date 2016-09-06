@@ -25,12 +25,14 @@
 namespace ssf {
 
 template <class N, template <class> class T>
-SSFServer<N, T>::SSFServer(const ssf::config::Services& services_config)
+SSFServer<N, T>::SSFServer(const ssf::config::Services& services_config,
+                           bool relay_only)
     : T<typename N::socket>(
           boost::bind(&SSFServer<N, T>::DoSSFStart, this, _1, _2)),
       async_engine_(),
       network_acceptor_(async_engine_.get_io_service()),
-      services_config_(services_config) {}
+      services_config_(services_config),
+      relay_only_(relay_only) {}
 
 template <class N, template <class> class T>
 SSFServer<N, T>::~SSFServer() {
@@ -45,6 +47,10 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
     SSF_LOG(kLogError) << "server: already running";
     return;
+  }
+
+  if (relay_only_) {
+    SSF_LOG(kLogWarning) << "server: relay only";
   }
 
   // resolve remote endpoint with query
@@ -111,13 +117,22 @@ template <class N, template <class> class T>
 void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
                                          NetworkSocketPtr p_socket) {
   if (!ec) {
-    this->DoSSFInitiateReceive(p_socket);
     AsyncAcceptConnection();
-  } else {
-    boost::system::error_code close_ec;
-    p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-    p_socket->close(close_ec);
+    if (!relay_only_) {
+      this->DoSSFInitiateReceive(p_socket);
+      return;
+    }
+  }
+
+  // Close connection
+  boost::system::error_code close_ec;
+  p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+  p_socket->close(close_ec);
+  if (ec) {
     SSF_LOG(kLogError) << "server: network error: " << ec.message();
+  } else if (relay_only_) {
+    SSF_LOG(kLogWarning)
+        << "server: direct connection attempt with relay-only option";
   }
 }
 

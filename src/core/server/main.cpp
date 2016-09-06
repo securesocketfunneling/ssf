@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
   }
 
   // Initiate and start the server
-  Server server(ssf_config.services());
+  Server server(ssf_config.services(), cmd.relay_only());
 
   // construct endpoint parameter stack
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(

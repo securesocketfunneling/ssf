@@ -7,6 +7,7 @@
 #include <regex>
 #include <memory>
 
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
 
@@ -39,6 +40,12 @@ BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
 BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
     int ac, char* av[], const OptionDescription& services,
     boost::system::error_code& ec) {
+  // Set executable name
+  if (ac > 0) {
+    boost::filesystem::path path(av[0]);
+    exec_name_ = path.filename().string();
+  }
+
   // Basic options
   OptionDescription basic_opts("Basic options");
   InitBasicOptions(basic_opts);
@@ -108,7 +115,8 @@ bool BaseCommandLine::DisplayHelp(const VariableMap& vm,
   }
 
   std::cout << "SSF " << ssf::versions::major << "." << ssf::versions::minor
-            << "." << ssf::versions::fix << std::endl << std::endl;
+            << "." << ssf::versions::fix << std::endl
+            << std::endl;
 
   std::cout << "Usage: " << GetUsageDesc() << std::endl;
 

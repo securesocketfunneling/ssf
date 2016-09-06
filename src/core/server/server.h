@@ -37,7 +37,8 @@ class SSFServer
   using ServiceManagerPtrMap = std::map<DemuxPtr, ServiceManagerPtr>;
 
  public:
-  SSFServer(const ssf::config::Services& services_config);
+  SSFServer(const ssf::config::Services& services_config,
+            bool relay_only = false);
 
   ~SSFServer();
 
@@ -62,6 +63,7 @@ class SSFServer
   AsyncEngine async_engine_;
   NetworkAcceptor network_acceptor_;
   ssf::config::Services services_config_;
+  bool relay_only_;
 
   DemuxPtrSet p_fiber_demuxes_;
   ServiceManagerPtrMap p_service_managers_;
