@@ -82,8 +82,10 @@ void CommandLine::ParseOptions(const VariableMap& vm,
 }
 
 std::string CommandLine::GetUsageDesc() {
-  return "ssfcp [options] [host@]/absolute/path/file "
-         "[[host@]/absolute/path/file]";
+  std::stringstream ss_desc;
+  ss_desc << exec_name_ << " [options] [host@]/absolute/path/file"
+                           " [[host@]/absolute/path/file]";
+  return ss_desc.str();
 }
 
 void CommandLine::ParseFirstArgument(const std::string& first_arg,

@@ -29,6 +29,8 @@ class CommandLine : public BaseCommandLine {
 
   inline bool show_status() const { return show_status_; }
 
+  inline bool relay_only() const { return relay_only_; }
+
   virtual ~CommandLine() {}
 
  protected:
@@ -44,6 +46,7 @@ class CommandLine : public BaseCommandLine {
  private:
   bool is_server_;
   bool show_status_;
+  bool relay_only_;
 };
 
 }  // standard

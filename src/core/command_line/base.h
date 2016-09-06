@@ -83,6 +83,7 @@ class BaseCommandLine {
   void set_log_level(const std::string& level);
 
  protected:
+  std::string exec_name_;
   std::string host_;
   uint16_t port_;
   std::string config_file_;

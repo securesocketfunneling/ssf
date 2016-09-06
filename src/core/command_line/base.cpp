@@ -7,8 +7,10 @@
 #include <regex>
 #include <memory>
 
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
+
 
 #include "common/error/error.h"
 
@@ -39,6 +41,12 @@ BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
 BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
     int ac, char* av[], const OptionDescription& services,
     boost::system::error_code& ec) {
+  // Set executable name
+  if (ac > 0) {
+    auto path = boost::filesystem::path(av[0]);
+    exec_name_ = path.filename().string();
+  }
+
   // Basic options
   OptionDescription basic_opts("Basic options");
   InitBasicOptions(basic_opts);
