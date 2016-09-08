@@ -46,6 +46,13 @@ class FibersToDatagrams : public BaseService<Demux> {
   typedef std::array<uint8_t, 50 * 1024> WorkingBufferType;
 
  public:
+  enum { factory_id = 5 };
+
+ public:
+  FibersToDatagrams() = delete;
+  FibersToDatagrams(const FibersToDatagrams&) = delete;
+
+ public:
   static FibersToDatagramsPtr create(boost::asio::io_service& io_service,
                                      Demux& fiber_demux,
                                      Parameters parameters) {
@@ -60,8 +67,6 @@ class FibersToDatagrams : public BaseService<Demux> {
     }
   }
 
-  enum { factory_id = 5 };
-
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<Demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
@@ -71,10 +76,6 @@ class FibersToDatagrams : public BaseService<Demux> {
 
     p_factory->RegisterServiceCreator(factory_id, &FibersToDatagrams::create);
   }
-
-  virtual void start(boost::system::error_code& ec);
-  virtual void stop(boost::system::error_code& ec);
-  virtual uint32_t service_type_id();
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
       local_port_type local_port, std::string remote_addr,
@@ -87,12 +88,16 @@ class FibersToDatagrams : public BaseService<Demux> {
     return create;
   }
 
+ public:
+  void start(boost::system::error_code& ec) override;
+  void stop(boost::system::error_code& ec) override;
+  uint32_t service_type_id() override;
+
  private:
   FibersToDatagrams(boost::asio::io_service& io_service, Demux& fiber_demux,
                     local_port_type local, const std::string& ip,
                     uint16_t remote_port);
 
- private:
   void StartReceivingDatagrams();
   void FiberReceiveHandler(const boost::system::error_code& ec, size_t length);
 

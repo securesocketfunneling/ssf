@@ -39,6 +39,13 @@ class FibersToSockets : public BaseService<Demux> {
   typedef boost::asio::ip::tcp::socket socket;
 
  public:
+  enum { factory_id = 3 };
+
+ public:
+  FibersToSockets() = delete;
+  FibersToSockets(const FibersToSockets&) = delete;
+
+ public:
   static FibersToSocketsPtr create(boost::asio::io_service& io_service,
                                    demux& fiber_demux, Parameters parameters) {
     if (!parameters.count("local_port") || !parameters.count("remote_ip") ||
@@ -52,8 +59,6 @@ class FibersToSockets : public BaseService<Demux> {
     }
   }
 
-  enum { factory_id = 3 };
-
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
@@ -63,10 +68,6 @@ class FibersToSockets : public BaseService<Demux> {
 
     p_factory->RegisterServiceCreator(factory_id, &FibersToSockets::create);
   }
-
-  virtual void start(boost::system::error_code& ec);
-  virtual void stop(boost::system::error_code& ec);
-  virtual uint32_t service_type_id();
 
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
       local_port_type local_port, std::string remote_addr,
@@ -79,12 +80,16 @@ class FibersToSockets : public BaseService<Demux> {
     return create;
   }
 
+ public:
+  void start(boost::system::error_code& ec) override;
+  void stop(boost::system::error_code& ec) override;
+  uint32_t service_type_id() override;
+
  private:
   FibersToSockets(boost::asio::io_service& io_service, demux& fiber_demux,
                   local_port_type local, const std::string& ip,
                   uint16_t remote_port);
 
- private:
   // No check on prioror presence implemented
   void StartAcceptFibers();
 
@@ -102,6 +107,7 @@ class FibersToSockets : public BaseService<Demux> {
     return std::static_pointer_cast<FibersToSockets>(this->shared_from_this());
   }
 
+ private:
   uint16_t remote_port_;
   std::string ip_;
   local_port_type local_port_;

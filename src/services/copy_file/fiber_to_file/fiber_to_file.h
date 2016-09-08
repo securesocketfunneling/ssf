@@ -41,32 +41,6 @@ class FiberToFile : public BaseService<Demux> {
     return FiberToFilePtr(new FiberToFile(io_service, fiber_demux));
   }
 
-  virtual ~FiberToFile() {}
-
-  // Start service and listen new fiber on demux port kServicePort
-  virtual void start(boost::system::error_code& ec) {
-    endpoint ep(this->get_demux(), kServicePort);
-    SSF_LOG(kLogInfo)
-        << "microservice[fiber to file]: start accept on fiber port "
-        << kServicePort;
-    fiber_acceptor_.bind(ep, ec);
-    fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
-    if (ec) {
-      return;
-    }
-    StartAccept();
-  }
-
-  // Stop service
-  virtual void stop(boost::system::error_code& ec) {
-    SSF_LOG(kLogInfo) << "microservice[fiber to file]: stopping";
-    manager_.stop_all();
-    fiber_acceptor_.close(ec);
-    fiber_.close(ec);
-  }
-
-  virtual uint32_t service_type_id() { return factory_id; }
-
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
@@ -82,6 +56,31 @@ class FiberToFile : public BaseService<Demux> {
 
     return create;
   }
+
+ public:
+  // Start service and listen new fiber on demux port kServicePort
+  void start(boost::system::error_code& ec) override {
+    endpoint ep(this->get_demux(), kServicePort);
+    SSF_LOG(kLogInfo)
+        << "microservice[fiber to file]: start accept on fiber port "
+        << kServicePort;
+    fiber_acceptor_.bind(ep, ec);
+    fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
+    if (ec) {
+      return;
+    }
+    StartAccept();
+  }
+
+  // Stop service
+  void stop(boost::system::error_code& ec) override {
+    SSF_LOG(kLogInfo) << "microservice[fiber to file]: stopping";
+    manager_.stop_all();
+    fiber_acceptor_.close(ec);
+    fiber_.close(ec);
+  }
+
+  uint32_t service_type_id() override { return factory_id; }
 
  private:
   FiberToFile(boost::asio::io_service& io_service, demux& fiber_demux)

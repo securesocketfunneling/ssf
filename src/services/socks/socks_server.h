@@ -39,6 +39,10 @@ class SocksServer : public BaseService<Demux> {
   typedef typename ssf::BaseService<Demux>::endpoint endpoint;
 
  public:
+  // SSF service ID for identification in the service factory
+  enum { factory_id = 2 };
+
+ public:
   SocksServer(const SocksServer&) = delete;
   SocksServer& operator=(const SocksServer&) = delete;
 
@@ -53,9 +57,6 @@ class SocksServer : public BaseService<Demux> {
     }
   }
 
-  // SSF service ID for identification in the service factory
-  enum { factory_id = 2 };
-
   /// Function used to register the micro service to the given factory
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
@@ -67,15 +68,6 @@ class SocksServer : public BaseService<Demux> {
     p_factory->RegisterServiceCreator(factory_id, &SocksServer::create);
   }
 
-  /// Start the service instance
-  virtual void start(boost::system::error_code& ec);
-
-  /// Stop the service instance
-  virtual void stop(boost::system::error_code& ec);
-
-  /// Return the type of the service
-  virtual uint32_t service_type_id();
-
   /// Function used to generate create service request
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
       uint16_t local_port) {
@@ -85,11 +77,20 @@ class SocksServer : public BaseService<Demux> {
     return std::move(create);
   }
 
+ public:
+  /// Start the service instance
+  void start(boost::system::error_code& ec) override;
+
+  /// Stop the service instance
+  void stop(boost::system::error_code& ec) override;
+
+  /// Return the type of the service
+  uint32_t service_type_id() override;
+
  private:
   SocksServer(boost::asio::io_service& io_service, demux& fiber_demux,
               const local_port_type& port);
 
- private:
   void StartAccept();
   void HandleAccept(const boost::system::error_code& e);
   void HandleStop();
@@ -106,8 +107,6 @@ class SocksServer : public BaseService<Demux> {
 
  private:
   fiber_acceptor fiber_acceptor_;
-
- private:
   SessionManager session_manager_;
   fiber new_connection_;
   boost::system::error_code init_ec_;
