@@ -34,7 +34,24 @@ void Services::Update(const PTree& pt) {
   UpdateFileCopy(pt);
 }
 
+void Services::SetGatewayPorts(bool gateway_ports) {
+  datagram_listener_.set_gateway_ports(gateway_ports);
+  stream_listener_.set_gateway_ports(gateway_ports);
+}
+
 void Services::Log() const {
+  if (datagram_listener_.enabled()) {
+    if (datagram_listener_.gateway_ports()) {
+      SSF_LOG(kLogWarning) << "config[microservices][datagram_listener]: "
+                              "gateway ports allowed";
+    }
+  }
+  if (stream_listener_.enabled()) {
+    if (stream_listener_.gateway_ports()) {
+      SSF_LOG(kLogWarning)
+          << "config[microservices][stream_listener]: gateway ports allowed";
+    }
+  }
   if (shell_.enabled()) {
     SSF_LOG(kLogInfo) << "config[microservices][shell]: path: <"
                       << process().path() << ">";
@@ -83,8 +100,16 @@ void Services::UpdateDatagramListener(const PTree& pt) {
     return;
   }
 
+  auto& datagram_listener_prop = optional.get();
+
   datagram_listener_.set_enabled(
-      ServiceEnabled(optional.get(), datagram_listener_.enabled()));
+      ServiceEnabled(datagram_listener_prop, datagram_listener_.enabled()));
+
+  auto gateway_ports =
+      datagram_listener_prop.get_child_optional("gateway_ports");
+  if (gateway_ports) {
+    datagram_listener_.set_gateway_ports(gateway_ports.get().get_value<bool>());
+  }
 }
 
 void Services::UpdateFileCopy(const PTree& pt) {
@@ -151,8 +176,15 @@ void Services::UpdateStreamListener(const PTree& pt) {
     return;
   }
 
+  auto& stream_listener_prop = optional.get();
+
   stream_listener_.set_enabled(
-      ServiceEnabled(optional.get(), stream_listener_.enabled()));
+      ServiceEnabled(stream_listener_prop, stream_listener_.enabled()));
+
+  auto gateway_ports = stream_listener_prop.get_child_optional("gateway_ports");
+  if (gateway_ports) {
+    stream_listener_.set_gateway_ports(gateway_ports.get().get_value<bool>());
+  }
 }
 
 bool Services::ServiceEnabled(const PTree& service_ptree, bool default_value) {

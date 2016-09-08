@@ -56,6 +56,8 @@ class Services {
 
   void Update(const PTree& pt);
 
+  void SetGatewayPorts(bool gateway_ports);
+
   void Log() const;
 
   void LogServiceStatus() const;

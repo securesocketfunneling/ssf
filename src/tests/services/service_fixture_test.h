@@ -30,7 +30,7 @@ class ServiceFixtureTest : public ::testing::Test {
  public:
   virtual ~ServiceFixtureTest() {}
 
-  virtual void SetUp() {
+  void SetUp() override {
     auto cleanup = [this]() {
       network_set_.set_value(false);
       service_set_.set_value(false);
@@ -49,7 +49,7 @@ class ServiceFixtureTest : public ::testing::Test {
     }
   }
 
-  virtual void TearDown() {
+  void TearDown() override {
     p_ssf_client_->Stop();
     p_ssf_server_->Stop();
   }

@@ -43,6 +43,8 @@ int main(int argc, char** argv) {
   ssf::config::Config ssf_config;
   ssf_config.Init();
 
+  ssf_config.services().SetGatewayPorts(cmd.gateway_ports());
+
   ssf_config.UpdateFromFile(cmd.config_file(), ec);
 
   if (ec) {

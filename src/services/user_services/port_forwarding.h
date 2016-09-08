@@ -8,16 +8,11 @@
 #include <memory>
 #include <stdexcept>
 
-#ifndef BOOST_SPIRIT_USE_PHOENIX_V3
-#define BOOST_SPIRIT_USE_PHOENIX_V3 1
-#endif
-#include <boost/fusion/include/std_pair.hpp>
-#include <boost/spirit/include/qi.hpp>
-#include <boost/spirit/include/classic.hpp>
-
 #include <boost/system/error_code.hpp>
 
 #include "common/error/error.h"
+
+#include "services/user_services/option_parser.h"
 
 #include "services/user_services/base_user_service.h"
 #include "services/admin/requests/create_service_request.h"
@@ -39,9 +34,10 @@ class PortForwarding : public BaseUserService<Demux> {
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  private:
-  PortForwarding(uint16_t local_port, std::string remote_addr,
-                uint16_t remote_port)
-      : local_port_(local_port),
+  PortForwarding(const std::string& local_addr, uint16_t local_port,
+                 const std::string& remote_addr, uint16_t remote_port)
+      : local_addr_(local_addr),
+        local_port_(local_port),
         remote_addr_(remote_addr),
         remote_port_(remote_port),
         remoteServiceId_(0),
@@ -50,40 +46,31 @@ class PortForwarding : public BaseUserService<Demux> {
   }
 
  public:
-  static std::string GetFullParseName() { return "forward,L"; }
+  static std::string GetFullParseName() { return "tcp-forward,L"; }
 
-  static std::string GetParseName() { return "forward"; }
+  static std::string GetParseName() { return "tcp-forward"; }
 
-  static std::string GetValueName() { return "loc_port:dest_ip:dest_port"; }
-
-  static std::string GetParseDesc() {
-    return "Forward TCP client port on given target from server";
+  static std::string GetValueName() {
+    return "[[loc_ip]:]loc_port:dest_ip:dest_port";
   }
 
- public:
+  static std::string GetParseDesc() {
+    return "Forward TCP client [[loc_ip]:]port to dest_ip:dest_port from "
+           "server";
+  }
+
   static std::shared_ptr<PortForwarding> CreateServiceOptions(
       std::string line, boost::system::error_code& ec) {
-    using boost::spirit::qi::int_;
-    using boost::spirit::qi::alnum;
-    using boost::spirit::qi::char_;
-    using boost::spirit::qi::rule;
-    typedef std::string::const_iterator str_it;
+    auto forward_options = OptionParser::ParseForwardOptions(line, ec);
 
-    rule<str_it, std::string()> target_pattern = +char_("0-9a-zA-Z.-");
-    uint16_t listening_port, target_port;
-    std::string target_addr;
-    str_it begin = line.begin(), end = line.end();
-    bool parsed = boost::spirit::qi::parse(
-        begin, end, int_ >> ":" >> target_pattern >> ":" >> int_,
-        listening_port, target_addr, target_port);
-
-    if (parsed) {
-      return std::shared_ptr<PortForwarding>(
-          new PortForwarding(listening_port, target_addr, target_port));
-    } else {
+    if (ec) {
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<PortForwarding>(nullptr);
     }
+
+    return std::shared_ptr<PortForwarding>(
+        new PortForwarding(forward_options.from.addr, forward_options.from.port,
+                           forward_options.to.addr, forward_options.to.port));
   }
 
   static void RegisterToServiceOptionFactory() {
@@ -92,23 +79,26 @@ class PortForwarding : public BaseUserService<Demux> {
         &PortForwarding::CreateServiceOptions);
   }
 
-  virtual std::string GetName() { return "forward"; }
+ public:
+  virtual ~PortForwarding() {}
 
-  virtual std::vector<admin::CreateServiceRequest<Demux>>
-  GetRemoteServiceCreateVector() {
+  std::string GetName() override { return "tcp-forward"; }
+
+  std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
+      override {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
-    services::admin::CreateServiceRequest<Demux> r_socks(
+    services::admin::CreateServiceRequest<Demux> r_port_forwarding(
         services::fibers_to_sockets::FibersToSockets<Demux>::GetCreateRequest(
             relay_fiber_port_, remote_addr_, remote_port_));
 
-    result.push_back(r_socks);
+    result.push_back(r_port_forwarding);
 
     return result;
   }
 
-  virtual std::vector<admin::StopServiceRequest<Demux>>
-  GetRemoteServiceStopVector(Demux& demux) {
+  std::vector<admin::StopServiceRequest<Demux>> GetRemoteServiceStopVector(
+      Demux& demux) override {
     std::vector<admin::StopServiceRequest<Demux>> result;
 
     auto id = GetRemoteServiceId(demux);
@@ -120,10 +110,10 @@ class PortForwarding : public BaseUserService<Demux> {
     return result;
   }
 
-  virtual bool StartLocalServices(Demux& demux) {
+  bool StartLocalServices(Demux& demux) override {
     services::admin::CreateServiceRequest<Demux> l_forward(
         services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
-            local_port_, relay_fiber_port_));
+            local_addr_, local_port_, relay_fiber_port_));
 
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
@@ -131,14 +121,14 @@ class PortForwarding : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[forward]: "
+      SSF_LOG(kLogError) << "user_service[tcp-forward]: "
                          << "local_service[sockets to fibers]: start failed: "
                          << ec.message();
     }
     return !ec;
   }
 
-  virtual uint32_t CheckRemoteServiceStatus(Demux& demux) {
+  uint32_t CheckRemoteServiceStatus(Demux& demux) override {
     services::admin::CreateServiceRequest<Demux> r_socks(
         services::fibers_to_sockets::FibersToSockets<Demux>::GetCreateRequest(
             relay_fiber_port_, remote_addr_, remote_port_));
@@ -150,7 +140,7 @@ class PortForwarding : public BaseUserService<Demux> {
     return status;
   }
 
-  virtual void StopLocalServices(Demux& demux) {
+  void StopLocalServices(Demux& demux) override {
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     p_service_factory->StopService(localServiceId_);
@@ -174,6 +164,7 @@ class PortForwarding : public BaseUserService<Demux> {
     }
   }
 
+  std::string local_addr_;
   uint16_t local_port_;
   std::string remote_addr_;
   uint16_t remote_port_;

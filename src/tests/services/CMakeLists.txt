@@ -28,11 +28,32 @@ set(SOCKS_HELPERS_FILES
   "socks_helpers.cpp")
 
 set(SERVICE_TESTS_FILES
+  "datagram_fixture_test.h"
   "service_fixture_test.h"
   "process_fixture_test.h"
+  "socks_fixture_test.h"
+  "stream_fixture_test.h"
 )
 
 # --- Service tests
+
+# --- Option parser
+
+add_target("option_parser_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    "option_parser_tests.cpp"
+    ${USER_SERVICE_FILES}
+    ${COMMON_ERROR_FILES}
+)
+project_group(${services_tests_group_name} option_parser_tests)
 
 # --- Socks test
 set(socks_test_source_files

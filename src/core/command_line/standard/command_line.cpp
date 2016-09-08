@@ -10,7 +10,8 @@ CommandLine::CommandLine(bool is_server)
     : BaseCommandLine(),
       is_server_(is_server),
       show_status_(false),
-      relay_only_(false) {}
+      relay_only_(false),
+      gateway_ports_(false) {}
 
 void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
@@ -34,9 +35,14 @@ void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
          p_host_option,
          "Set host");
   local_opts.add_options()
+      ("gateway-ports,g",
+         boost::program_options::bool_switch()->default_value(false),
+         "Allow gateway ports. At connection, client will be allowed to "
+         "specify listening network interface on every services");
+  local_opts.add_options()
       ("status,S",
          boost::program_options::bool_switch()->default_value(false),
-         "Display micro services status (on/off)");
+         "Display microservices status (on/off)");
   // clang-format on
 }
 
@@ -60,6 +66,9 @@ void CommandLine::ParseOptions(const VariableMap& vm,
   }
   if (vm.count("relay-only")) {
     relay_only_ = vm["relay-only"].as<bool>();
+  }
+  if (vm.count("gateway-ports")) {
+    gateway_ports_ = vm["gateway-ports"].as<bool>();
   }
 }
 

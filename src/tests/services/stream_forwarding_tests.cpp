@@ -1,61 +1,64 @@
-#include <list>
-
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
-
 #include "services/user_services/port_forwarding.h"
 
-#include "tests/services/service_fixture_test.h"
-#include "tests/services/tcp_helpers.h"
+#include "tests/services/stream_fixture_test.h"
 
 class StreamForwardTest
-    : public ServiceFixtureTest<ssf::services::PortForwarding> {
- public:
-  StreamForwardTest() {}
-
-  ~StreamForwardTest() {}
-
+    : public StreamFixtureTest<ssf::services::PortForwarding> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
-      boost::system::error_code& ec) {
-    return ServiceTested::CreateServiceOptions("5454:127.0.0.1:5354", ec);
+      boost::system::error_code& ec) override {
+    return ServiceTested::CreateServiceOptions("5454:127.0.0.1:5555", ec);
   }
 };
 
 TEST_F(StreamForwardTest, transferOnesOverStream) {
   ASSERT_TRUE(Wait());
 
-  std::list<std::promise<bool>> clients_finish;
+  Run("5454", "5555");
+}
 
-  boost::recursive_mutex mutex;
-
-  auto download = [&mutex](size_t size, std::promise<bool>& test_client) {
-    tests::tcp::DummyClient client("127.0.0.1", "5454", size);
-
-    {
-      boost::recursive_mutex::scoped_lock lock(mutex);
-      EXPECT_TRUE(client.Run());
+class StreamForwardWildcardTest : public StreamForwardTest {
+  void SetServerConfig(ssf::config::Config& config) override {
+    const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "stream_listener": { "gateway_ports": true }
+        }
     }
+}
+)RAWSTRING";
 
-    client.Stop();
-    test_client.set_value(true);
-  };
-
-  tests::tcp::DummyServer serv("127.0.0.1", "5354");
-  serv.Run();
-
-  boost::thread_group client_test_threads;
-
-  for (int i = 0; i < 6; ++i) {
-    clients_finish.emplace_front();
-    std::promise<bool>& client_finish = clients_finish.front();
-    client_test_threads.create_thread(boost::bind<void>(
-        download, 1024 * 1024 * i, boost::ref(client_finish)));
+    boost::system::error_code ec;
+    config.UpdateFromString(new_config, ec);
+    ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                             << new_config;
   }
 
-  client_test_threads.join_all();
-  for (auto& client_finish : clients_finish) {
-    client_finish.get_future().wait();
+  void SetClientConfig(ssf::config::Config& config) override {
+    const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "stream_listener": { "gateway_ports": true }
+        }
+    }
+}
+)RAWSTRING";
+
+    boost::system::error_code ec;
+    config.UpdateFromString(new_config, ec);
+    ASSERT_EQ(ec.value(), 0) << "Could not update client config from string "
+                             << new_config;
   }
 
-  serv.Stop();
+  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+      boost::system::error_code& ec) override {
+    return ServiceTested::CreateServiceOptions(":5656:127.0.0.1:5757", ec);
+  }
+};
+
+TEST_F(StreamForwardWildcardTest, transferOnesOverStream) {
+  ASSERT_TRUE(Wait());
+
+  Run("5656", "5757");
 }
