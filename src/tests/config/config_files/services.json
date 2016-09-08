@@ -2,9 +2,15 @@
     "ssf": {
         "services" : {
             "datagram_forwarder": { "enable": false },
-            "datagram_listener": { "enable": false },
+            "datagram_listener": {
+              "enable": false,
+              "gateway_ports": true
+            },
             "stream_forwarder": { "enable": false },
-            "stream_listener": { "enable": false },
+            "stream_listener": {
+              "enable": false,
+              "gateway_ports": true
+            },
             "file_copy": { "enable": true },
             "shell": {
                 "enable": true,

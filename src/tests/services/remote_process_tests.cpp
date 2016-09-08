@@ -6,11 +6,11 @@ class RemoteProcessTest
     : public ProcessFixtureTest<ssf::services::RemoteProcess> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("9091", ec);
+    return ServiceTested::CreateServiceOptions("9081", ec);
   }
 };
 
-TEST_F(RemoteProcessTest, ExecuteCmdTest) { ExecuteCmd("9091"); }
+TEST_F(RemoteProcessTest, ExecuteCmdTest) { ExecuteCmd("9081"); }
 
 class RemoteProcessWildcardTest : public RemoteProcessTest {
  protected:
@@ -52,8 +52,8 @@ class RemoteProcessWildcardTest : public RemoteProcessTest {
 
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9092", ec);
+    return ServiceTested::CreateServiceOptions(":9082", ec);
   }
 };
 
-TEST_F(RemoteProcessWildcardTest, ExecuteCmdTest) { ExecuteCmd("9092"); }
+TEST_F(RemoteProcessWildcardTest, ExecuteCmdTest) { ExecuteCmd("9082"); }

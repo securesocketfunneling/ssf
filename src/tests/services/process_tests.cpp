@@ -5,11 +5,11 @@
 class ProcessTest : public ProcessFixtureTest<ssf::services::Process> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("9091", ec);
+    return ServiceTested::CreateServiceOptions("9071", ec);
   }
 };
 
-TEST_F(ProcessTest, ExecuteCmdTest) { ExecuteCmd("9091"); }
+TEST_F(ProcessTest, ExecuteCmdTest) { ExecuteCmd("9071"); }
 
 class ProcessWildcardTest : public ProcessTest {
   void SetServerConfig(ssf::config::Config& config) override {
@@ -50,8 +50,8 @@ class ProcessWildcardTest : public ProcessTest {
 
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9092", ec);
+    return ServiceTested::CreateServiceOptions(":9072", ec);
   }
 };
 
-TEST_F(ProcessWildcardTest, ExecuteCmdTest) { ExecuteCmd("9092"); }
+TEST_F(ProcessWildcardTest, ExecuteCmdTest) { ExecuteCmd("9072"); }

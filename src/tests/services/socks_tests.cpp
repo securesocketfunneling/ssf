@@ -5,13 +5,13 @@
 class SocksTest : public SocksFixtureTest<ssf::services::Socks> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9091", ec);
+    return ServiceTested::CreateServiceOptions(":9051", ec);
   }
 };
 
 TEST_F(SocksTest, startStopTransmitSSFSocks) {
   ASSERT_TRUE(Wait());
-  Run("9091", "9092");
+  Run("9051", "9052");
 }
 
 class SocksWildcardTest : public SocksTest {
@@ -51,12 +51,12 @@ class SocksWildcardTest : public SocksTest {
 
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9093", ec);
+    return ServiceTested::CreateServiceOptions(":9053", ec);
   }
 };
 
 TEST_F(SocksWildcardTest, startStopTransmitSSFSocks) {
   ASSERT_TRUE(Wait());
 
-  Run("9093", "9094");
+  Run("9053", "9054");
 }

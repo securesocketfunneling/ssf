@@ -6,14 +6,14 @@ class RemoteUdpForwardTest
     : public DatagramFixtureTest<ssf::services::UdpRemotePortForwarding> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("5454:127.0.0.1:5555", ec);
+    return ServiceTested::CreateServiceOptions("6464:127.0.0.1:6565", ec);
   }
 };
 
 TEST_F(RemoteUdpForwardTest, transferOnesOverUdp) {
   ASSERT_TRUE(Wait());
 
-  Run("5454", "5555");
+  Run("6464", "6565");
 }
 
 class RemoteUdpForwardWildcardTest : public RemoteUdpForwardTest {
@@ -53,12 +53,12 @@ class RemoteUdpForwardWildcardTest : public RemoteUdpForwardTest {
 
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":5656:127.0.0.1:5757", ec);
+    return ServiceTested::CreateServiceOptions(":6666:127.0.0.1:6767", ec);
   }
 };
 
 TEST_F(RemoteUdpForwardWildcardTest, transferOnesOverStream) {
   ASSERT_TRUE(Wait());
 
-  Run("5656", "5757");
+  Run("6666", "6767");
 }

@@ -5,14 +5,14 @@
 class RemoteSocksTest : public SocksFixtureTest<ssf::services::RemoteSocks> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9091", ec);
+    return ServiceTested::CreateServiceOptions(":9061", ec);
   }
 };
 
 TEST_F(RemoteSocksTest, startStopTransmitSSFRemoteSocks) {
   ASSERT_TRUE(Wait());
 
-  Run("9091", "9092");
+  Run("9061", "9062");
 }
 
 class RemoteSocksWildcardTest : public RemoteSocksTest {
@@ -52,12 +52,12 @@ class RemoteSocksWildcardTest : public RemoteSocksTest {
 
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9093", ec);
+    return ServiceTested::CreateServiceOptions(":9063", ec);
   }
 };
 
 TEST_F(RemoteSocksWildcardTest, startStopTransmitSSFSocks) {
   ASSERT_TRUE(Wait());
 
-  Run("9093", "9094");
+  Run("9063", "9064");
 }
