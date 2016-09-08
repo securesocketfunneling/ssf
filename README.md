@@ -22,24 +22,77 @@ Features:
 
 ### Standard command line
 
+#### Client command line
+
 ```plaintext
-ssf<c|s>[.exe] [-h] [-v verb_level] [-q] [-L loc:ip:dest] [-R rem:ip:dest] [-D port] [-F port] [-U loc:ip:dest] [-V rem:ip:dest] [-X port] [-Y port] [-b bounce_file] [-c config_file] [-p port] [host]
+ssfc[.exe] [options] host
+
+Basic options:
+  -h [ --help ]                         Produce help message
+  -v [ --verbosity ] level (=info)      Verbosity:
+                                          critical|error|warning|info|debug|trace
+  -q [ --quiet ]                        Do not display log
+
+Local options:
+  -c [ --config ] config_file_path      Set config file
+  -b [ --circuit ] circuit_file_path    Set circuit file
+  -p [ --port ] port (=8011)            Set remote SSF server port
+  -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify
+                                        listening network interface on every services
+  -S [ --status ]                       Display microservices status (on/off)
+
+Supported service commands:
+  -Y [ --remote-shell ] [[rem_ip]:]rem_port
+                                        Open a port server side, each connection to that port launches a
+                                        shell client side with I/O forwarded from/to the socket (shell microservice
+                                        must be enabled client side prior to use)
+  -F [ --remote-socks ] [[rem_ip]:]rem_port
+                                        Run a SOCKS proxy on localhost accessible from server [[rem_ip]:]rem_port
+  -X [ --shell ] [[loc_ip]:]loc_port
+                                        Open a port on the client side, each connection to that port launches a
+                                        shell server side with I/O forwarded to/from the socket (shell microservice
+                                        must be enabled server side prior to use)
+  -D [ --socks ] [[loc_ip]:]loc_port
+                                        Run a SOCKS proxy on remote host accessible from client [[loc_ip]:]loc_port
+  -L [ --tcp-forward ] [[loc_ip]:]loc_port:dest_ip:dest_port
+                                        Forward TCP client [[loc_ip]:]port to dest_ip:dest_port from server
+  -R [ --tcp-remote-forward ] [[rem_ip]:]rem_port:dest_ip:dest_port
+                                        Forward TCP server [[rem_ip]:]rem_port to target dest_ip:dest_port from client
+  -U [ --udp-forward ] [[loc_ip]:]loc_port:dest_ip:dest_port
+                                        Forward UDP client [[loc_ip]:]loc_port to target dest_ip:dest_port from server
+  -V [ --udp-remote-forward ] [[rem_ip]:]rem_port:dest_ip:dest_port
+                                        Forward UDP server [[rem_ip]:]rem_port to dest_ip:dest_port from client
 ```
 
-* -v : Verbosity level (critical, error, warning, info, debug, trace), default is info
-* -q : Quiet mode (no log)
-* -L : TCP port forwarding with *loc* as the local TCP port, *ip* and *dest* as destination toward which the forward should be done from the server.
-* -R : TCP remote port forwarding with *rem* as the TCP port to forward from the remote host, *ip* and *dest* as destination toward which the forward should be done from the client.
-* -D : open a port (*port*) on the client to connect to a SOCKS server on the server from the client.
-* -F : open a port (*port*) on the server to connect to a SOCKS server on the client from the server.
-* -U : UDP port forwarding with *loc* as the UDP port to forward from the client, *ip* and *dest* as destination toward which the forward should be done from the server.
-* -V : UDP remote port forwarding with *rem* as the UDP port to forward from the server, *ip* and *dest* as destination toward which the forward should be done from the client.
-* -X : open a port (*port*) on the client side, each connection to that port creates a process with I/O forwarded to/from the server side (the binary used can be set with the config file)
-* -Y : open a port (*port*) on the server side, each connection to that port creates a process with I/O forwarded to/from the client side (the binary used can be set with the config file)
-* -b : *bounce_file* is the file containing the list of relays to use.
-* -c : *config_file* is the config file containing configuration for SSF (TLS configuration).
-* -p : *port* is the port on which to listen (for the server) or to connect (for the client). The default value is 8011.
-* host : the IP address or the name of the remote server to connect to.
+#### Server command line
+
+```plaintext
+ssfs[.exe] [options] [host]
+
+Basic options:
+  -h [ --help ]                         Produce help message
+  -v [ --verbosity ] level (=info)      Verbosity:
+                                          critical|error|warning|info|debug|trace
+  -q [ --quiet ]                        Do not display log
+
+Local options:
+  -c [ --config ] config_file_path      Set config file
+  -p [ --port ] port (=8011)            Set local SSF server port
+  -R [ --relay-only ]                   Server will only relay connections
+  -H [ --host ] host                    Set host
+  -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify listening
+                                        network interface on every services
+  -S [ --status ]                       Display microservices status (on/off)
+```
+
+#### Client example
+
+Client will open port 9000 locally and wait SOCKS requests to be transferred to
+server **192.168.0.1:8000**
+
+```plaintext
+ssfc[.exe] -D 9000 -b bounce.txt -c config.json -p 8000 192.168.0.1
+```
 
 #### Server example
 
@@ -53,15 +106,6 @@ Server will listen on **192.168.0.1:9000**
 
 ```plaintext
 ssfs[.exe] -p 9000 192.168.0.1
-```
-
-#### Client example
-
-Client will open port 9000 locally and wait SOCKS requests to be transferred to
-server **192.168.0.1:8000**
-
-```plaintext
-ssfc[.exe] -D 9000 -b bounce.txt -c config.json -p 8000 192.168.0.1
 ```
 
 ### Copy command line
@@ -81,12 +125,22 @@ Config file example:
 #### Command line
 
 ```plaintext
-ssfcp[.exe] [-h] [-b bounce_file] [-c config_file] [-p port] [-t] [host@]path [[host@]path]
-```
+ssfcp[.exe] [options] [host@]/absolute/path/file [[host@]/absolute/path/file]
 
-* -b : *bounce_file* is the file containing the list of relays to use.
-* -c : *config_file* is the config file containing configuration for SSF (TLS configuration).
-* -t : input from stdin
+Basic options:
+  -h [ --help ]                       Produce help message
+  -v [ --verbosity ] level (=info)    Verbosity:
+                                        critical|error|warning|info|debug|trace
+  -q [ --quiet ]                      Do not display log
+
+Local options:
+  -c [ --config ] config_file_path    Set config file
+  -b [ --circuit ] circuit_file_path  Set circuit file
+  -p [ --port ] port (=8011)          Set remote SSF server port
+
+Copy options:
+  -t [ --stdin ]                      Input will be stdin
+```
 
 #### Copy from local to remote destination :
 
@@ -149,9 +203,15 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
     },
     "services": {
       "datagram_forwarder": { "enable": true },
-      "datagram_listener": { "enable": true },
+      "datagram_listener": {
+        "enable": true,
+        "gateway_ports": false
+      },
       "stream_forwarder": { "enable": true },
-      "stream_listener": { "enable": true },
+      "stream_listener": {
+        "enable": true,
+        "gateway_ports": false
+      },
       "file_copy": { "enable": false },
       "shell": {
         "enable": false,
@@ -177,6 +237,7 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
 * _http_proxy.credentials.reuse_ntlm_ : reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)
 * _http_proxy.credentials.reuse_kerb_ : reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO)
 * _services.*.enable_   : [enable/disable microservice](#microservices)
+* _services.*.gateway_ports_ : enable/disable gateway ports
 * _services.shell.path_ : binary path used for shell creation (optional)
 * _services.shell.args_ : binary arguments used for shell creation (optional)
 
