@@ -1,6 +1,7 @@
 #ifndef TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
 #define TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
 
+#include <random>
 #include <utility>
 
 #include <gtest/gtest.h>
@@ -37,12 +38,20 @@ class ServiceFixtureTest : public ::testing::Test {
       transport_set_.set_value(false);
     };
 
-    if (!StartServer("127.0.0.1", "10000")) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distribution(30000, 65000);
+
+    auto port = std::to_string(distribution(gen));
+
+    SSF_LOG(kLogInfo) << "Service fixture: server will listen on port " << port;
+
+    if (!StartServer("127.0.0.1", port)) {
       cleanup();
       FAIL() << "Could not start server";
       return;
     }
-    if (!StartClient("127.0.0.1", "10000")) {
+    if (!StartClient("127.0.0.1", port)) {
       cleanup();
       FAIL() << "Could not start client";
       return;

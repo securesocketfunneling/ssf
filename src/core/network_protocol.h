@@ -84,7 +84,7 @@ class NetworkProtocol {
       const ssf::config::Config& ssf_config);
 
   static ssf::layer::LayerParameters ProxyConfigToLayerParameters(
-      const ssf::config::Config& ssf_config);
+      const ssf::config::Config& ssf_config, bool acceptor_endpoint);
 };
 
 }  // network

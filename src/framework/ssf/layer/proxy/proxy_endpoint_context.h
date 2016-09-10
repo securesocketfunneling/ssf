@@ -50,12 +50,15 @@ class ProxyEndpointContext {
 
   inline bool proxy_enabled() const { return proxy_enabled_; }
 
+  inline bool acceptor_endpoint() const { return acceptor_endpoint_; }
+
   inline const Proxy& http_proxy() const { return http_proxy_; }
 
   inline const Host& remote_host() const { return remote_host_; }
 
  private:
   bool proxy_enabled_;
+  bool acceptor_endpoint_;
   Proxy http_proxy_;
   Host remote_host_;
 };

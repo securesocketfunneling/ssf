@@ -64,8 +64,13 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
 
   // set acceptor
   network_acceptor_.open();
+
+  /*
+  // TODO: reuse address ?
   network_acceptor_.set_option(boost::asio::socket_base::reuse_address(true),
                                ec);
+  */
+
   network_acceptor_.bind(*endpoint_it, ec);
   if (ec) {
     SSF_LOG(kLogError) << "server: could not bind acceptor to network endpoint";

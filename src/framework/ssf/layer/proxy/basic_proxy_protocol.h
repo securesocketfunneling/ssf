@@ -71,7 +71,8 @@ class basic_ProxyProtocol {
     // Get next layer parameters
     ++parameters_it;
 
-    if (context.UpdateRemoteHost(*parameters_it)) {
+    if (!context.acceptor_endpoint() &&
+        context.UpdateRemoteHost(*parameters_it)) {
       // Proxy context contains remote host data
       return endpoint(context);
     } else {
