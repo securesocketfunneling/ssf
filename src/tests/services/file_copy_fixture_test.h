@@ -40,7 +40,7 @@ class FileCopyTestFixture : public ::testing::Test {
 
   virtual ~FileCopyTestFixture();
 
-  void StartServer();
+  void StartServer(const std::string& server_port);
   bool Wait();
   bool WaitClose();
   void StopServerThreads();
@@ -50,7 +50,7 @@ class FileCopyTestFixture : public ::testing::Test {
                          const boost::system::error_code& ec);
 
   void SetUp() override;
-  void StartClient();
+  void StartClient(const std::string& server_port);
   void TearDown() override;
 
   virtual std::string GetOutputPattern() const;

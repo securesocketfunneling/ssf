@@ -38,8 +38,9 @@ class SSFClientServerTest : public ::testing::Test {
   ~SSFClientServerTest() {}
 
   virtual void SetUp() {
-    StartServer();
-    StartClient();
+    std::string server_port("8100");
+    StartServer(server_port);
+    StartClient(server_port);
   }
 
   virtual void TearDown() {
@@ -47,24 +48,28 @@ class SSFClientServerTest : public ::testing::Test {
     p_ssf_server_->Stop();
   }
 
-  void StartServer() {
+  void StartServer(const std::string& server_port) {
     ssf::config::Config ssf_config;
+    
+    ssf_config.Init();
 
     auto endpoint_query =
-        NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
+        NetworkProtocol::GenerateServerQuery("", server_port, ssf_config);
     p_ssf_server_.reset(new Server(ssf_config.services()));
 
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
   }
 
-  void StartClient() {
+  void StartClient(const std::string& server_port) {
     std::vector<BaseUserServicePtr> client_options;
 
     ssf::config::Config ssf_config;
+    
+    ssf_config.Init();
 
     auto endpoint_query = NetworkProtocol::GenerateClientQuery(
-        "127.0.0.1", "8000", ssf_config, {});
+        "127.0.0.1", server_port, ssf_config, {});
 
     p_ssf_client_.reset(
         new Client(client_options, ssf_config.services(),

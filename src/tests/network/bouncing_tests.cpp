@@ -40,9 +40,11 @@ TEST(BouncingTests, BouncingChain) {
   std::list<Server> servers;
   ssf::circuit::NodeList node_list;
 
-  uint16_t initial_server_port = 10000;
+  uint16_t initial_server_port = 11000;
   uint8_t nb_of_servers = 5;
   ssf::config::Config ssf_config;
+  
+  ssf_config.Init();
 
   boost::system::error_code client_ec;
   boost::system::error_code circuit_ec;

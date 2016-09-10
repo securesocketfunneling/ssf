@@ -105,9 +105,10 @@ class Process : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[shell]: "
-                         << "local_service[sockets to fibers]: start failed: "
-                         << ec.message();
+      SSF_LOG(kLogError)
+          << "user_service[shell]: "
+          << "local microservice[stream_listener]: start failed: "
+          << ec.message();
     }
     return !ec;
   };

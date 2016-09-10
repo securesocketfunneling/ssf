@@ -15,7 +15,7 @@ TEST(SSFServerTest, failListeningWrongInterface) {
   ssf::config::Config ssf_config;
 
   auto endpoint_query =
-      NetworkProtocol::GenerateServerQuery("1.1.1.1", "8000", ssf_config);
+      NetworkProtocol::GenerateServerQuery("1.1.1.1", "8200", ssf_config);
   Server server(ssf_config.services());
 
   boost::system::error_code run_ec;
@@ -31,7 +31,7 @@ TEST(SSFServerTest, listeningAllInterfaces) {
   ssf::config::Config ssf_config;
 
   auto endpoint_query =
-      NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
+      NetworkProtocol::GenerateServerQuery("", "8300", ssf_config);
   Server server(ssf_config.services());
 
   boost::system::error_code run_ec;
@@ -49,7 +49,7 @@ TEST(SSFServerTest, listeningLocalhostInterface) {
   ssf::config::Config ssf_config;
 
   auto endpoint_query =
-      NetworkProtocol::GenerateServerQuery("127.0.0.1", "8000", ssf_config);
+      NetworkProtocol::GenerateServerQuery("127.0.0.1", "8400", ssf_config);
   Server server(ssf_config.services());
 
   boost::system::error_code run_ec;

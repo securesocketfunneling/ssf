@@ -44,9 +44,10 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     p_ssf_server_->Stop();
   }
 
-  void StartServer(const ssf::config::Config& config) {
+  void StartServer(const std::string& server_port,
+                   const ssf::config::Config& config) {
     auto endpoint_query =
-        NetworkProtocol::GenerateServerTLSQuery("", "8000", config);
+        NetworkProtocol::GenerateServerTLSQuery("", server_port, config);
 
     p_ssf_server_.reset(new Server(config.services()));
 
@@ -54,12 +55,13 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     p_ssf_server_->Run(endpoint_query, run_ec);
   }
 
-  void StartClient(const ssf::config::Config& config,
+  void StartClient(const std::string& server_port,
+                   const ssf::config::Config& config,
                    const ClientCallback& callback) {
     std::vector<BaseUserServicePtr> client_options;
 
     auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
-        "127.0.0.1", "8000", config, {});
+        "127.0.0.1", server_port, config, {});
 
     p_ssf_client_.reset(
         new Client(client_options, config.services(), callback));
@@ -92,7 +94,9 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
     }
   };
   ssf::config::Config client_config;
+  client_config.Init();
   ssf::config::Config server_config;
+  server_config.Init();
   boost::system::error_code ec;
 
   const char* new_config = R"RAWSTRING(
@@ -109,8 +113,9 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
   ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
                            << new_config;
 
-  StartServer(server_config);
-  StartClient(client_config, callback);
+  std::string server_port("8600");
+  StartServer(server_port, server_config);
+  StartClient(server_port, client_config, callback);
 
   network_set_future.wait();
   transport_set_future.wait();
@@ -140,7 +145,9 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
     }
   };
   ssf::config::Config client_config;
+  client_config.Init();
   ssf::config::Config server_config;
+  server_config.Init();
   boost::system::error_code ec;
   const char* new_client_config = R"RAWSTRING(
 {
@@ -169,8 +176,9 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
   ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
                            << new_server_config;
 
-  StartServer(server_config);
-  StartClient(client_config, callback);
+  std::string server_port("8700");
+  StartServer(server_port, server_config);
+  StartClient(server_port, client_config, callback);
 
   network_set_future.wait();
   transport_set_future.wait();
