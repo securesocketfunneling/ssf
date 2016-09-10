@@ -15,11 +15,10 @@
 #include "services/copy_file/file_to_fiber/file_to_fiber.h"
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
-#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
+#include "services/process/server.h"
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
-#include "services/process/server.h"
 
 #include "ssf/log/log.h"
 
@@ -115,7 +114,7 @@ void SSFClient<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 
     Notify(ssf::services::initialisation::TRANSPORT, nullptr, ec);
   } else {
-    SSF_LOG(kLogError) << "client: SSF protocol error " << ec.message();
+    SSF_LOG(kLogError) << "client: SSF protocol error (" << ec.message() << ")";
   }
 }
 

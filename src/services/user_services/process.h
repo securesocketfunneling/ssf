@@ -58,8 +58,8 @@ class Process : public BaseUserService<Demux> {
 
   std::string GetName() override { return "shell"; };
 
-  std::vector<admin::CreateServiceRequest<Demux>>
-  GetRemoteServiceCreateVector() override {
+  std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
+      override {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
     services::admin::CreateServiceRequest<Demux> r_process_server(

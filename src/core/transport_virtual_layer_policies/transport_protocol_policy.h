@@ -32,6 +32,8 @@ class TransportProtocolPolicy {
  public:
   TransportProtocolPolicy(Callback callback) : callback_(callback) {}
 
+  virtual ~TransportProtocolPolicy() {}
+
   void DoSSFInitiate(SocketPtr p_socket) {
     SSF_LOG(kLogDebug) << "transport: starting SSF protocol";
 

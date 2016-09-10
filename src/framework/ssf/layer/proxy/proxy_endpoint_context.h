@@ -37,7 +37,7 @@ class ProxyEndpointContext {
   void Init(const LayerParameters& proxy_parameters);
 
   // Update remote host component with TCP layer parameters
-  // Returns true if remote host was updated
+  // @returns true if remote host was updated
   bool UpdateRemoteHost(const LayerParameters& tcp_parameters);
 
   bool HttpProxyEnabled() const;

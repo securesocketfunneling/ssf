@@ -34,8 +34,10 @@ Basic options:
   -q [ --quiet ]                        Do not display log
 
 Local options:
-  -c [ --config ] config_file_path      Set config file
-  -b [ --circuit ] circuit_file_path    Set circuit file
+  -c [ --config ] config_file_path      Set config file. If option empty, try to load 'config.json' file from working
+                                        directory
+  -b [ --circuit ] circuit_file_path    Set circuit file. If option empty, try to load 'circuit.txt' file from working
+                                        directory
   -p [ --port ] port (=8011)            Set remote SSF server port
   -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify
                                         listening network interface on every services
@@ -76,10 +78,10 @@ Basic options:
   -q [ --quiet ]                        Do not display log
 
 Local options:
-  -c [ --config ] config_file_path      Set config file
+  -c [ --config ] config_file_path      Set config file. If option empty, try to load 'config.json' file from working
+                                        directory
   -p [ --port ] port (=8011)            Set local SSF server port
   -R [ --relay-only ]                   Server will only relay connections
-  -H [ --host ] host                    Set host
   -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify listening
                                         network interface on every services
   -S [ --status ]                       Display microservices status (on/off)
@@ -134,8 +136,10 @@ Basic options:
   -q [ --quiet ]                      Do not display log
 
 Local options:
-  -c [ --config ] config_file_path    Set config file
-  -b [ --circuit ] circuit_file_path  Set circuit file
+  -c [ --config ] config_file_path    Set config file. If option empty, try to load 'config.json' file from working
+                                      directory
+  -b [ --circuit ] circuit_file_path  Set circuit file. If option empty, try to load 'circuit.txt' file from working
+                                      directory
   -p [ --port ] port (=8011)          Set remote SSF server port
 
 Copy options:
@@ -197,8 +201,8 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
         "username": "",
         "password": "",
         "domain": "",
-        "reuse_ntlm": "true",
-        "reuse_nego": "true"
+        "reuse_ntlm": true,
+        "reuse_nego": true
       }
     },
     "services": {

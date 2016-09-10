@@ -1,15 +1,7 @@
-#include "ssf/layer/physical/tcp_helpers.h"
-
-#include <string>
-
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
-
 #include "ssf/error/error.h"
 
-#include "ssf/layer/parameters.h"
-
 #include "ssf/layer/physical/host.h"
+#include "ssf/layer/physical/tcp_helpers.h"
 
 namespace ssf {
 namespace layer {

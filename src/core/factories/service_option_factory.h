@@ -4,12 +4,11 @@
 #include <string>
 #include <functional>
 #include <map>
-
-#include <boost/thread/recursive_mutex.hpp>
+#include <memory>
 
 #include <boost/program_options.hpp>
-
 #include <boost/system/error_code.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
 #include "common/error/error.h"
 #include "services/user_services/base_user_service.h"
@@ -42,8 +41,7 @@ class ServiceOptionFactory {
     if (service_options_.count(index)) {
       return false;
     } else {
-      service_options_[index] = { parser, full_name,
-                                  value_name, description};
+      service_options_[index] = {parser, full_name, value_name, description};
       return true;
     }
   }

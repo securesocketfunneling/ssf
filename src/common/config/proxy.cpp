@@ -47,13 +47,13 @@ void Proxy::Update(const PTree& proxy_prop) {
   auto cred_reuse_ntlm_optional =
       proxy_prop.get_child_optional("credentials.reuse_ntlm");
   if (cred_reuse_ntlm_optional) {
-    reuse_ntlm_ = cred_reuse_ntlm_optional.get().data() == "true";
+    reuse_ntlm_ = cred_reuse_ntlm_optional.get().get_value<bool>();
   }
 
   auto cred_reuse_kerb_optional =
       proxy_prop.get_child_optional("credentials.reuse_kerb");
   if (cred_reuse_kerb_optional) {
-    reuse_kerb_ = cred_reuse_kerb_optional.get().data() == "true";
+    reuse_kerb_ = cred_reuse_kerb_optional.get().get_value<bool>();
   }
 }
 

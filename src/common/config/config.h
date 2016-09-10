@@ -3,8 +3,6 @@
 
 #include <string>
 
-#include <boost/asio/detail/config.hpp>
-
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
@@ -43,8 +41,8 @@ class Config {
    *         "username": "",
    *         "password": "",
    *         "domain": "",
-   *         "reuse_ntlm": "true",
-   *         "reuse_nego": "true"
+   *         "reuse_ntlm": true,
+   *         "reuse_nego": true
    *       }
    *     },
    *     "services": {

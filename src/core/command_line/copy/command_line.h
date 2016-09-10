@@ -1,18 +1,7 @@
 #ifndef SSF_CORE_COMMAND_LINE_COPY_COMMAND_LINE_H_
 #define SSF_CORE_COMMAND_LINE_COPY_COMMAND_LINE_H_
 
-#include <cstdint>
-
 #include <string>
-#include <stdexcept>
-#include <vector>
-#include <regex>
-#include <memory>
-
-#include <boost/program_options.hpp>
-#include <boost/system/error_code.hpp>
-
-#include <ssf/log/log.h>
 
 #include "core/command_line/base.h"
 
@@ -24,7 +13,7 @@ class CommandLine : public BaseCommandLine {
  public:
   CommandLine();
 
-  virtual ~CommandLine() {}
+  ~CommandLine();
 
   bool from_stdin() const;
 

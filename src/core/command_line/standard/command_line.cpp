@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "core/command_line/standard/command_line.h"
 
 #include "common/error/error.h"
@@ -12,6 +14,8 @@ CommandLine::CommandLine(bool is_server)
       show_status_(false),
       relay_only_(false),
       gateway_ports_(false) {}
+
+CommandLine::~CommandLine() {}
 
 void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 

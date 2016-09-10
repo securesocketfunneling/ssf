@@ -177,7 +177,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   auto p_service_factory = ServiceFactory<demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, p_service_manager);
 
-  // Register supported micro services
+  // Register supported microservices
   services::socks::SocksServer<demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.socks());
   services::fibers_to_sockets::FibersToSockets<demux>::RegisterToServiceFactory(
@@ -199,7 +199,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   services::process::Server<demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
-  // Start the admin micro service
+  // Start the admin microservice
   std::map<std::string, std::string> empty_map;
 
   auto p_admin_service = services::admin::Admin<demux>::Create(

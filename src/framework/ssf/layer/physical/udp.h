@@ -3,8 +3,6 @@
 
 #include <cstdint>
 
-#include <memory>
-
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/io_service.hpp>
 
@@ -25,13 +23,14 @@ class udp {
     facilities = ssf::layer::facilities::datagram,
     mtu = 1500 - overhead
   };
+
   enum { endpoint_stack_size = 1 };
 
-  typedef int socket_context;
-  typedef int acceptor_context;
-  typedef boost::asio::ip::udp::socket socket;
-  typedef boost::asio::ip::udp::resolver resolver;
-  typedef boost::asio::ip::udp::endpoint endpoint;
+  using socket_context = int;
+  using acceptor_context = int;
+  using endpoint = boost::asio::ip::udp::endpoint;
+  using resolver = boost::asio::ip::udp::resolver;
+  using socket = boost::asio::ip::udp::socket;
 
  private:
   using query = ParameterStack;

@@ -1,17 +1,7 @@
-#include "ssf/layer/physical/udp_helpers.h"
-
-#include <string>
-
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/udp.hpp>
-
-#include <boost/system/error_code.hpp>
-
 #include "ssf/error/error.h"
 
-#include "ssf/layer/parameters.h"
-
 #include "ssf/layer/physical/host.h"
+#include "ssf/layer/physical/udp_helpers.h"
 
 namespace ssf {
 namespace layer {

@@ -1,18 +1,13 @@
-#include "core/command_line/copy/command_line.h"
-
 #include <cstdint>
 
 #include <iostream>
-#include <string>
-#include <stdexcept>
-#include <vector>
-#include <regex>
 #include <memory>
 
-#include <boost/program_options.hpp>
-#include <boost/system/error_code.hpp>
+#include <ssf/log/log.h>
 
 #include "common/error/error.h"
+
+#include "core/command_line/copy/command_line.h"
 
 #include "versions.h"
 
@@ -21,6 +16,8 @@ namespace command_line {
 namespace copy {
 
 CommandLine::CommandLine() : BaseCommandLine(), from_stdin_(false) {}
+
+CommandLine::~CommandLine() {}
 
 void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
