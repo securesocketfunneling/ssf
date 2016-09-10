@@ -16,6 +16,7 @@
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
 #include "services/user_services/base_user_service.h"
+#include "services/user_services/option_parser.h"
 
 #include "core/factories/service_option_factory.h"
 
@@ -24,34 +25,28 @@ namespace services {
 
 template <typename Demux>
 class Socks : public BaseUserService<Demux> {
- private:
-  Socks(uint16_t local_port)
-      : local_port_(local_port), remoteServiceId_(0), localServiceId_(0) {}
-
  public:
   static std::string GetFullParseName() { return "socks,D"; }
 
   static std::string GetParseName() { return "socks"; }
 
-  static std::string GetValueName() { return "local_port"; }
+  static std::string GetValueName() { return "[[loc_ip]:]loc_port"; }
 
   static std::string GetParseDesc() {
-    return "Run a proxy socks on remote host";
+    return "Run a SOCKS proxy on remote host accessible from client "
+           "[[loc_ip]:]loc_port";
   }
 
- public:
   static std::shared_ptr<Socks> CreateServiceOptions(
       std::string line, boost::system::error_code& ec) {
-    try {
-      uint16_t port = (uint16_t)std::stoul(line);
-      return std::shared_ptr<Socks>(new Socks(port));
-    } catch (const std::invalid_argument&) {
+    auto listener = OptionParser::ParseListeningOption(line, ec);
+
+    if (ec) {
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<Socks>(nullptr);
-    } catch (const std::out_of_range&) {
-      ec.assign(::error::out_of_range, ::error::get_ssf_category());
-      return std::shared_ptr<Socks>(nullptr);
     }
+
+    return std::shared_ptr<Socks>(new Socks(listener.addr, listener.port));
   }
 
   static void RegisterToServiceOptionFactory() {
@@ -60,10 +55,13 @@ class Socks : public BaseUserService<Demux> {
         &Socks::CreateServiceOptions);
   }
 
-  virtual std::string GetName() { return "socks"; }
+ public:
+  virtual ~Socks() {}
 
-  virtual std::vector<admin::CreateServiceRequest<Demux>>
-  GetRemoteServiceCreateVector() {
+  std::string GetName() override { return "socks"; }
+
+  std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
+      override {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
     services::admin::CreateServiceRequest<Demux> r_socks(
@@ -74,8 +72,8 @@ class Socks : public BaseUserService<Demux> {
     return result;
   }
 
-  virtual std::vector<admin::StopServiceRequest<Demux>>
-  GetRemoteServiceStopVector(Demux& demux) {
+  std::vector<admin::StopServiceRequest<Demux>> GetRemoteServiceStopVector(
+      Demux& demux) override {
     std::vector<admin::StopServiceRequest<Demux>> result;
 
     auto id = GetRemoteServiceId(demux);
@@ -87,10 +85,10 @@ class Socks : public BaseUserService<Demux> {
     return result;
   }
 
-  virtual bool StartLocalServices(Demux& demux) {
+  bool StartLocalServices(Demux& demux) override {
     services::admin::CreateServiceRequest<Demux> l_forward(
         services::sockets_to_fibers::SocketsToFibers<Demux>::GetCreateRequest(
-            local_port_, local_port_));
+            local_addr_, local_port_, local_port_));
 
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
@@ -106,7 +104,7 @@ class Socks : public BaseUserService<Demux> {
     return !ec;
   }
 
-  virtual uint32_t CheckRemoteServiceStatus(Demux& demux) {
+  uint32_t CheckRemoteServiceStatus(Demux& demux) override {
     services::admin::CreateServiceRequest<Demux> r_socks(
         services::socks::SocksServer<Demux>::GetCreateRequest(local_port_));
     auto p_service_factory =
@@ -117,13 +115,19 @@ class Socks : public BaseUserService<Demux> {
     return status;
   }
 
-  virtual void StopLocalServices(Demux& demux) {
+  void StopLocalServices(Demux& demux) override {
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     p_service_factory->StopService(localServiceId_);
   }
 
  private:
+  Socks(const std::string& local_addr, uint16_t local_port)
+      : local_addr_(local_addr),
+        local_port_(local_port),
+        remoteServiceId_(0),
+        localServiceId_(0) {}
+
   uint32_t GetRemoteServiceId(Demux& demux) {
     if (remoteServiceId_) {
       return remoteServiceId_;
@@ -142,6 +146,7 @@ class Socks : public BaseUserService<Demux> {
     }
   }
 
+  std::string local_addr_;
   uint16_t local_port_;
   uint32_t remoteServiceId_;
   uint32_t localServiceId_;

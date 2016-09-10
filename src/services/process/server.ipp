@@ -52,7 +52,7 @@ void Server<Demux>::start(boost::system::error_code& ec) {
     return;
   }
 
-  SSF_LOG(kLogInfo) << "microservice[shell]: starting server on port "
+  SSF_LOG(kLogInfo) << "microservice[shell]: start server on fiber port "
                     << local_port_;
 
   this->StartAccept();
@@ -62,7 +62,7 @@ template <typename Demux>
 void Server<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  SSF_LOG(kLogInfo) << "microservice[shell]: stopping server";
+  SSF_LOG(kLogInfo) << "microservice[shell]: stop server";
   this->HandleStop();
 }
 

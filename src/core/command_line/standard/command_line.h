@@ -31,7 +31,7 @@ class CommandLine : public BaseCommandLine {
 
   inline bool relay_only() const { return relay_only_; }
 
-  virtual ~CommandLine() {}
+  inline bool gateway_ports() const { return gateway_ports_; }
 
  protected:
   void PopulateBasicOptions(OptionDescription& desc) override;
@@ -47,6 +47,7 @@ class CommandLine : public BaseCommandLine {
   bool is_server_;
   bool show_status_;
   bool relay_only_;
+  bool gateway_ports_;
 };
 
 }  // standard

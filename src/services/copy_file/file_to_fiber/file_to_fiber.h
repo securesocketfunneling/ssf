@@ -76,50 +76,6 @@ class FileToFiber : public BaseService<Demux> {
     return nullptr;
   }
 
-  virtual ~FileToFiber() {}
-
-  // Start service
-  virtual void start(boost::system::error_code& ec) {
-// set stdin in binary mode
-#ifdef WIN32
-    if (_setmode(_fileno(stdin), _O_BINARY) == -1) {
-      return;
-    }
-#endif
-
-    if (accept_) {
-      endpoint ep(this->get_demux(), kServicePort);
-      SSF_LOG(kLogInfo)
-          << "microservice[file to fiber]: start accept on fiber port "
-          << kServicePort;
-      fiber_acceptor_.bind(ep, ec);
-      fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
-      if (ec) {
-        return;
-      }
-      StartAccept();
-    } else {
-      StartTransfer();
-    }
-  }
-
-  // Stop service
-  virtual void stop(boost::system::error_code& ec) {
-    SSF_LOG(kLogInfo) << "microservice[file to fiber]: stopping";
-    manager_.stop_all();
-    boost::system::error_code close_ec;
-    fiber_acceptor_.close(close_ec);
-
-// reset stdin in text mode
-#ifdef WIN32
-    if (_setmode(_fileno(stdin), _O_TEXT) == -1) {
-      return;
-    }
-#endif
-  }
-
-  virtual uint32_t service_type_id() { return factory_id; }
-
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
@@ -144,6 +100,49 @@ class FileToFiber : public BaseService<Demux> {
 
     return create;
   }
+
+ public:
+  // Start service
+  void start(boost::system::error_code& ec) override {
+// set stdin in binary mode
+#ifdef WIN32
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1) {
+      return;
+    }
+#endif
+
+    if (accept_) {
+      endpoint ep(this->get_demux(), kServicePort);
+      SSF_LOG(kLogInfo)
+          << "microservice[file to fiber]: start accept on fiber port "
+          << kServicePort;
+      fiber_acceptor_.bind(ep, ec);
+      fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
+      if (ec) {
+        return;
+      }
+      StartAccept();
+    } else {
+      StartTransfer();
+    }
+  }
+
+  // Stop service
+  void stop(boost::system::error_code& ec) override {
+    SSF_LOG(kLogInfo) << "microservice[file to fiber]: stopping";
+    manager_.stop_all();
+    boost::system::error_code close_ec;
+    fiber_acceptor_.close(close_ec);
+
+// reset stdin in text mode
+#ifdef WIN32
+    if (_setmode(_fileno(stdin), _O_TEXT) == -1) {
+      return;
+    }
+#endif
+  }
+
+  uint32_t service_type_id() override { return factory_id; }
 
  private:
   FileToFiber(boost::asio::io_service& io_service, demux& fiber_demux)

@@ -92,7 +92,7 @@ void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
     return;
   }
 
-  SSF_LOG(kLogError) << "client: error when connecting to server "
+  SSF_LOG(kLogError) << "client: error when connecting to server: "
                      << ec.message();
 
   if (p_socket) {

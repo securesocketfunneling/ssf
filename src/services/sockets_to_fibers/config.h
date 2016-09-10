@@ -13,6 +13,14 @@ class Config : public BaseServiceConfig {
  public:
   Config();
   Config(const Config& stream_listener);
+
+  inline bool gateway_ports() const { return gateway_ports_; }
+  inline void set_gateway_ports(bool gateway_ports) {
+    gateway_ports_ = gateway_ports;
+  }
+
+ private:
+  bool gateway_ports_;
 };
 
 }  // sockets_to_fibers

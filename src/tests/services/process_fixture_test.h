@@ -15,19 +15,7 @@
 
 template <template <typename> class TServiceTested>
 class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
- public:
-  using ServiceTested =
-      typename ServiceFixtureTest<TServiceTested>::ServiceTested;
-
- public:
-  ProcessFixtureTest() : ServiceFixtureTest<TServiceTested>() {}
-
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
-      boost::system::error_code& ec) {
-    return ServiceTested::CreateServiceOptions("9091", ec);
-  }
-
-  void SetServerConfig(ssf::config::Config& config) {
+  void SetServerConfig(ssf::config::Config& config) override {
     boost::system::error_code ec;
 
     const char* new_config = R"RAWSTRING(
@@ -45,7 +33,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
                              << new_config;
   }
 
-  void SetClientConfig(ssf::config::Config& config) {
+  void SetClientConfig(ssf::config::Config& config) override {
     boost::system::error_code ec;
 
     const char* new_config = R"RAWSTRING(
@@ -63,7 +51,8 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
                              << new_config;
   }
 
-  void ExecuteCmd() {
+ protected:
+  void ExecuteCmd(const std::string& process_port) {
     ASSERT_TRUE(this->Wait());
 
     boost::asio::io_service io_service;
@@ -72,7 +61,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
     boost::asio::ip::tcp::socket socket(io_service);
 
     boost::asio::ip::tcp::resolver r(io_service);
-    boost::asio::ip::tcp::resolver::query q("127.0.0.1", "9091");
+    boost::asio::ip::tcp::resolver::query q("127.0.0.1", process_port);
     boost::system::error_code ec;
 
     boost::asio::connect(socket, r.resolve(q), ec);

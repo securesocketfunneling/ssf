@@ -49,9 +49,15 @@ class Config {
    *     },
    *     "services": {
    *       "datagram_forwarder": { "enable": true },
-   *       "datagram_listener": { "enable": true },
+   *       "datagram_listener": {
+   *         "enable": true,
+   *         "gateway_ports": false
+   *       },
    *       "stream_forwarder": { "enable": true },
-   *       "stream_listener": { "enable": true },
+   *       "stream_listener": {
+   *         "enable": true,
+   *         "gateway_ports": false
+   *       },
    *       "file_copy": { "enable": false },
    *       "shell": {
    *         "enable": false,
