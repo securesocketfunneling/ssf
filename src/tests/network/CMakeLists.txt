@@ -80,6 +80,27 @@ add_target("ssf_client_server_cipher_suites_tests"
 )
 project_group(${network_tests_group_name} ssf_client_server_cipher_suites_tests)
 
+# --- SSF Client tests
+set(ssf_client_source_files
+  "ssf_client_tests.cpp"
+  ${SSF_SOURCES}
+)
+
+add_target("ssf_client_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${ssf_client_source_files}
+)
+project_group(${network_tests_group_name} ssf_client_tests)
+
 # --- SSF Server tests
 set(ssf_server_source_files
   "ssf_server_tests.cpp"

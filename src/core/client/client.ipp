@@ -30,6 +30,7 @@ SSFClient<N, T>::SSFClient(std::vector<BaseUserServicePtr> user_services,
                            ClientCallback callback)
     : T<typename N::socket>(
           boost::bind(&SSFClient<N, T>::DoSSFStart, this, _1, _2)),
+      p_socket_(nullptr),
       async_engine_(),
       fiber_demux_(async_engine_.get_io_service()),
       user_services_(user_services),
@@ -51,8 +52,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
   }
 
   // Create network socket
-  NetworkSocketPtr p_socket =
-      std::make_shared<NetworkSocket>(async_engine_.get_io_service());
+  p_socket_ = std::make_shared<NetworkSocket>(async_engine_.get_io_service());
 
   // resolve remote endpoint with query
   NetworkResolver resolver(async_engine_.get_io_service());
@@ -66,13 +66,23 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
   async_engine_.Start();
 
   // async connect client to given endpoint
-  p_socket->async_connect(
+  p_socket_->async_connect(
       *endpoint_it,
-      boost::bind(&SSFClient<N, T>::NetworkToTransport, this, _1, p_socket));
+      boost::bind(&SSFClient<N, T>::NetworkToTransport, this, _1));
 }
 
 template <class N, template <class> class T>
 void SSFClient<N, T>::Stop() {
+  if (!async_engine_.IsStarted()) {
+    return;
+  }
+
+  if (p_socket_.get() != nullptr) {
+    boost::system::error_code close_ec;
+    p_socket_->close(close_ec);
+    p_socket_.reset();
+  }
+
   fiber_demux_.close();
 
   async_engine_.Stop();
@@ -84,19 +94,18 @@ boost::asio::io_service& SSFClient<N, T>::get_io_service() {
 }
 
 template <class N, template <class> class T>
-void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
-                                         NetworkSocketPtr p_socket) {
+void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
   if (!ec) {
-    this->DoSSFInitiate(p_socket);
+    this->DoSSFInitiate(std::move(p_socket_));
     return;
   }
 
   SSF_LOG(kLogError) << "client: error when connecting to server: "
                      << ec.message();
 
-  if (p_socket) {
+  if (p_socket_) {
     boost::system::error_code close_ec;
-    p_socket->close(close_ec);
+    p_socket_->close(close_ec);
   }
 
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);

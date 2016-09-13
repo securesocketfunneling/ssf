@@ -53,8 +53,7 @@ class SSFClient
   boost::asio::io_service& get_io_service();
 
  private:
-  void NetworkToTransport(const boost::system::error_code& ec,
-                          NetworkSocketPtr p_socket);
+  void NetworkToTransport(const boost::system::error_code& ec);
 
   void DoSSFStart(NetworkSocketPtr p_socket,
                   const boost::system::error_code& ec);
@@ -67,6 +66,8 @@ class SSFClient
               BaseUserServicePtr p_user_service, boost::system::error_code ec);
 
  private:
+  NetworkSocketPtr p_socket_;
+
   AsyncEngine async_engine_;
 
   Demux fiber_demux_;
