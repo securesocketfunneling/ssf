@@ -212,7 +212,7 @@ class basic_CircuitAcceptor_service
 
   native_handle_type native_handle(implementation_type& impl) { return impl; }
 
-  /// Set a socket option.
+  // Set a socket option.
   template <typename SettableSocketOption>
   boost::system::error_code set_option(implementation_type& impl,
                                        const SettableSocketOption& option,
@@ -223,10 +223,10 @@ class basic_CircuitAcceptor_service
     return ec;
   }
 
-  /// Register given endpoint if not already provided
-  ///   Create connection queue if not a forward endpoint
-  ///   Bind the acceptor of the next layer to the next layer endpoint
-  ///   Link the acceptor of the next layer to the current impl
+  // Register given endpoint if not already provided
+  //   Create connection queue if not a forward endpoint
+  //   Bind the acceptor of the next layer to the next layer endpoint
+  //   Link the acceptor of the next layer to the current impl
   boost::system::error_code bind(implementation_type& impl,
                                  const endpoint_type& endpoint,
                                  boost::system::error_code& ec) {
@@ -284,7 +284,7 @@ class basic_CircuitAcceptor_service
         impl.p_local_endpoint->next_layer_endpoint(), ec);
   }
 
-  /// Wait for new connections from next layer if not already listening
+  // Wait for new connections from next layer if not already listening
   boost::system::error_code listen(implementation_type& impl, int backlog,
                                    boost::system::error_code& ec) {
     boost::recursive_mutex::scoped_lock lock(bind_mutex_);
@@ -325,8 +325,8 @@ class basic_CircuitAcceptor_service
       p_queue = &queue_it->second;
     }
 
-    /// Waiting for new connections from next layer (p_queue is populated
-    /// asynchronously)
+    // Waiting for new connections from next layer (p_queue is populated
+    // asynchronously)
     while (true) {
       boost::this_thread::sleep(boost::posix_time::milliseconds(100));
       boost::recursive_mutex::scoped_lock lock(accept_mutex_);
@@ -404,7 +404,7 @@ class basic_CircuitAcceptor_service
   }
 
  private:
-  /// Start async accepting new connection on the next layer
+  // Start async accepting new connection on the next layer
   void start_accepting(p_next_acceptor_type p_next_layer_acceptor,
                        p_next_socket_type p_next_layer_socket = nullptr,
                        p_next_endpoint_type p_next_layer_endpoint = nullptr) {
@@ -433,8 +433,12 @@ class basic_CircuitAcceptor_service
                 p_next_socket_type p_next_layer_socket,
                 p_next_endpoint_type p_next_layer_endpoint,
                 const boost::system::error_code& ec) {
+    // Do not break accept loop
+    start_accepting(p_next_layer_acceptor);
+
     if (ec) {
-      // TODO : log error
+      SSF_LOG(kLogDebug) << "network[data_link]: could not accept connection ("
+                         << ec.message() << ")";
       return;
     }
 
@@ -469,8 +473,6 @@ class basic_CircuitAcceptor_service
               this, p_next_layer_socket, std::move(p_remote_endpoint),
               p_received_endpoint, next_local_endpoint, _1));
     }
-
-    start_accepting(p_next_layer_acceptor);
   }
 
   void connection_initiated_handler(p_next_socket_type p_next_layer_socket,
@@ -479,7 +481,8 @@ class basic_CircuitAcceptor_service
                                     next_endpoint_type next_local_endpoint,
                                     const boost::system::error_code& ec) {
     if (ec) {
-      // TODO : log error
+      SSF_LOG(kLogDebug) << "network[data_link]: connection not initialized ("
+                         << ec.message() << ")";
       return;
     }
 
@@ -522,7 +525,8 @@ class basic_CircuitAcceptor_service
                                     p_endpoint_type p_remote_endpoint,
                                     const boost::system::error_code& ec) {
     if (ec) {
-      // TODO : log error
+      SSF_LOG(kLogDebug) << "network[data_link]: connection not valid ("
+                         << ec.message() << ")";
       return;
     }
 
