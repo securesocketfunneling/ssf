@@ -73,6 +73,12 @@ class basic_CircuitSocket_service
   boost::system::error_code open(implementation_type& impl,
                                  const protocol_type& protocol,
                                  boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
+    }
+
     return impl.p_next_layer_socket->open(typename protocol_type::next_layer_protocol(),
                                           ec);
   }
@@ -87,6 +93,10 @@ class basic_CircuitSocket_service
   }
 
   bool is_open(const implementation_type& impl) const {
+    if (!impl.p_next_layer_socket) {
+      return false;
+    }
+
     return impl.p_next_layer_socket->is_open();
   }
 
@@ -114,6 +124,12 @@ class basic_CircuitSocket_service
 
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
+    }
+
     return impl.p_next_layer_socket->close(ec);
   }
 
@@ -123,6 +139,11 @@ class basic_CircuitSocket_service
 
   bool at_mark(const implementation_type& impl,
                boost::system::error_code& ec) const {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return false;
+    }
     return impl.p_next_layer_socket->at_mark(ec);
   }
 
@@ -140,6 +161,8 @@ class basic_CircuitSocket_service
   boost::system::error_code cancel(implementation_type& impl,
                                    boost::system::error_code& ec) {
     if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
       return ec;
     }
 

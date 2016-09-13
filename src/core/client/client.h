@@ -66,9 +66,9 @@ class SSFClient
               BaseUserServicePtr p_user_service, boost::system::error_code ec);
 
  private:
-  NetworkSocketPtr p_socket_;
-
   AsyncEngine async_engine_;
+
+  NetworkSocketPtr p_socket_;
 
   Demux fiber_demux_;
 

@@ -30,8 +30,8 @@ SSFClient<N, T>::SSFClient(std::vector<BaseUserServicePtr> user_services,
                            ClientCallback callback)
     : T<typename N::socket>(
           boost::bind(&SSFClient<N, T>::DoSSFStart, this, _1, _2)),
-      p_socket_(nullptr),
       async_engine_(),
+      p_socket_(nullptr),
       fiber_demux_(async_engine_.get_io_service()),
       user_services_(user_services),
       services_config_(services_config),
@@ -77,15 +77,16 @@ void SSFClient<N, T>::Stop() {
     return;
   }
 
-  if (p_socket_.get() != nullptr) {
-    boost::system::error_code close_ec;
-    p_socket_->close(close_ec);
-    p_socket_.reset();
-  }
-
   fiber_demux_.close();
 
+  if (p_socket_.get() != nullptr) {
+    boost::system::error_code close_ec;
+    p_socket_->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    p_socket_->close(close_ec);
+  }
+
   async_engine_.Stop();
+  p_socket_.reset();
 }
 
 template <class N, template <class> class T>
@@ -96,17 +97,12 @@ boost::asio::io_service& SSFClient<N, T>::get_io_service() {
 template <class N, template <class> class T>
 void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
   if (!ec) {
-    this->DoSSFInitiate(std::move(p_socket_));
+    this->DoSSFInitiate(p_socket_);
     return;
   }
 
   SSF_LOG(kLogError) << "client: error when connecting to server: "
                      << ec.message();
-
-  if (p_socket_) {
-    boost::system::error_code close_ec;
-    p_socket_->close(close_ec);
-  }
 
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 }
