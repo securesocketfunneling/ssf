@@ -19,7 +19,6 @@ TEST_F(SSFFixtureTest, ConnectToUnknownHost) {
   };
   StartTimer(std::chrono::seconds(5), timer_callback, timer_ec);
 
-  int server_port = 16000;
   auto client_callback = [this](ssf::services::initialisation::type type,
                                 BaseUserServicePtr p_user_service,
                                 const boost::system::error_code& ec) {
@@ -45,7 +44,7 @@ TEST_F(SSFFixtureTest, CloseWhileConnecting) {
   // Init server
   int server_port = 15000;
   boost::asio::ip::tcp::acceptor server(get_io_service());
-  InitTCPServer(server, 15000);
+  InitTCPServer(server, server_port);
 
   // Init timer (if client hangs)
   boost::system::error_code timer_ec;
