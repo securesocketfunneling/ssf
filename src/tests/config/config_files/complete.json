@@ -15,8 +15,8 @@
                 "username": "test_user",
                 "password": "test_password",
                 "domain": "test_domain",
-                "reuse_ntlm": "false",
-                "reuse_kerb": "false"
+                "reuse_ntlm": false,
+                "reuse_kerb": false
             }
         },
         "services" : {

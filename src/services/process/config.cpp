@@ -4,10 +4,7 @@ namespace ssf {
 namespace services {
 namespace process {
 
-Config::Config()
-    : BaseServiceConfig(false),
-      path_(""),
-      args_("") {}
+Config::Config() : BaseServiceConfig(false), path_(""), args_("") {}
 
 Config::Config(const Config& process_service)
     : BaseServiceConfig(process_service.enabled()),

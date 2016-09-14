@@ -1,6 +1,6 @@
 #include <fstream>
-#include <string>
 #include <sstream>
+#include <string>
 
 #include <boost/asio/detail/config.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -136,8 +136,8 @@ const char* Config::default_config_ = R"RAWSTRING(
         "username": "",
         "password": "",
         "domain": "",
-        "reuse_ntlm": "true",
-        "reuse_nego": "true"
+        "reuse_ntlm": true,
+        "reuse_nego": true
       }
     },
     "services": {

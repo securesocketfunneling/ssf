@@ -97,6 +97,10 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
   }
 
   bool is_open(const implementation_type& impl) const {
+    if (!impl.p_next_layer_acceptor) {
+      return false;
+    }
+
     return impl.p_next_layer_acceptor->is_open();
   }
 
@@ -113,6 +117,12 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
 
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
+    if (!impl.p_next_layer_acceptor) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
+    }
+
     return impl.p_next_layer_acceptor->close(ec);
   }
 
@@ -124,22 +134,38 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
   template <typename SettableSocketOption>
   boost::system::error_code set_option(implementation_type& impl,
                                        const SettableSocketOption& option,
-                                       boost::system::error_code& ec) {
-    if (impl.p_next_layer_acceptor) {
-      return impl.p_next_layer_acceptor->set_option(option, ec);
+                                       boost::system::error_code& ec) { 
+    if (!impl.p_next_layer_acceptor) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
     }
-    return ec;
+
+    return impl.p_next_layer_acceptor->set_option(option, ec);
+    
   }
 
   boost::system::error_code bind(implementation_type& impl,
                                  const endpoint_type& endpoint,
                                  boost::system::error_code& ec) {
+    if (!impl.p_next_layer_acceptor) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
+    }
+
     impl.p_local_endpoint = std::make_shared<endpoint_type>(endpoint);
     return impl.p_next_layer_acceptor->bind(endpoint.next_layer_endpoint(), ec);
   }
 
   boost::system::error_code listen(implementation_type& impl, int backlog,
-                                   boost::system::error_code& ec) {
+                                   boost::system::error_code& ec) {    
+    if (!impl.p_next_layer_acceptor) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
+    }
+
     return impl.p_next_layer_acceptor->listen(backlog, ec);
   }
 
@@ -149,7 +175,13 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
       boost::asio::basic_socket<Protocol1, SocketService>& peer,
       endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
       typename std::enable_if<boost::thread_detail::is_convertible<
-          protocol_type, Protocol1>::value>::type* = 0) {
+          protocol_type, Protocol1>::value>::type* = 0) {    
+    if (!impl.p_next_layer_acceptor) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
+    }
+
     auto& peer_impl = peer.native_handle();
     peer_impl.p_remote_endpoint =
         std::make_shared<typename Protocol1::endpoint>();
@@ -182,6 +214,14 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
         init(std::forward<AcceptHandler>(handler));
+
+    if (!impl.p_next_layer_acceptor) {
+      io::PostHandler(
+          this->get_io_service(), init.handler,
+          boost::system::error_code(ssf::error::bad_file_descriptor,
+                                    ssf::error::get_ssf_category()));
+      return init.result.get();
+    }
 
     auto& peer_impl = peer.native_handle();
     peer_impl.p_local_endpoint =

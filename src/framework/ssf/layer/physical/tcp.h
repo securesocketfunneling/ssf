@@ -33,12 +33,12 @@ class tcp {
 
   static const char* NAME;
 
-  typedef int socket_context;
-  typedef int acceptor_context;
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef boost::asio::ip::tcp::acceptor acceptor;
-  typedef boost::asio::ip::tcp::resolver resolver;
-  typedef boost::asio::ip::tcp::endpoint endpoint;
+  using socket_context = int;
+  using acceptor_context = int;
+  using acceptor = boost::asio::ip::tcp::acceptor;
+  using endpoint = boost::asio::ip::tcp::endpoint;
+  using resolver = boost::asio::ip::tcp::resolver;
+  using socket = boost::asio::ip::tcp::socket;
 
  private:
   using query = ParameterStack;
@@ -64,9 +64,10 @@ class tcp {
     return endpoint.port();
   }
 
-  static void add_params_from_property_tree(
-      query* p_query, const boost::property_tree::ptree& property_tree,
-      bool connect, boost::system::error_code& ec) {
+  static void add_params_from_property_tree(query* p_query,
+                                            const ptree& property_tree,
+                                            bool connect,
+                                            boost::system::error_code& ec) {
     auto layer_name = property_tree.get_child_optional("layer");
     if (!layer_name || layer_name.get().data() != NAME) {
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());

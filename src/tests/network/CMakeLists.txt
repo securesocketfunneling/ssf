@@ -17,6 +17,11 @@ file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
 
 # --- Network tests
 
+set(ssf_fixture_test_file
+  "ssf_fixture_test.h"
+  "ssf_fixture_test.cpp"
+)
+
 # --- Fiber asio tests
 set(fiber_asio_test_source_files
   "fiber_asio_tests.cpp"
@@ -80,10 +85,33 @@ add_target("ssf_client_server_cipher_suites_tests"
 )
 project_group(${network_tests_group_name} ssf_client_server_cipher_suites_tests)
 
+# --- SSF Client tests
+set(ssf_client_source_files
+  "ssf_client_tests.cpp"
+  ${SSF_SOURCES}
+  ${ssf_fixture_test_file}
+)
+
+add_target("ssf_client_tests"
+  TYPE
+    executable ${EXEC_FLAG} TEST
+  LINKS
+    ${OpenSSL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+  PREFIX_SKIP     .*/src
+  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
+  FILES
+    ${ssf_client_source_files}
+)
+project_group(${network_tests_group_name} ssf_client_tests)
+
 # --- SSF Server tests
 set(ssf_server_source_files
   "ssf_server_tests.cpp"
   ${SSF_SOURCES}
+  ${ssf_fixture_test_file}
 )
 
 add_target("ssf_server_tests"

@@ -23,10 +23,17 @@ boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(
 }
 
 ProxyEndpointContext::ProxyEndpointContext()
-    : proxy_enabled_(false), http_proxy_(), remote_host_() {}
+    : proxy_enabled_(false),
+      acceptor_endpoint_(false),
+      http_proxy_(),
+      remote_host_() {}
 
 void ProxyEndpointContext::Init(const LayerParameters& proxy_parameters) {
   proxy_enabled_ = false;
+
+  acceptor_endpoint_ = (ssf::helpers::GetField<std::string>(
+                          "acceptor_endpoint", proxy_parameters) == "true");
+
   auto http_host =
       ssf::helpers::GetField<std::string>("http_host", proxy_parameters);
   auto http_port =
@@ -36,6 +43,7 @@ void ProxyEndpointContext::Init(const LayerParameters& proxy_parameters) {
   }
 
   proxy_enabled_ = true;
+
   http_proxy_.host = http_host;
   http_proxy_.port = http_port;
   http_proxy_.username =

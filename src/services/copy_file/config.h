@@ -1,8 +1,6 @@
 #ifndef SSF_SERVICES_COPY_FILE_CONFIG_H_
 #define SSF_SERVICES_COPY_FILE_CONFIG_H_
 
-#include <string>
-
 #include "services/base_service_config.h"
 
 namespace ssf {

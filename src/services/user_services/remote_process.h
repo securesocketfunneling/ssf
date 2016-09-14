@@ -108,7 +108,7 @@ class RemoteProcess : public BaseUserService<Demux> {
         l_process_server.service_id(), l_process_server.parameters(), ec);
     if (ec) {
       SSF_LOG(kLogError) << "user_service[remote-shell]: "
-                         << "local_service[process]: start failed: "
+                         << "local microservice[process]: start failed: "
                          << ec.message();
     }
     return !ec;

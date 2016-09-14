@@ -62,13 +62,16 @@ bool SSPIAuthImpl::Init() {
     use_identity = true;
     identity.Domain = reinterpret_cast<unsigned char*>(
         const_cast<char*>(proxy_ctx_.domain.c_str()));
-    identity.DomainLength = proxy_ctx_.domain.size();
+    identity.DomainLength =
+        static_cast<unsigned long>(proxy_ctx_.domain.size());
     identity.User = reinterpret_cast<unsigned char*>(
         const_cast<char*>(proxy_ctx_.username.c_str()));
-    identity.UserLength = proxy_ctx_.username.size();
+    identity.UserLength =
+        static_cast<unsigned long>(proxy_ctx_.username.size());
     identity.Password = reinterpret_cast<unsigned char*>(
         const_cast<char*>(proxy_ctx_.password.c_str()));
-    identity.PasswordLength = proxy_ctx_.password.size();
+    identity.PasswordLength =
+        static_cast<unsigned long>(proxy_ctx_.password.size());
     identity.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
   }
 
@@ -102,7 +105,7 @@ bool SSPIAuthImpl::ProcessServerToken(const Token& server_token) {
   out_sec_buff_desc.pBuffers = &out_sec_buff;
   out_sec_buff.BufferType = SECBUFFER_TOKEN;
   out_sec_buff.pvBuffer = output_token_.data();
-  out_sec_buff.cbBuffer = output_token_.size();
+  out_sec_buff.cbBuffer = static_cast<unsigned long>(output_token_.size());
 
   // input token
   in_sec_buf_desc.ulVersion = SECBUFFER_VERSION;
@@ -110,7 +113,7 @@ bool SSPIAuthImpl::ProcessServerToken(const Token& server_token) {
   in_sec_buf_desc.pBuffers = &in_sec_buff;
   in_sec_buff.BufferType = SECBUFFER_TOKEN;
   in_sec_buff.pvBuffer = const_cast<uint8_t*>(server_token.data());
-  in_sec_buff.cbBuffer = server_token.size();
+  in_sec_buff.cbBuffer = static_cast<unsigned long>(server_token.size());
 
   // update security context
   unsigned long attrs;

@@ -86,6 +86,10 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
   }
 
   bool is_open(const implementation_type& impl) const {
+    if (!impl.p_next_layer_socket) {
+      return false;
+    }
+
     return impl.p_next_layer_socket->is_open();
   }
 
@@ -113,6 +117,11 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
 
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+      return ec;
+    }
+
     return impl.p_next_layer_socket->close(ec);
   }
 
@@ -122,11 +131,22 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
 
   boost::system::error_code cancel(implementation_type& impl,
                                    boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return ec;
+    }
+
     return impl.p_next_layer_socket->cancel(ec);
   }
 
   bool at_mark(const implementation_type& impl,
                boost::system::error_code& ec) const {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return false;
+    }
     return impl.p_next_layer_socket->at_mark(ec);
   }
 
@@ -187,6 +207,12 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
                    const ConstBufferSequence& buffers,
                    boost::asio::socket_base::message_flags flags,
                    boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::bad_file_descriptor,
+                ssf::error::get_ssf_category());
+      return 0;
+    }
+
     return impl.p_next_layer_socket->send(buffers, flags, ec);
   }
 
@@ -196,8 +222,21 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
       async_send(implementation_type& impl, const ConstBufferSequence& buffers,
                  boost::asio::socket_base::message_flags flags,
                  WriteHandler&& handler) {
-    return impl.p_next_layer_socket->async_send(
-        buffers, std::forward<WriteHandler>(handler));
+    boost::asio::detail::async_result_init<
+        WriteHandler, void(boost::system::error_code, std::size_t)>
+        init(std::forward<WriteHandler>(handler));
+
+    if (!impl.p_next_layer_socket) {
+      io::PostHandler(this->get_io_service(), init.handler,
+                      boost::system::error_code(ssf::error::broken_pipe,
+                                                ssf::error::get_ssf_category()),
+                      0);
+      return init.result.get();
+    }
+
+    impl.p_next_layer_socket->async_send(buffers, init.handler);
+
+    return init.result.get();
   }
 
   template <typename MutableBufferSequence>
@@ -205,6 +244,11 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
                       const MutableBufferSequence& buffers,
                       boost::asio::socket_base::message_flags flags,
                       boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+      return 0;
+    }
+
     return impl.p_next_layer_socket->receive(buffers, flags, ec);
   }
 
@@ -215,13 +259,31 @@ class basic_ProxySocket_service : public boost::asio::detail::service_base<
                     const MutableBufferSequence& buffers,
                     boost::asio::socket_base::message_flags flags,
                     ReadHandler&& handler) {
-    return impl.p_next_layer_socket->async_receive(
-        buffers, std::forward<ReadHandler>(handler));
+    boost::asio::detail::async_result_init<
+        ReadHandler, void(boost::system::error_code, std::size_t)>
+        init(std::forward<ReadHandler>(handler));
+
+    if (!impl.p_next_layer_socket) {
+      io::PostHandler(this->get_io_service(), init.handler,
+                      boost::system::error_code(ssf::error::broken_pipe,
+                                                ssf::error::get_ssf_category()),
+                      0);
+      return init.result.get();
+    }
+
+    impl.p_next_layer_socket->async_receive(buffers, init.handler);
+
+    return init.result.get();
   }
 
   boost::system::error_code shutdown(
       implementation_type& impl, boost::asio::socket_base::shutdown_type what,
       boost::system::error_code& ec) {
+    if (!impl.p_next_layer_socket) {
+      ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
+      return ec;
+    }
+
     impl.p_next_layer_socket->shutdown(what, ec);
 
     return ec;

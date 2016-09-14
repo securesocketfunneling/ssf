@@ -161,7 +161,6 @@ class Admin : public BaseService<Demux> {
   void ReceiveInstructionHeader();
   void ReceiveInstructionParameters();
   void TreatInstructionId();
-  void CreateNewService();
   void ShutdownServices();
 
   template <typename Handler>

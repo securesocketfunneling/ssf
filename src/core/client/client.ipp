@@ -15,11 +15,10 @@
 #include "services/copy_file/file_to_fiber/file_to_fiber.h"
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
-#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
+#include "services/process/server.h"
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
-#include "services/process/server.h"
 
 #include "ssf/log/log.h"
 
@@ -32,6 +31,7 @@ SSFClient<N, T>::SSFClient(std::vector<BaseUserServicePtr> user_services,
     : T<typename N::socket>(
           boost::bind(&SSFClient<N, T>::DoSSFStart, this, _1, _2)),
       async_engine_(),
+      p_socket_(nullptr),
       fiber_demux_(async_engine_.get_io_service()),
       user_services_(user_services),
       services_config_(services_config),
@@ -52,8 +52,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
   }
 
   // Create network socket
-  NetworkSocketPtr p_socket =
-      std::make_shared<NetworkSocket>(async_engine_.get_io_service());
+  p_socket_ = std::make_shared<NetworkSocket>(async_engine_.get_io_service());
 
   // resolve remote endpoint with query
   NetworkResolver resolver(async_engine_.get_io_service());
@@ -67,16 +66,27 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
   async_engine_.Start();
 
   // async connect client to given endpoint
-  p_socket->async_connect(
+  p_socket_->async_connect(
       *endpoint_it,
-      boost::bind(&SSFClient<N, T>::NetworkToTransport, this, _1, p_socket));
+      boost::bind(&SSFClient<N, T>::NetworkToTransport, this, _1));
 }
 
 template <class N, template <class> class T>
 void SSFClient<N, T>::Stop() {
+  if (!async_engine_.IsStarted()) {
+    return;
+  }
+
   fiber_demux_.close();
 
+  if (p_socket_.get() != nullptr) {
+    boost::system::error_code close_ec;
+    p_socket_->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+    p_socket_->close(close_ec);
+  }
+
   async_engine_.Stop();
+  p_socket_.reset();
 }
 
 template <class N, template <class> class T>
@@ -85,20 +95,14 @@ boost::asio::io_service& SSFClient<N, T>::get_io_service() {
 }
 
 template <class N, template <class> class T>
-void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec,
-                                         NetworkSocketPtr p_socket) {
+void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
   if (!ec) {
-    this->DoSSFInitiate(p_socket);
+    this->DoSSFInitiate(p_socket_);
     return;
   }
 
   SSF_LOG(kLogError) << "client: error when connecting to server: "
                      << ec.message();
-
-  if (p_socket) {
-    boost::system::error_code close_ec;
-    p_socket->close(close_ec);
-  }
 
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 }
@@ -115,7 +119,7 @@ void SSFClient<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 
     Notify(ssf::services::initialisation::TRANSPORT, nullptr, ec);
   } else {
-    SSF_LOG(kLogError) << "client: SSF protocol error " << ec.message();
+    SSF_LOG(kLogError) << "client: SSF protocol error (" << ec.message() << ")";
   }
 }
 

@@ -1,17 +1,6 @@
 #ifndef SSF_CORE_COMMAND_LINE_STANDARD_COMMAND_LINE_H
 #define SSF_CORE_COMMAND_LINE_STANDARD_COMMAND_LINE_H
 
-#include <cstdint>
-
-#include <string>
-#include <stdexcept>
-#include <vector>
-#include <regex>
-#include <memory>
-
-#include <boost/program_options.hpp>
-#include <boost/system/error_code.hpp>
-
 #include <ssf/log/log.h>
 
 #include "core/command_line/base.h"
@@ -22,10 +11,9 @@ namespace standard {
 
 class CommandLine : public BaseCommandLine {
  public:
-  using ParsedParameters = std::map<std::string, std::vector<std::string>>;
-
- public:
   CommandLine(bool is_server = false);
+
+  ~CommandLine();
 
   inline bool show_status() const { return show_status_; }
 

@@ -19,7 +19,6 @@ class Services {
  public:
   using PTree = boost::property_tree::ptree;
 
-  using UDPToFibersConfig = ssf::services::datagrams_to_fibers::Config;
   using DatagramForwarderConfig = ssf::services::fibers_to_datagrams::Config;
   using DatagramListenerConfig = ssf::services::datagrams_to_fibers::Config;
   using FileCopyConfig = ssf::services::copy_file::Config;
@@ -56,6 +55,7 @@ class Services {
 
   void Update(const PTree& pt);
 
+  // Set gateway ports on listener microservices
   void SetGatewayPorts(bool gateway_ports);
 
   void Log() const;

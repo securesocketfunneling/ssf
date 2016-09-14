@@ -4,13 +4,12 @@
 #include <set>
 #include <map>
 
-#include <boost/asio.hpp>
+#include <boost/asio/io_service.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
 #include "core/async_engine.h"
-#include "core/factories/service_factory.h"
 #include "core/service_manager/service_manager.h"
 
 namespace ssf {

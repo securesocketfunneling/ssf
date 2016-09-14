@@ -1,5 +1,21 @@
 # Change Log
 
+## 2.2.0
+
+Features:
+* #20 Enable/disable microservices in configuration file
+* #24 Gateway ports. Allow client to specify listening network interface on services:
+  `-g` command line option or `gateway_ports` microservice options (`stream_listener` and `datagram_listener`)
+* Server as relay only: `-R` command line option
+
+Fixed bugs:
+* #23 Delegate server hostname resolution to proxy
+* #25 Fix server DOS on bogus connection
+* #26 Fix a hang when the client stops during the connection stage
+
+File configuration:
+* `http_proxy.credentials.reuse_ntlm` and `http_proxy.credentials.reuse_kerb`: boolean instead of string
+
 ## 2.1.0
 
 Features:

@@ -58,8 +58,8 @@ class Process : public BaseUserService<Demux> {
 
   std::string GetName() override { return "shell"; };
 
-  std::vector<admin::CreateServiceRequest<Demux>>
-  GetRemoteServiceCreateVector() override {
+  std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
+      override {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
     services::admin::CreateServiceRequest<Demux> r_process_server(
@@ -105,9 +105,10 @@ class Process : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[shell]: "
-                         << "local_service[sockets to fibers]: start failed: "
-                         << ec.message();
+      SSF_LOG(kLogError)
+          << "user_service[shell]: "
+          << "local microservice[stream_listener]: start failed: "
+          << ec.message();
     }
     return !ec;
   };

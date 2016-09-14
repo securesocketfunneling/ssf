@@ -3,16 +3,12 @@
 
 #include <cstdint>
 
+#include <map>
 #include <string>
-#include <stdexcept>
 #include <vector>
-#include <regex>
-#include <memory>
 
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
-
-#include <ssf/log/log.h>
 
 namespace ssf {
 namespace command_line {

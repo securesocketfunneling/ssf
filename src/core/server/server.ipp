@@ -64,8 +64,13 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
 
   // set acceptor
   network_acceptor_.open();
+
+  /*
+  // TODO: reuse address ?
   network_acceptor_.set_option(boost::asio::socket_base::reuse_address(true),
                                ec);
+  */
+
   network_acceptor_.bind(*endpoint_it, ec);
   if (ec) {
     SSF_LOG(kLogError) << "server: could not bind acceptor to network endpoint";
@@ -116,8 +121,9 @@ void SSFServer<N, T>::AsyncAcceptConnection() {
 template <class N, template <class> class T>
 void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
                                          NetworkSocketPtr p_socket) {
+  AsyncAcceptConnection();
+
   if (!ec) {
-    AsyncAcceptConnection();
     if (!relay_only_) {
       this->DoSSFInitiateReceive(p_socket);
       return;
@@ -177,7 +183,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   auto p_service_factory = ServiceFactory<demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, p_service_manager);
 
-  // Register supported micro services
+  // Register supported microservices
   services::socks::SocksServer<demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.socks());
   services::fibers_to_sockets::FibersToSockets<demux>::RegisterToServiceFactory(
@@ -199,7 +205,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   services::process::Server<demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
-  // Start the admin micro service
+  // Start the admin microservice
   std::map<std::string, std::string> empty_map;
 
   auto p_admin_service = services::admin::Admin<demux>::Create(

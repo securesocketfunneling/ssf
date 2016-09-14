@@ -1,21 +1,13 @@
-#include <cstdint>
-
 #include <iostream>
-#include <string>
 #include <stdexcept>
-#include <vector>
-#include <regex>
-#include <memory>
 
 #include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
-#include <boost/system/error_code.hpp>
+
+#include <ssf/log/log.h>
 
 #include "common/error/error.h"
 
 #include "core/command_line/base.h"
-
-#include <ssf/log/log.h>
 
 #include "versions.h"
 
@@ -24,7 +16,7 @@ namespace command_line {
 
 BaseCommandLine::BaseCommandLine()
     : host_(""),
-      port_(),
+      port_(0),
       config_file_(""),
       circuit_file_(""),
       log_level_(ssf::log::kLogInfo),
@@ -205,14 +197,16 @@ void BaseCommandLine::InitLocalOptions(OptionDescription& local_opts) {
     ("config,c",
         boost::program_options::value<std::string>()
           ->value_name("config_file_path"),
-        "Set config file");
+        "Set config file. If option empty, try to load 'config.json' file from"
+        " working directory");
 
   if (!IsServerCli()) {
     local_opts.add_options()
       ("circuit,b",
           boost::program_options::value<std::string>()
             ->value_name("circuit_file_path"),
-          "Set circuit file");
+          "Set circuit file. If option empty, try to load 'circuit.txt' file "
+          "from working directory");
     
     local_opts.add_options()
       ("port,p",

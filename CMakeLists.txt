@@ -3,14 +3,16 @@ set(project_name "SSF")
 project(${project_name})
 
 set(SSF_VERSION_MAJOR 2)
-set(SSF_VERSION_MINOR 1)
+set(SSF_VERSION_MINOR 2)
 set(SSF_VERSION_FIX 0)
 set(SSF_VERSION_BOUNCE 2)
 set(SSF_VERSION_TRANSPORT 1)
 
 set(SSF_VERSION "${SSF_VERSION_MAJOR}.${SSF_VERSION_MINOR}.${SSF_VERSION_FIX}")
 
-message("** SSF_VERSION ${SSF_VERSION}")
+message("** SSF_VERSION: ${SSF_VERSION}")
+
+message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 # --- Options
 option(BUILD_UNIT_TESTS "Build SSF unit tests" ON)

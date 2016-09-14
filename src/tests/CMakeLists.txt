@@ -10,6 +10,7 @@ include_directories(
   ${GTEST_ROOT_DIR}/include
 )
 
+add_subdirectory(commandline)
 add_subdirectory(config)
 add_subdirectory(network)
 add_subdirectory(services)
