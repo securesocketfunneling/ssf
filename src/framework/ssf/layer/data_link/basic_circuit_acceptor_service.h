@@ -139,6 +139,10 @@ class basic_CircuitAcceptor_service
 
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
+    if (impl.p_next_layer_acceptor) {
+      impl.p_next_layer_acceptor->close(ec);
+    }
+
     {
       boost::recursive_mutex::scoped_lock lock(bind_mutex_);
 

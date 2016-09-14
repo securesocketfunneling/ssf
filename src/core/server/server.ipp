@@ -121,8 +121,9 @@ void SSFServer<N, T>::AsyncAcceptConnection() {
 template <class N, template <class> class T>
 void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
                                          NetworkSocketPtr p_socket) {
+  AsyncAcceptConnection();
+
   if (!ec) {
-    AsyncAcceptConnection();
     if (!relay_only_) {
       this->DoSSFInitiateReceive(p_socket);
       return;
