@@ -3,8 +3,9 @@
 ## 2.2.0
 
 Features:
-* #20 Enable/disable microservices in configuration file
-* #24 Gateway ports. Allow client to specify listening network interface on services:
+* Introducing [microservices](README.md#microservices), base components for client features
+* #20 Enable/disable microservices in [configuration file](README.md#configuration-file)
+* #24 Gateway ports. Allow client to specify network listening interface on client features:
   `-g` command line option or `gateway_ports` microservice options (`stream_listener` and `datagram_listener`)
 * Server as relay only: `-R` command line option
 
