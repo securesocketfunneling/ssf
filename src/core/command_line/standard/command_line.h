@@ -1,17 +1,6 @@
 #ifndef SSF_CORE_COMMAND_LINE_STANDARD_COMMAND_LINE_H
 #define SSF_CORE_COMMAND_LINE_STANDARD_COMMAND_LINE_H
 
-#include <cstdint>
-
-#include <string>
-#include <stdexcept>
-#include <vector>
-#include <regex>
-#include <memory>
-
-#include <boost/program_options.hpp>
-#include <boost/system/error_code.hpp>
-
 #include <ssf/log/log.h>
 
 #include "core/command_line/base.h"
@@ -22,12 +11,15 @@ namespace standard {
 
 class CommandLine : public BaseCommandLine {
  public:
-  using ParsedParameters = std::map<std::string, std::vector<std::string>>;
-
- public:
   CommandLine(bool is_server = false);
 
-  virtual ~CommandLine() {}
+  ~CommandLine();
+
+  inline bool show_status() const { return show_status_; }
+
+  inline bool relay_only() const { return relay_only_; }
+
+  inline bool gateway_ports() const { return gateway_ports_; }
 
  protected:
   void PopulateBasicOptions(OptionDescription& desc) override;
@@ -41,6 +33,9 @@ class CommandLine : public BaseCommandLine {
 
  private:
   bool is_server_;
+  bool show_status_;
+  bool relay_only_;
+  bool gateway_ports_;
 };
 
 }  // standard

@@ -3,16 +3,12 @@
 
 #include <cstdint>
 
+#include <map>
 #include <string>
-#include <stdexcept>
 #include <vector>
-#include <regex>
-#include <memory>
 
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
-
-#include <ssf/log/log.h>
 
 namespace ssf {
 namespace command_line {
@@ -83,6 +79,7 @@ class BaseCommandLine {
   void set_log_level(const std::string& level);
 
  protected:
+  std::string exec_name_;
   std::string host_;
   uint16_t port_;
   std::string config_file_;

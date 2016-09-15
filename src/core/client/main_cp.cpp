@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     SSF_LOG(kLogError) << "client: wrong command line arguments";
     return 1;
   }
-  
+
   ssf::log::Configure(cmd.log_level());
 
   // Create and initialize copy user service
@@ -79,7 +79,9 @@ int main(int argc, char** argv) {
 
   boost::system::error_code ec_config;
   ssf::config::Config ssf_config;
-  ssf_config.Update(cmd.config_file(), ec_config);
+  ssf_config.Init();
+
+  ssf_config.UpdateFromFile(cmd.config_file(), ec_config);
 
   if (ec_config) {
     SSF_LOG(kLogError) << "client: invalid config file format";

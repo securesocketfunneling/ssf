@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   // Parse the command line
   boost::system::error_code ec;
   cmd.Parse(argc, argv, ec);
-  
+
   if (ec.value() == ::error::operation_canceled) {
     return 0;
   }
@@ -36,12 +36,16 @@ int main(int argc, char** argv) {
     SSF_LOG(kLogError) << "server: wrong arguments -- Exiting";
     return 1;
   }
-  
+
   ssf::log::Configure(cmd.log_level());
 
   // Load SSF config if any
   ssf::config::Config ssf_config;
-  ssf_config.Update(cmd.config_file(), ec);
+  ssf_config.Init();
+
+  ssf_config.services().SetGatewayPorts(cmd.gateway_ports());
+
+  ssf_config.UpdateFromFile(cmd.config_file(), ec);
 
   if (ec) {
     SSF_LOG(kLogError) << "server: invalid config file format -- Exiting";
@@ -50,8 +54,12 @@ int main(int argc, char** argv) {
 
   ssf_config.Log();
 
+  if (cmd.show_status()) {
+    ssf_config.LogStatus();
+  }
+
   // Initiate and start the server
-  Server server(ssf_config.services());
+  Server server(ssf_config.services(), cmd.relay_only());
 
   // construct endpoint parameter stack
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(

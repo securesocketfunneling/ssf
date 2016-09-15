@@ -7,6 +7,7 @@
 
 #include "core/factories/service_factory.h"
 #include "services/admin/requests/create_service_request.h"
+#include "services/copy_file/config.h"
 #include "services/copy_file/file_to_fiber/file_to_fiber.h"
 
 namespace ssf {
@@ -40,18 +41,13 @@ class FileEnquirer : public BaseService<Demux> {
     return nullptr;
   }
 
-  virtual ~FileEnquirer() {}
-
-  virtual void start(boost::system::error_code& ec) {
-    SendRequest(boost::system::error_code(), 0);
-  }
-
-  virtual void stop(boost::system::error_code& ec) { fiber_.close(ec); }
-
-  virtual uint32_t service_type_id() { return factory_id; }
-
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<Demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(factory_id, &FileEnquirer::Create);
   }
 
@@ -63,6 +59,15 @@ class FileEnquirer : public BaseService<Demux> {
 
     return create;
   }
+
+ public:
+  void start(boost::system::error_code& ec) override {
+    SendRequest(boost::system::error_code(), 0);
+  }
+
+  void stop(boost::system::error_code& ec) override { fiber_.close(ec); }
+
+  uint32_t service_type_id() override { return factory_id; }
 
  private:
   FileEnquirer(boost::asio::io_service& io_service, Demux& fiber_demux,
@@ -86,9 +91,8 @@ class FileEnquirer : public BaseService<Demux> {
     }
 
     reenter(coroutine_) {
-      SSF_LOG(kLogDebug)
-          << "service[file enquirer]: connect to remote fiber acceptor port "
-          << remote_endpoint_.port();
+      SSF_LOG(kLogDebug) << "microservice[file enquirer]: connect to remote "
+                            "fiber acceptor port " << remote_endpoint_.port();
 
       yield fiber_.async_connect(
           remote_endpoint_,

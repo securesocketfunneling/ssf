@@ -1,18 +1,13 @@
-#include "core/command_line/copy/command_line.h"
-
 #include <cstdint>
 
 #include <iostream>
-#include <string>
-#include <stdexcept>
-#include <vector>
-#include <regex>
 #include <memory>
 
-#include <boost/program_options.hpp>
-#include <boost/system/error_code.hpp>
+#include <ssf/log/log.h>
 
 #include "common/error/error.h"
+
+#include "core/command_line/copy/command_line.h"
 
 #include "versions.h"
 
@@ -21,6 +16,8 @@ namespace command_line {
 namespace copy {
 
 CommandLine::CommandLine() : BaseCommandLine(), from_stdin_(false) {}
+
+CommandLine::~CommandLine() {}
 
 void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
@@ -82,8 +79,10 @@ void CommandLine::ParseOptions(const VariableMap& vm,
 }
 
 std::string CommandLine::GetUsageDesc() {
-  return "ssfcp [options] [host@]/absolute/path/file "
-         "[[host@]/absolute/path/file]";
+  std::stringstream ss_desc;
+  ss_desc << exec_name_ << " [options] [host@]/absolute/path/file"
+                           " [[host@]/absolute/path/file]";
+  return ss_desc.str();
 }
 
 void CommandLine::ParseFirstArgument(const std::string& first_arg,

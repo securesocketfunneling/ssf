@@ -1,3 +1,5 @@
+#include "common/config/config.h"
+
 #include "core/network_protocol.h"
 
 namespace ssf {
@@ -30,7 +32,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
     const ssf::config::Config& ssf_config,
     const ssf::circuit::NodeList& circuit_nodes) {
   ssf::layer::LayerParameters proxy_param_layer =
-      ProxyConfigToLayerParameters(ssf_config);
+      ProxyConfigToLayerParameters(ssf_config, false);
 
   ssf::layer::LayerParameters default_param_layer = {{"default", "true"}};
 
@@ -59,7 +61,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTLSQuery(
       TlsConfigToLayerParameters(ssf_config);
 
   ssf::layer::LayerParameters proxy_param_layer =
-      ProxyConfigToLayerParameters(ssf_config);
+      ProxyConfigToLayerParameters(ssf_config, false);
 
   ssf::layer::LayerParameters default_param_layer = {{"default", "true"}};
 
@@ -97,12 +99,16 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerTCPQuery(
   }
 
   ssf::layer::LayerParameters proxy_param_layer =
-      ProxyConfigToLayerParameters(ssf_config);
+      ProxyConfigToLayerParameters(ssf_config, true);
+
+  ssf::layer::LayerParameters default_proxy_param_layer =
+      ProxyConfigToLayerParameters(ssf_config, false);
 
   ssf::layer::ParameterStack layer_parameters;
   layer_parameters.push_front(physical_parameters);
 
-  ssf::layer::ParameterStack default_parameters = {proxy_param_layer, {}};
+  ssf::layer::ParameterStack default_parameters = {default_proxy_param_layer,
+                                                   {}};
 
   return ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(
       "server", default_parameters, layer_parameters);
@@ -121,7 +127,10 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerTLSQuery(
   }
 
   ssf::layer::LayerParameters proxy_param_layer =
-      ProxyConfigToLayerParameters(ssf_config);
+      ProxyConfigToLayerParameters(ssf_config, true);
+
+  ssf::layer::LayerParameters default_proxy_param_layer =
+      ProxyConfigToLayerParameters(ssf_config, false);
 
   ssf::layer::ParameterStack layer_parameters;
   layer_parameters.push_front(physical_parameters);
@@ -129,7 +138,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerTLSQuery(
   layer_parameters.push_front(tls_param_layer);
 
   ssf::layer::ParameterStack default_parameters = {
-      {}, tls_param_layer, proxy_param_layer, {}};
+      {}, tls_param_layer, default_proxy_param_layer, {}};
 
   Query query = ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(
       "server", default_parameters, layer_parameters);
@@ -154,16 +163,19 @@ ssf::layer::LayerParameters NetworkProtocol::TlsConfigToLayerParameters(
 }
 
 ssf::layer::LayerParameters NetworkProtocol::ProxyConfigToLayerParameters(
-    const ssf::config::Config& ssf_config) {
-  return {{"http_host", ssf_config.http_proxy().host()},
-          {"http_port", ssf_config.http_proxy().port()},
-          {"http_username", ssf_config.http_proxy().username()},
-          {"http_domain", ssf_config.http_proxy().domain()},
-          {"http_password", ssf_config.http_proxy().password()},
-          {"http_reuse_ntlm",
-           ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
-          {"http_reuse_kerb",
-           ssf_config.http_proxy().reuse_kerb() ? "true" : "false"}};
+    const ssf::config::Config& ssf_config, bool acceptor_endpoint) {
+  return {
+      {"acceptor_endpoint", acceptor_endpoint ? "true" : "false"},
+      {"http_host", ssf_config.http_proxy().host()},
+      {"http_port", ssf_config.http_proxy().port()},
+      {"http_username", ssf_config.http_proxy().username()},
+      {"http_domain", ssf_config.http_proxy().domain()},
+      {"http_password", ssf_config.http_proxy().password()},
+      {"http_reuse_ntlm",
+       ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
+      {"http_reuse_kerb",
+       ssf_config.http_proxy().reuse_kerb() ? "true" : "false"},
+  };
 }
 
 }  // network

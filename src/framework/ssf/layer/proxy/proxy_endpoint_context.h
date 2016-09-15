@@ -5,6 +5,8 @@
 
 #include <boost/asio/ip/tcp.hpp>
 
+#include "ssf/layer/physical/host.h"
+
 namespace ssf {
 namespace layer {
 namespace proxy {
@@ -13,7 +15,7 @@ struct Proxy {
   Proxy();
 
   boost::asio::ip::tcp::endpoint ToTcpEndpoint(
-      boost::asio::io_service& io_service);
+      boost::asio::io_service& io_service) const;
 
   std::string host;
   std::string port;
@@ -24,10 +26,19 @@ struct Proxy {
   bool reuse_kerb;
 };
 
-struct ProxyEndpointContext {
+class ProxyEndpointContext {
+ public:
+  using Host = ssf::layer::physical::Host;
+
+ public:
   ProxyEndpointContext();
 
-  bool IsProxyEnabled() const;
+  // Init context from proxy layer params
+  void Init(const LayerParameters& proxy_parameters);
+
+  // Update remote host component with TCP layer parameters
+  // @returns true if remote host was updated
+  bool UpdateRemoteHost(const LayerParameters& tcp_parameters);
 
   bool HttpProxyEnabled() const;
 
@@ -37,8 +48,19 @@ struct ProxyEndpointContext {
 
   bool operator<(const ProxyEndpointContext& rhs) const;
 
-  bool proxy_enabled;
-  Proxy http_proxy;
+  inline bool proxy_enabled() const { return proxy_enabled_; }
+
+  inline bool acceptor_endpoint() const { return acceptor_endpoint_; }
+
+  inline const Proxy& http_proxy() const { return http_proxy_; }
+
+  inline const Host& remote_host() const { return remote_host_; }
+
+ private:
+  bool proxy_enabled_;
+  bool acceptor_endpoint_;
+  Proxy http_proxy_;
+  Host remote_host_;
 };
 
 }  // proxy

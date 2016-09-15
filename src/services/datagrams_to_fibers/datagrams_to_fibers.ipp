@@ -8,12 +8,15 @@
 namespace ssf {
 namespace services {
 namespace datagrams_to_fibers {
+
 template <typename Demux>
 DatagramsToFibers<Demux>::DatagramsToFibers(boost::asio::io_service& io_service,
                                             Demux& fiber_demux,
+                                            const std::string& local_addr,
                                             uint16_t local_port,
                                             remote_port_type remote_port)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
+      local_addr_(local_addr),
       local_port_(local_port),
       remote_port_(remote_port),
       socket_(io_service),
@@ -24,18 +27,19 @@ DatagramsToFibers<Demux>::DatagramsToFibers(boost::asio::io_service& io_service,
 template <typename Demux>
 void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   SSF_LOG(kLogInfo)
-      << "service[datagrams to fibers]: starting relay on local port udp "
-      << local_port_;
+      << "microservice[datagram_listener]: start forwarding local UDP port <"
+      << local_addr_ << ":" << local_port_ << "> to fiber port "
+      << remote_port_;
 
   boost::asio::ip::udp::resolver resolver(socket_.get_io_service());
-  boost::asio::ip::udp::resolver::query query(
-      boost::asio::ip::udp::v4(), "localhost", std::to_string(local_port_));
+  boost::asio::ip::udp::resolver::query query(local_addr_,
+                                              std::to_string(local_port_));
   auto ep_it = resolver.resolve(query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError)
-        << "service[datagrams to fibers]: could not resolve query <localhost, "
-        << local_port_ << ">";
+    SSF_LOG(kLogError) << "microservice[datagram_listener]: could not "
+                          "resolve query <" << local_addr_ << ":" << local_port_
+                       << ">";
     return;
   }
 
@@ -44,22 +48,27 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   boost::system::error_code close_ec;
   socket_.open(boost::asio::ip::udp::v4(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "service[datagrams to fibers]: could not open socket";
-    socket_.close(close_ec);
-    return;
-  }
-  boost::asio::socket_base::reuse_address reuse_address_option(true);
-  socket_.set_option(reuse_address_option, ec);
-  if (ec) {
     SSF_LOG(kLogError)
-        << "service[datagrams to fibers]: could not set reuse address option";
+        << "microservice[datagram_listener]: could not open socket";
     socket_.close(close_ec);
     return;
   }
 
+  /**
+  // TODO: reuse_address = legit socket option?
+  boost::asio::socket_base::reuse_address reuse_address_option(true);
+  socket_.set_option(reuse_address_option, ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "microservice[datagram_listener]: could not set "
+                          "reuse address option";
+    socket_.close(close_ec);
+    return;
+  }*/
+
   socket_.bind(endpoint_, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "service[datagrams to fibers]: could not bind socket";
+    SSF_LOG(kLogError)
+        << "microservice[datagram_listener]: could not bind socket";
     socket_.close(close_ec);
     return;
   }
@@ -71,11 +80,11 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service[datagrams to fibers]: stopping";
+  SSF_LOG(kLogInfo) << "microservice[datagram_listener]: stopping";
   socket_.close(ec);
 
   if (ec) {
-    SSF_LOG(kLogDebug) << "service[datagrams to fibers]: error on stop "
+    SSF_LOG(kLogDebug) << "microservice[datagram_listener]: error on stop "
                        << ec.message();
   }
 
@@ -89,7 +98,8 @@ uint32_t DatagramsToFibers<Demux>::service_type_id() {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::StartReceivingDatagrams() {
-  SSF_LOG(kLogTrace) << "service[datagrams to fibers]: receiving new datagrams";
+  SSF_LOG(kLogTrace)
+      << "microservice[datagram_listener]: receiving new datagrams";
 
   socket_.async_receive_from(
       boost::asio::buffer(working_buffer_), endpoint_,

@@ -1,6 +1,7 @@
 #ifndef TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
 #define TESTS_SERVICES_SERVICE_FIXTURE_TEST_H_
 
+#include <random>
 #include <utility>
 
 #include <gtest/gtest.h>
@@ -30,33 +31,47 @@ class ServiceFixtureTest : public ::testing::Test {
  public:
   virtual ~ServiceFixtureTest() {}
 
-  virtual void SetUp() {
+  void SetUp() override {
     auto cleanup = [this]() {
       network_set_.set_value(false);
       service_set_.set_value(false);
       transport_set_.set_value(false);
     };
 
-    if (!StartServer("127.0.0.1", "10000")) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distribution(30000, 65000);
+
+    auto port = std::to_string(distribution(gen));
+
+    SSF_LOG(kLogInfo) << "Service fixture: server will listen on port " << port;
+
+    if (!StartServer("127.0.0.1", port)) {
       cleanup();
       FAIL() << "Could not start server";
       return;
     }
-    if (!StartClient("127.0.0.1", "10000")) {
+    if (!StartClient("127.0.0.1", port)) {
       cleanup();
       FAIL() << "Could not start client";
       return;
     }
   }
 
-  virtual void TearDown() {
+  void TearDown() override {
     p_ssf_client_->Stop();
     p_ssf_server_->Stop();
   }
 
+  virtual void SetServerConfig(ssf::config::Config& config) {}
+
+  virtual void SetClientConfig(ssf::config::Config& config) {}
+
   bool StartServer(const std::string& host_addr, const std::string& host_port) {
     ssf::config::Config ssf_config;
+    ssf_config.Init();
 
+    SetServerConfig(ssf_config);
     auto endpoint_query =
         NetworkProtocol::GenerateServerQuery(host_addr, host_port, ssf_config);
 
@@ -80,6 +95,9 @@ class ServiceFixtureTest : public ::testing::Test {
     client_options.push_back(p_service);
 
     ssf::config::Config ssf_config;
+    ssf_config.Init();
+
+    SetClientConfig(ssf_config);
 
     auto endpoint_query = NetworkProtocol::GenerateClientQuery(
         target_addr, target_host, ssf_config, {});
@@ -135,14 +153,14 @@ class ServiceFixtureTest : public ::testing::Test {
     }
 
     if (type == ssf::services::initialisation::SERVICE) {
-      if(ec) {
+      if (ec) {
         SSF_LOG(kLogCritical) << "user_service[" << p_user_service->GetName()
                               << "]: initialization failed";
       }
       if (p_user_service->GetName() == ServiceTested::GetParseName()) {
         service_set_.set_value(!ec);
       }
-    
+
       return;
     }
   }

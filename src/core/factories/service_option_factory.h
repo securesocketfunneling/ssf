@@ -4,12 +4,11 @@
 #include <string>
 #include <functional>
 #include <map>
-
-#include <boost/thread/recursive_mutex.hpp>
+#include <memory>
 
 #include <boost/program_options.hpp>
-
 #include <boost/system/error_code.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
 #include "common/error/error.h"
 #include "services/user_services/base_user_service.h"
@@ -33,22 +32,21 @@ class ServiceOptionFactory {
   using ServiceParserMap = std::map<std::string, ParserDescriptor>;
 
  public:
-  static bool RegisterUserServiceParser(std::string index,
-                                        std::string full_name,
-                                        std::string value_name,
-                                        std::string description,
+  static bool RegisterUserServiceParser(const std::string& index,
+                                        const std::string& full_name,
+                                        const std::string& value_name,
+                                        const std::string& description,
                                         ServiceParserType parser) {
     boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
     if (service_options_.count(index)) {
       return false;
     } else {
-      service_options_[index] = {std::move(parser), std::move(full_name),
-                                 std::move(value_name), std::move(description)};
+      service_options_[index] = {parser, full_name, value_name, description};
       return true;
     }
   }
 
-  static bool UnregisterUserServiceParser(std::string index) {
+  static bool UnregisterUserServiceParser(const std::string& index) {
     boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
     auto it = service_options_.find(index);
 
@@ -77,7 +75,7 @@ class ServiceOptionFactory {
   }
 
   static std::shared_ptr<ssf::services::BaseUserService<Demux>>
-  ParseServiceLine(std::string option, std::string parameters,
+  ParseServiceLine(const std::string& option, const std::string& parameters,
                    boost::system::error_code& ec) {
     boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
     auto it = service_options_.find(option);

@@ -101,7 +101,7 @@ class ServiceStatus {
 
   uint32_t error_code_value() { return error_code_value_; }
 
-  void add_parameter(std::string key, std::string value) {
+  void add_parameter(const std::string& key, const std::string& value) {
     parameters_[key] = value;
   }
 

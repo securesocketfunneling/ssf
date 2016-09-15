@@ -44,9 +44,10 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     p_ssf_server_->Stop();
   }
 
-  void StartServer(const ssf::config::Config& config) {
+  void StartServer(const std::string& server_port,
+                   const ssf::config::Config& config) {
     auto endpoint_query =
-        NetworkProtocol::GenerateServerTLSQuery("", "8000", config);
+        NetworkProtocol::GenerateServerTLSQuery("", server_port, config);
 
     p_ssf_server_.reset(new Server(config.services()));
 
@@ -54,14 +55,16 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
     p_ssf_server_->Run(endpoint_query, run_ec);
   }
 
-  void StartClient(const ssf::config::Config& config,
+  void StartClient(const std::string& server_port,
+                   const ssf::config::Config& config,
                    const ClientCallback& callback) {
     std::vector<BaseUserServicePtr> client_options;
 
     auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
-        "127.0.0.1", "8000", config, {});
+        "127.0.0.1", server_port, config, {});
 
-    p_ssf_client_.reset(new Client(client_options, config.services(), callback));
+    p_ssf_client_.reset(
+        new Client(client_options, config.services(), callback));
 
     boost::system::error_code run_ec;
     p_ssf_client_->Run(endpoint_query, run_ec);
@@ -91,11 +94,28 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
     }
   };
   ssf::config::Config client_config;
+  client_config.Init();
   ssf::config::Config server_config;
-  server_config.tls().set_cipher_alg("DHE-RSA-AES256-GCM-SHA256");
+  server_config.Init();
+  boost::system::error_code ec;
 
-  StartServer(server_config);
-  StartClient(client_config, callback);
+  const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "tls" : {
+            "cipher_alg": "DHE-RSA-AES256-GCM-SHA256"
+        }
+    }
+}
+)RAWSTRING";
+
+  server_config.UpdateFromString(new_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_config;
+
+  std::string server_port("8600");
+  StartServer(server_port, server_config);
+  StartClient(server_port, client_config, callback);
 
   network_set_future.wait();
   transport_set_future.wait();
@@ -125,15 +145,40 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
     }
   };
   ssf::config::Config client_config;
+  client_config.Init();
   ssf::config::Config server_config;
+  server_config.Init();
+  boost::system::error_code ec;
+  const char* new_client_config = R"RAWSTRING(
+{
+    "ssf": {
+        "tls" : {
+            "cipher_alg": "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256"
+        }
+    }
+}
+)RAWSTRING";
 
-  client_config.tls().set_cipher_alg(
-      "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256^");
-  server_config.tls().set_cipher_alg(
-      "ECDH-ECDSA-AES128-SHA256:DHE-RSA-AES128-SHA256");
+  const char* new_server_config = R"RAWSTRING(
+{
+    "ssf": {
+        "tls" : {
+            "cipher_alg": "ECDH-ECDSA-AES128-SHA256:DHE-RSA-AES128-SHA256"
+        }
+    }
+}
+)RAWSTRING";
 
-  StartServer(server_config);
-  StartClient(client_config, callback);
+  client_config.UpdateFromString(new_client_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update client config from string "
+                           << new_client_config;
+  server_config.UpdateFromString(new_server_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_server_config;
+
+  std::string server_port("8700");
+  StartServer(server_port, server_config);
+  StartClient(server_port, client_config, callback);
 
   network_set_future.wait();
   transport_set_future.wait();

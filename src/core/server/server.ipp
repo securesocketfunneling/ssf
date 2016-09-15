@@ -25,12 +25,14 @@
 namespace ssf {
 
 template <class N, template <class> class T>
-SSFServer<N, T>::SSFServer(const ssf::config::Services& services_config)
+SSFServer<N, T>::SSFServer(const ssf::config::Services& services_config,
+                           bool relay_only)
     : T<typename N::socket>(
           boost::bind(&SSFServer<N, T>::DoSSFStart, this, _1, _2)),
       async_engine_(),
       network_acceptor_(async_engine_.get_io_service()),
-      services_config_(services_config) {}
+      services_config_(services_config),
+      relay_only_(relay_only) {}
 
 template <class N, template <class> class T>
 SSFServer<N, T>::~SSFServer() {
@@ -47,6 +49,10 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
     return;
   }
 
+  if (relay_only_) {
+    SSF_LOG(kLogWarning) << "server: relay only";
+  }
+
   // resolve remote endpoint with query
   NetworkResolver resolver(async_engine_.get_io_service());
   auto endpoint_it = resolver.resolve(query, ec);
@@ -58,8 +64,13 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
 
   // set acceptor
   network_acceptor_.open();
+
+  /*
+  // TODO: reuse address ?
   network_acceptor_.set_option(boost::asio::socket_base::reuse_address(true),
                                ec);
+  */
+
   network_acceptor_.bind(*endpoint_it, ec);
   if (ec) {
     SSF_LOG(kLogError) << "server: could not bind acceptor to network endpoint";
@@ -110,14 +121,24 @@ void SSFServer<N, T>::AsyncAcceptConnection() {
 template <class N, template <class> class T>
 void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
                                          NetworkSocketPtr p_socket) {
+  AsyncAcceptConnection();
+
   if (!ec) {
-    this->DoSSFInitiateReceive(p_socket);
-    AsyncAcceptConnection();
-  } else {
-    boost::system::error_code close_ec;
-    p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-    p_socket->close(close_ec);
+    if (!relay_only_) {
+      this->DoSSFInitiateReceive(p_socket);
+      return;
+    }
+  }
+
+  // Close connection
+  boost::system::error_code close_ec;
+  p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+  p_socket->close(close_ec);
+  if (ec) {
     SSF_LOG(kLogError) << "server: network error: " << ec.message();
+  } else if (relay_only_) {
+    SSF_LOG(kLogWarning)
+        << "server: direct connection attempt with relay-only option";
   }
 }
 
@@ -162,25 +183,29 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   auto p_service_factory = ServiceFactory<demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, p_service_manager);
 
-  // Register supported micro services
+  // Register supported microservices
   services::socks::SocksServer<demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.socks());
   services::fibers_to_sockets::FibersToSockets<demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.stream_forwarder());
   services::sockets_to_fibers::SocketsToFibers<demux>::RegisterToServiceFactory(
-      p_service_factory);
+      p_service_factory, services_config_.stream_listener());
   services::fibers_to_datagrams::FibersToDatagrams<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.datagram_forwarder());
   services::datagrams_to_fibers::DatagramsToFibers<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.datagram_listener());
   services::copy_file::file_to_fiber::FileToFiber<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.file_copy());
   services::copy_file::fiber_to_file::FiberToFile<
-      demux>::RegisterToServiceFactory(p_service_factory);
+      demux>::RegisterToServiceFactory(p_service_factory,
+                                       services_config_.file_copy());
   services::process::Server<demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
-  // Start the admin micro service
+  // Start the admin microservice
   std::map<std::string, std::string> empty_map;
 
   auto p_admin_service = services::admin::Admin<demux>::Create(

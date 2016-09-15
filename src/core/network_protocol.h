@@ -12,10 +12,14 @@
 #include <ssf/layer/physical/tlsotcp.h>
 #include <ssf/layer/proxy/basic_proxy_protocol.h>
 
-#include "common/config/config.h"
 #include "core/circuit/config.h"
 
 namespace ssf {
+
+namespace config {
+class Config;
+}  // config
+
 namespace network {
 
 class NetworkProtocol {
@@ -80,7 +84,7 @@ class NetworkProtocol {
       const ssf::config::Config& ssf_config);
 
   static ssf::layer::LayerParameters ProxyConfigToLayerParameters(
-      const ssf::config::Config& ssf_config);
+      const ssf::config::Config& ssf_config, bool acceptor_endpoint);
 };
 
 }  // network

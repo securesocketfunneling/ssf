@@ -6,18 +6,12 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <stdexcept>
-
-#ifndef BOOST_SPIRIT_USE_PHOENIX_V3
-#define BOOST_SPIRIT_USE_PHOENIX_V3 1
-#endif
-#include <boost/fusion/include/std_pair.hpp>
-#include <boost/spirit/include/qi.hpp>
-#include <boost/spirit/include/classic.hpp>
 
 #include <boost/system/error_code.hpp>
 
 #include "common/error/error.h"
+
+#include "services/user_services/option_parser.h"
 
 #include "services/user_services/base_user_service.h"
 #include "services/admin/requests/create_service_request.h"
@@ -38,52 +32,32 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
  private:
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
- private:
-  UdpRemotePortForwarding(uint16_t remote_port, std::string local_addr,
-                         uint16_t local_port)
-      : local_port_(local_port),
-        local_addr_(local_addr),
-        remote_port_(remote_port),
-        remoteServiceId_(0),
-        localServiceId_(0) {
-    relay_fiber_port_ = remote_port_ + (1 << 16);
-  }
-
  public:
-  static std::string GetFullParseName() { return "udpremote,V"; }
+  static std::string GetFullParseName() { return "udp-remote-forward,V"; }
 
-  static std::string GetParseName() { return "udpremote"; }
+  static std::string GetParseName() { return "udp-remote-forward"; }
 
-  static std::string GetValueName() { return "rem_port:dest_ip:dest_port"; }
+  static std::string GetValueName() {
+    return "[[rem_ip]:]rem_port:dest_ip:dest_port";
+  }
 
   static std::string GetParseDesc() {
-    return "Forward remote udp port on given target from client";
+    return "Forward UDP server [[rem_ip]:]rem_port to dest_ip:dest_port from "
+           "client";
   }
 
- public:
   static std::shared_ptr<UdpRemotePortForwarding> CreateServiceOptions(
       std::string line, boost::system::error_code& ec) {
-    using boost::spirit::qi::int_;
-    using boost::spirit::qi::alnum;
-    using boost::spirit::qi::char_;
-    using boost::spirit::qi::rule;
-    typedef std::string::const_iterator str_it;
+    auto forward_options = OptionParser::ParseForwardOptions(line, ec);
 
-    rule<str_it, std::string()> target_pattern = +char_("0-9a-zA-Z.-");
-    uint16_t listening_port, target_port;
-    std::string target_addr;
-    str_it begin = line.begin(), end = line.end();
-    bool parsed = boost::spirit::qi::parse(
-        begin, end, int_ >> ":" >> target_pattern >> ":" >> int_,
-        listening_port, target_addr, target_port);
-
-    if (parsed) {
-      return std::shared_ptr<UdpRemotePortForwarding>(
-          new UdpRemotePortForwarding(listening_port, target_addr, target_port));
-    } else {
+    if (ec) {
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<UdpRemotePortForwarding>(nullptr);
     }
+
+    return std::shared_ptr<UdpRemotePortForwarding>(new UdpRemotePortForwarding(
+        forward_options.from.addr, forward_options.from.port,
+        forward_options.to.addr, forward_options.to.port));
   }
 
   static void RegisterToServiceOptionFactory() {
@@ -92,23 +66,27 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
         &UdpRemotePortForwarding::CreateServiceOptions);
   }
 
-  virtual std::string GetName() { return "udpremote"; }
+ public:
+  virtual ~UdpRemotePortForwarding() {}
 
-  virtual std::vector<admin::CreateServiceRequest<Demux>>
-  GetRemoteServiceCreateVector() {
+  std::string GetName() override { return "udp-remote-forward"; }
+
+  std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
+      override {
     std::vector<admin::CreateServiceRequest<Demux>> result;
 
     services::admin::CreateServiceRequest<Demux> r_forward(
         services::datagrams_to_fibers::DatagramsToFibers<
-            Demux>::GetCreateRequest(remote_port_, relay_fiber_port_));
+            Demux>::GetCreateRequest(remote_addr_, remote_port_,
+                                     relay_fiber_port_));
 
     result.push_back(r_forward);
 
     return result;
   }
 
-  virtual std::vector<admin::StopServiceRequest<Demux>>
-  GetRemoteServiceStopVector(Demux& demux) {
+  std::vector<admin::StopServiceRequest<Demux>> GetRemoteServiceStopVector(
+      Demux& demux) override {
     std::vector<admin::StopServiceRequest<Demux>> result;
 
     auto id = GetRemoteServiceId(demux);
@@ -120,7 +98,7 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
     return result;
   }
 
-  virtual bool StartLocalServices(Demux& demux) {
+  bool StartLocalServices(Demux& demux) override {
     services::admin::CreateServiceRequest<Demux> l_forward(
         services::fibers_to_datagrams::FibersToDatagrams<
             Demux>::GetCreateRequest(relay_fiber_port_, local_addr_,
@@ -141,10 +119,11 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
     return !ec;
   }
 
-  virtual uint32_t CheckRemoteServiceStatus(Demux& demux) {
+  uint32_t CheckRemoteServiceStatus(Demux& demux) override {
     services::admin::CreateServiceRequest<Demux> r_forward(
         services::datagrams_to_fibers::DatagramsToFibers<
-            Demux>::GetCreateRequest(remote_port_, relay_fiber_port_));
+            Demux>::GetCreateRequest(remote_addr_, remote_port_,
+                                     relay_fiber_port_));
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     auto status = p_service_factory->GetStatus(r_forward.service_id(),
@@ -154,20 +133,32 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
     return status;
   }
 
-  virtual void StopLocalServices(Demux& demux) {
+  void StopLocalServices(Demux& demux) override {
     auto p_service_factory =
         ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
     p_service_factory->StopService(localServiceId_);
   }
 
  private:
+  UdpRemotePortForwarding(const std::string& remote_addr, uint16_t remote_port,
+                          const std::string& local_addr, uint16_t local_port)
+      : local_port_(local_port),
+        local_addr_(local_addr),
+        remote_port_(remote_port),
+        remote_addr_(remote_addr),
+        remoteServiceId_(0),
+        localServiceId_(0) {
+    relay_fiber_port_ = remote_port_ + (1 << 16);
+  }
+
   uint32_t GetRemoteServiceId(Demux& demux) {
     if (remoteServiceId_) {
       return remoteServiceId_;
     } else {
       services::admin::CreateServiceRequest<Demux> r_forward(
           services::datagrams_to_fibers::DatagramsToFibers<
-              Demux>::GetCreateRequest(remote_port_, relay_fiber_port_));
+              Demux>::GetCreateRequest(remote_addr_, remote_port_,
+                                       relay_fiber_port_));
 
       auto p_service_factory =
           ServiceFactoryManager<Demux>::GetServiceFactory(&demux);
@@ -178,9 +169,11 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
     }
   }
 
+ private:
   uint16_t local_port_;
   std::string local_addr_;
   uint16_t remote_port_;
+  std::string remote_addr_;
 
   local_port_type relay_fiber_port_;
 

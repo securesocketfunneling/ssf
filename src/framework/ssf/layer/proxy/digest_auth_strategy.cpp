@@ -1,12 +1,12 @@
 #include <ctime>
+
 #include <algorithm>
+#include <random>
 #include <set>
 #include <sstream>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
 
 #include <openssl/md5.h>
 
@@ -257,11 +257,12 @@ std::string DigestAuthStrategy::GenerateRandomString(std::size_t strlen) {
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       "1234567890");
   random_string.reserve(strlen);
-  boost::random::mt19937 rng;
+
   // TODO improve randomness
-  rng.seed(static_cast<unsigned int>(std::time(0)));
-  boost::random::uniform_int_distribution<> index_dist(0,
-                                                       characters.size() - 1);
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  std::uniform_int_distribution<> index_dist(
+      0, static_cast<int>(characters.size() - 1));
   for (std::size_t i = 0; i < strlen; ++i) {
     random_string[i] = characters[index_dist(rng)];
   }

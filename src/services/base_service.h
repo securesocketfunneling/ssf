@@ -14,6 +14,7 @@
 #include "common/boost/fiber/datagram_fiber.hpp"
 
 namespace ssf {
+
 //----------------------------------------------------------------------------
 /// Base class for services
 template <typename Demux>
@@ -36,12 +37,12 @@ class BaseService : public std::enable_shared_from_this<BaseService<Demux>> {
   typedef std::map<std::string, std::string> Parameters;
 
  public:
+  virtual ~BaseService() {}
+
   virtual void start(boost::system::error_code&) = 0;
   virtual void stop(boost::system::error_code&) = 0;
-
   virtual uint32_t service_type_id() = 0;
 
-  virtual ~BaseService() {}
 
   void set_local_id(uint32_t local_id) { local_id_ = local_id; }
 

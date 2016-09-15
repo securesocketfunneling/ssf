@@ -25,6 +25,7 @@
 #include "services/admin/requests/create_service_request.h"
 #include "services/copy_file/file_to_fiber/istream_to_fiber_session.h"
 
+#include "services/copy_file/config.h"
 #include "services/copy_file/filename_buffer.h"
 #include "services/copy_file/filesystem/filesystem.h"
 #include "services/copy_file/fiber_to_file/fiber_to_file.h"
@@ -75,51 +76,13 @@ class FileToFiber : public BaseService<Demux> {
     return nullptr;
   }
 
-  virtual ~FileToFiber() {}
-
-  // Start service
-  virtual void start(boost::system::error_code& ec) {
-// set stdin in binary mode
-#ifdef WIN32
-    if (_setmode(_fileno(stdin), _O_BINARY) == -1) {
-      return;
-    }
-#endif
-
-    if (accept_) {
-      endpoint ep(this->get_demux(), kServicePort);
-      SSF_LOG(kLogInfo) << "service[file to fiber]: start accept on fiber port "
-                        << kServicePort;
-      fiber_acceptor_.bind(ep, ec);
-      fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
-      if (ec) {
-        return;
-      }
-      StartAccept();
-    } else {
-      StartTransfer();
-    }
-  }
-
-  // Stop service
-  virtual void stop(boost::system::error_code& ec) {
-    SSF_LOG(kLogInfo) << "service[file to fiber]: stopping";
-    manager_.stop_all();
-    boost::system::error_code close_ec;
-    fiber_acceptor_.close(close_ec);
-
-// reset stdin in text mode
-#ifdef WIN32
-    if (_setmode(_fileno(stdin), _O_TEXT) == -1) {
-      return;
-    }
-#endif
-  }
-
-  virtual uint32_t service_type_id() { return factory_id; }
-
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory) {
+      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+    if (!config.enabled()) {
+      // service factory is not enabled
+      return;
+    }
+
     p_factory->RegisterServiceCreator(factory_id, &FileToFiber::Create);
   }
 
@@ -137,6 +100,49 @@ class FileToFiber : public BaseService<Demux> {
 
     return create;
   }
+
+ public:
+  // Start service
+  void start(boost::system::error_code& ec) override {
+// set stdin in binary mode
+#ifdef WIN32
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1) {
+      return;
+    }
+#endif
+
+    if (accept_) {
+      endpoint ep(this->get_demux(), kServicePort);
+      SSF_LOG(kLogInfo)
+          << "microservice[file to fiber]: start accept on fiber port "
+          << kServicePort;
+      fiber_acceptor_.bind(ep, ec);
+      fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
+      if (ec) {
+        return;
+      }
+      StartAccept();
+    } else {
+      StartTransfer();
+    }
+  }
+
+  // Stop service
+  void stop(boost::system::error_code& ec) override {
+    SSF_LOG(kLogInfo) << "microservice[file to fiber]: stopping";
+    manager_.stop_all();
+    boost::system::error_code close_ec;
+    fiber_acceptor_.close(close_ec);
+
+// reset stdin in text mode
+#ifdef WIN32
+    if (_setmode(_fileno(stdin), _O_TEXT) == -1) {
+      return;
+    }
+#endif
+  }
+
+  uint32_t service_type_id() override { return factory_id; }
 
  private:
   FileToFiber(boost::asio::io_service& io_service, demux& fiber_demux)
@@ -276,7 +282,7 @@ class FileToFiber : public BaseService<Demux> {
         std::make_shared<fiber>(this->get_demux().get_io_service());
 
     SSF_LOG(kLogDebug)
-        << "service[file to fiber]: connect to remote fiber acceptor port "
+        << "microservice[file to fiber]: connect to remote fiber acceptor port "
         << ssf::services::copy_file::fiber_to_file::FiberToFile<
                Demux>::kServicePort;
 
@@ -304,11 +310,12 @@ class FileToFiber : public BaseService<Demux> {
 
     if (from_stdin) {
       SSF_LOG(kLogInfo)
-          << "service[file to fiber]: start forward data from stdin to "
+          << "microservice[file to fiber]: start forward data from stdin to "
           << output_file;
     } else {
-      SSF_LOG(kLogInfo) << "service[file to fiber]: start forward data from "
-                        << input_file << " to " << output_file;
+      SSF_LOG(kLogInfo)
+          << "microservice[file to fiber]: start forward data from "
+          << input_file << " to " << output_file;
     }
 
     if (!from_stdin) {

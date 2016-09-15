@@ -22,9 +22,9 @@ class ConnectOp {
   void operator()(boost::system::error_code& ec) {
     auto& context = peer_endpoint_.endpoint_context();
 
-    if (!context.IsProxyEnabled()) {
+    if (!context.proxy_enabled()) {
       ssf::layer::detail::ConnectOp<Stream, Endpoint>(
-        stream_, p_local_endpoint_, std::move(peer_endpoint_))(ec);
+          stream_, p_local_endpoint_, std::move(peer_endpoint_))(ec);
       return;
     }
 
@@ -54,7 +54,7 @@ class AsyncConnectOp {
   void operator()() {
     auto& context = peer_endpoint_.endpoint_context();
 
-    if (!context.IsProxyEnabled()) {
+    if (!context.proxy_enabled()) {
       ssf::layer::detail::AsyncConnectOp<
           Protocol, Stream, Endpoint,
           typename boost::asio::handler_type<

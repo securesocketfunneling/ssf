@@ -5,10 +5,7 @@ FileCopyTestFixture::FileCopyTestFixture()
 
 FileCopyTestFixture::~FileCopyTestFixture() {}
 
-void FileCopyTestFixture::SetUp() {
-  StartServer();
-  StartClient();
-}
+void FileCopyTestFixture::SetUp() {}
 
 void FileCopyTestFixture::TearDown() {
   StopClientThreads();
@@ -29,11 +26,27 @@ void FileCopyTestFixture::TearDown() {
   }
 }
 
-void FileCopyTestFixture::StartServer() {
+void FileCopyTestFixture::StartServer(const std::string& server_port) {
   ssf::config::Config ssf_config;
+  ssf_config.Init();
+  boost::system::error_code ec;
+
+  const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "file_copy": { "enable": true }
+        }
+    }
+}
+)RAWSTRING";
+
+  ssf_config.UpdateFromString(new_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_config;
 
   auto endpoint_query =
-      NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
+      NetworkProtocol::GenerateServerQuery("", server_port, ssf_config);
 
   p_ssf_server_.reset(new Server(ssf_config.services()));
 
@@ -41,7 +54,7 @@ void FileCopyTestFixture::StartServer() {
   p_ssf_server_->Run(endpoint_query, run_ec);
 }
 
-void FileCopyTestFixture::StartClient() {
+void FileCopyTestFixture::StartClient(const std::string& server_port) {
   std::vector<BaseUserServicePtr> client_services;
   boost::system::error_code ec;
   auto p_service =
@@ -52,9 +65,27 @@ void FileCopyTestFixture::StartClient() {
   client_services.push_back(p_service);
 
   ssf::config::Config ssf_config;
+  ssf_config.Init();
+
+  const char* new_config = R"RAWSTRING(
+{
+    "ssf": {
+        "services" : {
+            "file_copy": { "enable": true }
+        }
+    }
+}
+)RAWSTRING";
+
+  ssf_config.UpdateFromString(new_config, ec);
+  ASSERT_EQ(ec.value(), 0) << "Could not update server config from string "
+                           << new_config;
 
   auto endpoint_query =
-      NetworkProtocol::GenerateClientQuery("127.0.0.1", "8000", ssf_config, {});
+      NetworkProtocol::GenerateClientQuery("127.0.0.1",
+                                           server_port,
+                                           ssf_config,
+                                           {});
 
   p_ssf_client_.reset(new Client(
       client_services, ssf_config.services(),

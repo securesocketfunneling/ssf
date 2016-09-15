@@ -55,8 +55,11 @@ void FileExistsAndIdentical(const std::string& source_filepath,
       << " are different";
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyNoFileFromClientToRemoteTest, CopyTest) {
+  std::string server_port("6050");
+  StartServer(server_port);
+  StartClient(server_port);
+  
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -67,8 +70,11 @@ TEST_F(CopyNoFileFromClientToRemoteTest, CopyTest) {
       << "The file test_filex.txt should not exist in files_copied";
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyUniqueFileFromClientToRemoteTest, CopyTest) {
+  std::string server_port("6100");
+  StartServer(server_port);
+  StartClient(server_port);
+  
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -77,8 +83,11 @@ TEST_F(CopyUniqueFileFromClientToRemoteTest, CopyTest) {
                          "files_copied/test_file1.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyGlobFileFromClientToRemoteTest, CopyTest) {
+  std::string server_port("6200");
+  StartServer(server_port);
+  StartClient(server_port);
+  
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -89,8 +98,11 @@ TEST_F(CopyGlobFileFromClientToRemoteTest, CopyTest) {
                          "files_copied/test_file2.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyUniqueFileFromRemoteToClientTest, CopyTest) {
+  std::string server_port("6300");
+  StartServer(server_port);
+  StartClient(server_port);
+  
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -99,8 +111,11 @@ TEST_F(CopyUniqueFileFromRemoteToClientTest, CopyTest) {
                          "files_copied/test_file1.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyGlobFileFromRemoteToClientTest, CopyTest) {
+  std::string server_port("6400");
+  StartServer(server_port);
+  StartClient(server_port);
+  
   ASSERT_TRUE(Wait());
 
   ASSERT_TRUE(WaitClose());
@@ -111,8 +126,11 @@ TEST_F(CopyGlobFileFromRemoteToClientTest, CopyTest) {
                          "files_copied/test_file2.txt");
 }
 
-//-----------------------------------------------------------------------------
 TEST_F(CopyStdinFromClientToRemoteTest, CopyTest) {
+  std::string server_port("6500");
+  StartServer(server_port);
+  StartClient(server_port);
+  
   // stdin as test_file1.txt filebuf
   std::ifstream in("files_to_copy/test_file1.txt", std::ifstream::binary);
   std::streambuf* cinbuf = std::cin.rdbuf();

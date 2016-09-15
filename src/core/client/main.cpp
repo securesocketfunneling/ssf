@@ -98,8 +98,11 @@ int main(int argc, char** argv) {
 
   // Load SSF config if any
   ssf::config::Config ssf_config;
+  ssf_config.Init();
 
-  ssf_config.Update(cmd.config_file(), ec);
+  ssf_config.services().SetGatewayPorts(cmd.gateway_ports());
+
+  ssf_config.UpdateFromFile(cmd.config_file(), ec);
 
   if (ec) {
     SSF_LOG(kLogError) << "client: invalid config file format -- Exiting";
@@ -107,6 +110,10 @@ int main(int argc, char** argv) {
   }
 
   ssf_config.Log();
+
+  if (cmd.show_status()) {
+    ssf_config.LogStatus();
+  }
 
   CircuitConfig circuit_config;
   circuit_config.Update(cmd.circuit_file(), ec);
@@ -146,7 +153,7 @@ int main(int argc, char** argv) {
         if (p_service.get() != nullptr) {
           if (ec) {
             SSF_LOG(kLogError) << "client: service <" << p_service->GetName()
-                               << "> NOK";
+                               << "> KO";
           } else {
             SSF_LOG(kLogInfo) << "client: service <" << p_service->GetName()
                               << "> OK";
@@ -173,7 +180,7 @@ int main(int argc, char** argv) {
   client.Run(endpoint_query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "client: error happened when running client : "
+    SSF_LOG(kLogError) << "client: error happened when running client: "
                        << ec.message();
     return 1;
   }
@@ -226,16 +233,17 @@ void InitializeClientServices(ClientServices* p_client_services,
   // Initialize requested user services (socks, port forwarding)
   for (const auto& parameter : parameters) {
     for (const auto& single_parameter : parameter.second) {
+      boost::system::error_code parse_ec;
       auto p_service_options =
           ssf::ServiceOptionFactory<Demux>::ParseServiceLine(
-              parameter.first, single_parameter, ec);
-
-      if (!ec) {
+              parameter.first, single_parameter, parse_ec);
+      if (!parse_ec) {
         p_client_services->push_back(p_service_options);
       } else {
-        SSF_LOG(kLogError) << "client: wrong parameter " << parameter.first
-                           << ": " << single_parameter << ": " << ec.message();
-        return;
+        SSF_LOG(kLogError) << "client: invalid option value for service<"
+                           << parameter.first << ">: " << single_parameter
+                           << " (" << parse_ec.message() << ")";
+        ec.assign(parse_ec.value(), parse_ec.category());
       }
     }
   }

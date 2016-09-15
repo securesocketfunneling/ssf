@@ -26,9 +26,9 @@ FibersToSockets<Demux>::FibersToSockets(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo)
-      << "service[fibers to sockets]: starting relay on local port tcp "
-      << local_port_;
+  SSF_LOG(kLogInfo) << "microservice[stream_forwarder]: start "
+                       "forwarding stream fiber from fiber port " << local_port_
+                    << " to TCP <" << ip_ << ":" << remote_port_ << ">";
 
   endpoint ep(this->get_demux(), local_port_);
   fiber_acceptor_.bind(ep, ec);
@@ -49,7 +49,7 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void FibersToSockets<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service[fibers to sockets]: stopping";
+  SSF_LOG(kLogInfo) << "microservice[stream_forwarder]: stopping";
   ec.assign(::error::success, ::error::get_ssf_category());
 
   fiber_acceptor_.close();
@@ -63,7 +63,7 @@ uint32_t FibersToSockets<Demux>::service_type_id() {
 
 template <typename Demux>
 void FibersToSockets<Demux>::StartAcceptFibers() {
-  SSF_LOG(kLogTrace) << "service[fibers to sockets]: accepting new clients";
+  SSF_LOG(kLogTrace) << "microservice[stream_forwarder]: accepting new clients";
 
   fiber_acceptor_.async_accept(
       fiber_, Then(&FibersToSockets::FiberAcceptHandler, this->SelfFromThis()));
@@ -72,7 +72,7 @@ void FibersToSockets<Demux>::StartAcceptFibers() {
 template <typename Demux>
 void FibersToSockets<Demux>::FiberAcceptHandler(
     const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service[fibers to sockets]: accept handler";
+  SSF_LOG(kLogTrace) << "microservice[stream_forwarder]: accept handler";
 
   if (!fiber_acceptor_.is_open()) {
     return;
@@ -88,7 +88,7 @@ void FibersToSockets<Demux>::FiberAcceptHandler(
 template <typename Demux>
 void FibersToSockets<Demux>::SocketConnectHandler(
     const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service[fibers to sockets]: connect handler";
+  SSF_LOG(kLogTrace) << "microservice[stream_forwarder]: connect handler";
 
   if (!ec) {
     auto session = SessionForwarder<fiber, socket>::create(

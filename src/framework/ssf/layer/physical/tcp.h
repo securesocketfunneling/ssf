@@ -15,6 +15,7 @@
 #include "ssf/layer/parameters.h"
 #include "ssf/layer/physical/tcp_helpers.h"
 #include "ssf/layer/protocol_attributes.h"
+#include "ssf/layer/physical/host.h"
 
 namespace ssf {
 namespace layer {
@@ -32,12 +33,12 @@ class tcp {
 
   static const char* NAME;
 
-  typedef int socket_context;
-  typedef int acceptor_context;
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef boost::asio::ip::tcp::acceptor acceptor;
-  typedef boost::asio::ip::tcp::resolver resolver;
-  typedef boost::asio::ip::tcp::endpoint endpoint;
+  using socket_context = int;
+  using acceptor_context = int;
+  using acceptor = boost::asio::ip::tcp::acceptor;
+  using endpoint = boost::asio::ip::tcp::endpoint;
+  using resolver = boost::asio::ip::tcp::resolver;
+  using socket = boost::asio::ip::tcp::socket;
 
  private:
   using query = ParameterStack;
@@ -46,29 +47,27 @@ class tcp {
  public:
   operator boost::asio::ip::tcp() { return boost::asio::ip::tcp::v4(); }
 
-  static std::string get_name() {
-    return NAME;
-  }
+  static std::string get_name() { return NAME; }
 
   static endpoint make_endpoint(boost::asio::io_service& io_service,
                                 query::const_iterator parameters_it, uint32_t,
                                 boost::system::error_code& ec) {
-    return ssf::layer::physical::detail::make_tcp_endpoint(
-        io_service, *parameters_it, ec);
+    return ssf::layer::physical::detail::make_tcp_endpoint(io_service,
+                                                           *parameters_it, ec);
   }
-  
 
   static std::string get_address(const endpoint& endpoint) {
-    return endpoint.address().to_string();  
+    return endpoint.address().to_string();
   }
 
   static unsigned short get_port(const endpoint& endpoint) {
     return endpoint.port();
   }
 
-  static void add_params_from_property_tree(
-      query* p_query, const boost::property_tree::ptree& property_tree,
-      bool connect, boost::system::error_code& ec) {
+  static void add_params_from_property_tree(query* p_query,
+                                            const ptree& property_tree,
+                                            bool connect,
+                                            boost::system::error_code& ec) {
     auto layer_name = property_tree.get_child_optional("layer");
     if (!layer_name || layer_name.get().data() != NAME) {
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());

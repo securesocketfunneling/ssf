@@ -34,24 +34,25 @@ void Server<Demux>::start(boost::system::error_code& ec) {
 
   if (ec) {
     SSF_LOG(kLogError)
-        << "service[process]: fiber acceptor could not bind on port "
+        << "microservice[shell]: fiber acceptor could not bind on port "
         << local_port_;
     return;
   }
 
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "service[process]: fiber acceptor could not listen";
+    SSF_LOG(kLogError)
+        << "microservice[shell]: fiber acceptor could not listen";
     return;
   }
 
   if (!CheckBinaryPath()) {
-    SSF_LOG(kLogError) << "service[process]: binary not found";
+    SSF_LOG(kLogError) << "microservice[shell]: binary not found";
     ec.assign(::error::file_not_found, ::error::get_ssf_category());
     return;
   }
 
-  SSF_LOG(kLogInfo) << "service[process]: starting server on port "
+  SSF_LOG(kLogInfo) << "microservice[shell]: start server on fiber port "
                     << local_port_;
 
   this->StartAccept();
@@ -61,7 +62,7 @@ template <typename Demux>
 void Server<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  SSF_LOG(kLogInfo) << "service[process]: stopping server";
+  SSF_LOG(kLogInfo) << "microservice[shell]: stop server";
   this->HandleStop();
 }
 
@@ -72,7 +73,7 @@ uint32_t Server<Demux>::service_type_id() {
 
 template <typename Demux>
 void Server<Demux>::StartAccept() {
-  SSF_LOG(kLogTrace) << "service[process]: accept new session";
+  SSF_LOG(kLogTrace) << "microservice[shell]: accepting new session";
   fiber_acceptor_.async_accept(
       new_connection_,
       boost::bind(&Server::HandleAccept, this->SelfFromThis(), _1));
@@ -80,19 +81,20 @@ void Server<Demux>::StartAccept() {
 
 template <typename Demux>
 void Server<Demux>::HandleAccept(const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service[process]: HandleAccept";
+  SSF_LOG(kLogTrace) << "microservice[shell]: HandleAccept";
 
   if (!fiber_acceptor_.is_open()) {
     return;
   }
 
   if (ec) {
-    SSF_LOG(kLogError) << "service[process]: error accepting new connection: "
-                       << ec.message() << " " << ec.value();
+    SSF_LOG(kLogError)
+        << "microservice[shell]: error accepting new connections: "
+        << ec.message() << " " << ec.value();
     this->StartAccept();
   }
 
-  SSF_LOG(kLogInfo) << "service[process]: start session";
+  SSF_LOG(kLogInfo) << "microservice[shell]: start session";
   ssf::BaseSessionPtr new_process_session = std::make_shared<session_impl>(
       &(this->session_manager_), std::move(this->new_connection_), binary_path_,
       binary_args_);

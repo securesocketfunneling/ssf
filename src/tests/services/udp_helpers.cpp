@@ -6,7 +6,7 @@ namespace tests {
 namespace udp {
 
 DummyServer::DummyServer(const std::string& listening_addr,
-                               const std::string& listening_port)
+                         const std::string& listening_port)
     : io_service_(),
       p_worker_(new boost::asio::io_service::work(io_service_)),
       listening_addr_(listening_addr),
@@ -97,7 +97,7 @@ void DummyServer::OneBufferSentHandler(
 }
 
 DummyClient::DummyClient(const std::string& target_addr,
-                               const std::string& target_port, size_t size)
+                         const std::string& target_port, size_t size)
     : io_service_(),
       p_worker_(new boost::asio::io_service::work(io_service_)),
       socket_(io_service_),
@@ -109,7 +109,7 @@ bool DummyClient::Init() {
   t_ = boost::thread([&]() { io_service_.run(); });
 
   boost::asio::ip::udp::resolver r(io_service_);
-  boost::asio::ip::udp::resolver::query q("127.0.0.1", "5454");
+  boost::asio::ip::udp::resolver::query q(target_addr_, target_port_);
 
   auto it = r.resolve(q);
 

@@ -1,61 +1,84 @@
-#include <gtest/gtest.h>
+#include <condition_variable>
+#include <mutex>
 
-#include "common/config/config.h"
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
-#include "core/network_protocol.h"
-#include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
-#include "core/server/server.h"
+#include "tests/network/ssf_fixture_test.h"
 
-using NetworkProtocol = ssf::network::NetworkProtocol;
+TEST_F(SSFFixtureTest, failListeningWrongInterface) {
+  boost::system::error_code server_ec;
+  StartServer("1.1.1.1", "8200", server_ec);
 
-TEST(SSFServerTest, failListeningWrongInterface) {
-  using Server =
-      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+  ASSERT_NE(0, server_ec.value());
 
-  ssf::config::Config ssf_config;
-
-  auto endpoint_query =
-      NetworkProtocol::GenerateServerQuery("1.1.1.1", "8000", ssf_config);
-  Server server(ssf_config.services());
-
-  boost::system::error_code run_ec;
-  server.Run(endpoint_query, run_ec);
-
-  ASSERT_NE(0, run_ec.value());
+  StopServer();
 }
 
-TEST(SSFServerTest, listeningAllInterfaces) {
-  using Server =
-      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+TEST_F(SSFFixtureTest, listeningAllInterfaces) {
+  boost::system::error_code server_ec;
+  StartServer("", "8300", server_ec);
 
-  ssf::config::Config ssf_config;
+  ASSERT_EQ(0, server_ec.value());
 
-  auto endpoint_query =
-      NetworkProtocol::GenerateServerQuery("", "8000", ssf_config);
-  Server server(ssf_config.services());
-
-  boost::system::error_code run_ec;
-  server.Run(endpoint_query, run_ec);
-
-  ASSERT_EQ(0, run_ec.value());
-
-  server.Stop();
+  StopServer();
 }
 
-TEST(SSFServerTest, listeningLocalhostInterface) {
-  using Server =
-      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+TEST_F(SSFFixtureTest, listeningLocalhostInterface) {
+  boost::system::error_code server_ec;
+  StartServer("127.0.0.1", "8300", server_ec);
 
-  ssf::config::Config ssf_config;
+  ASSERT_EQ(0, server_ec.value());
 
-  auto endpoint_query =
-      NetworkProtocol::GenerateServerQuery("127.0.0.1", "8000", ssf_config);
-  Server server(ssf_config.services());
+  StopServer();
+}
 
-  boost::system::error_code run_ec;
-  server.Run(endpoint_query, run_ec);
+TEST_F(SSFFixtureTest, buggyConnectionTest) {
+  boost::system::error_code timer_ec;
+  auto timer_callback = [this](const boost::system::error_code& ec) {
+    EXPECT_NE(0, ec.value()) << "Timer should be canceled. Client is hanging";
+    if (!ec) {
+      SendNotification(false);
+    }
+  };
+  StartTimer(std::chrono::seconds(10), timer_callback, timer_ec);
+  ASSERT_EQ(0, timer_ec.value()) << "Could not start timer";
 
-  ASSERT_EQ(0, run_ec.value());
+  int server_port = 8400;
+  boost::system::error_code server_ec;
+  StartServer("127.0.0.1", std::to_string(server_port), server_ec);
+  ASSERT_EQ(0, server_ec.value());
 
-  server.Stop();
+  auto client_callback = [this](ssf::services::initialisation::type type,
+                                BaseUserServicePtr p_user_service,
+                                const boost::system::error_code& ec) {
+    if (type != ssf::services::initialisation::NETWORK) {
+      return;
+    }
+    EXPECT_EQ(0, ec.value());
+    SendNotification(ec.value() == 0);
+  };
+
+  boost::asio::ip::tcp::socket buggy_client(get_io_service());
+  boost::asio::ip::tcp::endpoint server_ep(
+      boost::asio::ip::address::from_string("127.0.0.1"), server_port);
+
+  auto connect_callback = [client_callback, &buggy_client, &server_port, this](
+      const boost::system::error_code& ec) {
+    boost::system::error_code run_ec;
+    StartClient(std::to_string(server_port), client_callback, run_ec);
+    EXPECT_EQ(0, run_ec.value());
+    buggy_client.close(run_ec);
+  };
+
+  buggy_client.async_connect(server_ep, connect_callback);
+
+  // Wait client action
+  WaitNotification();
+
+  EXPECT_TRUE(IsNotificationSuccess()) << "Client connection failed";
+
+  StopTimer();
+  StopServer();
+  StopClient();
 }

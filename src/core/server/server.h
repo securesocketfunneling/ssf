@@ -4,13 +4,12 @@
 #include <set>
 #include <map>
 
-#include <boost/asio.hpp>
+#include <boost/asio/io_service.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
 #include "core/async_engine.h"
-#include "core/factories/service_factory.h"
 #include "core/service_manager/service_manager.h"
 
 namespace ssf {
@@ -37,7 +36,8 @@ class SSFServer
   using ServiceManagerPtrMap = std::map<DemuxPtr, ServiceManagerPtr>;
 
  public:
-  SSFServer(const ssf::config::Services& services_config);
+  SSFServer(const ssf::config::Services& services_config,
+            bool relay_only = false);
 
   ~SSFServer();
 
@@ -62,6 +62,7 @@ class SSFServer
   AsyncEngine async_engine_;
   NetworkAcceptor network_acceptor_;
   ssf::config::Services services_config_;
+  bool relay_only_;
 
   DemuxPtrSet p_fiber_demuxes_;
   ServiceManagerPtrMap p_service_managers_;
