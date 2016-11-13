@@ -5,11 +5,6 @@
 #include <boost/bind/protect.hpp>
 #include <boost/asio/spawn.hpp>
 
-#include "services/socks/v5/request.h"
-#include "services/socks/v5/request_auth.h"
-#include "services/socks/v5/reply.h"
-#include "services/socks/v5/reply_auth.h"
-
 #include <boost/asio/basic_stream_socket.hpp>
 
 namespace ssf {
@@ -58,7 +53,7 @@ void Session<Demux>::HandleRequestAuthDispatch(
   }
 
   // Check for compatible authentications
-  if (request_auth_.is_no_auth_present()) {
+  if (request_auth_.IsNoAuthPresent()) {
     DoNoAuth();
   } else {
     DoErrorAuth();
@@ -110,13 +105,13 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 
   // Check command asked
   switch (request_.command()) {
-    case Request::kConnect:
+    case Request::Command::kConnect:
       DoConnectRequest();
       break;
-    case Request::kBind:
+    case Request::Command::kBind:
       DoBindRequest();
       break;
-    case Request::kUDP:
+    case Request::Command::kUDP:
       DoUDPRequest();
       break;
     default:
@@ -134,11 +129,13 @@ void Session<Demux>::DoConnectRequest() {
   boost::system::error_code ec;
   uint16_t port = request_.port();
 
-  if (request_.addressType() == Request::kIPv4) {
+  if (request_.address_type() ==
+      static_cast<uint8_t>(Request::AddressType::kIPv4)) {
     boost::asio::ip::address_v4 address(request_.ipv4());
     app_server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
                               handler);
-  } else if (request_.addressType() == Request::kDNS) {
+  } else if (request_.address_type() ==
+             static_cast<uint8_t>(Request::AddressType::kDNS)) {
     boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::query query(
         std::string(request_.domain().data(), request_.domain().size()),
@@ -150,7 +147,8 @@ void Session<Demux>::DoConnectRequest() {
     } else {
       app_server_.async_connect(*iterator, handler);
     }
-  } else if (request_.addressType() == Request::kIPv6) {
+  } else if (request_.address_type() ==
+             static_cast<uint8_t>(Request::AddressType::kDNS)) {
     boost::asio::ip::address_v6 address(request_.ipv6());
     app_server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
                               handler);
@@ -187,14 +185,14 @@ void Session<Demux>::HandleApplicationServerConnect(
   auto self = self_shared_from_this();
   auto p_reply = std::make_shared<Reply>(err);
 
-  switch (request_.addressType()) {
-    case Request::kIPv4:
+  switch (request_.address_type()) {
+    case static_cast<uint8_t>(Request::AddressType::kIPv4):
       p_reply->set_ipv4(request_.ipv4());
       break;
-    case Request::kDNS:
+    case static_cast<uint8_t>(Request::AddressType::kDNS):
       p_reply->set_domain(request_.domain());
       break;
-    case Request::kIPv6:
+    case static_cast<uint8_t>(Request::AddressType::kIPv6):
       p_reply->set_ipv6(request_.ipv6());
       break;
     default:

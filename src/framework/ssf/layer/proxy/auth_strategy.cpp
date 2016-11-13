@@ -10,12 +10,12 @@ std::string AuthStrategy::ExtractAuthToken(const HttpResponse& response) const {
   std::string challenge_str;
   auto auth_name = AuthName();
 
-  auto proxy_authenticate_hdr = response.Header(
+  auto hdr_values = response.GetHeaderValues(
       proxy_authentication() ? "Proxy-Authenticate" : "WWW-Authenticate");
-  for (auto& hdr : proxy_authenticate_hdr) {
-    // find negotiate auth header
-    if (hdr.find(auth_name) == 0) {
-      challenge_str = hdr.substr(auth_name.length());
+  for (auto& hdr_value : hdr_values) {
+    // find auth header
+    if (hdr_value.find(auth_name) == 0) {
+      challenge_str = hdr_value.substr(auth_name.length());
       break;
     }
   }

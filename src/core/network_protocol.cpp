@@ -164,18 +164,20 @@ ssf::layer::LayerParameters NetworkProtocol::TlsConfigToLayerParameters(
 
 ssf::layer::LayerParameters NetworkProtocol::ProxyConfigToLayerParameters(
     const ssf::config::Config& ssf_config, bool acceptor_endpoint) {
-  return {
-      {"acceptor_endpoint", acceptor_endpoint ? "true" : "false"},
-      {"http_host", ssf_config.http_proxy().host()},
-      {"http_port", ssf_config.http_proxy().port()},
-      {"http_username", ssf_config.http_proxy().username()},
-      {"http_domain", ssf_config.http_proxy().domain()},
-      {"http_password", ssf_config.http_proxy().password()},
-      {"http_reuse_ntlm",
-       ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
-      {"http_reuse_kerb",
-       ssf_config.http_proxy().reuse_kerb() ? "true" : "false"},
-  };
+  return {{"acceptor_endpoint", acceptor_endpoint ? "true" : "false"},
+          {"http_host", ssf_config.http_proxy().host()},
+          {"http_port", ssf_config.http_proxy().port()},
+          {"http_username", ssf_config.http_proxy().username()},
+          {"http_domain", ssf_config.http_proxy().domain()},
+          {"http_password", ssf_config.http_proxy().password()},
+          {"http_reuse_ntlm",
+           ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
+          {"http_reuse_kerb",
+           ssf_config.http_proxy().reuse_kerb() ? "true" : "false"},
+          {"socks_version", std::to_string(static_cast<uint8_t>(
+                                ssf_config.socks_proxy().version()))},
+          {"socks_host", ssf_config.socks_proxy().host()},
+          {"socks_port", ssf_config.socks_proxy().port()}};
 }
 
 }  // network

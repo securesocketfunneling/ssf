@@ -49,6 +49,8 @@ class ProxyTestFixture : public ::testing::Test {
 
   ssf::layer::LayerParameters GetProxyParam() const;
 
+  ssf::layer::LayerParameters GetSocksProxyParam() const;
+
  private:
   bool ParseConfigFile(const std::string& filepath);
   std::string GetOption(const std::string& name) const;

@@ -25,9 +25,9 @@ class HttpRequest {
 
   void AddHeader(const std::string& name, const std::string& value);
 
-  std::string Header(const std::string& name);
+  std::string GetHeaderValue(const std::string& name);
 
-  std::string GenerateRequest() const;
+  std::string Serialize() const;
 
  private:
   std::string method_;

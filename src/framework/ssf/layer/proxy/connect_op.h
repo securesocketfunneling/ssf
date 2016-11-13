@@ -6,6 +6,7 @@
 #include "ssf/error/error.h"
 #include "ssf/layer/connect_op.h"
 #include "ssf/layer/proxy/http_connect_op.h"
+#include "ssf/layer/proxy/socks_connect_op.h"
 
 namespace ssf {
 namespace layer {
@@ -31,6 +32,12 @@ class ConnectOp {
     if (context.HttpProxyEnabled()) {
       HttpConnectOp<Stream, Endpoint>(stream_, p_local_endpoint_,
                                       std::move(peer_endpoint_))(ec);
+      return;
+    }
+
+    if (context.SocksProxyEnabled()) {
+      SocksConnectOp<Stream, Endpoint>(stream_, p_local_endpoint_,
+                                       std::move(peer_endpoint_))(ec);
       return;
     }
   }
@@ -66,6 +73,16 @@ class AsyncConnectOp {
 
     if (context.HttpProxyEnabled()) {
       AsyncHttpConnectOp<
+          Protocol, Stream, Endpoint,
+          typename boost::asio::handler_type<
+              ConnectHandler, void(boost::system::error_code)>::type>(
+          stream_, p_local_endpoint_, std::move(peer_endpoint_),
+          std::move(handler_))();
+      return;
+    }
+
+    if (context.SocksProxyEnabled()) {
+      AsyncSocksConnectOp<
           Protocol, Stream, Endpoint,
           typename boost::asio::handler_type<
               ConnectHandler, void(boost::system::error_code)>::type>(

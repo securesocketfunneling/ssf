@@ -32,11 +32,11 @@ class SocksFixtureTest : public ServiceFixtureTest<TServiceTested> {
         EXPECT_TRUE(initiated);
       }
 
-      auto sent = client.InitSocks();
+      auto init = client.InitSocks();
 
       {
         boost::recursive_mutex::scoped_lock lock(mutex);
-        EXPECT_TRUE(sent);
+        EXPECT_TRUE(init);
       }
 
       auto received = client.ReceiveOneBuffer();

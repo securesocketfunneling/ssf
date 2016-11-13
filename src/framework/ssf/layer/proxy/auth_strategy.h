@@ -33,18 +33,19 @@ class AuthStrategy {
   inline Status status() const { return status_; }
 
  protected:
-  AuthStrategy(const Proxy& proxy_ctx, Status status)
+  AuthStrategy(const HttpProxy& proxy_ctx, Status status)
       : proxy_ctx_(proxy_ctx), status_(status), proxy_authentication_(false) {}
 
   inline bool proxy_authentication() const { return proxy_authentication_; }
   inline void set_proxy_authentication(const HttpResponse& response) {
-    proxy_authentication_ = !response.Header("Proxy-Authenticate").empty();
+    proxy_authentication_ =
+        !response.GetHeaderValues("Proxy-Authenticate").empty();
   }
 
   std::string ExtractAuthToken(const HttpResponse& response) const;
 
  protected:
-  Proxy proxy_ctx_;
+  HttpProxy proxy_ctx_;
   Status status_;
 
  private:

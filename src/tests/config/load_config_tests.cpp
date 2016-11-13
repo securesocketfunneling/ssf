@@ -55,6 +55,7 @@ TEST_F(LoadConfigTest, DefaultValueTest) {
   ASSERT_EQ(config_.tls().key_password(), "");
   ASSERT_EQ(config_.tls().dh_path(), "./certs/dh4096.pem");
   ASSERT_EQ(config_.tls().cipher_alg(), "DHE-RSA-AES256-GCM-SHA384");
+
   ASSERT_EQ(config_.http_proxy().host(), "");
   ASSERT_EQ(config_.http_proxy().port(), "");
   ASSERT_EQ(config_.http_proxy().username(), "");
@@ -62,6 +63,11 @@ TEST_F(LoadConfigTest, DefaultValueTest) {
   ASSERT_EQ(config_.http_proxy().password(), "");
   ASSERT_EQ(config_.http_proxy().reuse_kerb(), true);
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), true);
+
+  ASSERT_EQ(config_.socks_proxy().version(),
+            ssf::network::Socks::Version::kVUnknonw);
+  ASSERT_EQ(config_.socks_proxy().host(), "");
+  ASSERT_EQ(config_.socks_proxy().port(), "");
 
   ASSERT_TRUE(config_.services().datagram_forwarder().enabled());
   ASSERT_TRUE(config_.services().datagram_listener().enabled());
@@ -139,6 +145,11 @@ TEST_F(LoadConfigTest, LoadProxyFileTest) {
   ASSERT_EQ(config_.http_proxy().password(), "test_password");
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), false);
   ASSERT_EQ(config_.http_proxy().reuse_kerb(), false);
+
+  ASSERT_EQ(config_.socks_proxy().version(),
+            ssf::network::Socks::Version::kV5);
+  ASSERT_EQ(config_.socks_proxy().host(), "127.0.0.2");
+  ASSERT_EQ(config_.socks_proxy().port(), "1080");
 }
 
 TEST_F(LoadConfigTest, LoadServicesFileTest) {
@@ -173,6 +184,7 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   ASSERT_EQ(config_.tls().key_password(), "test_key_password");
   ASSERT_EQ(config_.tls().dh_path(), "test_dh_path");
   ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
+
   ASSERT_EQ(config_.http_proxy().host(), "127.0.0.1");
   ASSERT_EQ(config_.http_proxy().port(), "8080");
   ASSERT_EQ(config_.http_proxy().username(), "test_user");
@@ -180,6 +192,12 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   ASSERT_EQ(config_.http_proxy().domain(), "test_domain");
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), false);
   ASSERT_EQ(config_.http_proxy().reuse_kerb(), false);
+  
+  ASSERT_EQ(config_.socks_proxy().version(),
+            ssf::network::Socks::Version::kV4);
+  ASSERT_EQ(config_.socks_proxy().host(), "127.0.0.2");
+  ASSERT_EQ(config_.socks_proxy().port(), "1080");
+
   ASSERT_EQ(config_.services().process().path(), "/bin/custom_path");
   ASSERT_EQ(config_.services().process().args(), "-custom args");
 }

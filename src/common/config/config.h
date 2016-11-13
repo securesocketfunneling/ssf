@@ -99,8 +99,11 @@ class Config {
   inline const Tls& tls() const { return tls_; }
   inline Tls& tls() { return tls_; }
 
-  inline const Proxy& http_proxy() const { return http_proxy_; }
-  inline Proxy& http_proxy() { return http_proxy_; }
+  inline const HttpProxy& http_proxy() const { return http_proxy_; }
+  inline HttpProxy& http_proxy() { return http_proxy_; }
+
+  inline const SocksProxy& socks_proxy() const { return socks_proxy_; }
+  inline SocksProxy& socks_proxy() { return socks_proxy_; }
 
   inline const Services& services() const { return services_; }
   inline Services& services() { return services_; }
@@ -109,12 +112,14 @@ class Config {
   void UpdateFromPTree(const PTree& pt);
   void UpdateTls(const PTree& pt);
   void UpdateHttpProxy(const PTree& pt);
+  void UpdateSocksProxy(const PTree& pt);
   void UpdateServices(const PTree& pt);
 
  private:
   static const char* default_config_;
   Tls tls_;
-  Proxy http_proxy_;
+  HttpProxy http_proxy_;
+  SocksProxy socks_proxy_;
   Services services_;
 };
 

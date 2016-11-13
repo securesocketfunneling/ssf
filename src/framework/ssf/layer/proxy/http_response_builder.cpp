@@ -27,7 +27,7 @@ namespace proxy {
 
 HttpResponseBuilder::HttpResponseBuilder()
     : response_(),
-      complete_(false),
+      done_(false),
       processing_header_name_(true),
       current_header_name_(),
       current_header_value_(),
@@ -48,17 +48,13 @@ HttpResponseBuilder::HttpResponseBuilder()
       HTTP_PARSER_C_CALLBACK_NAME(OnMessageComplete);
 }
 
-HttpResponse HttpResponseBuilder::Get() {
-  auto response = response_;
-
-  Reset();
-
-  return response;
+const HttpResponse* HttpResponseBuilder::Get() const {
+  return &response_;
 }
 
 void HttpResponseBuilder::Reset() {
   parser_.data = this;
-  complete_ = false;
+  done_ = false;
   processing_header_name_ = true;
   current_header_name_.clear();
   current_header_value_.clear();
@@ -129,7 +125,7 @@ HttpResponseBuilder::ParserStatus HttpResponseBuilder::OnHeadersComplete(
     processing_header_name_ = true;
   }
 
-  if (response_.Header("content-length").empty()) {
+  if (response_.GetHeaderValues("content-length").empty()) {
     return kParserNoBody;
   }
 
@@ -148,7 +144,7 @@ HttpResponseBuilder::ParserStatus HttpResponseBuilder::OnMessageComplete(
   response_.set_body(ss_body_.str());
 
   ss_body_.clear();
-  complete_ = true;
+  done_ = true;
 
   return kParserOk;
 }

@@ -114,7 +114,6 @@ void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,
         status_ = Status::kError;
         break;
     }
-    return;
   }
 }
 

@@ -3,16 +3,17 @@
 
 #include <memory>
 
-#include <boost/noncopyable.hpp>  // NOLINT
+#include <boost/noncopyable.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/asio.hpp>  // NOLINT
+#include <boost/asio.hpp>
 
-#include <ssf/network/base_session.h>  // NOLINT
-#include <ssf/network/socket_link.h>   // NOLINT
+#include <ssf/network/base_session.h>
+#include <ssf/network/socket_link.h>
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
-#include "services/socks/v4/request.h"  // NOLINT
+#include "ssf/network/socks/v4/request.h"
+#include "ssf/network/socks/v4/reply.h"
 
 #include "common/boost/fiber/stream_fiber.hpp"
 
@@ -30,6 +31,9 @@ class Session : public ssf::BaseSession {
       typename Demux::socket_type>::socket fiber;
 
   typedef ItemManager<BaseSessionPtr> SessionManager;
+
+  using Request = ssf::network::socks::v4::Request;
+  using Reply = ssf::network::socks::v4::Reply;
 
  public:
   Session(SessionManager* sm, fiber client);
@@ -68,6 +72,80 @@ class Session : public ssf::BaseSession {
   std::shared_ptr<StreamBuff> upstream_;
   std::shared_ptr<StreamBuff> downstream_;
 };
+
+template <class VerifyHandler, class StreamSocket>
+class ReadRequestCoro : public boost::asio::coroutine {
+ public:
+  ReadRequestCoro(StreamSocket& c, ssf::network::socks::v4::Request* p_r,
+                  VerifyHandler h)
+      : c_(c),
+        r_(*p_r),
+        handler_(h),
+        total_length_(0),
+        p_stream_(new boost::asio::streambuf) {}
+
+#include <boost/asio/yield.hpp>  // NOLINT
+  void operator()(const boost::system::error_code& ec, std::size_t length) {
+    std::istream is(p_stream_.get());
+    std::string name;
+    std::string domain;
+
+    if (!ec) reenter(this) {
+        // Read Request fixed size buffer
+        yield boost::asio::async_read(c_, r_.MutBuffer(), std::move(*this));
+        total_length_ += length;
+
+        // Read Request variable size name (from now, until '\0')
+        yield boost::asio::async_read_until(c_, *p_stream_, '\0',
+                                            std::move(*this));
+        total_length_ += length;
+
+        // Set the name to complete the request
+        r_.set_name(boost::asio::buffer_cast<const char*>(p_stream_->data()));
+        p_stream_->consume(length);
+
+        if (r_.is_4a_version()) {
+          // Read Request variable size domain (from now, until '\0')
+          yield boost::asio::async_read_until(c_, *p_stream_, '\0',
+                                              std::move(*this));
+          total_length_ += length;
+
+          // Set the name to complete the request
+          r_.set_domain(
+              boost::asio::buffer_cast<const char*>(p_stream_->data()));
+        }
+
+        boost::get<0>(handler_)(ec, total_length_);
+      }
+    else {
+      boost::get<0>(handler_)(ec, total_length_);
+    }
+  }
+#include <boost/asio/unyield.hpp>  // NOLINT
+
+ private:
+  StreamSocket& c_;
+  ssf::network::socks::v4::Request& r_;
+  VerifyHandler handler_;
+  std::size_t total_length_;
+  std::shared_ptr<boost::asio::streambuf> p_stream_;
+};
+
+template <class VerifyHandler, class StreamSocket>
+void AsyncReadRequest(StreamSocket& c, ssf::network::socks::v4::Request* p_r,
+                      VerifyHandler handler) {
+  ReadRequestCoro<boost::tuple<VerifyHandler>, StreamSocket> RequestReader(
+      c, p_r, boost::make_tuple(handler));
+
+  RequestReader(boost::system::error_code(), 0);
+}
+
+template <class VerifyHandler, class StreamSocket>
+void AsyncSendReply(StreamSocket& c, const ssf::network::socks::v4::Reply& r,
+                    VerifyHandler handler) {
+  boost::asio::async_write(c, r.ConstBuffer(), handler);
+}
+
 }  // v4
 }  // socks
 }  // ssf

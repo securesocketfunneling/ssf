@@ -3,6 +3,8 @@
     "target_port": "9000",
     "proxy_host": "proxy.example.com",
     "proxy_port": "3128",
+    "socks_host": "proxy.example.com",
+    "socks_port": "1080",
     "username": "",
     "password": "",
     "domain": "",

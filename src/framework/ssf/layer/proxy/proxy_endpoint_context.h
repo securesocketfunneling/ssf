@@ -14,16 +14,34 @@ namespace proxy {
 struct Proxy {
   Proxy();
 
+  virtual ~Proxy();
+
   boost::asio::ip::tcp::endpoint ToTcpEndpoint(
       boost::asio::io_service& io_service) const;
 
+  bool IsSet() const;
+
   std::string host;
   std::string port;
+};
+
+struct HttpProxy : public Proxy {
+  HttpProxy();
+
   std::string username;
   std::string password;
   std::string domain;
   bool reuse_ntlm;
   bool reuse_kerb;
+};
+
+struct SocksProxy : public Proxy {
+  SocksProxy();
+
+  bool IsVersion4() const { return version == "4"; }
+  bool IsVersion5() const { return version == "5"; }
+
+  std::string version;
 };
 
 class ProxyEndpointContext {
@@ -42,6 +60,8 @@ class ProxyEndpointContext {
 
   bool HttpProxyEnabled() const;
 
+  bool SocksProxyEnabled() const;
+
   bool operator==(const ProxyEndpointContext& rhs) const;
 
   bool operator!=(const ProxyEndpointContext& rhs) const;
@@ -52,14 +72,17 @@ class ProxyEndpointContext {
 
   inline bool acceptor_endpoint() const { return acceptor_endpoint_; }
 
-  inline const Proxy& http_proxy() const { return http_proxy_; }
+  inline const HttpProxy& http_proxy() const { return http_proxy_; }
+
+  inline const SocksProxy& socks_proxy() const { return socks_proxy_; }
 
   inline const Host& remote_host() const { return remote_host_; }
 
  private:
   bool proxy_enabled_;
   bool acceptor_endpoint_;
-  Proxy http_proxy_;
+  HttpProxy http_proxy_;
+  SocksProxy socks_proxy_;
   Host remote_host_;
 };
 

@@ -24,12 +24,12 @@ class PlatformAuthImpl {
   virtual Token GetAuthToken() = 0;
 
  protected:
-  PlatformAuthImpl(const Proxy& proxy_ctx)
+  PlatformAuthImpl(const HttpProxy& proxy_ctx)
       : state_(kInit), proxy_ctx_(proxy_ctx) {}
 
  protected:
   State state_;
-  Proxy proxy_ctx_;
+  HttpProxy proxy_ctx_;
 };
 
 }  // proxy

@@ -1,5 +1,10 @@
 # Change Log
 
+## 2.3.0
+
+Features:
+* #14 SOCKS proxy support (no authentication), cf. configuration file
+
 ## 2.2.0
 
 Features:

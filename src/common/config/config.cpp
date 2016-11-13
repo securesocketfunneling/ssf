@@ -77,6 +77,7 @@ void Config::UpdateFromString(const std::string& config_string,
 void Config::Log() const {
   tls_.Log();
   http_proxy_.Log();
+  socks_proxy_.Log();
   services_.Log();
 }
 
@@ -85,6 +86,7 @@ void Config::LogStatus() const { services_.LogServiceStatus(); }
 void Config::UpdateFromPTree(const PTree& pt) {
   UpdateTls(pt);
   UpdateHttpProxy(pt);
+  UpdateSocksProxy(pt);
   UpdateServices(pt);
 }
 
@@ -101,11 +103,21 @@ void Config::UpdateTls(const PTree& pt) {
 void Config::UpdateHttpProxy(const PTree& pt) {
   auto proxy_optional = pt.get_child_optional("ssf.http_proxy");
   if (!proxy_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: proxy configuration not found";
+    SSF_LOG(kLogDebug) << "config[update]: http proxy configuration not found";
     return;
   }
 
   http_proxy_.Update(proxy_optional.get());
+}
+
+void Config::UpdateSocksProxy(const PTree& pt) {
+  auto proxy_optional = pt.get_child_optional("ssf.socks_proxy");
+  if (!proxy_optional) {
+    SSF_LOG(kLogDebug) << "config[update]: socks proxy configuration not found";
+    return;
+  }
+
+  socks_proxy_.Update(proxy_optional.get());
 }
 
 void Config::UpdateServices(const PTree& pt) {
@@ -139,6 +151,11 @@ const char* Config::default_config_ = R"RAWSTRING(
         "reuse_ntlm": true,
         "reuse_nego": true
       }
+    },
+    "socks_proxy": {
+      "version": 0,
+      "host": "",
+      "port": ""
     },
     "services": {
       "datagram_forwarder": { "enable": true },

@@ -9,7 +9,7 @@ namespace proxy {
 
 class BasicAuthStrategy : public AuthStrategy {
  public:
-  BasicAuthStrategy(const Proxy& proxy);
+  BasicAuthStrategy(const HttpProxy& proxy);
 
   virtual ~BasicAuthStrategy(){};
 

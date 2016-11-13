@@ -3,10 +3,11 @@
 #include <ssf/log/log.h>
 
 #include "common/config/proxy.h"
+
 namespace ssf {
 namespace config {
 
-Proxy::Proxy()
+HttpProxy::HttpProxy()
     : host_(""),
       port_(""),
       username_(""),
@@ -15,7 +16,7 @@ Proxy::Proxy()
       reuse_ntlm_(true),
       reuse_kerb_(true) {}
 
-void Proxy::Update(const PTree& proxy_prop) {
+void HttpProxy::Update(const PTree& proxy_prop) {
   auto host_optional = proxy_prop.get_child_optional("host");
   if (host_optional) {
     host_ = host_optional.get().data();
@@ -57,7 +58,7 @@ void Proxy::Update(const PTree& proxy_prop) {
   }
 }
 
-void Proxy::Log() const {
+void HttpProxy::Log() const {
   if (IsSet()) {
     SSF_LOG(kLogInfo) << "config[HTTP proxy]: <" << host_ << ":" << port_
                       << ">";
@@ -71,6 +72,42 @@ void Proxy::Log() const {
                       << (reuse_kerb_ ? "true" : "false") << ">";
   } else {
     SSF_LOG(kLogInfo) << "config[HTTP proxy]: <None>";
+  }
+}
+
+SocksProxy::SocksProxy()
+    : version_(Socks::Version::kVUnknonw), host_(""), port_("") {}
+
+void SocksProxy::Update(const PTree& proxy_prop) {
+  auto version_optional = proxy_prop.get_child_optional("version");
+  if (version_optional) {
+    int version = version_optional.get().get_value<int>();
+    if (version == 4) {
+      version_ = Socks::Version::kV4;
+    }
+    if (version == 5) {
+      version_ = Socks::Version::kV5;
+    }
+  }
+
+  auto host_optional = proxy_prop.get_child_optional("host");
+  if (host_optional) {
+    host_ = host_optional.get().data();
+  }
+
+  auto port_optional = proxy_prop.get_child_optional("port");
+  if (port_optional) {
+    port_ = port_optional.get().data();
+  }
+}
+
+void SocksProxy::Log() const {
+  if (IsSet()) {
+    SSF_LOG(kLogInfo) << "config[SOCKS proxy]: <V"
+                      << std::to_string(static_cast<uint8_t>(version_)) << " "
+                      << host_ << ":" << port_ << ">";
+  } else {
+    SSF_LOG(kLogInfo) << "config[SOCKS proxy]: <None>";
   }
 }
 

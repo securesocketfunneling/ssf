@@ -22,7 +22,7 @@ class SSPIAuthImpl : public PlatformAuthImpl {
   enum SecurityPackage { kNTLM = 0, kNegotiate };
 
  public:
-  SSPIAuthImpl(SecurityPackage sec_package, const Proxy& proxy_ctx);
+  SSPIAuthImpl(SecurityPackage sec_package, const HttpProxy& proxy_ctx);
 
   virtual ~SSPIAuthImpl();
 

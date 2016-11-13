@@ -141,6 +141,86 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
                                                      acceptor_parameters, 200);
 }
 
+TEST_F(ProxyTestFixture, Socks4ProxySetTest) {
+  typedef ssf::layer::proxy::basic_ProxyProtocol<ssf::layer::physical::tcp>
+      StreamStackProtocol;
+
+  ASSERT_TRUE(Initialized()) << "Proxy test fixture was not initialized. "
+                             << "Please check that the config file '"
+                             << config_file_
+                             << "' exists (cf. proxy/README.md)";
+
+  ssf::layer::ParameterStack acceptor_parameters;
+  acceptor_parameters.push_back(empty_layer);
+  acceptor_parameters.push_back(tcp_server_parameters);
+
+  auto socks_proxy_param = GetSocksProxyParam();
+  socks_proxy_param["socks_version"] = "4";
+
+  ssf::layer::ParameterStack client_parameters;
+  client_parameters.push_back(socks_proxy_param);
+  client_parameters.push_back(GetProxyTcpParam());
+
+  TestStreamProtocol<StreamStackProtocol>(client_parameters,
+                                          acceptor_parameters, 1024);
+
+  TestStreamProtocolFuture<StreamStackProtocol>(client_parameters,
+                                                acceptor_parameters);
+
+  /*  Uncomment after fix on boost build system
+  TestStreamProtocolSpawn<StreamStackProtocol>(client_parameters,
+                                               acceptor_parameters);*/
+
+  TestStreamProtocolSynchronous<StreamStackProtocol>(client_parameters,
+                                                     acceptor_parameters);
+
+  PerfTestStreamProtocolHalfDuplex<StreamStackProtocol>(
+      client_parameters, acceptor_parameters, 200);
+
+  PerfTestStreamProtocolFullDuplex<StreamStackProtocol>(
+      client_parameters, acceptor_parameters, 200);
+}
+
+TEST_F(ProxyTestFixture, Socks5ProxySetTest) {
+  typedef ssf::layer::proxy::basic_ProxyProtocol<ssf::layer::physical::tcp>
+      StreamStackProtocol;
+
+  ASSERT_TRUE(Initialized()) << "Proxy test fixture was not initialized. "
+                             << "Please check that the config file '"
+                             << config_file_
+                             << "' exists (cf. proxy/README.md)";
+
+  ssf::layer::ParameterStack acceptor_parameters;
+  acceptor_parameters.push_back(empty_layer);
+  acceptor_parameters.push_back(tcp_server_parameters);
+
+  auto socks_proxy_param = GetSocksProxyParam();
+  socks_proxy_param["socks_version"] = "5";
+
+  ssf::layer::ParameterStack client_parameters;
+  client_parameters.push_back(socks_proxy_param);
+  client_parameters.push_back(GetProxyTcpParam());
+
+  TestStreamProtocol<StreamStackProtocol>(client_parameters,
+                                          acceptor_parameters, 1024);
+
+  TestStreamProtocolFuture<StreamStackProtocol>(client_parameters,
+                                                acceptor_parameters);
+
+  /*  Uncomment after fix on boost build system
+  TestStreamProtocolSpawn<StreamStackProtocol>(client_parameters,
+                                               acceptor_parameters);*/
+
+  TestStreamProtocolSynchronous<StreamStackProtocol>(client_parameters,
+                                                     acceptor_parameters);
+
+  PerfTestStreamProtocolHalfDuplex<StreamStackProtocol>(
+      client_parameters, acceptor_parameters, 200);
+
+  PerfTestStreamProtocolFullDuplex<StreamStackProtocol>(
+      client_parameters, acceptor_parameters, 200);
+}
+
 TEST_F(ProxyTestFixture, ProxyNotSetTest) {
   typedef ssf::layer::proxy::basic_ProxyProtocol<
       ssf::layer::physical::TCPPhysicalLayer> StreamStackProtocol;

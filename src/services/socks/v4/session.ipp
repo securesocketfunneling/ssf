@@ -7,9 +7,6 @@
 
 #include <ssf/log/log.h>
 
-#include "services/socks/v4/request.h"
-#include "services/socks/v4/reply.h"
-
 #include <boost/asio/basic_stream_socket.hpp>
 
 namespace ssf {
@@ -57,16 +54,14 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
     return;
   }
 
-  // Dispatch request according to it's command id
-  switch (request_.Command()) {
-    case Request::kConnect:
+  // Dispatch request according to its command
+  switch (request_.command()) {
+    case Request::Command::kConnect:
       DoConnectRequest();
       break;
-
-    case Request::kBind:
+    case Request::Command::kBind:
       DoBindRequest();
       break;
-
     default:
       SSF_LOG(kLogError) << "session[socks]: Invalid v4 command";
       break;
@@ -86,7 +81,7 @@ void Session<Demux>::DoConnectRequest() {
     // In the 4a version, the address needs to be resolved
     boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::query query(
-        request_.Domain(), std::to_string(request_.Port()));
+        request_.domain(), std::to_string(request_.port()));
     boost::asio::ip::tcp::resolver::iterator iterator(
         resolver.resolve(query, ec));
 

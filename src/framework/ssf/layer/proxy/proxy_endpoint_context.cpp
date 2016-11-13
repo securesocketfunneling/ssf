@@ -10,6 +10,8 @@ namespace proxy {
 
 Proxy::Proxy() : host(""), port("") {}
 
+Proxy::~Proxy() {}
+
 boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(
     boost::asio::io_service& io_service) const {
   boost::system::error_code ec;
@@ -22,6 +24,12 @@ boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(
   return *endpoint_it;
 }
 
+bool Proxy::IsSet() const { return !host.empty() && !port.empty(); }
+
+HttpProxy::HttpProxy(): Proxy() {}
+
+SocksProxy::SocksProxy(): Proxy() {}
+
 ProxyEndpointContext::ProxyEndpointContext()
     : proxy_enabled_(false),
       acceptor_endpoint_(false),
@@ -32,35 +40,54 @@ void ProxyEndpointContext::Init(const LayerParameters& proxy_parameters) {
   proxy_enabled_ = false;
 
   acceptor_endpoint_ = (ssf::helpers::GetField<std::string>(
-                          "acceptor_endpoint", proxy_parameters) == "true");
+                            "acceptor_endpoint", proxy_parameters) == "true");
 
+  // http proxy config
   auto http_host =
       ssf::helpers::GetField<std::string>("http_host", proxy_parameters);
   auto http_port =
       ssf::helpers::GetField<std::string>("http_port", proxy_parameters);
-  if (http_port.empty() || http_host.empty()) {
-    return;
+  if (!http_host.empty() && !http_port.empty()) {
+    proxy_enabled_ = true;
+
+    http_proxy_.host = http_host;
+    http_proxy_.port = http_port;
+    http_proxy_.username =
+        ssf::helpers::GetField<std::string>("http_username", proxy_parameters);
+    http_proxy_.domain =
+        ssf::helpers::GetField<std::string>("http_domain", proxy_parameters);
+    http_proxy_.password =
+        ssf::helpers::GetField<std::string>("http_password", proxy_parameters);
+    http_proxy_.reuse_ntlm =
+        (ssf::helpers::GetField<std::string>("http_reuse_ntlm",
+                                             proxy_parameters) == "true");
+    http_proxy_.reuse_kerb =
+        (ssf::helpers::GetField<std::string>("http_reuse_kerb",
+                                             proxy_parameters) == "true");
   }
 
-  proxy_enabled_ = true;
+  // socks proxy config
+  auto socks_version =
+      ssf::helpers::GetField<std::string>("socks_version", proxy_parameters);
+  auto socks_host =
+      ssf::helpers::GetField<std::string>("socks_host", proxy_parameters);
+  auto socks_port =
+      ssf::helpers::GetField<std::string>("socks_port", proxy_parameters);
+  if (!socks_version.empty() && !socks_host.empty() && !socks_port.empty()) {
+    proxy_enabled_ = true;
 
-  http_proxy_.host = http_host;
-  http_proxy_.port = http_port;
-  http_proxy_.username =
-      ssf::helpers::GetField<std::string>("http_username", proxy_parameters);
-  http_proxy_.domain =
-      ssf::helpers::GetField<std::string>("http_domain", proxy_parameters);
-  http_proxy_.password =
-      ssf::helpers::GetField<std::string>("http_password", proxy_parameters);
-  http_proxy_.reuse_ntlm = (ssf::helpers::GetField<std::string>(
-                                "http_reuse_ntlm", proxy_parameters) == "true");
-  http_proxy_.reuse_kerb = (ssf::helpers::GetField<std::string>(
-                                "http_reuse_kerb", proxy_parameters) == "true");
+    socks_proxy_.version = socks_version;
+    socks_proxy_.host = socks_host;
+    socks_proxy_.port = socks_port;
+  }
 }
 
 bool ProxyEndpointContext::HttpProxyEnabled() const {
-  return proxy_enabled_ && !http_proxy_.host.empty() &&
-         !http_proxy_.port.empty();
+  return proxy_enabled_ && http_proxy_.IsSet();
+}
+
+bool ProxyEndpointContext::SocksProxyEnabled() const {
+  return proxy_enabled_ && socks_proxy_.IsSet();
 }
 
 bool ProxyEndpointContext::UpdateRemoteHost(const LayerParameters& parameters) {
@@ -74,7 +101,9 @@ bool ProxyEndpointContext::UpdateRemoteHost(const LayerParameters& parameters) {
 bool ProxyEndpointContext::operator==(const ProxyEndpointContext& rhs) const {
   return proxy_enabled_ == rhs.proxy_enabled_ &&
          http_proxy_.host == rhs.http_proxy_.host &&
-         http_proxy_.port == rhs.http_proxy_.port;
+         http_proxy_.port == rhs.http_proxy_.port &&
+         socks_proxy_.host == rhs.socks_proxy_.host &&
+         socks_proxy_.port == rhs.socks_proxy_.port;
 }
 
 bool ProxyEndpointContext::operator!=(const ProxyEndpointContext& rhs) const {
@@ -82,7 +111,8 @@ bool ProxyEndpointContext::operator!=(const ProxyEndpointContext& rhs) const {
 }
 
 bool ProxyEndpointContext::operator<(const ProxyEndpointContext& rhs) const {
-  return http_proxy_.host < rhs.http_proxy_.host;
+  return (http_proxy_.host < rhs.http_proxy_.host) &&
+         (socks_proxy_.host < rhs.socks_proxy_.host);
 }
 
 }  // proxy

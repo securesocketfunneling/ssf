@@ -10,7 +10,7 @@ namespace ssf {
 namespace layer {
 namespace proxy {
 
-NtlmAuthStrategy::NtlmAuthStrategy(const Proxy& proxy_ctx)
+NtlmAuthStrategy::NtlmAuthStrategy(const HttpProxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating), p_impl_(nullptr) {
 #if defined(WIN32)
   p_impl_.reset(new SSPIAuthImpl(SSPIAuthImpl::kNTLM, proxy_ctx));
@@ -31,11 +31,9 @@ NtlmAuthStrategy::NtlmAuthStrategy(const Proxy& proxy_ctx)
 std::string NtlmAuthStrategy::AuthName() const { return "NTLM"; }
 
 bool NtlmAuthStrategy::Support(const HttpResponse& response) const {
-  auto auth_name = AuthName();
   return p_impl_.get() != nullptr &&
          status_ != Status::kAuthenticationFailure &&
-         (response.HeaderValueBeginWith("Proxy-Authenticate", auth_name) ||
-          response.HeaderValueBeginWith("WWW-Authenticate", auth_name));
+         response.IsAuthenticationAllowed(AuthName());
 }
 
 void NtlmAuthStrategy::ProcessResponse(const HttpResponse& response) {
