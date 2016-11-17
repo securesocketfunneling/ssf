@@ -9,8 +9,8 @@ namespace v5 {
 
 Reply::Reply()
     : version_(static_cast<uint8_t>(Socks::Version::kV5)),
-      addr_type_(0x00),
       reserved_(0x00),
+      addr_type_(0x00),
       domain_length_(0),
       domain_(0),
       port_high_byte_(0),

@@ -119,9 +119,9 @@ class AsyncSocksConnectOp {
         p_local_endpoint_(p_local_endpoint),
         peer_endpoint_(std::move(peer_endpoint)),
         handler_(std::move(handler)),
+        p_session_initializer_(new SocksSessionInitializer()),
         p_buffer_(new std::vector<uint8_t>()),
-        p_expected_response_size_(new uint32_t(0)),
-        p_session_initializer_(new SocksSessionInitializer()) {}
+        p_expected_response_size_(new uint32_t(0)) {}
 
   AsyncSocksConnectOp(const AsyncSocksConnectOp& other)
       : coro_(other.coro_),
@@ -129,9 +129,9 @@ class AsyncSocksConnectOp {
         p_local_endpoint_(other.p_local_endpoint_),
         peer_endpoint_(other.peer_endpoint_),
         handler_(other.handler_),
+        p_session_initializer_(other.p_session_initializer_),
         p_buffer_(other.p_buffer_),
-        p_expected_response_size_(other.p_expected_response_size_),
-        p_session_initializer_(other.p_session_initializer_) {}
+        p_expected_response_size_(other.p_expected_response_size_) {}
 
   AsyncSocksConnectOp(AsyncSocksConnectOp&& other)
       : coro_(std::move(other.coro_)),
@@ -139,9 +139,9 @@ class AsyncSocksConnectOp {
         p_local_endpoint_(other.p_local_endpoint_),
         peer_endpoint_(std::move(other.peer_endpoint_)),
         handler_(std::move(other.handler_)),
+        p_session_initializer_(other.p_session_initializer_),
         p_buffer_(other.p_buffer_),
-        p_expected_response_size_(other.p_expected_response_size_),
-        p_session_initializer_(other.p_session_initializer_) {}
+        p_expected_response_size_(other.p_expected_response_size_) {}
 
   inline ConnectHandler& handler() const { return handler_; }
 

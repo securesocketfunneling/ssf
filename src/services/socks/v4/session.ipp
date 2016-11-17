@@ -56,10 +56,10 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 
   // Dispatch request according to its command
   switch (request_.command()) {
-    case Request::Command::kConnect:
+    case static_cast<uint8_t>(Request::Command::kConnect):
       DoConnectRequest();
       break;
-    case Request::Command::kBind:
+    case static_cast<uint8_t>(Request::Command::kBind):
       DoBindRequest();
       break;
     default:
