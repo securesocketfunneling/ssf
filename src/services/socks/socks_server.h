@@ -52,8 +52,16 @@ class SocksServer : public BaseService<Demux> {
     if (!parameters.count("local_port")) {
       return SocksServerPtr(nullptr);
     } else {
-      return std::shared_ptr<SocksServer>(new SocksServer(
-          io_service, fiber_demux, std::stoul(parameters["local_port"])));
+      try {
+        uint32_t local_port = std::stoul(parameters["local_port"]);
+        return std::shared_ptr<SocksServer>(
+            new SocksServer(io_service, fiber_demux, local_port));
+      }
+      catch (const std::exception&) {
+        SSF_LOG(kLogError)
+            << "microservice[socks]: cannot extract port parameter";
+        return SocksServerPtr(nullptr);
+      }
     }
   }
 
