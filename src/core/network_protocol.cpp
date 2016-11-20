@@ -13,7 +13,8 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientQuery(
   return GenerateClientTLSQuery(remote_addr, remote_port, ssf_config,
                                 circuit_nodes);
 #elif TCP_ONLY_LINK
-  return GenerateClientTCPQuery(remote_addr, remote_port, circuit_nodes);
+  return GenerateClientTCPQuery(remote_addr, remote_port, ssf_config,
+                                circuit_nodes);
 #endif
 }
 
@@ -23,7 +24,8 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerQuery(
 #ifdef TLS_OVER_TCP_LINK
   return GenerateServerTLSQuery(remote_addr, remote_port, ssf_config);
 #elif TCP_ONLY_LINK
-  return NetworkProtocol::GenerateServerTCPQuery(remote_addr, remote_port);
+  return NetworkProtocol::GenerateServerTCPQuery(remote_addr, remote_port,
+                                                 ssf_config);
 #endif
 }
 
@@ -106,6 +108,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerTCPQuery(
 
   ssf::layer::ParameterStack layer_parameters;
   layer_parameters.push_front(physical_parameters);
+  layer_parameters.push_front(proxy_param_layer);
 
   ssf::layer::ParameterStack default_parameters = {default_proxy_param_layer,
                                                    {}};
