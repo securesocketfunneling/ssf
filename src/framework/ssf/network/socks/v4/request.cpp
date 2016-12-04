@@ -45,7 +45,7 @@ uint16_t Request::port() const {
   port = port | port_low_byte_;
 
   return port;
-};
+}
 
 bool Request::Is4aVersion() const {
   return (address_[0] == 0) && (address_[1] == 0) && (address_[2] == 0) &&
