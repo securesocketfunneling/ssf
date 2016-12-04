@@ -46,12 +46,7 @@ class Request {
 
   boost::asio::ip::address_v6::bytes_type ipv6() const { return ipv6_; }
 
-  uint16_t port() const {
-    uint16_t port = port_high_byte_;
-    port = (port << 8) & 0xff00;
-    port = port | port_low_byte_;
-    return port;
-  }
+  uint16_t port() const;
 
   std::vector<boost::asio::const_buffer> ConstBuffers() const;
 

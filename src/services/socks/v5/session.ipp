@@ -7,6 +7,8 @@
 
 #include <boost/asio/basic_stream_socket.hpp>
 
+#include <ssf/utils/enum.h>
+
 namespace ssf {
 namespace socks {
 namespace v5 {
@@ -129,13 +131,12 @@ void Session<Demux>::DoConnectRequest() {
   boost::system::error_code ec;
   uint16_t port = request_.port();
 
-  if (request_.address_type() ==
-      static_cast<uint8_t>(Request::AddressType::kIPv4)) {
+  if (request_.address_type() == ToIntegral(Request::AddressType::kIPv4)) {
     boost::asio::ip::address_v4 address(request_.ipv4());
     app_server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
                               handler);
   } else if (request_.address_type() ==
-             static_cast<uint8_t>(Request::AddressType::kDNS)) {
+             ToIntegral(Request::AddressType::kDNS)) {
     boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::query query(
         std::string(request_.domain().data(), request_.domain().size()),
@@ -148,7 +149,7 @@ void Session<Demux>::DoConnectRequest() {
       app_server_.async_connect(*iterator, handler);
     }
   } else if (request_.address_type() ==
-             static_cast<uint8_t>(Request::AddressType::kDNS)) {
+             ToIntegral(Request::AddressType::kDNS)) {
     boost::asio::ip::address_v6 address(request_.ipv6());
     app_server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
                               handler);

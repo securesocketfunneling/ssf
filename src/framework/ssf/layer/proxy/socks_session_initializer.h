@@ -20,8 +20,7 @@ namespace proxy {
 class SocksSessionInitializer {
  public:
   using Buffer = std::vector<uint8_t>;
-  enum Status : int { kError = -1, kSuccess = 0, kContinue = 1 };
-  enum Stage : int { kConnect = 1, kProcessing = 2 };
+  enum class Status : int { kError = -1, kSuccess = 0, kContinue = 1 };
 
  public:
   SocksSessionInitializer();
@@ -32,8 +31,6 @@ class SocksSessionInitializer {
 
   inline Status status() { return status_; }
 
-  inline Stage stage() { return stage_; }
-
   void PopulateRequest(Buffer* p_request, uint32_t* p_expected_response_size,
                        boost::system::error_code& ec);
 
@@ -41,7 +38,6 @@ class SocksSessionInitializer {
 
  private:
   Status status_;
-  Stage stage_;
   std::string target_host_;
   uint16_t target_port_;
   ProxyEndpointContext proxy_ep_ctx_;

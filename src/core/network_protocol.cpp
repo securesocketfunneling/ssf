@@ -1,3 +1,5 @@
+#include <ssf/utils/enum.h>
+
 #include "common/config/config.h"
 
 #include "core/network_protocol.h"
@@ -177,8 +179,8 @@ ssf::layer::LayerParameters NetworkProtocol::ProxyConfigToLayerParameters(
            ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
           {"http_reuse_kerb",
            ssf_config.http_proxy().reuse_kerb() ? "true" : "false"},
-          {"socks_version", std::to_string(static_cast<uint8_t>(
-                                ssf_config.socks_proxy().version()))},
+          {"socks_version",
+           std::to_string(ToIntegral(ssf_config.socks_proxy().version()))},
           {"socks_host", ssf_config.socks_proxy().host()},
           {"socks_port", ssf_config.socks_proxy().port()}};
 }

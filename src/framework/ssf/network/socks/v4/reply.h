@@ -38,9 +38,6 @@ class Reply {
   std::array<boost::asio::mutable_buffer, 5> MutBuffer();
 
  private:
-  Status ErrorCodeToStatus(const boost::system::error_code& err);
-
- private:
   uint8_t null_byte_;
   uint8_t status_;
   uint8_t port_high_byte_;

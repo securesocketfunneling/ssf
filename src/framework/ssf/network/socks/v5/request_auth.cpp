@@ -2,19 +2,21 @@
 
 #include "ssf/network/socks/socks.h"
 
+#include "ssf/utils/enum.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
 namespace v5 {
 
 void RequestAuth::Init(AuthMethod method) {
-  version_ = static_cast<uint8_t>(Socks::Version::kV5);
+  version_ = ToIntegral(Socks::Version::kV5);
   auth_supported_count_ = 1;
-  auth_methods_.push_back(static_cast<uint8_t>(method));
+  auth_methods_.push_back(ToIntegral(method));
 }
 
-void RequestAuth::AddAuthMethod(uint8_t authMethod) {
-  auth_methods_.push_back(static_cast<uint8_t>(authMethod));
+void RequestAuth::AddAuthMethod(uint8_t auth_method) {
+  auth_methods_.push_back(auth_method);
 }
 
 std::array<boost::asio::mutable_buffer, 1> RequestAuth::MutBuffers() {
@@ -36,7 +38,7 @@ std::vector<boost::asio::const_buffer> RequestAuth::ConstBuffers() {
 
 bool RequestAuth::IsNoAuthPresent() {
   for (const auto& auth_method : auth_methods_) {
-    if (auth_method == static_cast<uint8_t>(AuthMethod::kNoAuth)) {
+    if (auth_method == ToIntegral(AuthMethod::kNoAuth)) {
       return true;
     }
   }

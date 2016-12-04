@@ -7,6 +7,8 @@
 
 #include "ssf/network/socks/socks.h"
 
+#include "ssf/utils/enum.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
@@ -14,8 +16,8 @@ namespace v5 {
 
 void Request::Init(const std::string& target_addr, uint16_t target_port,
                    boost::system::error_code& ec) {
-  version_ = static_cast<uint8_t>(Socks::Version::kV5);
-  command_ = static_cast<uint8_t>(Command::kConnect);
+  version_ = ToIntegral(Socks::Version::kV5);
+  command_ = ToIntegral(Command::kConnect);
   reserved_ = 0x00;
 
   boost::system::error_code addr_ec;
@@ -27,23 +29,30 @@ void Request::Init(const std::string& target_addr, uint16_t target_port,
     }
 
     // addr is a domain name
-    address_type_ = static_cast<uint8_t>(AddressType::kDNS);
+    address_type_ = ToIntegral(AddressType::kDNS);
     domain_length_ = static_cast<uint8_t>(target_addr.size());
     std::copy(target_addr.begin(), target_addr.end(),
               std::back_inserter(domain_));
   } else {
     // addr is an IP address
     if (ip_addr.is_v4()) {
-      address_type_ = static_cast<uint8_t>(AddressType::kIPv4);
+      address_type_ = ToIntegral(AddressType::kIPv4);
       ipv4_ = ip_addr.to_v4().to_bytes();
     } else {
-      address_type_ = static_cast<uint8_t>(AddressType::kIPv6);
+      address_type_ = ToIntegral(AddressType::kIPv6);
       ipv6_ = ip_addr.to_v6().to_bytes();
     }
   }
 
   port_high_byte_ = (target_port >> 8);
   port_low_byte_ = (target_port & 0x00ff);
+}
+
+uint16_t Request::port() const {
+  uint16_t port = port_high_byte_;
+  port = (port << 8) & 0xff00;
+  port = port | port_low_byte_;
+  return port;
 }
 
 std::vector<boost::asio::const_buffer> Request::ConstBuffers() const {

@@ -65,7 +65,7 @@ TEST_F(LoadConfigTest, DefaultValueTest) {
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), true);
 
   ASSERT_EQ(config_.socks_proxy().version(),
-            ssf::network::Socks::Version::kVUnknonw);
+            ssf::network::Socks::Version::kVUnknown);
   ASSERT_EQ(config_.socks_proxy().host(), "");
   ASSERT_EQ(config_.socks_proxy().port(), "");
 

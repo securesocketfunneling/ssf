@@ -104,7 +104,7 @@ class ReadRequestCoro : public boost::asio::coroutine {
         r_.set_name(boost::asio::buffer_cast<const char*>(p_stream_->data()));
         p_stream_->consume(length);
 
-        if (r_.is_4a_version()) {
+        if (r_.Is4aVersion()) {
           // Read Request variable size domain (from now, until '\0')
           yield boost::asio::async_read_until(c_, *p_stream_, '\0',
                                               std::move(*this));

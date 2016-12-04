@@ -7,6 +7,8 @@
 
 #include <ssf/log/log.h>
 
+#include <ssf/utils/enum.h>
+
 #include <boost/asio/basic_stream_socket.hpp>
 
 namespace ssf {
@@ -77,7 +79,7 @@ void Session<Demux>::DoConnectRequest() {
   boost::system::error_code ec;
   boost::asio::ip::tcp::endpoint endpoint;
 
-  if (request_.is_4a_version()) {
+  if (request_.Is4aVersion()) {
     // In the 4a version, the address needs to be resolved
     boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::query query(

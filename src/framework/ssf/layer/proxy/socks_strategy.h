@@ -26,19 +26,23 @@ class SocksStrategy {
 
   virtual void Init(boost::system::error_code& ec) = 0;
 
+  // @param p_expected_response_size response size in bytes expected from this
+  //   request
   virtual void PopulateRequest(const std::string& host, uint16_t port,
                                Buffer* p_request,
                                uint32_t* p_expected_response_size,
                                boost::system::error_code& ec) = 0;
+
   virtual void ProcessResponse(const Buffer& response,
                                boost::system::error_code& ec) = 0;
 
   State state() const { return state_; };
+  void set_state(State state) { state_ = state; }
 
  protected:
   SocksStrategy(State state) : state_(state) {}
 
- protected:
+ private:
   State state_;
 };
 

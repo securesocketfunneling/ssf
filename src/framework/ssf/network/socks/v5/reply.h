@@ -11,6 +11,8 @@
 
 #include <boost/system/error_code.hpp>
 
+#include "ssf/utils/enum.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
@@ -44,14 +46,12 @@ class Reply {
 
   uint8_t status() const { return status_; }
 
-  bool AccessGranted() const {
-    return status_ == static_cast<uint8_t>(Status::kGranted);
-  }
+  bool AccessGranted() const { return status_ == ToIntegral(Status::kGranted); }
 
   bool IsAddrTypeSet() const {
-    return addr_type_ == static_cast<uint8_t>(AddressType::kIPv4) ||
-           addr_type_ == static_cast<uint8_t>(AddressType::kDNS) ||
-           addr_type_ == static_cast<uint8_t>(AddressType::kIPv6);
+    return addr_type_ == ToIntegral(AddressType::kIPv4) ||
+           addr_type_ == ToIntegral(AddressType::kDNS) ||
+           addr_type_ == ToIntegral(AddressType::kIPv6);
   }
 
   bool IsPortSet() const { return port_high_byte_ != 0 || port_low_byte_ != 0; }
@@ -73,9 +73,6 @@ class Reply {
   std::vector<boost::asio::mutable_buffer> MutIPV6Buffers();
   std::vector<boost::asio::mutable_buffer> MutDomainLengthBuffers();
   std::vector<boost::asio::mutable_buffer> MutDomainBuffers();
-
- private:
-  Status ErrorCodeToStatus(const boost::system::error_code& err);
 
  private:
   uint8_t version_;

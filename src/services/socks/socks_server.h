@@ -4,16 +4,15 @@
 #include <string>
 #include <map>
 
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/asio.hpp>  // NOLINT
 
+#include <ssf/log/log.h>
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
 #include "services/base_service.h"
-
-#include "common/boost/fiber/stream_fiber.hpp"
-#include "common/boost/fiber/basic_fiber_demux.hpp"
 
 #include "core/factories/service_factory.h"
 
@@ -28,44 +27,43 @@ namespace socks {
 template <typename Demux>
 class SocksServer : public BaseService<Demux> {
  private:
-  typedef typename Demux::local_port_type local_port_type;
+  using local_port_type = typename Demux::local_port_type;
 
-  typedef std::shared_ptr<SocksServer> SocksServerPtr;
-  typedef ItemManager<BaseSessionPtr> SessionManager;
-  typedef typename ssf::BaseService<Demux>::Parameters Parameters;
-  typedef typename ssf::BaseService<Demux>::demux demux;
-  typedef typename ssf::BaseService<Demux>::fiber fiber;
-  typedef typename ssf::BaseService<Demux>::fiber_acceptor fiber_acceptor;
-  typedef typename ssf::BaseService<Demux>::endpoint endpoint;
+  using SocksServerPtr = std::shared_ptr<SocksServer>;
+  using SessionManager = ItemManager<BaseSessionPtr>;
+  using Parameters = typename ssf::BaseService<Demux>::Parameters;
+  using demux = typename ssf::BaseService<Demux>::demux;
+  using fiber = typename ssf::BaseService<Demux>::fiber;
+  using fiber_acceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
+  using endpoint = typename ssf::BaseService<Demux>::endpoint;
 
  public:
-  // SSF service ID for identification in the service factory
+  // Service ID in the service factory
   enum { factory_id = 2 };
 
  public:
   SocksServer(const SocksServer&) = delete;
   SocksServer& operator=(const SocksServer&) = delete;
 
-  /// Create a new instance of the service
+  // Create a new instance of the service
   static SocksServerPtr create(boost::asio::io_service& io_service,
                                demux& fiber_demux, Parameters parameters) {
     if (!parameters.count("local_port")) {
       return SocksServerPtr(nullptr);
-    } else {
-      try {
-        uint32_t local_port = std::stoul(parameters["local_port"]);
-        return std::shared_ptr<SocksServer>(
-            new SocksServer(io_service, fiber_demux, local_port));
-      }
-      catch (const std::exception&) {
-        SSF_LOG(kLogError)
-            << "microservice[socks]: cannot extract port parameter";
-        return SocksServerPtr(nullptr);
-      }
+    }
+
+    try {
+      uint32_t local_port = std::stoul(parameters["local_port"]);
+      return std::shared_ptr<SocksServer>(
+          new SocksServer(io_service, fiber_demux, local_port));
+    } catch (const std::exception&) {
+      SSF_LOG(kLogError)
+          << "microservice[socks]: cannot extract port parameter";
+      return SocksServerPtr(nullptr);
     }
   }
 
-  /// Function used to register the micro service to the given factory
+  // Register the microservice to the given factory
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
@@ -76,7 +74,7 @@ class SocksServer : public BaseService<Demux> {
     p_factory->RegisterServiceCreator(factory_id, &SocksServer::create);
   }
 
-  /// Function used to generate create service request
+  // Generate create service request
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
       uint16_t local_port) {
     ssf::services::admin::CreateServiceRequest<demux> create(factory_id);
@@ -86,13 +84,11 @@ class SocksServer : public BaseService<Demux> {
   }
 
  public:
-  /// Start the service instance
+  // BaseService
   void start(boost::system::error_code& ec) override;
 
-  /// Stop the service instance
   void stop(boost::system::error_code& ec) override;
 
-  /// Return the type of the service
   uint32_t service_type_id() override;
 
  private:

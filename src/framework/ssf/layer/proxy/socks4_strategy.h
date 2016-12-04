@@ -18,6 +18,7 @@ class Socks4Strategy : public SocksStrategy {
  public:
   Socks4Strategy();
 
+  // SocksStrategy
   void Init(boost::system::error_code& ec) override;
 
   void PopulateRequest(const std::string& host, uint16_t port,

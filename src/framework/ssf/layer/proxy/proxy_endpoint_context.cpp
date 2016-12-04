@@ -26,9 +26,9 @@ boost::asio::ip::tcp::endpoint Proxy::ToTcpEndpoint(
 
 bool Proxy::IsSet() const { return !host.empty() && !port.empty(); }
 
-HttpProxy::HttpProxy(): Proxy() {}
+HttpProxy::HttpProxy() : Proxy() {}
 
-SocksProxy::SocksProxy(): Proxy() {}
+SocksProxy::SocksProxy() : Proxy() {}
 
 ProxyEndpointContext::ProxyEndpointContext()
     : proxy_enabled_(false),

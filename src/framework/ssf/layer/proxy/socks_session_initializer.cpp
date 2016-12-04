@@ -13,7 +13,6 @@ void SocksSessionInitializer::Reset(const std::string& target_host,
                                     const ProxyEndpointContext& proxy_ep_ctx,
                                     boost::system::error_code& ec) {
   status_ = Status::kContinue;
-  stage_ = Stage::kConnect;
   target_host_ = target_host;
   proxy_ep_ctx_ = proxy_ep_ctx;
 

@@ -2,13 +2,15 @@
 
 #include "ssf/network/socks/socks.h"
 
+#include "ssf/utils/enum.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
 namespace v5 {
 
 Reply::Reply()
-    : version_(static_cast<uint8_t>(Socks::Version::kV5)),
+    : version_(ToIntegral(Socks::Version::kV5)),
       reserved_(0x00),
       addr_type_(0x00),
       domain_length_(0),
@@ -17,12 +19,16 @@ Reply::Reply()
       port_low_byte_(0) {}
 
 Reply::Reply(const boost::system::error_code& err)
-    : version_(static_cast<uint8_t>(Socks::Version::kV5)),
-      status_(static_cast<uint8_t>(ErrorCodeToStatus(err))),
-      reserved_(0x00) {}
+    : version_(ToIntegral(Socks::Version::kV5)),
+      status_(ToIntegral(Status::kFailed)),
+      reserved_(0x00) {
+  if (!err) {
+    status_ = ToIntegral(Status::kGranted);
+  }
+}
 
 void Reply::Reset() {
-  version_ = static_cast<uint8_t>(Socks::Version::kV5);
+  version_ = ToIntegral(Socks::Version::kV5);
   addr_type_ = 0x00;
   reserved_ = 0x00;
   domain_length_ = 0;
@@ -40,18 +46,18 @@ bool Reply::IsComplete() const {
 }
 
 void Reply::set_ipv4(boost::asio::ip::address_v4::bytes_type ipv4) {
-  addr_type_ = static_cast<uint8_t>(AddressType::kIPv4);
+  addr_type_ = ToIntegral(AddressType::kIPv4);
   ipv4_ = ipv4;
 }
 
 void Reply::set_domain(const std::vector<char>& domain) {
-  addr_type_ = static_cast<uint8_t>(AddressType::kDNS);
+  addr_type_ = ToIntegral(AddressType::kDNS);
   domain_length_ = static_cast<uint8_t>(domain.size());
   domain_ = domain;
 }
 
 void Reply::set_ipv6(boost::asio::ip::address_v6::bytes_type ipv6) {
-  addr_type_ = static_cast<uint8_t>(AddressType::kIPv6);
+  addr_type_ = ToIntegral(AddressType::kIPv6);
   ipv6_ = ipv6;
 }
 
@@ -85,15 +91,6 @@ std::vector<boost::asio::const_buffer> Reply::Buffers() const {
   buf.push_back(boost::asio::buffer(&port_low_byte_, 1));
 
   return buf;
-}
-
-Reply::Status Reply::ErrorCodeToStatus(const boost::system::error_code& err) {
-  Status s = Status::kFailed;
-
-  if (!err) {
-    s = Status::kGranted;
-  }
-  return s;
 }
 
 std::vector<boost::asio::mutable_buffer> Reply::MutBaseBuffers() {

@@ -45,6 +45,11 @@ class Config {
    *         "reuse_nego": true
    *       }
    *     },
+   *     "socks_proxy": {
+   *       "version": 0,
+   *       "host": "",
+   *       "port": ""
+   *     },
    *     "services": {
    *       "datagram_forwarder": { "enable": true },
    *       "datagram_listener": {

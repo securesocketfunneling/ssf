@@ -58,23 +58,27 @@ class SocksConnectOp {
                                             connect_ec);
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError)
-              << "network[proxy]: socks session initializer could not "
+              << "network[socks proxy]: session initializer could not "
                  "generate request";
           break;
         }
 
-        boost::asio::write(stream_, boost::asio::buffer(buffer));
+        if (buffer.size() > 0) {
+          boost::asio::write(stream_, boost::asio::buffer(buffer));
+        }
 
         buffer.resize(expected_response_size);
 
         // read response
-        boost::asio::read(stream_, boost::asio::buffer(buffer));
+        if (buffer.size() > 0) {
+          boost::asio::read(stream_, boost::asio::buffer(buffer));
 
-        session_initializer.ProcessResponse(buffer, connect_ec);
+          session_initializer.ProcessResponse(buffer, connect_ec);
+        }
 
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError)
-              << "network[proxy]: socks session initializer could not "
+              << "network[socks proxy]: session initializer could not "
                  "process response";
           break;
         }
@@ -87,13 +91,14 @@ class SocksConnectOp {
       }
 
       SSF_LOG(kLogError)
-          << "network[proxy]: connection through socks proxy failed";
+          << "network[socks proxy]: connection through socks proxy failed";
       stream_.close(close_ec);
       connect_ec.assign(ssf::error::broken_pipe,
                         ssf::error::get_ssf_category());
     } catch (const std::exception& err) {
-      SSF_LOG(kLogError) << "network[proxy]: connection through proxy failed ("
-                         << err.what() << ")";
+      SSF_LOG(kLogError)
+          << "network[socks proxy]: connection through proxy failed ("
+          << err.what() << ")";
       stream_.close(close_ec);
       ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
       return;
@@ -181,25 +186,29 @@ class AsyncSocksConnectOp {
             p_buffer_.get(), p_expected_response_size_.get(), connect_ec);
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError)
-              << "network[proxy]: socks session initializer could not "
+              << "network[socks proxy]: session initializer could not "
                  "generate request";
           break;
         }
 
-        yield boost::asio::async_write(stream_, boost::asio::buffer(*p_buffer_),
-                                       std::move(*this));
+        if (p_buffer_->size() > 0) {
+          yield boost::asio::async_write(
+              stream_, boost::asio::buffer(*p_buffer_), std::move(*this));
+        }
 
         p_buffer_->resize(*p_expected_response_size_);
 
         // read response
-        yield boost::asio::async_read(stream_, boost::asio::buffer(*p_buffer_),
-                                      std::move(*this));
+        if (p_buffer_->size() > 0) {
+          yield boost::asio::async_read(
+              stream_, boost::asio::buffer(*p_buffer_), std::move(*this));
 
-        p_session_initializer_->ProcessResponse(*p_buffer_, connect_ec);
+          p_session_initializer_->ProcessResponse(*p_buffer_, connect_ec);
+        }
 
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError)
-              << "network[proxy]: socks session initializer could not "
+              << "network[socks proxy]: session initializer could not "
                  "process response";
           break;
         }
@@ -213,7 +222,7 @@ class AsyncSocksConnectOp {
       }
 
       SSF_LOG(kLogError)
-          << "network[proxy]: connection through socks proxy failed";
+          << "network[socks proxy]: connection through socks proxy failed";
       stream_.close(close_ec);
       connect_ec.assign(ssf::error::broken_pipe,
                         ssf::error::get_ssf_category());

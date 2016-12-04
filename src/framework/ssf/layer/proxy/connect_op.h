@@ -40,6 +40,9 @@ class ConnectOp {
                                        std::move(peer_endpoint_))(ec);
       return;
     }
+
+    ec.assign(ssf::error::function_not_supported,
+              ssf::error::get_ssf_category());
   }
 
  private:
@@ -90,6 +93,10 @@ class AsyncConnectOp {
           std::move(handler_))();
       return;
     }
+
+    boost::system::error_code ec(ssf::error::function_not_supported,
+                                 ssf::error::get_ssf_category());
+    handler_(ec);
   }
 
  private:

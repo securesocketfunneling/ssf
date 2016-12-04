@@ -1,6 +1,7 @@
 #include "ssf/error/error.h"
 #include "ssf/layer/proxy/socks5_strategy.h"
 #include "ssf/log/log.h"
+#include "ssf/utils/enum.h"
 
 #include "ssf/network/socks/v5/request_auth.h"
 #include "ssf/network/socks/v5/reply_auth.h"
@@ -14,7 +15,7 @@ namespace proxy {
 Socks5Strategy::Socks5Strategy() : SocksStrategy(State::kAuthenticating) {}
 
 void Socks5Strategy::Init(boost::system::error_code& ec) {
-  state_ = State::kAuthenticating;
+  set_state(State::kAuthenticating);
   connect_reply_.Reset();
 }
 
@@ -22,7 +23,7 @@ void Socks5Strategy::PopulateRequest(const std::string& target_host,
                                      uint16_t target_port, Buffer* p_request,
                                      uint32_t* p_expected_response_size,
                                      boost::system::error_code& ec) {
-  switch (state_) {
+  switch (state()) {
     case State::kAuthenticating:
       GenAuthRequest(p_request, p_expected_response_size, ec);
       break;
@@ -43,7 +44,7 @@ void Socks5Strategy::PopulateRequest(const std::string& target_host,
 
 void Socks5Strategy::ProcessResponse(const Buffer& response,
                                      boost::system::error_code& ec) {
-  switch (state_) {
+  switch (state()) {
     case State::kAuthenticating:
       ProcessAuthResponse(response, ec);
       break;
@@ -78,14 +79,13 @@ void Socks5Strategy::ProcessAuthResponse(const Buffer& response,
                            boost::asio::buffer(response));
 
   if (auth_reply.auth_method() !=
-      static_cast<uint8_t>(AuthRequest::AuthMethod::kNoAuth)) {
-    SSF_LOG(kLogError)
-        << "network[socks proxy]: no authentication strategy implemented";
-    state_ = State::kError;
+      ToIntegral(AuthRequest::AuthMethod::kNoAuth)) {
+    SSF_LOG(kLogError) << "network[socks5 proxy]: authentication not supported";
+    set_state(State::kError);
     ec.assign(ssf::error::connection_aborted, ssf::error::get_ssf_category());
     return;
   }
-  state_ = State::kConnecting;
+  set_state(State::kConnecting);
 }
 
 void Socks5Strategy::GenConnectRequest(const std::string& host, uint16_t port,
@@ -132,10 +132,10 @@ void Socks5Strategy::ProcessConnectResponse(const Buffer& response,
   if (connect_reply_.IsComplete()) {
     if (connect_reply_.AccessGranted()) {
       SSF_LOG(kLogDebug) << "network[socks5 proxy]: connected";
-      state_ = State::kConnected;
+      set_state(State::kConnected);
     } else {
       SSF_LOG(kLogError) << "network[socks5 proxy]: connection failed";
-      state_ = State::kError;
+      set_state(State::kError);
     }
   }
 }

@@ -32,22 +32,13 @@ class Request {
 
   std::string domain() const { return domain_; };
 
-  uint16_t port() const {
-    uint16_t port = port_high_byte_;
-    port = (port << 8) & 0xff00;
-    port = port | port_low_byte_;
-
-    return port;
-  };
-
-  bool is_4a_version() const {
-    return (address_[0] == 0) && (address_[1] == 0) && (address_[2] == 0) &&
-           (address_[3] != 0);
-  }
+  uint16_t port() const;
 
   void set_name(const std::string& name) { name_ = name; }
 
   void set_domain(const std::string& domain) { domain_ = domain; }
+
+  bool Is4aVersion() const;
 
   boost::asio::ip::tcp::endpoint Endpoint() const;
 

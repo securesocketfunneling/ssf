@@ -12,6 +12,8 @@
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
+#include <ssf/utils/enum.h>
+
 #include "ssf/network/socks/v5/request.h"
 #include "ssf/network/socks/v5/request_auth.h"
 #include "ssf/network/socks/v5/reply.h"
@@ -169,14 +171,13 @@ class ReadRequestCoro : public boost::asio::coroutine {
         total_length_ += length;
 
         // Read the address
-        if (r_.address_type() ==
-            static_cast<uint8_t>(Request::AddressType::kIPv4)) {
+        if (r_.address_type() == ToIntegral(Request::AddressType::kIPv4)) {
           // Read IPv4 address
           yield boost::asio::async_read(c_, r_.AddressBuffer(),
                                         std::move(*this));
           total_length_ += length;
         } else if (r_.address_type() ==
-                   static_cast<uint8_t>(Request::AddressType::kDNS)) {
+                   ToIntegral(Request::AddressType::kDNS)) {
           // Read length of the domain name
           yield boost::asio::async_read(c_, r_.DomainLengthBuffer(),
                                         std::move(*this));
@@ -186,7 +187,7 @@ class ReadRequestCoro : public boost::asio::coroutine {
                                         std::move(*this));
           total_length_ += length;
         } else if (r_.address_type() ==
-                   static_cast<uint8_t>(Request::AddressType::kIPv6)) {
+                   ToIntegral(Request::AddressType::kIPv6)) {
           // Read IPv6 address
           yield boost::asio::async_read(c_, r_.AddressBuffer(),
                                         std::move(*this));

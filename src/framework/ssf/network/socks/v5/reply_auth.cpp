@@ -2,6 +2,8 @@
 
 #include "ssf/network/socks/socks.h"
 
+#include "ssf/utils/enum.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
@@ -10,8 +12,7 @@ namespace v5 {
 AuthReply::AuthReply() {}
 
 AuthReply::AuthReply(uint8_t authMethod)
-    : version_(static_cast<uint8_t>(Socks::Version::kV5)),
-      auth_method_(authMethod) {}
+    : version_(ToIntegral(Socks::Version::kV5)), auth_method_(authMethod) {}
 
 std::array<boost::asio::const_buffer, 2> AuthReply::ConstBuffer() const {
   std::array<boost::asio::const_buffer, 2> buf = {{

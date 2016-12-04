@@ -69,7 +69,7 @@ class SocksProxy {
   void Log() const;
 
   inline bool IsSet() const {
-    return version_ != Socks::Version::kVUnknonw && !host_.empty() &&
+    return version_ != Socks::Version::kVUnknown && !host_.empty() &&
            !port_.empty();
   }
 
