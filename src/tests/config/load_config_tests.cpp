@@ -65,9 +65,9 @@ TEST_F(LoadConfigTest, DefaultValueTest) {
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), true);
 
   ASSERT_EQ(config_.socks_proxy().version(),
-            ssf::network::Socks::Version::kVUnknown);
+            ssf::network::Socks::Version::kV5);
   ASSERT_EQ(config_.socks_proxy().host(), "");
-  ASSERT_EQ(config_.socks_proxy().port(), "");
+  ASSERT_EQ(config_.socks_proxy().port(), "1080");
 
   ASSERT_TRUE(config_.services().datagram_forwarder().enabled());
   ASSERT_TRUE(config_.services().datagram_listener().enabled());

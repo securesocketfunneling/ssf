@@ -26,8 +26,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerQuery(
 #ifdef TLS_OVER_TCP_LINK
   return GenerateServerTLSQuery(remote_addr, remote_port, ssf_config);
 #elif TCP_ONLY_LINK
-  return NetworkProtocol::GenerateServerTCPQuery(remote_addr, remote_port,
-                                                 ssf_config);
+  return GenerateServerTCPQuery(remote_addr, remote_port, ssf_config);
 #endif
 }
 

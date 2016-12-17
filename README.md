@@ -194,7 +194,7 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
       "dh_path": "./certs/dh4096.pem",
       "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
     },
-    "http_proxy" : {
+    "http_proxy": {
       "host": "",
       "port": "",
       "credentials": {
@@ -204,6 +204,11 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
         "reuse_ntlm": true,
         "reuse_nego": true
       }
+    },
+    "socks_proxy": {
+      "version": 5,
+      "host": "",
+      "port": "1080"
     },
     "services": {
       "datagram_forwarder": { "enable": true },
@@ -228,22 +233,28 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
 }
 ```
 
-* _tls.ca_cert_path_      : relative or absolute path to the CA certificate file
-* _tls.cert_path_         : relative or absolute path to the instance certificate file
-* _tls.key_path_          : relative or absolute path to the private key file
-* _tls.dh_path_           : relative or absolute path to the Diffie-Hellman file
-* _tls.cipher_alg_        : cipher algorithm
-* _http_proxy.host_                   : HTTP proxy host
-* _http_proxy.port_                   : HTTP proxy port
-* _http_proxy.credentials.username_   : proxy username credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
-* _http_proxy.credentials.password_   : proxy password credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)
-* _http_proxy.credentials.domain_     : user domain (NTLM and Negotiate auth on Windows only)
-* _http_proxy.credentials.reuse_ntlm_ : reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)
-* _http_proxy.credentials.reuse_kerb_ : reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO)
-* _services.*.enable_   : [enable/disable microservice](#microservices)
-* _services.*.gateway_ports_ : enable/disable gateway ports
-* _services.shell.path_ : binary path used for shell creation (optional)
-* _services.shell.args_ : binary arguments used for shell creation (optional)
+| Configuration key                 | Description                                                                                               |
+|:----------------------------------|:----------------------------------------------------------------------------------------------------------|
+| tls.ca_cert_path                  | relative or absolute path to the CA certificate file                                                      |
+| tls.cert_path                     | relative or absolute path to the instance certificate file                                                |
+| key_path                          | relative or absolute path to the private key file                                                         |
+| tls.dh_path                       | relative or absolute path to the Diffie-Hellman file                                                      |
+| tls.cipher_alg                    | cipher algorithm                                                                                          |
+| http_proxy.host                   | HTTP proxy host                                                                                           |
+| http_proxy.port                   | HTTP proxy port                                                                                           |
+| http_proxy.credentials.username   | proxy username credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)  |
+| http_proxy.credentials.password   | proxy password credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)  |
+| http_proxy.credentials.domain     | user domain (NTLM and Negotiate auth on Windows only)                                                     |
+| http_proxy.credentials.reuse_ntlm | reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)                        |
+| http_proxy.credentials.reuse_kerb | reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO) |
+| socks_proxy.version               | SOCKS version (4 or 5)                                                                                    |
+| socks_proxy.host                  | SOCKS proxy host                                                                                          |
+| socks_proxy.port                  | SOCKS proxy port                                                                                          |
+| services.*.enable                 | [enable/disable microservice](#microservices)                                                             |
+| services.*.gateway_ports          | enable/disable gateway ports                                                                              |
+| services.shell.path               | binary path used for shell creation                                                                       |
+| services.shell.args               | binary arguments used for shell creation                                                                  |
+
 
 ## How to configure
 

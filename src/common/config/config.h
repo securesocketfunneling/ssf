@@ -26,7 +26,7 @@ class Config {
    * Format example (default values):
    * {
    *   "ssf": {
-   *     "tls" : {
+   *     "tls": {
    *       "ca_cert_path": "./certs/trusted/ca.crt",
    *       "cert_path": "./certs/certificate.crt",
    *       "key_path": "./certs/private.key",
@@ -34,7 +34,7 @@ class Config {
    *       "dh_path": "./certs/dh4096.pem",
    *       "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
    *     },
-   *     "http_proxy" : {
+   *     "http_proxy": {
    *       "host": "",
    *       "port": "",
    *       "credentials": {
@@ -46,9 +46,9 @@ class Config {
    *       }
    *     },
    *     "socks_proxy": {
-   *       "version": 0,
+   *       "version": 5,
    *       "host": "",
-   *       "port": ""
+   *       "port": "1080"
    *     },
    *     "services": {
    *       "datagram_forwarder": { "enable": true },
