@@ -51,12 +51,28 @@ class FibersToSockets : public BaseService<Demux> {
     if (!parameters.count("local_port") || !parameters.count("remote_ip") ||
         !parameters.count("remote_port")) {
       return FibersToSocketsPtr(nullptr);
-    } else {
-      return std::shared_ptr<FibersToSockets>(new FibersToSockets(
-          io_service, fiber_demux, std::stoul(parameters["local_port"]),
-          parameters["remote_ip"],
-          (uint16_t)std::stoul(parameters["remote_port"])));
     }
+
+    uint32_t local_port;
+    uint32_t remote_port;
+    try {
+      local_port = std::stoul(parameters["local_port"]);
+      remote_port = std::stoul(parameters["remote_port"]);
+    } catch (const std::exception&) {
+      SSF_LOG(kLogError) << "microservice[stream_forwarder]: cannot extract "
+                            "port parameters";
+      return FibersToSocketsPtr(nullptr);
+    }
+
+    if (remote_port > 65535) {
+      SSF_LOG(kLogError) << "microservice[stream_forwarder]: local port ("
+                         << remote_port << ") out of range ";
+      return FibersToSocketsPtr(nullptr);
+    }
+
+    return std::shared_ptr<FibersToSockets>(new FibersToSockets(
+        io_service, fiber_demux, local_port, parameters["remote_ip"],
+        static_cast<uint16_t>(remote_port)));
   }
 
   static void RegisterToServiceFactory(

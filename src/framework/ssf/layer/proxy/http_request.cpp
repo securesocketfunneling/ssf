@@ -20,7 +20,7 @@ void HttpRequest::AddHeader(const std::string& name, const std::string& value) {
   headers_[name] = value;
 }
 
-std::string HttpRequest::Header(const std::string& name) {
+std::string HttpRequest::GetHeaderValue(const std::string& name) {
   HeadersMap::const_iterator it = headers_.find(name);
   if (it == headers_.end()) {
     // header not found
@@ -30,17 +30,20 @@ std::string HttpRequest::Header(const std::string& name) {
   return it->second;
 }
 
-std::string HttpRequest::GenerateRequest() const {
+std::string HttpRequest::Serialize() const {
   std::stringstream ss_request;
   std::string eol("\r\n");
 
-  ss_request << "CONNECT " << uri_ << " HTTP/1.1" << eol;
+  ss_request << method_ << " " << uri_ << " HTTP/1.1" << eol;
 
   for (const auto& header : headers_) {
     ss_request << header.first << ": " << header.second << eol;
   }
-  ss_request << body_;
+  if (body_.size() > 0) {
+    ss_request << "Content-Length: " << body_.size() << eol;
+  }
   ss_request << eol;
+  ss_request << body_;
 
   return ss_request.str();
 }

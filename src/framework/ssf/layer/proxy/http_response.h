@@ -20,7 +20,8 @@ class HttpResponse {
   };
 
  private:
-  using HeadersMap = std::map<std::string, std::list<std::string>>;
+  using HeaderValues = std::list<std::string>;
+  using HeadersMap = std::map<std::string, HeaderValues>;
 
  public:
   HttpResponse();
@@ -31,7 +32,7 @@ class HttpResponse {
   inline std::string body() { return body_; }
   inline void set_body(const std::string& body) { body_ = body; }
 
-  std::list<std::string> Header(const std::string& name) const;
+  HeaderValues GetHeaderValues(const std::string& name) const;
   void AddHeader(const std::string& name, const std::string& value);
 
   void Reset();
@@ -39,10 +40,19 @@ class HttpResponse {
   bool Success() const;
   bool Redirected() const;
 
-  bool HeaderValueBeginWith(const std::string& header_name,
-                            const std::string& begin_with) const;
+  bool CloseConnection() const;
 
   bool AuthenticationRequired() const;
+
+  bool IsAuthenticationAllowed(const std::string& auth_name) const;
+
+ private:
+  // content offset in header or std::string::npos if not found
+  std::size_t HeaderContains(const std::string& header_name,
+                             const std::string& content) const;
+
+  bool HasHeaderValueBeginsWith(const std::string& header_name,
+                                const std::string& begin_with) const;
 
  private:
   int status_code_;

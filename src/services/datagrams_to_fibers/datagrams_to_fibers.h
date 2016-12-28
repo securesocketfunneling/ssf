@@ -88,10 +88,27 @@ class DatagramsToFibers : public BaseService<Demux> {
         local_addr = parameters["local_addr"];
       }
     }
+
+    uint32_t local_port;
+    uint32_t remote_port;
+    try {
+      local_port = std::stoul(parameters["local_port"]);
+      remote_port = std::stoul(parameters["remote_port"]);
+    } catch (const std::exception&) {
+      SSF_LOG(kLogError)
+          << "microservice[datagram_listener]: cannot extract port parameters";
+      return DatagramsToFibersPtr(nullptr);
+    }
+
+    if (local_port > 65535) {
+      SSF_LOG(kLogError) << "microservice[datagram_listener]: local port ("
+                         << local_port << ") out of range ";
+      return DatagramsToFibersPtr(nullptr);
+    }
+
     return std::shared_ptr<DatagramsToFibers>(
         new DatagramsToFibers(io_service, fiber_demux, local_addr,
-                              (uint16_t)std::stoul(parameters["local_port"]),
-                              std::stoul(parameters["remote_port"])));
+                              static_cast<uint16_t>(local_port), remote_port));
   }
 
   static void RegisterToServiceFactory(

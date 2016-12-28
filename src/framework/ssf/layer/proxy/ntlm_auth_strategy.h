@@ -10,7 +10,7 @@ namespace proxy {
 
 class NtlmAuthStrategy : public AuthStrategy {
  public:
-  NtlmAuthStrategy(const Proxy& proxy_ctx);
+  NtlmAuthStrategy(const HttpProxy& proxy_ctx);
 
   virtual ~NtlmAuthStrategy(){};
 

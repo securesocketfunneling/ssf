@@ -14,8 +14,6 @@
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
-#include "services/socks/v4/request.h"
-
 #include "common/boost/fiber/stream_fiber.hpp"
 
 namespace ssf {

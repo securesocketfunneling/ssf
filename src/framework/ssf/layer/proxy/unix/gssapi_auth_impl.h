@@ -30,7 +30,7 @@ class GSSAPIAuthImpl : public PlatformAuthImpl {
   using fct_gss_release_name_t = decltype(&gss_release_name);
 
  public:
-  GSSAPIAuthImpl(const Proxy& proxy_ctx);
+  GSSAPIAuthImpl(const HttpProxy& proxy_ctx);
 
   virtual ~GSSAPIAuthImpl();
 

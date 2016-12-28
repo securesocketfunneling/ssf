@@ -23,7 +23,7 @@ namespace ssf {
 namespace layer {
 namespace proxy {
 
-DigestAuthStrategy::DigestAuthStrategy(const Proxy& proxy_ctx)
+DigestAuthStrategy::DigestAuthStrategy(const HttpProxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating),
       request_populated_(false),
       qop_(Qop::kNone),
@@ -33,10 +33,7 @@ DigestAuthStrategy::DigestAuthStrategy(const Proxy& proxy_ctx)
 std::string DigestAuthStrategy::AuthName() const { return "Digest"; }
 
 bool DigestAuthStrategy::Support(const HttpResponse& response) const {
-  auto auth_name = AuthName();
-  return !request_populated_ &&
-         (response.HeaderValueBeginWith("WWW-Authenticate", auth_name) ||
-          response.HeaderValueBeginWith("Proxy-Authenticate", auth_name));
+  return !request_populated_ && response.IsAuthenticationAllowed(AuthName());
 }
 
 void DigestAuthStrategy::ProcessResponse(const HttpResponse& response) {

@@ -6,6 +6,7 @@
 #include "ssf/error/error.h"
 #include "ssf/layer/connect_op.h"
 #include "ssf/layer/proxy/http_connect_op.h"
+#include "ssf/layer/proxy/socks_connect_op.h"
 
 namespace ssf {
 namespace layer {
@@ -33,6 +34,15 @@ class ConnectOp {
                                       std::move(peer_endpoint_))(ec);
       return;
     }
+
+    if (context.SocksProxyEnabled()) {
+      SocksConnectOp<Stream, Endpoint>(stream_, p_local_endpoint_,
+                                       std::move(peer_endpoint_))(ec);
+      return;
+    }
+
+    ec.assign(ssf::error::function_not_supported,
+              ssf::error::get_ssf_category());
   }
 
  private:
@@ -73,6 +83,20 @@ class AsyncConnectOp {
           std::move(handler_))();
       return;
     }
+
+    if (context.SocksProxyEnabled()) {
+      AsyncSocksConnectOp<
+          Protocol, Stream, Endpoint,
+          typename boost::asio::handler_type<
+              ConnectHandler, void(boost::system::error_code)>::type>(
+          stream_, p_local_endpoint_, std::move(peer_endpoint_),
+          std::move(handler_))();
+      return;
+    }
+
+    boost::system::error_code ec(ssf::error::function_not_supported,
+                                 ssf::error::get_ssf_category());
+    handler_(ec);
   }
 
  private:

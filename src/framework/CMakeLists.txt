@@ -23,8 +23,6 @@ file(GLOB_RECURSE SSF_FRAMEWORK_COMMON_NETWORK_FILES
 
 file(GLOB_RECURSE SSF_FRAMEWORK_COMMON_UTILS_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/ssf/utils/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/network/*.ipp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ssf/network/*.cpp"
 )
 
 # layer files

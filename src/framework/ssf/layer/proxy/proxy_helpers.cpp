@@ -10,8 +10,8 @@ namespace ssf {
 namespace layer {
 namespace proxy {
 
-bool ValidateIPTarget(boost::asio::io_service& io_service,
-                      const std::string& addr, const std::string& port) {
+bool CanResolveHost(boost::asio::io_service& io_service,
+                    const std::string& addr, const std::string& port) {
   boost::system::error_code ec;
   boost::asio::ip::tcp::resolver resolver(io_service);
   boost::asio::ip::tcp::resolver::query query(addr, port);
@@ -27,13 +27,22 @@ ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
 
   context.Init(parameters);
 
-  if (context.proxy_enabled() &&
-      !ValidateIPTarget(io_service, context.http_proxy().host,
-                        context.http_proxy().port)) {
+  if (context.HttpProxyEnabled() &&
+      !CanResolveHost(io_service, context.http_proxy().host,
+                      context.http_proxy().port)) {
     ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
-    SSF_LOG(kLogError) << "network[proxy]: could not resolve target address <"
-                       << context.http_proxy().host << ":"
-                       << context.http_proxy().port << ">";
+    SSF_LOG(kLogError)
+        << "network[http proxy]: could not resolve target address <"
+        << context.http_proxy().host << ":" << context.http_proxy().port << ">";
+  }
+  if (context.SocksProxyEnabled() &&
+      !CanResolveHost(io_service, context.socks_proxy().host,
+                      context.socks_proxy().port)) {
+    ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
+    SSF_LOG(kLogError)
+        << "network[socks proxy]: could not resolve target address <"
+        << context.socks_proxy().host << ":" << context.socks_proxy().port
+        << ">";
   }
 
   return context;

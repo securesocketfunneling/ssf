@@ -83,11 +83,19 @@ class StopServiceRequest {
     try {
       ar >> request;
     } catch (const std::exception&) {
+      // TODO: ec?
+      SSF_LOG(kLogWarning) << "stop service request: extract request failed";
       return std::string();
     }
 
-    ServiceStatus<Demux> reply(std::stoul(serialized_result), 0, ec.value(),
-                               Parameters());
+    uint32_t id;
+    try {
+      id = std::stoul(serialized_result);
+    } catch (const std::exception&) {
+      SSF_LOG(kLogWarning) << "stop service request: extract reply id failed";
+      return std::string();
+    }
+    ServiceStatus<Demux> reply(id, 0, ec.value(), Parameters());
 
     return reply.OnSending();
   }

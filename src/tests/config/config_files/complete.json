@@ -19,6 +19,11 @@
                 "reuse_kerb": false
             }
         },
+        "socks_proxy": {
+            "version": 4,
+            "host": "127.0.0.2",
+            "port": "1080"
+        },
         "services" : {
             "shell": {
                 "path": "/bin/custom_path",

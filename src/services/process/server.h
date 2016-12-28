@@ -64,11 +64,20 @@ class Server : public BaseService<Demux> {
                           const std::string& binary_args) {
     if (!parameters.count("local_port") || binary_path.empty()) {
       return ServerPtr(nullptr);
-    } else {
-      return std::shared_ptr<Server>(new Server(
-          io_service, fiber_demux, std::stoul(parameters["local_port"]),
-          binary_path, binary_args));
     }
+
+    uint32_t local_port;
+    try {
+      local_port = std::stoul(parameters["local_port"]);
+    } catch (const std::exception&) {
+      SSF_LOG(kLogError)
+          << "microservice[shell]: cannot extract port parameter";
+      return ServerPtr(nullptr);
+    }
+
+    return std::shared_ptr<Server>(new Server(
+        io_service, fiber_demux, local_port,
+        binary_path, binary_args));
   }
 
   // Function used to register the micro service to the given factory

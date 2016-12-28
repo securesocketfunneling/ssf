@@ -10,6 +10,11 @@
                 "reuse_ntlm": false,
                 "reuse_kerb": false
             }
+        },
+        "socks_proxy": {
+            "version": 5,
+            "host": "127.0.0.2",
+            "port": "1080"
         }
     }
 }

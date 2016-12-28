@@ -10,7 +10,8 @@ namespace proxy {
 SSPIAuthImpl::SecPackageNames SSPIAuthImpl::sec_package_names_ = {"NTLM",
                                                                   "Negotiate"};
 
-SSPIAuthImpl::SSPIAuthImpl(SecurityPackage sec_package, const Proxy& proxy_ctx)
+SSPIAuthImpl::SSPIAuthImpl(SecurityPackage sec_package,
+                           const HttpProxy& proxy_ctx)
     : PlatformAuthImpl(proxy_ctx),
       sec_package_(sec_package),
       h_cred_(),

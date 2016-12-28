@@ -25,6 +25,10 @@ Config::Config() : tls_(), http_proxy_(), services_() {}
 
 void Config::Init() {
   boost::system::error_code ec;
+
+  SSF_LOG(kLogDebug) << "config[ssf]: default configuration: "
+                     << default_config_;
+
   UpdateFromString(default_config_, ec);
 }
 
@@ -47,6 +51,11 @@ void Config::UpdateFromFile(const std::string& filepath,
     boost::property_tree::ptree pt;
     boost::property_tree::read_json(conf_file, pt);
 
+    std::stringstream ss_loaded_config;
+    boost::property_tree::write_json(ss_loaded_config, pt);
+    SSF_LOG(kLogDebug) << "config[ssf]: file configuration: " << std::endl
+                       << ss_loaded_config.str();
+
     UpdateFromPTree(pt);
   } catch (const std::exception& e) {
     SSF_LOG(kLogError) << "config[ssf]: error reading SSF config file: "
@@ -59,9 +68,6 @@ void Config::UpdateFromString(const std::string& config_string,
                               boost::system::error_code& ec) {
   std::stringstream ss_config;
   ss_config << config_string;
-
-  SSF_LOG(kLogDebug) << "config[ssf]: update config from string:"
-                     << default_config_;
 
   try {
     boost::property_tree::ptree pt;
@@ -77,6 +83,7 @@ void Config::UpdateFromString(const std::string& config_string,
 void Config::Log() const {
   tls_.Log();
   http_proxy_.Log();
+  socks_proxy_.Log();
   services_.Log();
 }
 
@@ -85,6 +92,7 @@ void Config::LogStatus() const { services_.LogServiceStatus(); }
 void Config::UpdateFromPTree(const PTree& pt) {
   UpdateTls(pt);
   UpdateHttpProxy(pt);
+  UpdateSocksProxy(pt);
   UpdateServices(pt);
 }
 
@@ -101,11 +109,21 @@ void Config::UpdateTls(const PTree& pt) {
 void Config::UpdateHttpProxy(const PTree& pt) {
   auto proxy_optional = pt.get_child_optional("ssf.http_proxy");
   if (!proxy_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: proxy configuration not found";
+    SSF_LOG(kLogDebug) << "config[update]: http proxy configuration not found";
     return;
   }
 
   http_proxy_.Update(proxy_optional.get());
+}
+
+void Config::UpdateSocksProxy(const PTree& pt) {
+  auto proxy_optional = pt.get_child_optional("ssf.socks_proxy");
+  if (!proxy_optional) {
+    SSF_LOG(kLogDebug) << "config[update]: socks proxy configuration not found";
+    return;
+  }
+
+  socks_proxy_.Update(proxy_optional.get());
 }
 
 void Config::UpdateServices(const PTree& pt) {
@@ -121,7 +139,7 @@ void Config::UpdateServices(const PTree& pt) {
 const char* Config::default_config_ = R"RAWSTRING(
 {
   "ssf": {
-    "tls" : {
+    "tls": {
       "ca_cert_path": "./certs/trusted/ca.crt",
       "cert_path": "./certs/certificate.crt",
       "key_path": "./certs/private.key",
@@ -129,7 +147,7 @@ const char* Config::default_config_ = R"RAWSTRING(
       "dh_path": "./certs/dh4096.pem",
       "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
     },
-    "http_proxy" : {
+    "http_proxy": {
       "host": "",
       "port": "",
       "credentials": {
@@ -139,6 +157,11 @@ const char* Config::default_config_ = R"RAWSTRING(
         "reuse_ntlm": true,
         "reuse_nego": true
       }
+    },
+    "socks_proxy": {
+      "version": 5,
+      "host": "",
+      "port": "1080"
     },
     "services": {
       "datagram_forwarder": { "enable": true },

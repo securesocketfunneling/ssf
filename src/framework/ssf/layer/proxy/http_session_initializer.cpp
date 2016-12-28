@@ -61,7 +61,7 @@ void HttpSessionInitializer::PopulateRequest(HttpRequest* p_request,
 void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,
                                              boost::system::error_code& ec) {
   if (response.Success()) {
-    SSF_LOG(kLogInfo) << "network[proxy]: connected (auth: "
+    SSF_LOG(kLogInfo) << "network[http proxy]: connected (auth: "
                       << ((p_current_auth_strategy_ != nullptr)
                               ? (p_current_auth_strategy_->AuthName())
                               : "None") << ")";
@@ -94,7 +94,8 @@ void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,
   }
 
   if (p_current_auth_strategy_ == nullptr) {
-    SSF_LOG(kLogError) << "network[proxy]: authentication strategies failed";
+    SSF_LOG(kLogError)
+        << "network[http proxy]: authentication strategies failed";
     status_ = Status::kError;
     return;
   }
@@ -114,7 +115,6 @@ void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,
         status_ = Status::kError;
         break;
     }
-    return;
   }
 }
 
@@ -122,7 +122,7 @@ void HttpSessionInitializer::SetAuthStrategy(const HttpResponse& response) {
   for (const auto& p_auth_strategy : auth_strategies_) {
     if (p_auth_strategy->Support(response)) {
       p_current_auth_strategy_ = p_auth_strategy.get();
-      SSF_LOG(kLogDebug) << "network[proxy]: try "
+      SSF_LOG(kLogDebug) << "network[http proxy]: try "
                          << p_current_auth_strategy_->AuthName() << " auth";
       break;
     }

@@ -37,14 +37,6 @@ class HttpConnectOp {
   void operator()(boost::system::error_code& ec) {
     auto& endpoint_context = peer_endpoint_.endpoint_context();
 
-    stream_.connect(
-        endpoint_context.http_proxy().ToTcpEndpoint(stream_.get_io_service()),
-        ec);
-
-    if (ec) {
-      return;
-    }
-
     p_local_endpoint_->set();
 
     boost::system::error_code close_ec;
@@ -65,8 +57,10 @@ class HttpConnectOp {
       // session initialization (connect request + auth)
       while (session_initializer.status() ==
              HttpSessionInitializer::Status::kContinue) {
+        // (re)connect to proxy (new strategy or connection close header)?
         if ((session_initializer.stage() ==
-             HttpSessionInitializer::Stage::kConnect)) {
+             HttpSessionInitializer::Stage::kConnect) ||
+            response_builder.Get()->CloseConnection()) {
           if (stream_.is_open()) {
             stream_.shutdown(boost::asio::socket_base::shutdown_both, ec);
             stream_.close(ec);
@@ -83,7 +77,7 @@ class HttpConnectOp {
           break;
         }
 
-        auto request = http_request.GenerateRequest();
+        auto request = http_request.Serialize();
         boost::asio::write(stream_, boost::asio::buffer(request), connect_ec);
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
@@ -94,12 +88,13 @@ class HttpConnectOp {
         response_builder.Reset();
 
         // read response
-        while (!response_builder.complete()) {
+        while (!response_builder.Done()) {
           bytes_read = stream_.receive(boost::asio::buffer(buffer));
           response_builder.ProcessInput(buffer.data(), bytes_read);
         }
 
-        session_initializer.ProcessResponse(response_builder.Get(), connect_ec);
+        session_initializer.ProcessResponse(*response_builder.Get(),
+                                            connect_ec);
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
                                 "process connect response";
@@ -146,7 +141,8 @@ class AsyncHttpConnectOp {
         p_request_(new std::string()),
         p_buffer_(new Buffer()),
         p_response_builder_(new HttpResponseBuilder()),
-        p_session_initializer_(new HttpSessionInitializer()) {}
+        p_session_initializer_(new HttpSessionInitializer()),
+        p_http_request_(new HttpRequest()) {}
 
   AsyncHttpConnectOp(const AsyncHttpConnectOp& other)
       : coro_(other.coro_),
@@ -157,7 +153,8 @@ class AsyncHttpConnectOp {
         p_request_(other.p_request_),
         p_buffer_(other.p_buffer_),
         p_response_builder_(other.p_response_builder_),
-        p_session_initializer_(other.p_session_initializer_) {}
+        p_session_initializer_(other.p_session_initializer_),
+        p_http_request_(other.p_http_request_) {}
 
   AsyncHttpConnectOp(AsyncHttpConnectOp&& other)
       : coro_(std::move(other.coro_)),
@@ -165,10 +162,11 @@ class AsyncHttpConnectOp {
         p_local_endpoint_(other.p_local_endpoint_),
         peer_endpoint_(std::move(other.peer_endpoint_)),
         handler_(std::move(other.handler_)),
-        p_request_(other.p_request_),
-        p_buffer_(other.p_buffer_),
-        p_response_builder_(other.p_response_builder_),
-        p_session_initializer_(other.p_session_initializer_) {}
+        p_request_(std::move(other.p_request_)),
+        p_buffer_(std::move(other.p_buffer_)),
+        p_response_builder_(std::move(other.p_response_builder_)),
+        p_session_initializer_(std::move(other.p_session_initializer_)),
+        p_http_request_(std::move(other.p_http_request_)) {}
 
 #include <boost/asio/yield.hpp>
   void operator()(
@@ -183,24 +181,20 @@ class AsyncHttpConnectOp {
     boost::system::error_code connect_ec;
     auto& endpoint_context = peer_endpoint_.endpoint_context();
 
-    HttpRequest http_request;
-
     reenter(coro_) {
       p_session_initializer_->Reset(endpoint_context.remote_host().addr(),
                                     endpoint_context.remote_host().port(),
                                     endpoint_context);
-
-      yield stream_.async_connect(
-          endpoint_context.http_proxy().ToTcpEndpoint(stream_.get_io_service()),
-          std::move(*this));
 
       p_local_endpoint_->set();
 
       // session initialization (connect request + auth)
       while (p_session_initializer_->status() ==
              HttpSessionInitializer::Status::kContinue) {
+        // (re)connect to proxy (new strategy or connection close header)?
         if ((p_session_initializer_->stage() ==
-             HttpSessionInitializer::Stage::kConnect)) {
+             HttpSessionInitializer::Stage::kConnect) ||
+            p_response_builder_->Get()->CloseConnection()) {
           if (stream_.is_open()) {
             stream_.shutdown(boost::asio::socket_base::shutdown_both,
                              close_ec_);
@@ -213,27 +207,28 @@ class AsyncHttpConnectOp {
         }
 
         // send request
-        p_session_initializer_->PopulateRequest(&http_request, connect_ec);
+        p_session_initializer_->PopulateRequest(p_http_request_.get(),
+                                                connect_ec);
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
                                 "generate connect request";
           break;
         }
 
-        *p_request_ = http_request.GenerateRequest();
+        *p_request_ = p_http_request_->Serialize();
 
         yield boost::asio::async_write(
             stream_, boost::asio::buffer(*p_request_), std::move(*this));
 
         // read response
         p_response_builder_->Reset();
-        while (!p_response_builder_->complete()) {
+        while (!p_response_builder_->Done()) {
           yield stream_.async_receive(boost::asio::buffer(*p_buffer_),
                                       std::move(*this));
           p_response_builder_->ProcessInput(p_buffer_->data(), size);
         }
 
-        p_session_initializer_->ProcessResponse(p_response_builder_->Get(),
+        p_session_initializer_->ProcessResponse(*p_response_builder_->Get(),
                                                 connect_ec);
         if (connect_ec.value() != 0) {
           SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
@@ -271,6 +266,7 @@ class AsyncHttpConnectOp {
   std::shared_ptr<Buffer> p_buffer_;
   std::shared_ptr<HttpResponseBuilder> p_response_builder_;
   std::shared_ptr<HttpSessionInitializer> p_session_initializer_;
+  std::shared_ptr<HttpRequest> p_http_request_;
   boost::system::error_code close_ec_;
 };
 

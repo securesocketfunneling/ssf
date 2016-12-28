@@ -5,15 +5,17 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+#include "ssf/network/socks/socks.h"
+
 namespace ssf {
 namespace config {
 
-struct Proxy {
+class HttpProxy {
  public:
   using PTree = boost::property_tree::ptree;
 
  public:
-  Proxy();
+  HttpProxy();
 
  public:
   void Update(const PTree& pt);
@@ -51,6 +53,39 @@ struct Proxy {
   bool reuse_ntlm_;
   // Reuse default Kerberos/Negotiate credentials
   bool reuse_kerb_;
+};
+
+class SocksProxy {
+ public:
+  using PTree = boost::property_tree::ptree;
+  using Socks = ssf::network::Socks;
+
+ public:
+  SocksProxy();
+
+ public:
+  void Update(const PTree& pt);
+
+  void Log() const;
+
+  inline bool IsSet() const {
+    return version_ != Socks::Version::kVUnknown && !host_.empty() &&
+           !port_.empty();
+  }
+
+  inline Socks::Version version() const { return version_; }
+
+  inline std::string host() const { return host_; }
+
+  inline std::string port() const { return port_; }
+
+ private:
+  // Socks server version
+  Socks::Version version_;
+  // Proxy host
+  std::string host_;
+  // Proxy port
+  std::string port_;
 };
 
 }  // config

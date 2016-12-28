@@ -26,7 +26,7 @@ class Config {
    * Format example (default values):
    * {
    *   "ssf": {
-   *     "tls" : {
+   *     "tls": {
    *       "ca_cert_path": "./certs/trusted/ca.crt",
    *       "cert_path": "./certs/certificate.crt",
    *       "key_path": "./certs/private.key",
@@ -34,7 +34,7 @@ class Config {
    *       "dh_path": "./certs/dh4096.pem",
    *       "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
    *     },
-   *     "http_proxy" : {
+   *     "http_proxy": {
    *       "host": "",
    *       "port": "",
    *       "credentials": {
@@ -44,6 +44,11 @@ class Config {
    *         "reuse_ntlm": true,
    *         "reuse_nego": true
    *       }
+   *     },
+   *     "socks_proxy": {
+   *       "version": 5,
+   *       "host": "",
+   *       "port": "1080"
    *     },
    *     "services": {
    *       "datagram_forwarder": { "enable": true },
@@ -99,8 +104,11 @@ class Config {
   inline const Tls& tls() const { return tls_; }
   inline Tls& tls() { return tls_; }
 
-  inline const Proxy& http_proxy() const { return http_proxy_; }
-  inline Proxy& http_proxy() { return http_proxy_; }
+  inline const HttpProxy& http_proxy() const { return http_proxy_; }
+  inline HttpProxy& http_proxy() { return http_proxy_; }
+
+  inline const SocksProxy& socks_proxy() const { return socks_proxy_; }
+  inline SocksProxy& socks_proxy() { return socks_proxy_; }
 
   inline const Services& services() const { return services_; }
   inline Services& services() { return services_; }
@@ -109,12 +117,14 @@ class Config {
   void UpdateFromPTree(const PTree& pt);
   void UpdateTls(const PTree& pt);
   void UpdateHttpProxy(const PTree& pt);
+  void UpdateSocksProxy(const PTree& pt);
   void UpdateServices(const PTree& pt);
 
  private:
   static const char* default_config_;
   Tls tls_;
-  Proxy http_proxy_;
+  HttpProxy http_proxy_;
+  SocksProxy socks_proxy_;
   Services services_;
 };
 

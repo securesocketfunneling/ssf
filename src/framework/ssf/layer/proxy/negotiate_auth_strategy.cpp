@@ -12,7 +12,7 @@ namespace ssf {
 namespace layer {
 namespace proxy {
 
-NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
+NegotiateAuthStrategy::NegotiateAuthStrategy(const HttpProxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating) {
 #if defined(WIN32)
   p_impl_.reset(new SSPIAuthImpl(SSPIAuthImpl::kNegotiate, proxy_ctx));
@@ -31,11 +31,9 @@ NegotiateAuthStrategy::NegotiateAuthStrategy(const Proxy& proxy_ctx)
 std::string NegotiateAuthStrategy::AuthName() const { return "Negotiate"; }
 
 bool NegotiateAuthStrategy::Support(const HttpResponse& response) const {
-  auto auth_name = AuthName();
   return p_impl_.get() != nullptr &&
          status_ != Status::kAuthenticationFailure &&
-         (response.HeaderValueBeginWith("Proxy-Authenticate", auth_name) ||
-          response.HeaderValueBeginWith("WWW-Authenticate", auth_name));
+         response.IsAuthenticationAllowed(AuthName());
 }
 
 void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {

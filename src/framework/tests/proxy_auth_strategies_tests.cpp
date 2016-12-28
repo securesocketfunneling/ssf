@@ -35,7 +35,7 @@ TEST(ProxyAuthStrategiesTest, BasicAuthTest) {
   using BasicAuthStrategy = ssf::layer::proxy::BasicAuthStrategy;
   using HttpRequest = ssf::layer::proxy::HttpRequest;
   using HttpResponse = ssf::layer::proxy::HttpResponse;
-  using Proxy = ssf::layer::proxy::Proxy;
+  using Proxy = ssf::layer::proxy::HttpProxy;
 
   Proxy proxy_ctx;
   proxy_ctx.username = "Aladdin";
@@ -61,7 +61,7 @@ TEST(ProxyAuthStrategiesTest, BasicAuthTest) {
 
   ASSERT_FALSE(basic_auth.Support(response));
 
-  auto authorization_hdr = request.Header("Authorization");
+  auto authorization_hdr = request.GetHeaderValue("Authorization");
   ASSERT_FALSE(authorization_hdr.empty());
 
   ASSERT_NE(authorization_hdr.find("QWxhZGRpbjpvcGVuIHNlc2FtZQ=="),
@@ -73,7 +73,7 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
   using DigestAuthStrategy = ssf::layer::proxy::DigestAuthStrategy;
   using HttpRequest = ssf::layer::proxy::HttpRequest;
   using HttpResponse = ssf::layer::proxy::HttpResponse;
-  using Proxy = ssf::layer::proxy::Proxy;
+  using Proxy = ssf::layer::proxy::HttpProxy;
 
   Proxy proxy_ctx;
   proxy_ctx.username = "Mufasa";
@@ -104,7 +104,7 @@ TEST(ProxyAuthStrategiesTest, DigestAuthTest) {
 
   ASSERT_FALSE(digest_auth.Support(response));
 
-  auto authorization_hdr = request.Header("Authorization");
+  auto authorization_hdr = request.GetHeaderValue("Authorization");
   ASSERT_FALSE(authorization_hdr.empty());
 
   ASSERT_NE(authorization_hdr.find("uri=\"/dir/index.html\""),
@@ -124,7 +124,7 @@ TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {
   using NegotiateAuthStrategy = ssf::layer::proxy::NegotiateAuthStrategy;
   using HttpRequest = ssf::layer::proxy::HttpRequest;
   using HttpResponse = ssf::layer::proxy::HttpResponse;
-  using Proxy = ssf::layer::proxy::Proxy;
+  using Proxy = ssf::layer::proxy::HttpProxy;
 
   Proxy proxy_ctx;
   proxy_ctx.host = "proxy.example.com";
@@ -155,6 +155,6 @@ TEST(ProxyAuthStrategiesTest, NegotiateAuthTest) {
   ASSERT_NE(negotiate_auth.status(),
             NegotiateAuthStrategy::kAuthenticationFailure);
 
-  auto authorization_hdr = request.Header("Authorization");
+  auto authorization_hdr = request.GetHeaderValue("Authorization");
   ASSERT_FALSE(authorization_hdr.empty());
 }

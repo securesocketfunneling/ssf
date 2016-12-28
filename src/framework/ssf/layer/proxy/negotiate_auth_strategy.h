@@ -13,7 +13,7 @@ namespace proxy {
 
 class NegotiateAuthStrategy : public AuthStrategy {
  public:
-  NegotiateAuthStrategy(const Proxy& proxy_ctx);
+  NegotiateAuthStrategy(const HttpProxy& proxy_ctx);
 
   virtual ~NegotiateAuthStrategy(){};
 

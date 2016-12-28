@@ -48,7 +48,9 @@ bool ProxyTestFixture::Initialized() {
   return config_options_.count("target_host") > 0 &&
          config_options_.count("target_port") > 0 &&
          config_options_.count("proxy_host") > 0 &&
-         config_options_.count("proxy_port") > 0;
+         config_options_.count("proxy_port") > 0 &&
+         config_options_.count("socks_host") > 0 &&
+         config_options_.count("socks_port") > 0;
 }
 
 std::string ProxyTestFixture::GetOption(const std::string& name) const {
@@ -83,6 +85,13 @@ ssf::layer::LayerParameters ProxyTestFixture::GetProxyParam() const {
   proxy_params["http_reuse_ntlm"] = GetOption("reuse_ntlm");
   proxy_params["http_reuse_kerb"] = GetOption("reuse_kerb");
 
+  return proxy_params;
+}
+
+ssf::layer::LayerParameters ProxyTestFixture::GetSocksProxyParam() const {
+  ssf::layer::LayerParameters proxy_params;
+  proxy_params["socks_host"] = GetOption("socks_host");
+  proxy_params["socks_port"] = GetOption("socks_port");
   return proxy_params;
 }
 

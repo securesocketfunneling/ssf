@@ -1,3 +1,13 @@
+#include <ssf/network/socks/v4/request.h>
+#include <ssf/network/socks/v4/reply.h>
+
+#include <ssf/network/socks/v5/request_auth.h>
+#include <ssf/network/socks/v5/reply_auth.h>
+#include <ssf/network/socks/v5/request.h>
+#include <ssf/network/socks/v5/reply.h>
+
+#include <ssf/utils/enum.h>
+
 #include "common/error/error.h"
 
 #include "tests/services/socks_helpers.h"
@@ -5,64 +15,10 @@
 namespace tests {
 namespace socks {
 
-Request::Request(CommandType cmd,
-                 const boost::asio::ip::tcp::endpoint& endpoint,
-                 const std::string& user_id)
-    : version_(0x04), command_(cmd), user_id_(user_id), null_byte_(0) {
-  // Only IPv4 is supported by the SOCKS 4 protocol.
-  if (endpoint.protocol() != boost::asio::ip::tcp::v4()) {
-    throw boost::system::system_error(
-        boost::asio::error::address_family_not_supported);
-  }
-
-  // Convert port number to network byte order.
-  unsigned short port = endpoint.port();
-  port_high_byte_ = (port >> 8) & 0xff;
-  port_low_byte_ = port & 0xff;
-
-  // Save IP address in network byte order.
-  address_ = endpoint.address().to_v4().to_bytes();
-}
-
-std::array<boost::asio::const_buffer, 7> Request::Buffers() const {
-  std::array<boost::asio::const_buffer, 7> bufs = {
-      {boost::asio::buffer(&version_, 1), boost::asio::buffer(&command_, 1),
-       boost::asio::buffer(&port_high_byte_, 1),
-       boost::asio::buffer(&port_low_byte_, 1), boost::asio::buffer(address_),
-       boost::asio::buffer(user_id_), boost::asio::buffer(&null_byte_, 1)}};
-  return bufs;
-}
-
-Reply::Reply() : null_byte_(0), status_() {}
-
-std::array<boost::asio::mutable_buffer, 5> Reply::Buffers() {
-  std::array<boost::asio::mutable_buffer, 5> bufs = {
-      {boost::asio::buffer(&null_byte_, 1), boost::asio::buffer(&status_, 1),
-       boost::asio::buffer(&port_high_byte_, 1),
-       boost::asio::buffer(&port_low_byte_, 1), boost::asio::buffer(address_)}};
-  return bufs;
-}
-
-bool Reply::Success() const {
-  return null_byte_ == 0 && status_ == kRequestGranted;
-}
-
-unsigned char Reply::Status() const { return status_; }
-
-boost::asio::ip::tcp::endpoint Reply::Endpoint() const {
-  unsigned short port = port_high_byte_;
-  port = (port << 8) & 0xff00;
-  port = port | port_low_byte_;
-
-  boost::asio::ip::address_v4 address(address_);
-
-  return boost::asio::ip::tcp::endpoint(address, port);
-}
-
-DummyClient::DummyClient(const std::string& socks_server_addr,
-                         const std::string& socks_server_port,
-                         const std::string& target_addr,
-                         const std::string& target_port, size_t size)
+SocksDummyClient::SocksDummyClient(const std::string& socks_server_addr,
+                                   const std::string& socks_server_port,
+                                   const std::string& target_addr,
+                                   const std::string& target_port, size_t size)
     : io_service_(),
       p_worker_(new boost::asio::io_service::work(io_service_)),
       socket_(io_service_),
@@ -72,7 +28,7 @@ DummyClient::DummyClient(const std::string& socks_server_addr,
       target_port_(target_port),
       size_(size) {}
 
-bool DummyClient::Init() {
+bool SocksDummyClient::Init() {
   t_ = boost::thread([&]() { io_service_.run(); });
 
   boost::asio::ip::tcp::resolver r(io_service_);
@@ -89,47 +45,7 @@ bool DummyClient::Init() {
   return !ec;
 }
 
-bool DummyClient::InitSocks() {
-  boost::system::error_code ec;
-
-  boost::asio::ip::tcp::resolver r2(io_service_);
-  boost::asio::ip::tcp::resolver::query q2(target_addr_, target_port_);
-  Request req(Request::CommandType::kConnect, *r2.resolve(q2), "01");
-
-  boost::asio::write(socket_, req.Buffers(), ec);
-
-  if (ec) {
-    SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
-    Stop();
-    return false;
-  }
-
-  Reply rep;
-
-  boost::asio::read(socket_, rep.Buffers(), ec);
-
-  if (ec) {
-    SSF_LOG(kLogError) << "dummy client: fail to read " << ec.value();
-    Stop();
-    return false;
-  }
-
-  if (!rep.Success()) {
-    Stop();
-    return false;
-  }
-
-  boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_t)), ec);
-
-  if (ec) {
-    SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
-    Stop();
-  }
-
-  return !ec;
-}
-
-bool DummyClient::ReceiveOneBuffer() {
+bool SocksDummyClient::ReceiveOneBuffer() {
   size_t received(0);
 
   while (received < size_) {
@@ -157,7 +73,7 @@ bool DummyClient::ReceiveOneBuffer() {
   return received == size_;
 }
 
-void DummyClient::Stop() {
+void SocksDummyClient::Stop() {
   boost::system::error_code ec;
   socket_.close(ec);
 
@@ -167,7 +83,7 @@ void DummyClient::Stop() {
   io_service_.stop();
 }
 
-bool DummyClient::CheckOneBuffer(size_t n) {
+bool SocksDummyClient::CheckOneBuffer(size_t n) {
   for (size_t i = 0; i < n; ++i) {
     if (one_buffer_[i] != 1) {
       return false;
@@ -175,6 +91,150 @@ bool DummyClient::CheckOneBuffer(size_t n) {
   }
 
   return true;
+}
+
+Socks4DummyClient::Socks4DummyClient(const std::string& socks_server_addr,
+                                     const std::string& socks_server_port,
+                                     const std::string& target_addr,
+                                     const std::string& target_port,
+                                     size_t size)
+    : SocksDummyClient(socks_server_addr, socks_server_port, target_addr,
+                       target_port, size) {}
+
+bool Socks4DummyClient::InitSocks() {
+  using Request = ssf::network::socks::v4::Request;
+  using Reply = ssf::network::socks::v4::Reply;
+
+  boost::system::error_code ec;
+
+  Request req;
+  try {
+    uint16_t port = static_cast<uint16_t>(std::stoul(target_port_));
+    req.Init(Request::Command::kConnect, target_addr_, port, ec);
+    if (ec) {
+      Stop();
+      return false;
+    }
+  } catch (const std::exception&) {
+    Stop();
+    return false;
+  }
+  boost::asio::write(socket_, req.ConstBuffer(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "socks4 client: fail to write " << ec.value();
+    Stop();
+    return false;
+  }
+
+  Reply rep;
+  boost::asio::read(socket_, rep.MutBuffer(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "socks4 client: fail to read " << ec.value();
+    Stop();
+    return false;
+  }
+  if (rep.status() != Reply::Status::kGranted) {
+    Stop();
+    return false;
+  }
+
+  boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_t)), ec);
+
+  if (ec) {
+    SSF_LOG(kLogError) << "socks4 client: fail to write " << ec.value();
+    Stop();
+  }
+
+  return !ec;
+}
+
+Socks5DummyClient::Socks5DummyClient(const std::string& socks_server_addr,
+                                     const std::string& socks_server_port,
+                                     const std::string& target_addr,
+                                     const std::string& target_port,
+                                     size_t size)
+    : SocksDummyClient(socks_server_addr, socks_server_port, target_addr,
+                       target_port, size) {}
+
+bool Socks5DummyClient::InitSocks() {
+  using RequestAuth = ssf::network::socks::v5::RequestAuth;
+  using ReplyAuth = ssf::network::socks::v5::AuthReply;
+  using Request = ssf::network::socks::v5::Request;
+  using Reply = ssf::network::socks::v5::Reply;
+
+  boost::system::error_code ec;
+
+  RequestAuth auth_req;
+  auth_req.Init(RequestAuth::AuthMethod::kNoAuth);
+  boost::asio::write(socket_, auth_req.ConstBuffers(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "socks5 client: fail to write auth request "
+                       << ec.value();
+    Stop();
+    return false;
+  }
+
+  ReplyAuth auth_rep;
+  boost::asio::read(socket_, auth_rep.MutBuffer(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "socks5 client: fail to read auth reply"
+                       << ec.value();
+    Stop();
+    return false;
+  }
+  if (auth_rep.auth_method() !=
+      ssf::ToIntegral(RequestAuth::AuthMethod::kNoAuth)) {
+    Stop();
+    return false;
+  }
+
+  Request req;
+  try {
+    uint16_t port = static_cast<uint16_t>(std::stoul(target_port_));
+    req.Init(target_addr_, port, ec);
+    if (ec) {
+      Stop();
+      return false;
+    }
+  } catch (const std::exception&) {
+    Stop();
+    return false;
+  }
+  boost::asio::write(socket_, req.ConstBuffers(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "socks5 client: fail to write conenct request"
+                       << ec.value();
+    Stop();
+    return false;
+  }
+
+  Reply rep;
+  boost::asio::read(socket_, rep.MutBaseBuffers(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "socks5 client: fail to read reply (first part)"
+                       << ec.value();
+    Stop();
+    return false;
+  }
+  boost::asio::read(socket_, rep.MutDynamicBuffers(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "socks5 client: fail to read reply (second part)"
+                       << ec.value();
+    Stop();
+    return false;
+  }
+  if (!rep.IsComplete() || !rep.AccessGranted()) {
+    Stop();
+    return false;
+  }
+
+  boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_t)), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
+    Stop();
+  }
+
+  return !ec;
 }
 
 }  // socks

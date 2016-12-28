@@ -27,17 +27,18 @@ class HttpResponseBuilder {
   enum ParserStatus : int {
     kParserError = -1,
     kParserOk = 0,
-    kParserNoBody = 1
+    kParserNoBody = 1,
+    kConnectSuccess = 2
   };
 
  public:
   HttpResponseBuilder();
 
-  inline bool complete() { return complete_; }
+  bool Done() { return done_; }
 
   ParserStatus ProcessInput(const char* p_data, std::size_t size);
 
-  HttpResponse Get();
+  const HttpResponse* Get() const;
 
   void Reset();
 
@@ -65,7 +66,7 @@ class HttpResponseBuilder {
 
   HttpResponse response_;
 
-  bool complete_;
+  bool done_;
   bool processing_header_name_;
   std::string current_header_name_;
   std::string current_header_value_;

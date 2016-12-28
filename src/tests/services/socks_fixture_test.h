@@ -13,7 +13,7 @@
 #include "tests/services/socks_helpers.h"
 #include "tests/services/tcp_helpers.h"
 
-template <template <typename> class TServiceTested>
+template <template <typename> class TServiceTested, class DummyClient>
 class SocksFixtureTest : public ServiceFixtureTest<TServiceTested> {
  protected:
   void Run(const std::string& socks_port, const std::string& server_port) {
@@ -23,8 +23,8 @@ class SocksFixtureTest : public ServiceFixtureTest<TServiceTested> {
 
     auto download = [&mutex, &socks_port, &server_port](
         size_t size, std::promise<bool>& test_client) {
-      tests::socks::DummyClient client("127.0.0.1", socks_port, "127.0.0.1",
-                                       server_port, size);
+      DummyClient client("127.0.0.1", socks_port, "127.0.0.1", server_port,
+                         size);
       auto initiated = client.Init();
 
       {
@@ -32,11 +32,11 @@ class SocksFixtureTest : public ServiceFixtureTest<TServiceTested> {
         EXPECT_TRUE(initiated);
       }
 
-      auto sent = client.InitSocks();
+      auto init = client.InitSocks();
 
       {
         boost::recursive_mutex::scoped_lock lock(mutex);
-        EXPECT_TRUE(sent);
+        EXPECT_TRUE(init);
       }
 
       auto received = client.ReceiveOneBuffer();

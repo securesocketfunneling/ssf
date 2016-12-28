@@ -31,7 +31,7 @@ namespace ssf {
 namespace layer {
 namespace proxy {
 
-GSSAPIAuthImpl::GSSAPIAuthImpl(const Proxy& proxy_ctx)
+GSSAPIAuthImpl::GSSAPIAuthImpl(const HttpProxy& proxy_ctx)
     : PlatformAuthImpl(proxy_ctx),
       h_gss_api_(NULL),
       h_sec_ctx_(GSS_C_NO_CONTEXT),

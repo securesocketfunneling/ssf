@@ -5,17 +5,14 @@ namespace ssf {
 namespace layer {
 namespace proxy {
 
-BasicAuthStrategy::BasicAuthStrategy(const Proxy& proxy_ctx)
+BasicAuthStrategy::BasicAuthStrategy(const HttpProxy& proxy_ctx)
     : AuthStrategy(proxy_ctx, Status::kAuthenticating),
       request_populated_(false) {}
 
 std::string BasicAuthStrategy::AuthName() const { return "Basic"; }
 
 bool BasicAuthStrategy::Support(const HttpResponse& response) const {
-  auto auth_name = AuthName();
-  return !request_populated_ &&
-         (response.HeaderValueBeginWith("Proxy-Authenticate", auth_name) ||
-          response.HeaderValueBeginWith("WWW-Authenticate", auth_name));
+  return !request_populated_ && response.IsAuthenticationAllowed(AuthName());
 }
 
 void BasicAuthStrategy::ProcessResponse(const HttpResponse& response) {

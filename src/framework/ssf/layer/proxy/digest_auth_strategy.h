@@ -20,7 +20,7 @@ class DigestAuthStrategy : public AuthStrategy {
   enum Qop { kNone, kAuth, kAuthInt };
 
  public:
-  DigestAuthStrategy(const Proxy& proxy_ctx);
+  DigestAuthStrategy(const HttpProxy& proxy_ctx);
 
   virtual ~DigestAuthStrategy(){};
 
