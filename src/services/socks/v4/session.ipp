@@ -65,7 +65,7 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       DoBindRequest();
       break;
     default:
-      SSF_LOG(kLogError) << "session[socks]: Invalid v4 command";
+      SSF_LOG(kLogError) << "session[socks]: invalid v4 command";
       break;
   }
 }
@@ -103,7 +103,7 @@ void Session<Demux>::DoConnectRequest() {
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  SSF_LOG(kLogError) << "session[socks]: Bind Not implemented yet";
+  SSF_LOG(kLogError) << "session[socks]: Bind not implemented yet";
   HandleStop();
 }
 

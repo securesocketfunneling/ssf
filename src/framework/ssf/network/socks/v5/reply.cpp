@@ -18,14 +18,10 @@ Reply::Reply()
       port_high_byte_(0),
       port_low_byte_(0) {}
 
-Reply::Reply(const boost::system::error_code& err)
+Reply::Reply(CommandStatus command_status)
     : version_(ToIntegral(Socks::Version::kV5)),
-      status_(ToIntegral(Status::kFailed)),
-      reserved_(0x00) {
-  if (!err) {
-    status_ = ToIntegral(Status::kGranted);
-  }
-}
+      status_(ToIntegral(command_status)),
+      reserved_(0x00) {}
 
 void Reply::Reset() {
   version_ = ToIntegral(Socks::Version::kV5);
@@ -94,14 +90,9 @@ std::vector<boost::asio::const_buffer> Reply::Buffers() const {
 }
 
 std::vector<boost::asio::mutable_buffer> Reply::MutBaseBuffers() {
-  std::vector<boost::asio::mutable_buffer> buf;
-
-  buf.push_back(boost::asio::buffer(&version_, 1));
-  buf.push_back(boost::asio::buffer(&status_, 1));
-  buf.push_back(boost::asio::buffer(&reserved_, 1));
-  buf.push_back(boost::asio::buffer(&addr_type_, 1));
-
-  return buf;
+  return {{boost::asio::buffer(&version_, 1), boost::asio::buffer(&status_, 1),
+           boost::asio::buffer(&reserved_, 1),
+           boost::asio::buffer(&addr_type_, 1)}};
 }
 
 std::vector<boost::asio::mutable_buffer> Reply::MutDynamicBuffers() {
@@ -126,34 +117,25 @@ std::vector<boost::asio::mutable_buffer> Reply::MutDynamicBuffers() {
 }
 
 std::vector<boost::asio::mutable_buffer> Reply::MutIPV4Buffers() {
-  std::vector<boost::asio::mutable_buffer> buf;
-  buf.push_back(boost::asio::buffer(ipv4_));
-  buf.push_back(boost::asio::buffer(&port_high_byte_, 1));
-  buf.push_back(boost::asio::buffer(&port_low_byte_, 1));
-  return buf;
+  return {{boost::asio::buffer(ipv4_), boost::asio::buffer(&port_high_byte_, 1),
+           boost::asio::buffer(&port_low_byte_, 1)}};
 }
 
 std::vector<boost::asio::mutable_buffer> Reply::MutIPV6Buffers() {
-  std::vector<boost::asio::mutable_buffer> buf;
-  buf.push_back(boost::asio::buffer(ipv6_));
-  buf.push_back(boost::asio::buffer(&port_high_byte_, 1));
-  buf.push_back(boost::asio::buffer(&port_low_byte_, 1));
-  return buf;
+  return {{boost::asio::buffer(ipv6_), boost::asio::buffer(&port_high_byte_, 1),
+           boost::asio::buffer(&port_low_byte_, 1)}};
 }
 
 std::vector<boost::asio::mutable_buffer> Reply::MutDomainLengthBuffers() {
-  std::vector<boost::asio::mutable_buffer> buf;
-  buf.push_back(boost::asio::buffer(&domain_length_, 1));
-  return buf;
+  return {{boost::asio::buffer(&domain_length_, 1)}};
 }
 
 std::vector<boost::asio::mutable_buffer> Reply::MutDomainBuffers() {
   std::vector<boost::asio::mutable_buffer> buf;
   domain_.resize(domain_length_);
-  buf.push_back(boost::asio::buffer(domain_));
-  buf.push_back(boost::asio::buffer(&port_high_byte_, 1));
-  buf.push_back(boost::asio::buffer(&port_low_byte_, 1));
-  return buf;
+  return {{boost::asio::buffer(domain_),
+           boost::asio::buffer(&port_high_byte_, 1),
+           boost::asio::buffer(&port_low_byte_, 1)}};
 }
 
 }  // v5

@@ -15,19 +15,14 @@
 
 #include "common/error/error.h"
 
+#include "ssf/network/socks/v5/types.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
 namespace v5 {
 
 class Request {
- public:
-  // Command types constants
-  enum class Command : uint8_t { kConnect = 0x01, kBind = 0x02, kUDP = 0x03 };
-
-  // Address type constants
-  enum class AddressType : uint8_t { kIPv4 = 0x01, kDNS = 0x03, kIPv6 = 0x04 };
-
  public:
   void Init(const std::string& target_addr, uint16_t target_port,
             boost::system::error_code& ec);
@@ -51,7 +46,7 @@ class Request {
   std::vector<boost::asio::const_buffer> ConstBuffers() const;
 
   std::array<boost::asio::mutable_buffer, 4> FirstPartBuffers();
-  boost::asio::mutable_buffers_1 DomainLengthBuffer();
+  std::array<boost::asio::mutable_buffer, 1> DomainLengthBuffer();
   std::vector<boost::asio::mutable_buffer> AddressBuffer();
   std::array<boost::asio::mutable_buffer, 2> PortBuffers();
 

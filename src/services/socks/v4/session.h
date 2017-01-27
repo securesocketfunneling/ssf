@@ -86,39 +86,36 @@ class ReadRequestCoro : public boost::asio::coroutine {
 
 #include <boost/asio/yield.hpp>  // NOLINT
   void operator()(const boost::system::error_code& ec, std::size_t length) {
-    std::istream is(p_stream_.get());
-    std::string name;
-    std::string domain;
+    if (ec) {
+      handler_(ec, total_length_);
+      return;
+    }
 
-    if (!ec) reenter(this) {
-        // Read Request fixed size buffer
-        yield boost::asio::async_read(c_, r_.MutBuffer(), std::move(*this));
-        total_length_ += length;
+    reenter(this) {
+      // Read Request fixed size buffer
+      yield boost::asio::async_read(c_, r_.MutBuffer(), std::move(*this));
+      total_length_ += length;
 
-        // Read Request variable size name (from now, until '\0')
+      // Read Request variable size name (from now, until '\0')
+      yield boost::asio::async_read_until(c_, *p_stream_, '\0',
+                                          std::move(*this));
+      total_length_ += length;
+
+      // Set the name to complete the request
+      r_.set_name(boost::asio::buffer_cast<const char*>(p_stream_->data()));
+      p_stream_->consume(length);
+
+      if (r_.Is4aVersion()) {
+        // Read Request variable size domain (from now, until '\0')
         yield boost::asio::async_read_until(c_, *p_stream_, '\0',
                                             std::move(*this));
         total_length_ += length;
 
         // Set the name to complete the request
-        r_.set_name(boost::asio::buffer_cast<const char*>(p_stream_->data()));
-        p_stream_->consume(length);
-
-        if (r_.Is4aVersion()) {
-          // Read Request variable size domain (from now, until '\0')
-          yield boost::asio::async_read_until(c_, *p_stream_, '\0',
-                                              std::move(*this));
-          total_length_ += length;
-
-          // Set the name to complete the request
-          r_.set_domain(
-              boost::asio::buffer_cast<const char*>(p_stream_->data()));
-        }
-
-        boost::get<0>(handler_)(ec, total_length_);
+        r_.set_domain(boost::asio::buffer_cast<const char*>(p_stream_->data()));
       }
-    else {
-      boost::get<0>(handler_)(ec, total_length_);
+
+      handler_(ec, total_length_);
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT
@@ -134,8 +131,7 @@ class ReadRequestCoro : public boost::asio::coroutine {
 template <class VerifyHandler, class StreamSocket>
 void AsyncReadRequest(StreamSocket& c, ssf::network::socks::v4::Request* p_r,
                       VerifyHandler handler) {
-  ReadRequestCoro<boost::tuple<VerifyHandler>, StreamSocket> RequestReader(
-      c, p_r, boost::make_tuple(handler));
+  ReadRequestCoro<VerifyHandler, StreamSocket> RequestReader(c, p_r, handler);
 
   RequestReader(boost::system::error_code(), 0);
 }

@@ -11,6 +11,7 @@
 
 #include <boost/system/error_code.hpp>
 
+#include "ssf/network/socks/v5/types.h"
 #include "ssf/utils/enum.h"
 
 namespace ssf {
@@ -20,25 +21,13 @@ namespace v5 {
 
 class Reply {
  public:
-  // Status constants
-  enum class Status : uint8_t {
-    kGranted = 0x00,
-    kFailed = 0x01,
-    kConnNotAllowed = 0x02,
-    kNetUnreach = 0x03,
-    kHostUnreach = 0x04,
-    kConnRefused = 0x05,
-    kTTLEx = 0x06,
-    kError = 0x07,
-    kBadAddrType = 0x08
-  };
 
   // Address type constants
   enum class AddressType : uint8_t { kIPv4 = 0x01, kDNS = 0x03, kIPv6 = 0x04 };
 
  public:
   Reply();
-  Reply(const boost::system::error_code&);
+  Reply(CommandStatus reply_status);
 
   void Reset();
 
@@ -46,7 +35,9 @@ class Reply {
 
   uint8_t status() const { return status_; }
 
-  bool AccessGranted() const { return status_ == ToIntegral(Status::kGranted); }
+  bool AccessGranted() const {
+    return status_ == ToIntegral(CommandStatus::kSucceeded);
+  }
 
   bool IsAddrTypeSet() const {
     return addr_type_ == ToIntegral(AddressType::kIPv4) ||

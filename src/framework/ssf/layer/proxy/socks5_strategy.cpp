@@ -1,3 +1,5 @@
+#include <ssf/network/socks/v5/types.h>
+
 #include "ssf/error/error.h"
 #include "ssf/layer/proxy/socks5_strategy.h"
 #include "ssf/log/log.h"
@@ -64,7 +66,7 @@ void Socks5Strategy::GenAuthRequest(Buffer* p_request,
                                     uint32_t* p_expected_response_size,
                                     boost::system::error_code& ec) {
   AuthRequest req;
-  req.Init(AuthRequest::AuthMethod::kNoAuth);
+  req.Init({AuthMethod::kNoAuth});
 
   auto req_buf = req.ConstBuffers();
   p_request->resize(boost::asio::buffer_size(req_buf));
@@ -74,12 +76,11 @@ void Socks5Strategy::GenAuthRequest(Buffer* p_request,
 
 void Socks5Strategy::ProcessAuthResponse(const Buffer& response,
                                          boost::system::error_code& ec) {
-  AuthReply auth_reply;
+  ReplyAuth auth_reply;
   boost::asio::buffer_copy(auth_reply.MutBuffer(),
                            boost::asio::buffer(response));
 
-  if (auth_reply.auth_method() !=
-      ToIntegral(AuthRequest::AuthMethod::kNoAuth)) {
+  if (auth_reply.auth_method() != ToIntegral(AuthMethod::kNoAuth)) {
     SSF_LOG(kLogError) << "network[socks5 proxy]: authentication not supported";
     set_state(State::kError);
     ec.assign(ssf::error::connection_aborted, ssf::error::get_ssf_category());

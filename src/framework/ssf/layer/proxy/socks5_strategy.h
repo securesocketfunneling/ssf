@@ -14,8 +14,13 @@ namespace proxy {
 
 class Socks5Strategy : public SocksStrategy {
  private:
+  using AuthMethod = ssf::network::socks::v5::AuthMethod;
   using AuthRequest = ssf::network::socks::v5::RequestAuth;
-  using AuthReply = ssf::network::socks::v5::AuthReply;
+  using ReplyAuth = ssf::network::socks::v5::ReplyAuth;
+
+  using CommandType = ssf::network::socks::v5::CommandType;
+  using AddressType = ssf::network::socks::v5::AddressType;
+  using CommandStatus = ssf::network::socks::v5::CommandStatus;
   using ConnectRequest = ssf::network::socks::v5::Request;
   using ConnectReply = ssf::network::socks::v5::Reply;
 
