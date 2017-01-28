@@ -19,7 +19,8 @@ Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
       io_service_(client.get_io_service()),
       p_session_manager_(p_session_manager),
       client_(std::move(client)),
-      server_(client.get_io_service()) {}
+      server_(io_service_),
+      server_resolver_(io_service_) {}
 
 template <typename Demux>
 void Session<Demux>::HandleStop() {
@@ -33,7 +34,7 @@ void Session<Demux>::stop(boost::system::error_code&) {
   boost::system::error_code ec;
   server_.close(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[socks]: stop error " << ec.message();
+    SSF_LOG(kLogError) << "session[socks v5]: stop error " << ec.message();
   }
 }
 
@@ -50,7 +51,7 @@ template <typename Demux>
 void Session<Demux>::HandleRequestAuthDispatch(
     const boost::system::error_code& ec, std::size_t) {
   if (ec) {
-    SSF_LOG(kLogError) << "session[socks]: request auth failed "
+    SSF_LOG(kLogError) << "session[socks v5]: request auth failed "
                        << ec.message();
     HandleStop();
     return;
@@ -119,7 +120,7 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       DoUDPRequest();
       break;
     default:
-      SSF_LOG(kLogError) << "session[socks]: invalid v5 command";
+      SSF_LOG(kLogError) << "session[socks v5]: invalid v5 command";
       DoErrorCommand(CommandStatus::kCommandNotSupported);
       break;
   }
@@ -127,9 +128,10 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
-  auto handler =
+  auto connect_handler =
       boost::bind(&Session::HandleApplicationServerConnect,
                   self_shared_from_this(), boost::asio::placeholders::error);
+
   boost::system::error_code ec;
   uint16_t port = request_.port();
 
@@ -137,46 +139,45 @@ void Session<Demux>::DoConnectRequest() {
     case static_cast<uint8_t>(AddressType::kIPv4): {
       boost::asio::ip::address_v4 address(request_.ipv4());
       server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
-                            handler);
-      break;
-    }
-    case static_cast<uint8_t>(AddressType::kDNS): {
-      boost::asio::ip::tcp::resolver resolver(io_service_);
-      boost::asio::ip::tcp::resolver::query query(
-          std::string(request_.domain().data(), request_.domain().size()),
-          std::to_string(port));
-      boost::asio::ip::tcp::resolver::iterator iterator(
-          resolver.resolve(query, ec));
-      if (ec) {
-        handler(ec);
-      } else {
-        server_.async_connect(*iterator, handler);
-      }
+                            connect_handler);
       break;
     }
     case static_cast<uint8_t>(AddressType::kIPv6): {
       boost::asio::ip::address_v6 address(request_.ipv6());
       server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
-                            handler);
+                            connect_handler);
+      break;
+    }
+    case static_cast<uint8_t>(AddressType::kDNS): {
+      auto resolve_handler =
+          boost::bind(&Session::HandleResolveServerEndpoint,
+                      self_shared_from_this(), boost::asio::placeholders::error,
+                      boost::asio::placeholders::iterator);
+
+      boost::asio::ip::tcp::resolver::query query(
+          std::string(request_.domain().data(), request_.domain().size()),
+          std::to_string(port));
+
+      server_resolver_.async_resolve(query, resolve_handler);
       break;
     }
     default:
-      SSF_LOG(kLogError) << "session[socks]: unsupported address type";
+      SSF_LOG(kLogError) << "session[socks v5]: unsupported address type";
       ec.assign(ssf::error::connection_refused, ssf::error::get_ssf_category());
-      handler(ec);
+      connect_handler(ec);
       break;
   };
 }
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  SSF_LOG(kLogError) << "session[socks]: Bind not implemented yet";
+  SSF_LOG(kLogError) << "session[socks v5]: Bind not implemented yet";
   DoErrorCommand(CommandStatus::kCommandNotSupported);
 }
 
 template <typename Demux>
 void Session<Demux>::DoUDPRequest() {
-  SSF_LOG(kLogError) << "session[socks]: UDP not implemented yet";
+  SSF_LOG(kLogError) << "session[socks v5]: UDP not implemented yet";
   DoErrorCommand(CommandStatus::kCommandNotSupported);
 }
 
@@ -189,6 +190,20 @@ void Session<Demux>::DoErrorCommand(CommandStatus err_status) {
                  [this, self, p_reply](boost::system::error_code, std::size_t) {
                    HandleStop();
                  });
+}
+
+template <typename Demux>
+void Session<Demux>::HandleResolveServerEndpoint(
+    const boost::system::error_code& ec, tcp_resolver::iterator ep_it) {
+  auto connect_handler =
+      boost::bind(&Session::HandleApplicationServerConnect,
+                  self_shared_from_this(), boost::asio::placeholders::error);
+  if (ec) {
+    connect_handler(ec);
+    return;
+  }
+
+  server_.async_connect(*ep_it, connect_handler);
 }
 
 template <typename Demux>

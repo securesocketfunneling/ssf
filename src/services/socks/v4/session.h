@@ -24,13 +24,15 @@ namespace v4 {
 template <typename Demux>
 class Session : public ssf::BaseSession {
  private:
-  typedef std::array<char, 50 * 1024> StreamBuff;
+  using StreamBuff = std::array<char, 50 * 1024>;
 
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef typename boost::asio::fiber::stream_fiber<
-      typename Demux::socket_type>::socket fiber;
+  using socket = boost::asio::ip::tcp::socket;
+  using tcp_resolver = boost::asio::ip::tcp::resolver;
 
-  typedef ItemManager<BaseSessionPtr> SessionManager;
+  using fiber = typename boost::asio::fiber::stream_fiber<
+      typename Demux::socket_type>::socket;
+
+  using SessionManager = ItemManager<BaseSessionPtr>;
 
   using Request = ssf::network::socks::v4::Request;
   using Reply = ssf::network::socks::v4::Reply;
@@ -50,6 +52,9 @@ class Session : public ssf::BaseSession {
 
   void DoBindRequest();
 
+  void HandleResolveServerEndpoint(const boost::system::error_code& err,
+                                   tcp_resolver::iterator ep_it);
+
   void HandleApplicationServerConnect(const boost::system::error_code&);
 
   void EstablishLink();
@@ -66,7 +71,9 @@ class Session : public ssf::BaseSession {
   SessionManager* p_session_manager_;
 
   fiber client_;
-  socket app_server_;
+  socket server_;
+  tcp_resolver server_resolver_;
+
   Request request_;
 
   std::shared_ptr<StreamBuff> upstream_;

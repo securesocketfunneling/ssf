@@ -33,13 +33,7 @@ void Reply::Reset() {
   port_low_byte_ = 0;
 }
 
-bool Reply::IsComplete() const {
-  if (!IsAddrTypeSet()) {
-    return false;
-  }
-
-  return IsPortSet();
-}
+bool Reply::IsComplete() const { return IsAddrTypeSet() && IsPortSet(); }
 
 void Reply::set_ipv4(boost::asio::ip::address_v4::bytes_type ipv4) {
   addr_type_ = ToIntegral(AddressType::kIPv4);
@@ -109,7 +103,7 @@ std::vector<boost::asio::mutable_buffer> Reply::MutDynamicBuffers() {
       }
       break;
     case static_cast<uint8_t>(AddressType::kIPv6):
-      buf = MutIPV4Buffers();
+      buf = MutIPV6Buffers();
       break;
   }
 

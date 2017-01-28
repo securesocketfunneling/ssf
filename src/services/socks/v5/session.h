@@ -31,6 +31,8 @@ class Session : public ssf::BaseSession {
   using StreamBuff = std::array<char, 50 * 1024>;
 
   using socket = boost::asio::ip::tcp::socket;
+  using tcp_resolver = boost::asio::ip::tcp::resolver;
+
   using fiber = typename boost::asio::fiber::stream_fiber<
       typename Demux::socket_type>::socket;
 
@@ -71,6 +73,9 @@ class Session : public ssf::BaseSession {
 
   void DoUDPRequest();
 
+  void HandleResolveServerEndpoint(const boost::system::error_code& err,
+                                   tcp_resolver::iterator ep_it);
+
   void HandleApplicationServerConnect(const boost::system::error_code&);
 
   void DoErrorCommand(CommandStatus err_status);
@@ -90,6 +95,7 @@ class Session : public ssf::BaseSession {
 
   fiber client_;
   socket server_;
+  tcp_resolver server_resolver_;
   RequestAuth request_auth_;
   Request request_;
 

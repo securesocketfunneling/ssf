@@ -231,6 +231,8 @@ bool Socks5DummyClient::InitSocks() {
     return false;
   }
   if (!rep.IsComplete() || !rep.AccessGranted()) {
+    SSF_LOG(kLogError) << "socks5 client: request incomplete or access refused"
+                       << ec.value();
     Stop();
     return false;
   }
