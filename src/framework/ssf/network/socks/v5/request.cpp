@@ -17,7 +17,7 @@ namespace v5 {
 void Request::Init(const std::string& target_addr, uint16_t target_port,
                    boost::system::error_code& ec) {
   version_ = ToIntegral(Socks::Version::kV5);
-  command_ = ToIntegral(Command::kConnect);
+  command_ = ToIntegral(CommandType::kConnect);
   reserved_ = 0x00;
 
   boost::system::error_code addr_ec;
@@ -80,15 +80,13 @@ std::vector<boost::asio::const_buffer> Request::ConstBuffers() const {
 }
 
 std::array<boost::asio::mutable_buffer, 4> Request::FirstPartBuffers() {
-  std::array<boost::asio::mutable_buffer, 4> buf = {
-      {boost::asio::buffer(&version_, 1), boost::asio::buffer(&command_, 1),
-       boost::asio::buffer(&reserved_, 1),
-       boost::asio::buffer(&address_type_, 1)}};
-  return buf;
+  return {{boost::asio::buffer(&version_, 1), boost::asio::buffer(&command_, 1),
+           boost::asio::buffer(&reserved_, 1),
+           boost::asio::buffer(&address_type_, 1)}};
 }
 
-boost::asio::mutable_buffers_1 Request::DomainLengthBuffer() {
-  return boost::asio::mutable_buffers_1(&domain_length_, 1);
+std::array<boost::asio::mutable_buffer, 1> Request::DomainLengthBuffer() {
+  return {{boost::asio::buffer(&domain_length_, 1)}};
 }
 
 std::vector<boost::asio::mutable_buffer> Request::AddressBuffer() {
@@ -99,12 +97,8 @@ std::vector<boost::asio::mutable_buffer> Request::AddressBuffer() {
       buf.push_back(boost::asio::buffer(ipv4_));
       break;
     case static_cast<uint8_t>(AddressType::kDNS):
-      while (domain_.size() < domain_length_) {
-        domain_.push_back(0);
-      }
-      for (size_t i = 0; i < domain_length_; ++i) {
-        buf.push_back(boost::asio::mutable_buffer(&(domain_[i]), 1));
-      }
+      domain_.resize(domain_length_);
+      buf.push_back(boost::asio::buffer(domain_));
       break;
     case static_cast<uint8_t>(AddressType::kIPv6):
       buf.push_back(boost::asio::buffer(ipv6_));
@@ -114,10 +108,8 @@ std::vector<boost::asio::mutable_buffer> Request::AddressBuffer() {
 }
 
 std::array<boost::asio::mutable_buffer, 2> Request::PortBuffers() {
-  std::array<boost::asio::mutable_buffer, 2> buf = {
-      {boost::asio::buffer(&port_high_byte_, 1),
-       boost::asio::buffer(&port_low_byte_, 1)}};
-  return buf;
+  return {{boost::asio::buffer(&port_high_byte_, 1),
+           boost::asio::buffer(&port_low_byte_, 1)}};
 }
 
 }  // v5

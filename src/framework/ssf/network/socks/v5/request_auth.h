@@ -7,6 +7,8 @@
 
 #include <boost/asio/buffer.hpp>
 
+#include "ssf/network/socks/v5/types.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
@@ -14,22 +16,16 @@ namespace v5 {
 
 class RequestAuth {
  public:
-  // Authentication method constants
-  enum class AuthMethod : uint8_t {
-    kNoAuth = 0x00,
-    kGSSAPI = 0x01,
-    kUserPassword = 0x02,
-    kError = 0xFF
-  };
+  RequestAuth();
 
- public:
-  void Init(AuthMethod method);
+  void Init(const std::vector<AuthMethod>& methods);
 
   uint8_t auth_supported_count() const { return auth_supported_count_; }
 
   void AddAuthMethod(uint8_t auth_method);
 
-  std::array<boost::asio::mutable_buffer, 1> MutBuffers();
+  boost::asio::mutable_buffers_1 MutAuthSupportedBuffers();
+  boost::asio::mutable_buffers_1 MutAuthBuffers();
   std::vector<boost::asio::const_buffer> ConstBuffers();
 
   bool IsNoAuthPresent();

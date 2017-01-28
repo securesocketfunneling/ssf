@@ -67,7 +67,7 @@ struct AsyncHDSocketLinker : boost::asio::coroutine {
       }
     }
     else {
-      boost::get<0>(handler_)(ec);
+      handler_(ec);
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT
@@ -118,13 +118,8 @@ template<typename Handler, class ReadFrom, class WriteTo>
 void AsyncEstablishHDLink(ReadFrom rf, WriteTo wt,
                           boost::asio::mutable_buffers_1 working_buffer,
                           Handler handler) {
-  AsyncHDSocketLinker<boost::tuple<Handler>,
-                      typename ReadFrom::type,
-                      typename WriteTo::type> AsyncTransfer(
-        rf.read_from_,
-        wt.write_to_,
-        working_buffer,
-        boost::make_tuple(handler));
+  AsyncHDSocketLinker<Handler, typename ReadFrom::type, typename WriteTo::type>
+      AsyncTransfer(rf.read_from_, wt.write_to_, working_buffer, handler);
 
   AsyncTransfer(boost::system::error_code(), 0);
 }

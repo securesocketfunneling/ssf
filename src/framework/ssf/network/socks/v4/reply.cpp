@@ -29,19 +29,17 @@ Reply::Reply(const boost::system::error_code& err,
 }
 
 std::array<boost::asio::const_buffer, 5> Reply::ConstBuffer() const {
-  std::array<boost::asio::const_buffer, 5> buf = {
-      {boost::asio::buffer(&null_byte_, 1), boost::asio::buffer(&status_, 1),
-       boost::asio::buffer(&port_high_byte_, 1),
-       boost::asio::buffer(&port_low_byte_, 1), boost::asio::buffer(address_)}};
-  return buf;
+  return {{boost::asio::buffer(&null_byte_, 1), boost::asio::buffer(&status_, 1),
+           boost::asio::buffer(&port_high_byte_, 1),
+           boost::asio::buffer(&port_low_byte_, 1),
+           boost::asio::buffer(address_)}};
 }
 
 std::array<boost::asio::mutable_buffer, 5> Reply::MutBuffer() {
-  std::array<boost::asio::mutable_buffer, 5> buf = {
-      {boost::asio::buffer(&null_byte_, 1), boost::asio::buffer(&status_, 1),
-       boost::asio::buffer(&port_high_byte_, 1),
-       boost::asio::buffer(&port_low_byte_, 1), boost::asio::buffer(address_)}};
-  return buf;
+  return {{boost::asio::buffer(&null_byte_, 1), boost::asio::buffer(&status_, 1),
+           boost::asio::buffer(&port_high_byte_, 1),
+           boost::asio::buffer(&port_low_byte_, 1),
+           boost::asio::buffer(address_)}};
 }
 
 }  // v4

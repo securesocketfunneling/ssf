@@ -5,6 +5,7 @@
 #include <ssf/network/socks/v5/reply_auth.h>
 #include <ssf/network/socks/v5/request.h>
 #include <ssf/network/socks/v5/reply.h>
+#include <ssf/network/socks/v5/types.h>
 
 #include <ssf/utils/enum.h>
 
@@ -157,15 +158,22 @@ Socks5DummyClient::Socks5DummyClient(const std::string& socks_server_addr,
                        target_port, size) {}
 
 bool Socks5DummyClient::InitSocks() {
+  using AuthMethod = ssf::network::socks::v5::AuthMethod;
   using RequestAuth = ssf::network::socks::v5::RequestAuth;
-  using ReplyAuth = ssf::network::socks::v5::AuthReply;
+  using ReplyAuth = ssf::network::socks::v5::ReplyAuth;
+
+  using CommandType = ssf::network::socks::v5::CommandType;
+  using AddressType = ssf::network::socks::v5::AddressType;
+  using CommandStatus = ssf::network::socks::v5::CommandStatus;
   using Request = ssf::network::socks::v5::Request;
   using Reply = ssf::network::socks::v5::Reply;
 
   boost::system::error_code ec;
 
   RequestAuth auth_req;
-  auth_req.Init(RequestAuth::AuthMethod::kNoAuth);
+  auth_req.Init({AuthMethod::kNoAuth,
+                 AuthMethod::kGSSAPI,
+                 AuthMethod::kUserPassword});
   boost::asio::write(socket_, auth_req.ConstBuffers(), ec);
   if (ec) {
     SSF_LOG(kLogError) << "socks5 client: fail to write auth request "
@@ -182,8 +190,7 @@ bool Socks5DummyClient::InitSocks() {
     Stop();
     return false;
   }
-  if (auth_rep.auth_method() !=
-      ssf::ToIntegral(RequestAuth::AuthMethod::kNoAuth)) {
+  if (auth_rep.auth_method() != ssf::ToIntegral(AuthMethod::kNoAuth)) {
     Stop();
     return false;
   }
@@ -224,6 +231,8 @@ bool Socks5DummyClient::InitSocks() {
     return false;
   }
   if (!rep.IsComplete() || !rep.AccessGranted()) {
+    SSF_LOG(kLogError) << "socks5 client: request incomplete or access refused"
+                       << ec.value();
     Stop();
     return false;
   }

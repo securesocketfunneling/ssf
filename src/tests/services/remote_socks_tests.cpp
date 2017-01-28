@@ -44,7 +44,16 @@ class RemoteSocks4Test
                               tests::socks::Socks4DummyClient> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9061", ec);
+    return ServiceTested::CreateServiceOptions(":9151", ec);
+  }
+};
+
+class RemoteSocks4aTest
+    : public SocksFixtureTest<ssf::services::RemoteSocks,
+                              tests::socks::Socks4DummyClient> {
+  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+      boost::system::error_code& ec) override {
+    return ServiceTested::CreateServiceOptions(":9153", ec);
   }
 };
 
@@ -52,20 +61,23 @@ class RemoteSocks4WildcardTest
     : public RemoteSocksWildcardTest<RemoteSocks4Test> {
   std::shared_ptr<typename RemoteSocks4Test::ServiceTested>
   ServiceCreateServiceOptions(boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9063", ec);
+    return ServiceTested::CreateServiceOptions(":9155", ec);
   }
 };
 
-TEST_F(RemoteSocks4Test, startStopTransmitSSFRemoteSocks) {
+TEST_F(RemoteSocks4Test, Socks4) {
   ASSERT_TRUE(Wait());
-
-  Run("9061", "9062");
+  Run("9151", "127.0.0.1", "9152");
 }
 
-TEST_F(RemoteSocks4WildcardTest, startStopTransmitSSFSocks) {
+TEST_F(RemoteSocks4aTest, Socks4a) {
   ASSERT_TRUE(Wait());
+  Run("9153", "localhost", "9154");
+}
 
-  Run("9063", "9064");
+TEST_F(RemoteSocks4WildcardTest, Socks4) {
+  ASSERT_TRUE(Wait());
+  Run("9155", "127.0.0.1", "9156");
 }
 
 class RemoteSocks5Test
@@ -73,7 +85,16 @@ class RemoteSocks5Test
                               tests::socks::Socks5DummyClient> {
   std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9065", ec);
+    return ServiceTested::CreateServiceOptions(":9157", ec);
+  }
+};
+
+class RemoteSocks5hTest
+    : public SocksFixtureTest<ssf::services::RemoteSocks,
+                              tests::socks::Socks5DummyClient> {
+  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+      boost::system::error_code& ec) override {
+    return ServiceTested::CreateServiceOptions(":9159", ec);
   }
 };
 
@@ -81,18 +102,21 @@ class RemoteSocks5WildcardTest
     : public RemoteSocksWildcardTest<RemoteSocks5Test> {
   std::shared_ptr<typename RemoteSocks4Test::ServiceTested>
   ServiceCreateServiceOptions(boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9067", ec);
+    return ServiceTested::CreateServiceOptions(":9161", ec);
   }
 };
 
-TEST_F(RemoteSocks5Test, startStopTransmitSSFRemoteSocks) {
+TEST_F(RemoteSocks5Test, Socks5) {
   ASSERT_TRUE(Wait());
-
-  Run("9065", "9066");
+  Run("9157", "127.0.0.1", "9158");
 }
 
-TEST_F(RemoteSocks5WildcardTest, startStopTransmitSSFSocks) {
+TEST_F(RemoteSocks5hTest, Socks5h) {
   ASSERT_TRUE(Wait());
+  Run("9159", "localhost", "9160");
+}
 
-  Run("9067", "9068");
+TEST_F(RemoteSocks5WildcardTest, Socks5) {
+  ASSERT_TRUE(Wait());
+  Run("9161", "127.0.0.1", "9162");
 }

@@ -6,15 +6,18 @@
 
 #include <boost/asio/buffer.hpp>
 
+#include "ssf/network/socks/v5/request_auth.h"
+#include "ssf/network/socks/v5/types.h"
+
 namespace ssf {
 namespace network {
 namespace socks {
 namespace v5 {
 
-class AuthReply {
+class ReplyAuth {
  public:
-  AuthReply();
-  AuthReply(uint8_t auth_method);
+  ReplyAuth();
+  ReplyAuth(AuthMethod auth_method);
 
   uint8_t auth_method() const { return auth_method_; }
 

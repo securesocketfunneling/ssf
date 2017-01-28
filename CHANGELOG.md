@@ -5,6 +5,9 @@
 Features:
 * #14 SOCKS proxy support (no authentication), cf. configuration file
 
+Fixed bugs:
+* #32 SOCKS v5 microservice
+
 ## 2.2.0
 
 Features:

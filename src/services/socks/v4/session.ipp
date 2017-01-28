@@ -21,7 +21,8 @@ Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
       io_service_(client.get_io_service()),
       p_session_manager_(p_session_manager),
       client_(std::move(client)),
-      app_server_(client.get_io_service()) {}
+      server_(io_service_),
+      server_resolver_(io_service_) {}
 
 template <typename Demux>
 void Session<Demux>::HandleStop() {
@@ -33,9 +34,9 @@ template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code&) {
   client_.close();
   boost::system::error_code ec;
-  app_server_.close(ec);
+  server_.close(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[socks]: stop error " << ec.message();
+    SSF_LOG(kLogError) << "session[socks v4]: stop error " << ec.message();
   }
 }
 
@@ -65,46 +66,48 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       DoBindRequest();
       break;
     default:
-      SSF_LOG(kLogError) << "session[socks]: Invalid v4 command";
+      SSF_LOG(kLogError) << "session[socks v4]: invalid v4 command";
       break;
   }
 }
 
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
-  auto handler =
+  auto connect_handler =
       boost::bind(&Session::HandleApplicationServerConnect,
                   self_shared_from_this(), boost::asio::placeholders::error);
 
-  boost::system::error_code ec;
-  boost::asio::ip::tcp::endpoint endpoint;
-
   if (request_.Is4aVersion()) {
-    // In the 4a version, the address needs to be resolved
-    boost::asio::ip::tcp::resolver resolver(io_service_);
+    // socks4a: address needs to be resolved
+    auto resolve_handler = boost::bind(
+        &Session::HandleResolveServerEndpoint, self_shared_from_this(),
+        boost::asio::placeholders::error, boost::asio::placeholders::iterator);
     boost::asio::ip::tcp::resolver::query query(
         request_.domain(), std::to_string(request_.port()));
-    boost::asio::ip::tcp::resolver::iterator iterator(
-        resolver.resolve(query, ec));
-
-    if (!ec) {
-      endpoint = *iterator;
-    }
+    server_resolver_.async_resolve(query, resolve_handler);
   } else {
-    endpoint = request_.Endpoint();
-  }
-
-  if (ec) {
-    HandleApplicationServerConnect(ec);
-  } else {
-    app_server_.async_connect(endpoint, handler);
+    server_.async_connect(request_.Endpoint(), connect_handler);
   }
 }
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  SSF_LOG(kLogError) << "session[socks]: Bind Not implemented yet";
+  SSF_LOG(kLogError) << "session[socks v4]: Bind not implemented yet";
   HandleStop();
+}
+
+template <typename Demux>
+void Session<Demux>::HandleResolveServerEndpoint(
+    const boost::system::error_code& ec, tcp_resolver::iterator ep_it) {
+  auto connect_handler =
+      boost::bind(&Session::HandleApplicationServerConnect,
+                  self_shared_from_this(), boost::asio::placeholders::error);
+  if (ec) {
+    connect_handler(ec);
+    return;
+  }
+
+  server_.async_connect(*ep_it, connect_handler);
 }
 
 template <typename Demux>
@@ -138,11 +141,11 @@ void Session<Demux>::EstablishLink() {
   downstream_.reset(new StreamBuff);
 
   // Two half duplex links
-  AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(app_server_),
+  AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(server_),
                        boost::asio::buffer(*upstream_),
                        boost::bind(&Session::HandleStop, self));
 
-  AsyncEstablishHDLink(ssf::ReadFrom(app_server_), ssf::WriteTo(client_),
+  AsyncEstablishHDLink(ssf::ReadFrom(server_), ssf::WriteTo(client_),
                        boost::asio::buffer(*downstream_),
                        boost::bind(&Session::HandleStop, self));
 }

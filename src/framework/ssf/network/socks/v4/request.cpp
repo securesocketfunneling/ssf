@@ -66,11 +66,10 @@ boost::asio::ip::tcp::endpoint Request::Endpoint() const {
 }
 
 std::array<boost::asio::mutable_buffer, 4> Request::MutBuffer() {
-  std::array<boost::asio::mutable_buffer, 4> buf = {
-      {boost::asio::buffer(&command_, 1),
-       boost::asio::buffer(&port_high_byte_, 1),
-       boost::asio::buffer(&port_low_byte_, 1), boost::asio::buffer(address_)}};
-  return buf;
+  return {{boost::asio::buffer(&command_, 1),
+           boost::asio::buffer(&port_high_byte_, 1),
+           boost::asio::buffer(&port_low_byte_, 1),
+           boost::asio::buffer(address_)}};
 }
 
 std::vector<boost::asio::const_buffer> Request::ConstBuffer() const {

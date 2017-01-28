@@ -24,13 +24,15 @@ namespace v4 {
 template <typename Demux>
 class Session : public ssf::BaseSession {
  private:
-  typedef std::array<char, 50 * 1024> StreamBuff;
+  using StreamBuff = std::array<char, 50 * 1024>;
 
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef typename boost::asio::fiber::stream_fiber<
-      typename Demux::socket_type>::socket fiber;
+  using socket = boost::asio::ip::tcp::socket;
+  using tcp_resolver = boost::asio::ip::tcp::resolver;
 
-  typedef ItemManager<BaseSessionPtr> SessionManager;
+  using fiber = typename boost::asio::fiber::stream_fiber<
+      typename Demux::socket_type>::socket;
+
+  using SessionManager = ItemManager<BaseSessionPtr>;
 
   using Request = ssf::network::socks::v4::Request;
   using Reply = ssf::network::socks::v4::Reply;
@@ -50,6 +52,9 @@ class Session : public ssf::BaseSession {
 
   void DoBindRequest();
 
+  void HandleResolveServerEndpoint(const boost::system::error_code& err,
+                                   tcp_resolver::iterator ep_it);
+
   void HandleApplicationServerConnect(const boost::system::error_code&);
 
   void EstablishLink();
@@ -66,7 +71,9 @@ class Session : public ssf::BaseSession {
   SessionManager* p_session_manager_;
 
   fiber client_;
-  socket app_server_;
+  socket server_;
+  tcp_resolver server_resolver_;
+
   Request request_;
 
   std::shared_ptr<StreamBuff> upstream_;
@@ -86,39 +93,36 @@ class ReadRequestCoro : public boost::asio::coroutine {
 
 #include <boost/asio/yield.hpp>  // NOLINT
   void operator()(const boost::system::error_code& ec, std::size_t length) {
-    std::istream is(p_stream_.get());
-    std::string name;
-    std::string domain;
+    if (ec) {
+      handler_(ec, total_length_);
+      return;
+    }
 
-    if (!ec) reenter(this) {
-        // Read Request fixed size buffer
-        yield boost::asio::async_read(c_, r_.MutBuffer(), std::move(*this));
-        total_length_ += length;
+    reenter(this) {
+      // Read Request fixed size buffer
+      yield boost::asio::async_read(c_, r_.MutBuffer(), std::move(*this));
+      total_length_ += length;
 
-        // Read Request variable size name (from now, until '\0')
+      // Read Request variable size name (from now, until '\0')
+      yield boost::asio::async_read_until(c_, *p_stream_, '\0',
+                                          std::move(*this));
+      total_length_ += length;
+
+      // Set the name to complete the request
+      r_.set_name(boost::asio::buffer_cast<const char*>(p_stream_->data()));
+      p_stream_->consume(length);
+
+      if (r_.Is4aVersion()) {
+        // Read Request variable size domain (from now, until '\0')
         yield boost::asio::async_read_until(c_, *p_stream_, '\0',
                                             std::move(*this));
         total_length_ += length;
 
         // Set the name to complete the request
-        r_.set_name(boost::asio::buffer_cast<const char*>(p_stream_->data()));
-        p_stream_->consume(length);
-
-        if (r_.Is4aVersion()) {
-          // Read Request variable size domain (from now, until '\0')
-          yield boost::asio::async_read_until(c_, *p_stream_, '\0',
-                                              std::move(*this));
-          total_length_ += length;
-
-          // Set the name to complete the request
-          r_.set_domain(
-              boost::asio::buffer_cast<const char*>(p_stream_->data()));
-        }
-
-        boost::get<0>(handler_)(ec, total_length_);
+        r_.set_domain(boost::asio::buffer_cast<const char*>(p_stream_->data()));
       }
-    else {
-      boost::get<0>(handler_)(ec, total_length_);
+
+      handler_(ec, total_length_);
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT
@@ -134,8 +138,7 @@ class ReadRequestCoro : public boost::asio::coroutine {
 template <class VerifyHandler, class StreamSocket>
 void AsyncReadRequest(StreamSocket& c, ssf::network::socks::v4::Request* p_r,
                       VerifyHandler handler) {
-  ReadRequestCoro<boost::tuple<VerifyHandler>, StreamSocket> RequestReader(
-      c, p_r, boost::make_tuple(handler));
+  ReadRequestCoro<VerifyHandler, StreamSocket> RequestReader(c, p_r, handler);
 
   RequestReader(boost::system::error_code(), 0);
 }

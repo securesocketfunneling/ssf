@@ -1,6 +1,4 @@
-/build
-/build-no-security
-/build32
-/build64
+/build*
+/.build*
 /third_party
 /src/framework/tests/proxy/proxy.json

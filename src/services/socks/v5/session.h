@@ -8,9 +8,9 @@
 #include <boost/asio.hpp>
 
 #include <ssf/network/base_session.h>
-#include <ssf/network/socket_link.h>
 #include <ssf/network/manager.h>
-#include <ssf/network/base_session.h>
+#include <ssf/network/socket_link.h>
+#include <ssf/network/socks/v5/types.h>
 
 #include <ssf/utils/enum.h>
 
@@ -31,12 +31,19 @@ class Session : public ssf::BaseSession {
   using StreamBuff = std::array<char, 50 * 1024>;
 
   using socket = boost::asio::ip::tcp::socket;
+  using tcp_resolver = boost::asio::ip::tcp::resolver;
+
   using fiber = typename boost::asio::fiber::stream_fiber<
       typename Demux::socket_type>::socket;
 
+  using AuthMethod = ssf::network::socks::v5::AuthMethod;
   using RequestAuth = ssf::network::socks::v5::RequestAuth;
+
+  using CommandType = ssf::network::socks::v5::CommandType;
+  using AddressType = ssf::network::socks::v5::AddressType;
+  using CommandStatus = ssf::network::socks::v5::CommandStatus;
+  using ReplyAuth = ssf::network::socks::v5::ReplyAuth;
   using Request = ssf::network::socks::v5::Request;
-  using AuthReply = ssf::network::socks::v5::AuthReply;
   using Reply = ssf::network::socks::v5::Reply;
 
   using SessionManager = ItemManager<BaseSessionPtr>;
@@ -66,7 +73,12 @@ class Session : public ssf::BaseSession {
 
   void DoUDPRequest();
 
+  void HandleResolveServerEndpoint(const boost::system::error_code& err,
+                                   tcp_resolver::iterator ep_it);
+
   void HandleApplicationServerConnect(const boost::system::error_code&);
+
+  void DoErrorCommand(CommandStatus err_status);
 
   void EstablishLink();
 
@@ -82,7 +94,8 @@ class Session : public ssf::BaseSession {
   SessionManager* p_session_manager_;
 
   fiber client_;
-  socket app_server_;
+  socket server_;
+  tcp_resolver server_resolver_;
   RequestAuth request_auth_;
   Request request_;
 
@@ -103,27 +116,22 @@ class ReadRequestAuthCoro : public boost::asio::coroutine {
 
 #include <boost/asio/yield.hpp>  // NOLINT
   void operator()(const boost::system::error_code& ec, std::size_t length) {
-    uint8_t method_count = 0;
-    uint8_t method = 0;
+    if (ec) {
+      handler_(ec, total_length_);
+      return;
+    }
 
-    if (!ec) reenter(this) {
-        // Read Request fixed size number of authentication methods
-        yield boost::asio::async_read(c_, r_.MutBuffers(), std::move(*this));
-        total_length_ += length;
+    reenter(this) {
+      // Read Request fixed size number of authentication methods
+      yield boost::asio::async_read(c_, r_.MutAuthSupportedBuffers(),
+                                    std::move(*this));
 
-        // Read each supported method
-        for (method_count = 0; method_count < r_.auth_supported_count();
-             ++method_count) {
-          yield boost::asio::async_read(
-              c_, boost::asio::mutable_buffers_1(&method, 1), std::move(*this));
-          r_.AddAuthMethod(method);
-          total_length_ += length;
-        }
+      total_length_ += length;
 
-        boost::get<0>(handler_)(ec, total_length_);
-      }
-    else {
-      boost::get<0>(handler_)(ec, total_length_);
+      // Read each supported method
+      yield boost::asio::async_read(c_, r_.MutAuthBuffers(), std::move(*this));
+
+      handler_(ec, total_length_);
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT
@@ -139,15 +147,15 @@ template <class VerifyHandler, class StreamSocket>
 void AsyncReadRequestAuth(StreamSocket& c,
                           ssf::network::socks::v5::RequestAuth* p_r,
                           VerifyHandler handler) {
-  ReadRequestAuthCoro<boost::tuple<VerifyHandler>, StreamSocket>
-      RequestAuthReader(c, p_r, boost::make_tuple(handler));
+  ReadRequestAuthCoro<VerifyHandler, StreamSocket> RequestAuthReader(c, p_r,
+                                                                     handler);
 
   RequestAuthReader(boost::system::error_code(), 0);
 }
 
 template <class VerifyHandler, class StreamSocket>
 void AsyncSendAuthReply(StreamSocket& c,
-                        const ssf::network::socks::v5::AuthReply& r,
+                        const ssf::network::socks::v5::ReplyAuth& r,
                         VerifyHandler handler) {
   boost::asio::async_write(c, r.ConstBuffer(), handler);
 }
@@ -156,6 +164,9 @@ template <class VerifyHandler, class StreamSocket>
 class ReadRequestCoro : public boost::asio::coroutine {
  private:
   using Request = ssf::network::socks::v5::Request;
+  using CommandType = ssf::network::socks::v5::CommandType;
+  using AddressType = ssf::network::socks::v5::AddressType;
+  using CommandStatus = ssf::network::socks::v5::CommandStatus;
 
  public:
   ReadRequestCoro(StreamSocket& c, ssf::network::socks::v5::Request* p_r,
@@ -164,48 +175,42 @@ class ReadRequestCoro : public boost::asio::coroutine {
 
 #include <boost/asio/yield.hpp>  // NOLINT
   void operator()(const boost::system::error_code& ec, std::size_t length) {
-    if (!ec) reenter(this) {
-        // Read Request fixed size buffer
-        yield boost::asio::async_read(c_, r_.FirstPartBuffers(),
+    if (ec) {
+      handler_(ec, total_length_);
+      return;
+    }
+
+    reenter(this) {
+      // Read Request fixed size buffer
+      yield boost::asio::async_read(c_, r_.FirstPartBuffers(),
+                                    std::move(*this));
+      total_length_ += length;
+
+      // Read the address (cannot use switch into stackless coroutine)
+      if (r_.address_type() == ToIntegral(AddressType::kIPv4) ||
+          r_.address_type() == ToIntegral(AddressType::kIPv6)) {
+        // Read the address
+        yield boost::asio::async_read(c_, r_.AddressBuffer(), std::move(*this));
+        total_length_ += length;
+      } else if (r_.address_type() == ToIntegral(AddressType::kDNS)) {
+        yield boost::asio::async_read(c_, r_.DomainLengthBuffer(),
                                       std::move(*this));
         total_length_ += length;
-
-        // Read the address
-        if (r_.address_type() == ToIntegral(Request::AddressType::kIPv4)) {
-          // Read IPv4 address
-          yield boost::asio::async_read(c_, r_.AddressBuffer(),
-                                        std::move(*this));
-          total_length_ += length;
-        } else if (r_.address_type() ==
-                   ToIntegral(Request::AddressType::kDNS)) {
-          // Read length of the domain name
-          yield boost::asio::async_read(c_, r_.DomainLengthBuffer(),
-                                        std::move(*this));
-          total_length_ += length;
-          // Read domain name
-          yield boost::asio::async_read(c_, r_.AddressBuffer(),
-                                        std::move(*this));
-          total_length_ += length;
-        } else if (r_.address_type() ==
-                   ToIntegral(Request::AddressType::kIPv6)) {
-          // Read IPv6 address
-          yield boost::asio::async_read(c_, r_.AddressBuffer(),
-                                        std::move(*this));
-          total_length_ += length;
-        } else {
-          boost::get<0>(handler_)(
-              boost::system::error_code(::error::protocol_error,
-                                        ::error::get_ssf_category()),
-              total_length_);
-        }
-
-        yield boost::asio::async_read(c_, r_.PortBuffers(), std::move(*this));
+        // Read domain name
+        yield boost::asio::async_read(c_, r_.AddressBuffer(), std::move(*this));
         total_length_ += length;
-
-        boost::get<0>(handler_)(ec, total_length_);
+      } else {
+        // address type not supported
+        handler_(boost::system::error_code(::error::protocol_error,
+                                           ::error::get_ssf_category()),
+                 total_length_);
+        return;
       }
-    else {
-      boost::get<0>(handler_)(ec, total_length_);
+
+      yield boost::asio::async_read(c_, r_.PortBuffers(), std::move(*this));
+      total_length_ += length;
+
+      handler_(ec, total_length_);
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT
@@ -220,8 +225,7 @@ class ReadRequestCoro : public boost::asio::coroutine {
 template <class VerifyHandler, class StreamSocket>
 void AsyncReadRequest(StreamSocket& c, ssf::network::socks::v5::Request* p_r,
                       VerifyHandler handler) {
-  ReadRequestCoro<boost::tuple<VerifyHandler>, StreamSocket> RequestReader(
-      c, p_r, boost::make_tuple(handler));
+  ReadRequestCoro<VerifyHandler, StreamSocket> RequestReader(c, p_r, handler);
 
   RequestReader(boost::system::error_code(), 0);
 }
