@@ -129,7 +129,8 @@ class basic_CircuitSocket_service
                 ssf::error::get_ssf_category());
       return ec;
     }
-
+    impl.p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                                       ec);
     return impl.p_next_layer_socket->close(ec);
   }
 

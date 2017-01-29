@@ -66,8 +66,8 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   ~TLSStreamBufferer() {}
 
   static p_puller_type create(p_tls_stream_type p_socket,
-                              p_strand_type p_strand, p_context_type p_ctx) {
-    return p_puller_type(new puller_type(p_socket, p_strand, p_ctx));
+                              p_strand_type p_strand) {
+    return p_puller_type(new puller_type(p_socket, p_strand));
   }
 
   /// Start receiving data
@@ -142,13 +142,11 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   }
 
  private:
-  TLSStreamBufferer(p_tls_stream_type p_socket, p_strand_type p_strand,
-                    p_context_type p_ctx)
+  TLSStreamBufferer(p_tls_stream_type p_socket, p_strand_type p_strand)
       : socket_(*p_socket),
         p_socket_(p_socket),
         strand_(*p_strand),
         p_strand_(p_strand),
-        p_ctx_(p_ctx),
         io_service_(strand_.get_io_service()),
         status_(boost::system::error_code()),
         pulling_(false) {}
@@ -252,8 +250,6 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   strand_type& strand_;
   p_strand_type p_strand_;
 
-  p_context_type p_ctx_;
-
   /// The io_service handling asynchronous operations
   boost::asio::io_service& io_service_;
 
@@ -307,7 +303,7 @@ class basic_buffered_tls_socket {
         socket_(*p_socket_),
         p_strand_(std::make_shared<strand_type>(
             socket_.get().lowest_layer().get_io_service())),
-        p_puller_(puller_type::create(p_socket_, p_strand_, p_ctx_)) {}
+        p_puller_(puller_type::create(p_socket_, p_strand_)) {}
 
   basic_buffered_tls_socket(boost::asio::io_service& io_service,
                             p_context_type p_ctx)
@@ -315,7 +311,7 @@ class basic_buffered_tls_socket {
         p_socket_(new tls_stream_type(io_service, *p_ctx)),
         socket_(*p_socket_),
         p_strand_(std::make_shared<strand_type>(io_service)),
-        p_puller_(puller_type::create(p_socket_, p_strand_, p_ctx_)) {}
+        p_puller_(puller_type::create(p_socket_, p_strand_)) {}
 
   basic_buffered_tls_socket(basic_buffered_tls_socket&& other)
       : p_ctx_(std::move(other.p_ctx_)),

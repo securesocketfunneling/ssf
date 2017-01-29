@@ -719,7 +719,12 @@ void basic_fiber_demux_service<S>::close(implementation_type impl) {
     if (!impl->closing) {
       impl->closing = true;
       close_all_fibers(impl);
-      impl->socket.get_io_service().post(impl->close_handler);
+      auto close_handler = [impl]() {
+        impl->close_handler();
+        // reset close handler (circular dependency)
+        impl->close_handler = []() {};
+      };
+      impl->socket.get_io_service().post(close_handler);
       // not enough: have to close socket...
       boost::system::error_code ec;
       impl->socket.close(ec);
