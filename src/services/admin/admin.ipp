@@ -375,12 +375,11 @@ void Admin<Demux>::StopRemoteService(
 
 template <typename Demux>
 void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
+  auto self = this->SelfFromThis();
   if (!ec) {
     auto p_command = std::make_shared<AdminCommand>(
         0, reserved_keep_alive_id_, reserved_keep_alive_size_,
         reserved_keep_alive_parameters_);
-
-    auto self = this->SelfFromThis();
 
     auto do_handler =
         [self, p_command](const boost::system::error_code& ec, size_t length) {
@@ -390,7 +389,7 @@ void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
     this->async_SendCommand(*p_command, do_handler);
   } else {
     this->get_io_service().post(
-        boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+        boost::bind(&Admin<Demux>::ShutdownServices, self));
     return;
   }
 }

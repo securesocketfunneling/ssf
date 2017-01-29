@@ -363,9 +363,8 @@ void basic_fiber_demux_service<S>::handle_rst(implementation_type impl,
   if ((impl->bound).count(header.id())) {
     auto p_fib_impl = impl->bound[header.id()];
     auto on_close = p_fib_impl->access_close_handler();
-    boost::recursive_mutex::scoped_lock lock_state(p_fib_impl->state_mutex);
 
-    p_fib_impl->closed = true;
+    boost::recursive_mutex::scoped_lock lock_state(p_fib_impl->state_mutex);
 
     if (p_fib_impl->connecting || p_fib_impl->connected) {
       if (p_fib_impl->connecting) {
@@ -675,25 +674,21 @@ std::vector<boost::asio::const_buffer> basic_fiber_demux_service<
 template <typename S>
 void basic_fiber_demux_service<S>::close_fiber(implementation_type impl,
                                                fiber_impl_type fib_impl) {
-
   boost::recursive_mutex::scoped_lock lock_state(fib_impl->state_mutex);
 
   if (!fib_impl->disconnecting && !fib_impl->disconnected) {
+    auto on_close = fib_impl->access_close_handler();
+    // acceptor fiber
     if (fib_impl->id.remote_port() == 0) {
       if (!fib_impl->closed) {
         stop_listening(impl, fib_impl->id.local_port());
         unbind(impl, fib_impl->id);
-
-        auto on_close = fib_impl->access_close_handler();
-        fib_impl->closed = true;
         impl->socket.get_io_service().post(on_close);
       }
     } else {
-      fib_impl->closed = true;
-
       if (fib_impl->connecting || fib_impl->connected) {
         fib_impl->set_disconnecting();
-        async_send_rst(impl, fib_impl->id, [] {});
+        async_send_rst(impl, fib_impl->id, [on_close] { on_close(); });
       }
     }
   }

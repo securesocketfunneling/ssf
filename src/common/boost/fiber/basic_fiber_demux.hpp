@@ -83,6 +83,8 @@ class basic_fiber_demux : private boost::noncopyable {
       : service_(boost::asio::use_service<service_type>(io_service)),
         impl_(nullptr) {}
 
+  ~basic_fiber_demux() {}
+
   /// Return the io_service managing the fiber demux.
   /**
   * This function is used to recover the io_service managing asynchronous
