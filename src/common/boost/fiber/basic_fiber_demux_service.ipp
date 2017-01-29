@@ -675,17 +675,18 @@ template <typename S>
 void basic_fiber_demux_service<S>::close_fiber(implementation_type impl,
                                                fiber_impl_type fib_impl) {
   boost::recursive_mutex::scoped_lock lock_state(fib_impl->state_mutex);
+  auto on_close = fib_impl->access_close_handler();
 
-  if (!fib_impl->disconnecting && !fib_impl->disconnected) {
-    auto on_close = fib_impl->access_close_handler();
-    // acceptor fiber
-    if (fib_impl->id.remote_port() == 0) {
-      if (!fib_impl->closed) {
-        stop_listening(impl, fib_impl->id.local_port());
-        unbind(impl, fib_impl->id);
-        impl->socket.get_io_service().post(on_close);
-      }
-    } else {
+  if (fib_impl->id.remote_port() == 0) {
+    // fiber acceptor
+    if (!fib_impl->closed) {
+      stop_listening(impl, fib_impl->id.local_port());
+      unbind(impl, fib_impl->id);
+      impl->socket.get_io_service().post(on_close);
+    }
+  } else {
+    // fiber
+    if (!fib_impl->disconnecting && !fib_impl->disconnected) {
       if (fib_impl->connecting || fib_impl->connected) {
         fib_impl->set_disconnecting();
         async_send_rst(impl, fib_impl->id, [on_close] { on_close(); });
