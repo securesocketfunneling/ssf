@@ -13,7 +13,7 @@
 ssf::layer::LayerParameters tcp_server_parameters = {{"port", "9000"}};
 
 ssf::layer::LayerParameters tcp_client_parameters = {{"addr", "127.0.0.1"},
-                                                          {"port", "9000"}};
+                                                     {"port", "9000"}};
 
 TEST(PhysicalLayerTest, TCPBaseLine) {
   ssf::layer::ParameterStack acceptor_parameters;
@@ -25,9 +25,8 @@ TEST(PhysicalLayerTest, TCPBaseLine) {
   TCPPerfTestHalfDuplex(client_parameters, acceptor_parameters, 200);
 }
 
- TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
-   typedef ssf::layer::physical::TCPPhysicalLayer
-       StreamStackProtocol;
+TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
+  typedef ssf::layer::physical::TCPPhysicalLayer StreamStackProtocol;
 
   ssf::layer::ParameterStack acceptor_parameters;
   acceptor_parameters.push_back(tcp_server_parameters);
@@ -70,17 +69,16 @@ TEST(PhysicalLayerTest, TCPBaseLine) {
 }
 
 TEST(PhysicalLayerTest, TLSLayerProtocolStackOverTCPTest) {
-  typedef ssf::layer::physical::TLSboTCPPhysicalLayer
-      TLSStackProtocol;
+  typedef ssf::layer::physical::TLSoTCPPhysicalLayer TLSStackProtocol;
 
   ssf::layer::ParameterStack acceptor_parameters;
   acceptor_parameters.push_back(
-      tests::virtual_network_helpers::tls_server_parameters);
+      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
   acceptor_parameters.push_back(tcp_server_parameters);
 
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(
-      tests::virtual_network_helpers::tls_client_parameters);
+      tests::virtual_network_helpers::GetClientTLSParametersAsBuffer());
   client_parameters.push_back(tcp_client_parameters);
 
   ssf::layer::LayerParameters client_error_tcp_parameters;
@@ -88,7 +86,55 @@ TEST(PhysicalLayerTest, TLSLayerProtocolStackOverTCPTest) {
   client_error_tcp_parameters["port"] = "9001";
   ssf::layer::ParameterStack client_error_parameters;
   client_error_parameters.push_back(
-      tests::virtual_network_helpers::tls_client_parameters);
+      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+  client_error_parameters.push_back(client_error_tcp_parameters);
+
+  ssf::layer::ParameterStack client_wrong_number_parameters;
+  client_wrong_number_parameters.push_back(tcp_client_parameters);
+
+  TestStreamProtocol<TLSStackProtocol>(client_parameters, acceptor_parameters,
+                                       1024);
+
+  TestStreamProtocolFuture<TLSStackProtocol>(client_parameters,
+                                             acceptor_parameters);
+
+  /* Uncomment after fix on boost build system
+  TestStreamProtocolSpawn<TLSStackProtocol>(client_parameters,
+                                            acceptor_parameters);*/
+
+  TestStreamProtocolSynchronous<TLSStackProtocol>(client_parameters,
+                                                  acceptor_parameters);
+
+  TestStreamErrorConnectionProtocol<TLSStackProtocol>(client_error_parameters);
+
+  TestEndpointResolverError<TLSStackProtocol>(client_wrong_number_parameters);
+
+  PerfTestStreamProtocolHalfDuplex<TLSStackProtocol>(client_parameters,
+                                                     acceptor_parameters, 200);
+
+  PerfTestStreamProtocolFullDuplex<TLSStackProtocol>(client_parameters,
+                                                     acceptor_parameters, 200);
+}
+
+TEST(PhysicalLayerTest, TLSLayerProtocolBufferStackOverTCPTest) {
+  typedef ssf::layer::physical::TLSboTCPPhysicalLayer TLSStackProtocol;
+
+  ssf::layer::ParameterStack acceptor_parameters;
+  acceptor_parameters.push_back(
+      tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
+  acceptor_parameters.push_back(tcp_server_parameters);
+
+  ssf::layer::ParameterStack client_parameters;
+  client_parameters.push_back(
+      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+  client_parameters.push_back(tcp_client_parameters);
+
+  ssf::layer::LayerParameters client_error_tcp_parameters;
+  client_error_tcp_parameters["addr"] = "127.0.0.1";
+  client_error_tcp_parameters["port"] = "9001";
+  ssf::layer::ParameterStack client_error_parameters;
+  client_error_parameters.push_back(
+      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
   client_error_parameters.push_back(client_error_tcp_parameters);
 
   ssf::layer::ParameterStack client_wrong_number_parameters;
@@ -119,8 +165,7 @@ TEST(PhysicalLayerTest, TLSLayerProtocolStackOverTCPTest) {
 }
 
 TEST(PhysicalLayerTest, EmptyDatagramProtocolStackOverUDPTest) {
-  typedef ssf::layer::physical::UDPPhysicalLayer
-      DatagramStackProtocol;
+  typedef ssf::layer::physical::UDPPhysicalLayer DatagramStackProtocol;
 
   ssf::layer::LayerParameters socket1_udp_parameters;
   socket1_udp_parameters["addr"] = "127.0.0.1";
@@ -135,7 +180,7 @@ TEST(PhysicalLayerTest, EmptyDatagramProtocolStackOverUDPTest) {
   socket2_parameters.push_back(socket2_udp_parameters);
 
   TestDatagramProtocolPerfHalfDuplex<DatagramStackProtocol>(
-    socket1_parameters, socket2_parameters, 100000);
+      socket1_parameters, socket2_parameters, 100000);
 
   TestDatagramProtocolPerfFullDuplex<DatagramStackProtocol>(
       socket1_parameters, socket2_parameters, 100000);

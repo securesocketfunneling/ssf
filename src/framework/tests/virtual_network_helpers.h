@@ -19,9 +19,8 @@ template <class NextLayer>
 using Layer = ssf::layer::VirtualEmptyStreamProtocol<NextLayer>;
 
 template <class NextLayer>
-using TLSLayer =
-    ssf::layer::cryptography::basic_CryptoStreamProtocol<
-        NextLayer, ssf::layer::cryptography::buffered_tls>;
+using TLSLayer = ssf::layer::cryptography::basic_CryptoStreamProtocol<
+    NextLayer, ssf::layer::cryptography::buffered_tls>;
 
 template <class NextLayer>
 using DatagramLayer = ssf::layer::VirtualEmptyDatagramProtocol<NextLayer>;
@@ -66,26 +65,15 @@ bool CheckBuffers(const Buffer& buffer1, const Buffer& buffer2,
   return true;
 }
 
-ssf::layer::LayerParameters tls_server_parameters = {
-  {"ca_src", "file"},
-  {"crt_src", "file"},
-  {"key_src", "file"},
-  {"dhparam_src", "file"},
-  {"ca_file", "./certs/trusted/ca.crt"},
-  {"crt_file", "./certs/certificate.crt"},
-  {"key_file", "./certs/private.key"},
-  {"dhparam_file", "./certs/dh4096.pem"}};
+ssf::layer::LayerParameters GetServerTLSParametersAsFile();
 
-ssf::layer::LayerParameters tls_client_parameters = {
-  {"ca_src", "file"},
-  {"crt_src", "file"},
-  {"key_src", "file"},
-  {"ca_file", "./certs/trusted/ca.crt"},
-  {"crt_file", "./certs/certificate.crt"},
-  {"key_file", "./certs/private.key"}};
+ssf::layer::LayerParameters GetClientTLSParametersAsFile();
 
-ssf::layer::LayerParameters tls_default_server_parameters = {
-    {"default", "true"}};
+ssf::layer::LayerParameters GetDefaultServerParameters();
+
+ssf::layer::LayerParameters GetServerTLSParametersAsBuffer();
+
+ssf::layer::LayerParameters GetClientTLSParametersAsBuffer();
 
 }  // virtual_network_helpers
 }  // tests

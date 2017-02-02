@@ -154,16 +154,16 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerTLSQuery(
 
 ssf::layer::LayerParameters NetworkProtocol::TlsConfigToLayerParameters(
     const ssf::config::Config& ssf_config) {
-  return {{"ca_src", "file"},
-          {"crt_src", "file"},
-          {"key_src", "file"},
-          {"dhparam_src", "file"},
-          {"ca_file", ssf_config.tls().ca_cert_path()},
-          {"crt_file", ssf_config.tls().cert_path()},
-          {"key_file", ssf_config.tls().key_path()},
-          {"password", ssf_config.tls().key_password()},
-          {"dhparam_file", ssf_config.tls().dh_path()},
-          {"set_cipher_suit", ssf_config.tls().cipher_alg()}};
+  return {{ssf_config.tls().ca_cert().IsBuffer() ? "ca_buffer" : "ca_file",
+           ssf_config.tls().ca_cert().value()},
+          {ssf_config.tls().cert().IsBuffer() ? "crt_buffer" : "crt_file",
+           ssf_config.tls().cert().value()},
+          {ssf_config.tls().key().IsBuffer() ? "key_buffer" : "key_file",
+           ssf_config.tls().key().value()},
+          {"key_password", ssf_config.tls().key_password()},
+          {ssf_config.tls().dh().IsBuffer() ? "dhparam_buffer" : "dhparam_file",
+           ssf_config.tls().dh().value()},
+          {"cipher_suit", ssf_config.tls().cipher_alg()}};
 }
 
 ssf::layer::LayerParameters NetworkProtocol::ProxyConfigToLayerParameters(

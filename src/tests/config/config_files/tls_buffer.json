@@ -1,11 +1,11 @@
 {
     "ssf": {
         "tls" : {
-            "ca_cert_path": "test_ca_path",
-            "cert_path": "test_cert_path",
+            "ca_cert_buffer": "test_ca_cert_buffer",
+            "cert_buffer": "test_cert_buffer",
             "key_buffer": "test_key_buffer",
             "key_password": "test_key_password",
-            "dh_path": "test_dh_path",
+            "dh_buffer": "test_dh_buffer",
             "cipher_alg": "test_cipher_alg"
         }
     }

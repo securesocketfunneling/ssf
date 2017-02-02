@@ -120,7 +120,7 @@ class InterfaceTestFixture : public CircuitTestFixture {
     simple_tls1_acceptor_physical_parameters["port"] = "5000";
     ssf::layer::ParameterStack simple_tls1_parameters;
     simple_tls1_parameters.push_back(
-        tests::virtual_network_helpers::tls_server_parameters);
+        tests::virtual_network_helpers::GetServerTLSParametersAsFile());
     simple_tls1_parameters.push_back(simple_tls1_acceptor_physical_parameters);
     auto simple_tls1_local_endpoint_it =
         simple_tls_resolver.resolve(simple_tls1_parameters, tls1_ec);
@@ -146,7 +146,7 @@ class InterfaceTestFixture : public CircuitTestFixture {
     simple_tls2_client_physical_parameters["port"] = "5000";
     ssf::layer::ParameterStack simple_tls2_parameters;
     simple_tls2_parameters.push_back(
-        tests::virtual_network_helpers::tls_client_parameters);
+        tests::virtual_network_helpers::GetClientTLSParametersAsFile());
     simple_tls2_parameters.push_back(simple_tls2_client_physical_parameters);
     auto simple_tls2_remote_endpoint_it =
         simple_tls_resolver.resolve(simple_tls2_parameters, tls2_ec);
@@ -222,7 +222,7 @@ class InterfaceTestFixture : public CircuitTestFixture {
     circuit_tls1_acceptor_physical_parameters["port"] = "8002";
     ssf::layer::ParameterStack pre_circuit_tls1_parameters;
     pre_circuit_tls1_parameters.push_back(
-        tests::virtual_network_helpers::tls_server_parameters);
+        tests::virtual_network_helpers::GetServerTLSParametersAsFile());
     pre_circuit_tls1_parameters.push_back(
         circuit_tls1_acceptor_physical_parameters);
     ssf::layer::ParameterStack circuit_tls1_acceptor_default_parameters = {
@@ -259,7 +259,7 @@ class InterfaceTestFixture : public CircuitTestFixture {
     nodes_tls.PushBackNode();
     nodes_tls.AddTopLayerToBackNode(circuit_tls2_client_physical_parameters);
     nodes_tls.AddTopLayerToBackNode(
-        tests::virtual_network_helpers::tls_client_parameters);
+        tests::virtual_network_helpers::GetClientTLSParametersAsFile());
 
     ssf::layer::ParameterStack circuit_tls2_parameters(
         ssf::layer::data_link::
