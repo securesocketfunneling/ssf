@@ -33,33 +33,35 @@ template <typename Demux>
 class Server : public BaseService<Demux> {
  private:
 #if defined(BOOST_ASIO_WINDOWS)
-  using session_impl = windows::Session<Demux>;
+  using SessionImpl = windows::Session<Demux>;
 #else
-  using session_impl = posix::Session<Demux>;
+  using SessionImpl = posix::Session<Demux>;
 #endif  // defined(BOOST_ASIO_WINDOWS)
 
-  using local_port_type = typename Demux::local_port_type;
+  using LocalPortType = typename Demux::local_port_type;
 
   using ServerPtr = std::shared_ptr<Server>;
   using SessionManager = ItemManager<BaseSessionPtr>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
-  using demux = typename ssf::BaseService<Demux>::demux;
-  using fiber = typename ssf::BaseService<Demux>::fiber;
-  using fiber_acceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
-  using endpoint = typename ssf::BaseService<Demux>::endpoint;
+  using Fiber = typename ssf::BaseService<Demux>::fiber;
+  using FiberPtr = std::shared_ptr<Fiber>;
+  using FiberAcceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
+  using FiberEndpoint = typename ssf::BaseService<Demux>::endpoint;
 
  public:
   // SSF service ID for identification in the service factory
-  enum { factory_id = 10 };
+  enum { kFactoryId = 10 };
 
  public:
   Server(const Server&) = delete;
   Server& operator=(const Server&) = delete;
 
+  ~Server() { SSF_LOG(kLogDebug) << "microservice[shell]: destroy"; }
+
  public:
   // Create a new instance of the service
   static ServerPtr Create(boost::asio::io_service& io_service,
-                          demux& fiber_demux, Parameters parameters,
+                          Demux& fiber_demux, Parameters parameters,
                           const std::string& binary_path,
                           const std::string& binary_args) {
     if (!parameters.count("local_port") || binary_path.empty()) {
@@ -75,28 +77,27 @@ class Server : public BaseService<Demux> {
       return ServerPtr(nullptr);
     }
 
-    return std::shared_ptr<Server>(new Server(
-        io_service, fiber_demux, local_port,
-        binary_path, binary_args));
+    return ServerPtr(new Server(io_service, fiber_demux, local_port,
+                                binary_path, binary_args));
   }
 
   // Function used to register the micro service to the given factory
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
       // service factory is not enabled
       return;
     }
 
     p_factory->RegisterServiceCreator(
-        factory_id,
+        kFactoryId,
         boost::bind(&Server::Create, _1, _2, _3, config.path(), config.args()));
   }
 
-  // Function used to generate create service request
-  static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
-      uint16_t local_port) {
-    ssf::services::admin::CreateServiceRequest<demux> create(factory_id);
+  // Function used to create service request
+  static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
+      LocalPortType local_port) {
+    ssf::services::admin::CreateServiceRequest<Demux> create(kFactoryId);
     create.add_parameter("local_port", std::to_string(local_port));
 
     return create;
@@ -112,30 +113,33 @@ class Server : public BaseService<Demux> {
   // Return the type of the service
   uint32_t service_type_id() override;
 
+ public:
+  void StopSession(BaseSessionPtr session, boost::system::error_code& ec);
+
  private:
-  Server(boost::asio::io_service& io_service, demux& fiber_demux,
-         const local_port_type& port, const std::string& binary_path,
+  Server(boost::asio::io_service& io_service, Demux& fiber_demux,
+         const LocalPortType& port, const std::string& binary_path,
          const std::string& binary_args);
 
  private:
-  void StartAccept();
-  void HandleAccept(const boost::system::error_code& e);
+  void AsyncAcceptFiber();
+  void FiberAcceptHandler(FiberPtr new_connection,
+                          const boost::system::error_code& e);
   void HandleStop();
 
-  std::shared_ptr<Server> SelfFromThis() {
+  ServerPtr SelfFromThis() {
     return std::static_pointer_cast<Server>(this->shared_from_this());
   }
 
   bool CheckBinaryPath();
 
  private:
-  fiber_acceptor fiber_acceptor_;
+  FiberAcceptor fiber_acceptor_;
 
  private:
   SessionManager session_manager_;
-  fiber new_connection_;
   boost::system::error_code init_ec_;
-  local_port_type local_port_;
+  LocalPortType local_port_;
   std::string binary_path_;
   std::string binary_args_;
 };

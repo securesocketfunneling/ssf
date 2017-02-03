@@ -150,14 +150,14 @@ add_target("remote_stream_forward_tests"
 project_group(${services_tests_group_name} remote_stream_forward_tests)
 
 # --- UDP forward test
-set(udp_test_source_files
-  "udp_forwarding_tests.cpp"
+set(datagram_test_source_files
+  "datagram_forward_tests.cpp"
   ${SERVICE_TESTS_FILES}
   ${UDP_HELPERS_FILES}
   ${SSF_SOURCES}
 )
 
-add_target("udp_forward_tests"
+add_target("datagram_forward_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -168,19 +168,19 @@ add_target("udp_forward_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${udp_test_source_files}
+    ${datagram_test_source_files}
 )
-project_group(${services_tests_group_name} udp_forward_tests)
+project_group(${services_tests_group_name} datagram_forward_tests)
 
 # --- Remote UDP forward test
-set(remote_udp_test_source_files
-  "remote_udp_forwarding_tests.cpp"
+set(remote_datagram_test_source_files
+  "remote_datagram_forward_tests.cpp"
   ${SERVICE_TESTS_FILES}
   ${UDP_HELPERS_FILES}
   ${SSF_SOURCES}
 )
 
-add_target("remote_udp_forward_tests"
+add_target("remote_datagram_forward_tests"
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -191,9 +191,9 @@ add_target("remote_udp_forward_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${remote_udp_test_source_files}
+    ${remote_datagram_test_source_files}
 )
-project_group(${services_tests_group_name} remote_udp_forward_tests)
+project_group(${services_tests_group_name} remote_datagram_forward_tests)
 
 # --- File copy from client test
 file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_to_copy)

@@ -55,7 +55,7 @@ class FileToFiber : public BaseService<Demux> {
   using FilenameBuffer = ssf::services::copy_file::FilenameBuffer;
 
  public:
-  enum { factory_id = 8, kServicePort = 41 + ((1 << 17) + 1) };
+  enum { kFactoryId = 8, kServicePort = 41 + ((1 << 17) + 1) };
 
  public:
   // Factory method to create the service
@@ -83,13 +83,13 @@ class FileToFiber : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(factory_id, &FileToFiber::Create);
+    p_factory->RegisterServiceCreator(kFactoryId, &FileToFiber::Create);
   }
 
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
       bool server, bool from_stdin, const std::string& input_pattern,
       const std::string& output_pattern) {
-    ssf::services::admin::CreateServiceRequest<demux> create(factory_id);
+    ssf::services::admin::CreateServiceRequest<demux> create(kFactoryId);
     if (server) {
       create.add_parameter("accept", "true");
     } else {
@@ -142,7 +142,7 @@ class FileToFiber : public BaseService<Demux> {
 #endif
   }
 
-  uint32_t service_type_id() override { return factory_id; }
+  uint32_t service_type_id() override { return kFactoryId; }
 
  private:
   FileToFiber(boost::asio::io_service& io_service, demux& fiber_demux)

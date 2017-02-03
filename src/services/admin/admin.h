@@ -38,53 +38,48 @@ namespace admin {
 template <typename Demux>
 class Admin : public BaseService<Demux> {
  public:
-  typedef typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr
-      BaseUserServicePtr;
-  typedef std::function<void(
-      ssf::services::initialisation::type, BaseUserServicePtr,
-      const boost::system::error_code&)> AdminCallbackType;
+  using BaseUserServicePtr =
+      typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
+  using AdminCallbackType =
+      std::function<void(ssf::services::initialisation::type,
+                         BaseUserServicePtr, const boost::system::error_code&)>;
 
  private:
-  typedef typename Demux::local_port_type local_port_type;
+  using LocalPortType = typename Demux::local_port_type;
+  using AdminPtr = std::shared_ptr<Admin>;
+  using ServiceManager =
+      ItemManager<typename ssf::BaseService<Demux>::BaseServicePtr>;
 
-  typedef std::shared_ptr<Admin> AdminPtr;
-  typedef ItemManager<typename ssf::BaseService<Demux>::BaseServicePtr>
-      ServiceManager;
+  using Parameters = typename ssf::BaseService<Demux>::Parameters;
+  using FiberAcceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
+  using Fiber = typename ssf::BaseService<Demux>::fiber;
+  using FiberEndpoint = typename ssf::BaseService<Demux>::endpoint;
 
-  typedef typename ssf::BaseService<Demux>::Parameters Parameters;
-  typedef typename ssf::BaseService<Demux>::demux demux;
-  typedef typename ssf::BaseService<Demux>::endpoint endpoint;
-
-  typedef std::function<void(const boost::system::error_code&)> CommandHandler;
-  typedef std::map<uint32_t, CommandHandler> IdToCommandHandlerMap;
+  using CommandHandler = std::function<void(const boost::system::error_code&)>;
+  using IdToCommandHandlerMap = std::map<uint32_t, CommandHandler>;
 
  public:
   static AdminPtr Create(boost::asio::io_service& io_service,
                          Demux& fiber_demux, Parameters parameters) {
-    return std::shared_ptr<Admin>(new Admin(io_service, fiber_demux));
+    return AdminPtr(new Admin(io_service, fiber_demux));
   }
 
-  ~Admin() {}
+  ~Admin() { SSF_LOG(kLogDebug) << "service[admin]: destroy"; }
 
   enum {
-    factory_id = 1,
-    service_port = (1 << 17) + 1,         // first of the service range
-    keep_alive_interval = 120,            // seconds
-    service_status_retry_interval = 100,  // milliseconds
-    service_status_retry_number = 500     // retries
+    kFactoryId = 1,
+    kServicePort = (1 << 17) + 1,  // first of the service range
+    kKeepAliveInterval = 120,      // seconds
+    kServiceStatusRetryCount = 50  // retries
   };
 
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<Demux>> p_factory) {
-    p_factory->RegisterServiceCreator(factory_id, &Admin::Create);
+    p_factory->RegisterServiceCreator(kFactoryId, &Admin::Create);
   }
 
   void set_server();
   void set_client(std::vector<BaseUserServicePtr>, AdminCallbackType callback);
-
-  virtual void start(boost::system::error_code& ec);
-  virtual void stop(boost::system::error_code& ec);
-  virtual uint32_t service_type_id();
 
   template <typename Request, typename Handler>
   void Command(Request request, Handler handler) {
@@ -137,19 +132,28 @@ class Admin : public BaseService<Demux> {
     return 0;
   }
 
+ public:
+  // BaseService
+  void start(boost::system::error_code& ec);
+  void stop(boost::system::error_code& ec);
+  uint32_t service_type_id();
+
  private:
   Admin(boost::asio::io_service& io_service, Demux& fiber_demux);
 
-  void StartAccept();
-  void HandleAccept(const boost::system::error_code& ec);
-  void StartConnect();
-  void HandleConnect(const boost::system::error_code& ec);
+  void AsyncAccept();
+  void FiberAcceptHandler(const boost::system::error_code& ec);
+
+  void AsyncConnect();
+  void FiberConnectHandler(const boost::system::error_code& ec);
+
   void HandleStop();
+
   void Initialize();
   void StartRemoteService(
-      const admin::CreateServiceRequest<demux>& create_request,
+      const admin::CreateServiceRequest<Demux>& create_request,
       const CommandHandler& handler);
-  void StopRemoteService(const admin::StopServiceRequest<demux>& stop_request,
+  void StopRemoteService(const admin::StopServiceRequest<Demux>& stop_request,
                          const CommandHandler& handler);
   void InitializeRemoteServices(const boost::system::error_code& ec);
   void ListenForCommand();
@@ -160,7 +164,7 @@ class Admin : public BaseService<Demux> {
   void SendKeepAlive(const boost::system::error_code& ec);
   void ReceiveInstructionHeader();
   void ReceiveInstructionParameters();
-  void TreatInstructionId();
+  void ProcessInstructionId();
   void ShutdownServices();
 
   template <typename Handler>
@@ -179,13 +183,7 @@ class Admin : public BaseService<Demux> {
     }
   }
 
-  template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
-  }
-
-  std::shared_ptr<Admin> SelfFromThis() {
+  AdminPtr SelfFromThis() {
     return std::static_pointer_cast<Admin>(this->shared_from_this());
   }
 
@@ -195,8 +193,9 @@ class Admin : public BaseService<Demux> {
 
   // For initiating fiber connection
   bool is_server_;
-  typename ssf::BaseService<Demux>::fiber_acceptor fiber_acceptor_;
-  typename ssf::BaseService<Demux>::fiber fiber_;
+
+  FiberAcceptor fiber_acceptor_;
+  Fiber fiber_;
 
   // The status in which the admin service is
   uint32_t status_;
@@ -226,11 +225,11 @@ class Admin : public BaseService<Demux> {
   // Initialize services
   boost::asio::coroutine coroutine_;
   size_t i_;
-  std::vector<admin::CreateServiceRequest<demux>> create_request_vector_;
+  std::vector<admin::CreateServiceRequest<Demux>> create_request_vector_;
   size_t j_;
   uint32_t remote_all_started_;
   uint16_t init_retries_;
-  std::vector<admin::StopServiceRequest<demux>> stop_request_vector_;
+  std::vector<admin::StopServiceRequest<Demux>> stop_request_vector_;
   bool local_all_started_;
   boost::system::error_code init_ec_;
 

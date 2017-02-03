@@ -12,22 +12,25 @@
 #include <boost/asio/basic_stream_socket.hpp>
 
 namespace ssf {
+namespace services {
 namespace socks {
 namespace v4 {
 
 template <typename Demux>
-Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
+Session<Demux>::Session(SocksServerWPtr socks_server, Fiber client)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
-      p_session_manager_(p_session_manager),
+      socks_server_(socks_server),
       client_(std::move(client)),
       server_(io_service_),
       server_resolver_(io_service_) {}
 
 template <typename Demux>
 void Session<Demux>::HandleStop() {
-  boost::system::error_code ec;
-  p_session_manager_->stop(shared_from_this(), ec);
+  boost::system::error_code stop_err;
+  if (auto p_socks_server = socks_server_.lock()) {
+    p_socks_server->StopSession(this->SelfFromThis(), stop_err);
+  }
 }
 
 template <typename Demux>
@@ -42,11 +45,10 @@ void Session<Demux>::stop(boost::system::error_code&) {
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code&) {
-  AsyncReadRequest(
-      client_, &request_,
-      boost::bind(&Session::HandleRequestDispatch, self_shared_from_this(),
-                  boost::asio::placeholders::error,
-                  boost::asio::placeholders::bytes_transferred));
+  AsyncReadRequest(client_, &request_,
+                   boost::bind(&Session::HandleRequestDispatch, SelfFromThis(),
+                               boost::asio::placeholders::error,
+                               boost::asio::placeholders::bytes_transferred));
 }
 
 template <typename Demux>
@@ -74,13 +76,13 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
   auto connect_handler =
-      boost::bind(&Session::HandleApplicationServerConnect,
-                  self_shared_from_this(), boost::asio::placeholders::error);
+      boost::bind(&Session::HandleApplicationServerConnect, SelfFromThis(),
+                  boost::asio::placeholders::error);
 
   if (request_.Is4aVersion()) {
     // socks4a: address needs to be resolved
     auto resolve_handler = boost::bind(
-        &Session::HandleResolveServerEndpoint, self_shared_from_this(),
+        &Session::HandleResolveServerEndpoint, SelfFromThis(),
         boost::asio::placeholders::error, boost::asio::placeholders::iterator);
     boost::asio::ip::tcp::resolver::query query(
         request_.domain(), std::to_string(request_.port()));
@@ -98,10 +100,10 @@ void Session<Demux>::DoBindRequest() {
 
 template <typename Demux>
 void Session<Demux>::HandleResolveServerEndpoint(
-    const boost::system::error_code& ec, tcp_resolver::iterator ep_it) {
+    const boost::system::error_code& ec, Tcp::resolver::iterator ep_it) {
   auto connect_handler =
-      boost::bind(&Session::HandleApplicationServerConnect,
-                  self_shared_from_this(), boost::asio::placeholders::error);
+      boost::bind(&Session::HandleApplicationServerConnect, SelfFromThis(),
+                  boost::asio::placeholders::error);
   if (ec) {
     connect_handler(ec);
     return;
@@ -113,7 +115,7 @@ void Session<Demux>::HandleResolveServerEndpoint(
 template <typename Demux>
 void Session<Demux>::HandleApplicationServerConnect(
     const boost::system::error_code& err) {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
   auto p_reply = std::make_shared<Reply>(err, boost::asio::ip::tcp::endpoint());
 
   if (err) {  // Error connecting to the server, informing client and stopping
@@ -135,10 +137,10 @@ void Session<Demux>::HandleApplicationServerConnect(
 
 template <typename Demux>
 void Session<Demux>::EstablishLink() {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
 
-  upstream_.reset(new StreamBuff);
-  downstream_.reset(new StreamBuff);
+  upstream_.reset(new StreamBuf());
+  downstream_.reset(new StreamBuf());
 
   // Two half duplex links
   AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(server_),
@@ -152,6 +154,7 @@ void Session<Demux>::EstablishLink() {
 
 }  // v4
 }  // socks
+}  // services
 }  // ssf
 
 #endif  // SSF_SERVICES_SOCKS_V4_SESSION_IPP_

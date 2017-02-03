@@ -17,12 +17,12 @@ namespace process {
 namespace windows {
 
 template <typename Demux>
-Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
+Session<Demux>::Session(std::weak_ptr<ShellServer> server, Fiber client,
                         const std::string& binary_path,
                         const std::string& binary_args)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
-      p_session_manager_(p_session_manager),
+      p_server_(server),
       client_(std::move(client)),
       binary_path_(binary_path),
       binary_args_(binary_args),
@@ -117,8 +117,10 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::StopHandler(const boost::system::error_code& ec) {
-  boost::system::error_code e;
-  p_session_manager_->stop(this->SelfFromThis(), e);
+  boost::system::error_code stop_err;
+  if (auto server = p_server_.lock()) {
+    server->StopSession(this->SelfFromThis(), stop_err);
+  }
 }
 
 template <typename Demux>

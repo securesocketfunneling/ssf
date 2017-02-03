@@ -222,15 +222,14 @@ class basic_fiber_impl
         };
 
     close_handler = [this]() {
-      boost::system::error_code ec(::error::connection_reset,
-                                   ::error::get_ssf_category());
-      cancel_operations(ec);
-
       SSF_LOG(kLogTrace) << "fiber impl: close handler "
                          << this->id.remote_port() << ":"
                          << this->id.local_port();
-
       this->set_closed();
+
+      boost::system::error_code ec(::error::connection_reset,
+                                   ::error::get_ssf_category());
+      cancel_operations(ec);
     };
 
     error_handler = [](boost::system::error_code) {};
@@ -435,9 +434,9 @@ class basic_fiber_impl
                         this->shared_from_this(), ec));
       }
     } else {
-      if (!read_op_queue.empty()) {
-        auto op = read_op_queue.front();
-        read_op_queue.pop();
+      if (!read_dgr_op_queue.empty()) {
+        auto op = read_dgr_op_queue.front();
+        read_dgr_op_queue.pop();
 
         auto do_complete = [=]() { op->complete(ec, 0); };
         p_fib_demux->get_io_service().post(do_complete);
@@ -457,6 +456,7 @@ class basic_fiber_impl
       boost::system::error_code ec = boost::system::error_code(
           ::error::interrupted, ::error::get_ssf_category())) {
     r_queues_handler(ec);
+    r_dgr_queues_handler(ec);
     a_queues_handler(ec);
   }
 

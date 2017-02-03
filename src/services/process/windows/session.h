@@ -19,22 +19,24 @@
 namespace ssf {
 namespace services {
 namespace process {
+
+template<typename Demux>
+class Server;
+
 namespace windows {
 
 template <typename Demux>
 class Session : public ssf::BaseSession {
  private:
-  typedef std::array<char, 50 * 1024> StreamBuff;
-
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef typename boost::asio::fiber::stream_fiber<
-      typename Demux::socket_type>::socket fiber;
-  typedef boost::asio::windows::stream_handle stream_handle;
-  typedef ItemManager<BaseSessionPtr> SessionManager;
+  using StreamBuf = std::array<char, 50 * 1024>;
+  using Fiber = typename boost::asio::fiber::stream_fiber<
+      typename Demux::socket_type>::socket;
+  using StreamHandle = boost::asio::windows::stream_handle;
+  using ShellServer = typename Server<Demux>;
 
  public:
-  Session(SessionManager* sm, fiber client, const std::string& binary_path,
-          const std::string& binary_args);
+  Session(std::weak_ptr<ShellServer> server, Fiber client,
+          const std::string& binary_path, const std::string& binary_args);
 
  public:
   void start(boost::system::error_code&) override;
@@ -62,9 +64,9 @@ class Session : public ssf::BaseSession {
 
  private:
   boost::asio::io_service& io_service_;
-  SessionManager* p_session_manager_;
+  std::weak_ptr<ShellServer> p_server_;
 
-  fiber client_;
+  Fiber client_;
 
   std::string binary_path_;
   std::string binary_args_;
@@ -81,13 +83,13 @@ class Session : public ssf::BaseSession {
   HANDLE proc_err_;
   HANDLE proc_in_;
 
-  boost::asio::windows::stream_handle h_out_;
-  boost::asio::windows::stream_handle h_err_;
-  boost::asio::windows::stream_handle h_in_;
+  StreamHandle h_out_;
+  StreamHandle h_err_;
+  StreamHandle h_in_;
 
-  StreamBuff upstream_;
-  StreamBuff downstream_out_;
-  StreamBuff downstream_err_;
+  StreamBuf upstream_;
+  StreamBuf downstream_out_;
+  StreamBuf downstream_err_;
 };
 
 }  // windows

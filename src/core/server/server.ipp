@@ -92,6 +92,12 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
 /// Stop accepting connections and end all on going connections
 template <class N, template <class> class T>
 void SSFServer<N, T>::Stop() {
+  if (!async_engine_.IsStarted()) {
+    return;
+  }
+
+  SSF_LOG(kLogDebug) << "server: stop";
+
   RemoveAllDemuxes();
 
   // close acceptor

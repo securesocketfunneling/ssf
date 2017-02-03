@@ -10,22 +10,25 @@
 #include <ssf/utils/enum.h>
 
 namespace ssf {
+namespace services {
 namespace socks {
 namespace v5 {
 
 template <typename Demux>
-Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
+Session<Demux>::Session(SocksServerWPtr socks_server, Fiber client)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
-      p_session_manager_(p_session_manager),
+      socks_server_(socks_server),
       client_(std::move(client)),
       server_(io_service_),
       server_resolver_(io_service_) {}
 
 template <typename Demux>
 void Session<Demux>::HandleStop() {
-  boost::system::error_code ec;
-  p_session_manager_->stop(shared_from_this(), ec);
+  boost::system::error_code stop_err;
+  if (auto p_socks_server = socks_server_.lock()) {
+    p_socks_server->StopSession(this->SelfFromThis(), stop_err);
+  }
 }
 
 template <typename Demux>
@@ -42,7 +45,7 @@ template <typename Demux>
 void Session<Demux>::start(boost::system::error_code&) {
   AsyncReadRequestAuth(
       client_, &request_auth_,
-      boost::bind(&Session::HandleRequestAuthDispatch, self_shared_from_this(),
+      boost::bind(&Session::HandleRequestAuthDispatch, SelfFromThis(),
                   boost::asio::placeholders::error,
                   boost::asio::placeholders::bytes_transferred));
 }
@@ -67,7 +70,7 @@ void Session<Demux>::HandleRequestAuthDispatch(
 
 template <typename Demux>
 void Session<Demux>::DoNoAuth() {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
   auto p_reply = std::make_shared<ReplyAuth>(AuthMethod::kNoAuth);
 
   AsyncSendAuthReply(client_, *p_reply,
@@ -83,7 +86,7 @@ void Session<Demux>::DoNoAuth() {
 
 template <typename Demux>
 void Session<Demux>::DoErrorAuth() {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
   auto p_reply = std::make_shared<ReplyAuth>(AuthMethod::kUnsupportedAuth);
 
   AsyncSendAuthReply(client_, *p_reply,
@@ -93,11 +96,10 @@ void Session<Demux>::DoErrorAuth() {
 
 template <typename Demux>
 void Session<Demux>::HandleReplyAuthSent() {
-  AsyncReadRequest(
-      client_, &request_,
-      boost::bind(&Session::HandleRequestDispatch, self_shared_from_this(),
-                  boost::asio::placeholders::error,
-                  boost::asio::placeholders::bytes_transferred));
+  AsyncReadRequest(client_, &request_,
+                   boost::bind(&Session::HandleRequestDispatch, SelfFromThis(),
+                               boost::asio::placeholders::error,
+                               boost::asio::placeholders::bytes_transferred));
 }
 
 template <typename Demux>
@@ -129,8 +131,8 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
   auto connect_handler =
-      boost::bind(&Session::HandleApplicationServerConnect,
-                  self_shared_from_this(), boost::asio::placeholders::error);
+      boost::bind(&Session::HandleApplicationServerConnect, SelfFromThis(),
+                  boost::asio::placeholders::error);
 
   boost::system::error_code ec;
   uint16_t port = request_.port();
@@ -150,8 +152,8 @@ void Session<Demux>::DoConnectRequest() {
     }
     case static_cast<uint8_t>(AddressType::kDNS): {
       auto resolve_handler =
-          boost::bind(&Session::HandleResolveServerEndpoint,
-                      self_shared_from_this(), boost::asio::placeholders::error,
+          boost::bind(&Session::HandleResolveServerEndpoint, SelfFromThis(),
+                      boost::asio::placeholders::error,
                       boost::asio::placeholders::iterator);
 
       boost::asio::ip::tcp::resolver::query query(
@@ -183,7 +185,7 @@ void Session<Demux>::DoUDPRequest() {
 
 template <typename Demux>
 void Session<Demux>::DoErrorCommand(CommandStatus err_status) {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
   auto p_reply = std::make_shared<Reply>(err_status);
 
   AsyncSendReply(client_, *p_reply,
@@ -194,10 +196,10 @@ void Session<Demux>::DoErrorCommand(CommandStatus err_status) {
 
 template <typename Demux>
 void Session<Demux>::HandleResolveServerEndpoint(
-    const boost::system::error_code& ec, tcp_resolver::iterator ep_it) {
+    const boost::system::error_code& ec, Tcp::resolver::iterator ep_it) {
   auto connect_handler =
-      boost::bind(&Session::HandleApplicationServerConnect,
-                  self_shared_from_this(), boost::asio::placeholders::error);
+      boost::bind(&Session::HandleApplicationServerConnect, SelfFromThis(),
+                  boost::asio::placeholders::error);
   if (ec) {
     connect_handler(ec);
     return;
@@ -209,7 +211,7 @@ void Session<Demux>::HandleResolveServerEndpoint(
 template <typename Demux>
 void Session<Demux>::HandleApplicationServerConnect(
     const boost::system::error_code& err) {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
   auto p_reply = std::make_shared<Reply>(
       !err ? CommandStatus::kSucceeded : CommandStatus::kConnectionRefused);
 
@@ -262,10 +264,10 @@ void Session<Demux>::HandleApplicationServerConnect(
 
 template <typename Demux>
 void Session<Demux>::EstablishLink() {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
 
-  upstream_.reset(new StreamBuff);
-  downstream_.reset(new StreamBuff);
+  upstream_.reset(new StreamBuf());
+  downstream_.reset(new StreamBuf());
 
   AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(server_),
                        boost::asio::buffer(*upstream_),
@@ -277,6 +279,7 @@ void Session<Demux>::EstablishLink() {
 }
 }  // v5
 }  // socks
+}  // services
 }  // ssf
 
 #endif  // SSF_SERVICES_SOCKS_V5_SESSION_IPP_

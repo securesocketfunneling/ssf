@@ -77,6 +77,8 @@ void SSFClient<N, T>::Stop() {
     return;
   }
 
+  SSF_LOG(kLogDebug) << "client: stop";
+
   fiber_demux_.close();
 
   if (p_socket_.get() != nullptr) {
