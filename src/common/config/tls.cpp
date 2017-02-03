@@ -20,16 +20,15 @@ std::string TlsParam::ToString() const {
   std::stringstream ss;
   switch (type_) {
     case Type::kBuffer:
-      ss << "buffer:";
+      ss << "buffer";
       break;
     case Type::kFile:
-      ss << "file:";
+      ss << "file: " << value_;
       break;
     default:
-      ss << "unknown src:";
+      ss << "unknown src: " << value_;
       break;
   }
-  ss << " " << value_;
   return ss.str();
 }
 

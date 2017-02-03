@@ -101,8 +101,7 @@ void SSFClient<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
     return;
   }
 
-  SSF_LOG(kLogError) << "client: error when connecting to server: "
-                     << ec.message();
+  SSF_LOG(kLogError) << "client: server connection error: " << ec.message();
 
   Notify(ssf::services::initialisation::NETWORK, nullptr, ec);
 }
@@ -119,7 +118,7 @@ void SSFClient<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 
     Notify(ssf::services::initialisation::TRANSPORT, nullptr, ec);
   } else {
-    SSF_LOG(kLogError) << "client: SSF protocol error (" << ec.message() << ")";
+    SSF_LOG(kLogError) << "client: SSF protocol error: " << ec.message();
   }
 }
 
