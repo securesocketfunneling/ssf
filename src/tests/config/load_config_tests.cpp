@@ -49,11 +49,15 @@ TEST_F(LoadConfigTest, LoadWrongFormatFileTest) {
 }
 
 TEST_F(LoadConfigTest, DefaultValueTest) {
-  ASSERT_EQ(config_.tls().ca_cert_path(), "./certs/trusted/ca.crt");
-  ASSERT_EQ(config_.tls().cert_path(), "./certs/certificate.crt");
-  ASSERT_EQ(config_.tls().key_path(), "./certs/private.key");
+  ASSERT_FALSE(config_.tls().ca_cert().IsBuffer());
+  ASSERT_EQ(config_.tls().ca_cert().value(), "./certs/trusted/ca.crt");
+  ASSERT_FALSE(config_.tls().cert().IsBuffer());
+  ASSERT_EQ(config_.tls().cert().value(), "./certs/certificate.crt");
+  ASSERT_FALSE(config_.tls().key().IsBuffer());
+  ASSERT_EQ(config_.tls().key().value(), "./certs/private.key");
   ASSERT_EQ(config_.tls().key_password(), "");
-  ASSERT_EQ(config_.tls().dh_path(), "./certs/dh4096.pem");
+  ASSERT_FALSE(config_.tls().dh().IsBuffer());
+  ASSERT_EQ(config_.tls().dh().value(), "./certs/dh4096.pem");
   ASSERT_EQ(config_.tls().cipher_alg(), "DHE-RSA-AES256-GCM-SHA384");
 
   ASSERT_EQ(config_.http_proxy().host(), "");
@@ -89,12 +93,36 @@ TEST_F(LoadConfigTest, LoadTlsPartialFileTest) {
   config_.UpdateFromFile("./config_files/tls_partial.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if partial file format";
-  ASSERT_EQ(config_.tls().ca_cert_path(), "test_ca_path");
-  ASSERT_EQ(config_.tls().cert_path(), "./certs/certificate.crt");
-  ASSERT_EQ(config_.tls().key_path(), "test_key_path");
+
+  ASSERT_FALSE(config_.tls().ca_cert().IsBuffer());
+  ASSERT_EQ(config_.tls().ca_cert().value(), "test_ca_path");
+  ASSERT_FALSE(config_.tls().cert().IsBuffer());
+  ASSERT_EQ(config_.tls().cert().value(), "./certs/certificate.crt");
+  ASSERT_FALSE(config_.tls().key().IsBuffer());
+  ASSERT_EQ(config_.tls().key().value(), "test_key_path");
   ASSERT_EQ(config_.tls().key_password(), "");
-  ASSERT_EQ(config_.tls().dh_path(), "test_dh_path");
+  ASSERT_FALSE(config_.tls().dh().IsBuffer());
+  ASSERT_EQ(config_.tls().dh().value(), "test_dh_path");
   ASSERT_EQ(config_.tls().cipher_alg(), "DHE-RSA-AES256-GCM-SHA384");
+}
+
+TEST_F(LoadConfigTest, LoadTlsBufferFileTest) {
+  boost::system::error_code ec;
+
+  config_.UpdateFromFile("./config_files/tls_buffer.json", ec);
+
+  ASSERT_EQ(ec.value(), 0) << "Success if buffer file format";
+
+  ASSERT_TRUE(config_.tls().ca_cert().IsBuffer());
+  ASSERT_EQ(config_.tls().ca_cert().value(), "test_ca_cert_buffer");
+  ASSERT_TRUE(config_.tls().cert().IsBuffer());
+  ASSERT_EQ(config_.tls().cert().value(), "test_cert_buffer");
+  ASSERT_TRUE(config_.tls().key().IsBuffer());
+  ASSERT_EQ(config_.tls().key().value(), "test_key_buffer");
+  ASSERT_EQ(config_.tls().key_password(), "test_key_password");
+  ASSERT_TRUE(config_.tls().dh().IsBuffer());
+  ASSERT_EQ(config_.tls().dh().value(), "test_dh_buffer");
+  ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
 }
 
 TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
@@ -103,12 +131,18 @@ TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
   config_.UpdateFromFile("./config_files/tls_complete.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
-  ASSERT_EQ(config_.tls().ca_cert_path(), "test_ca_path");
-  ASSERT_EQ(config_.tls().cert_path(), "test_cert_path");
-  ASSERT_EQ(config_.tls().key_path(), "test_key_path");
+
+  ASSERT_FALSE(config_.tls().ca_cert().IsBuffer());
+  ASSERT_EQ(config_.tls().ca_cert().value(), "test_ca_path");
+  ASSERT_FALSE(config_.tls().cert().IsBuffer());
+  ASSERT_EQ(config_.tls().cert().value(), "test_cert_path");
+  ASSERT_TRUE(config_.tls().key().IsBuffer());
+  ASSERT_EQ(config_.tls().key().value(), "test_key_buffer");
   ASSERT_EQ(config_.tls().key_password(), "test_key_password");
-  ASSERT_EQ(config_.tls().dh_path(), "test_dh_path");
+  ASSERT_FALSE(config_.tls().dh().IsBuffer());
+  ASSERT_EQ(config_.tls().dh().value(), "test_dh_path");
   ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
+
   ASSERT_EQ(config_.http_proxy().host(), "");
   ASSERT_EQ(config_.http_proxy().port(), "");
   ASSERT_EQ(config_.http_proxy().username(), "");
@@ -136,7 +170,9 @@ TEST_F(LoadConfigTest, LoadProxyFileTest) {
   boost::system::error_code ec;
 
   config_.UpdateFromFile("./config_files/proxy.json", ec);
+
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
+
   ASSERT_EQ(config_.http_proxy().host(), "127.0.0.1");
   ASSERT_EQ(config_.http_proxy().port(), "8080");
   ASSERT_EQ(config_.http_proxy().username(), "test_user");
@@ -145,8 +181,7 @@ TEST_F(LoadConfigTest, LoadProxyFileTest) {
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), false);
   ASSERT_EQ(config_.http_proxy().reuse_kerb(), false);
 
-  ASSERT_EQ(config_.socks_proxy().version(),
-            ssf::network::Socks::Version::kV5);
+  ASSERT_EQ(config_.socks_proxy().version(), ssf::network::Socks::Version::kV5);
   ASSERT_EQ(config_.socks_proxy().host(), "127.0.0.2");
   ASSERT_EQ(config_.socks_proxy().port(), "1080");
 }
@@ -177,11 +212,16 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   config_.UpdateFromFile("./config_files/complete.json", ec);
 
   ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
-  ASSERT_EQ(config_.tls().ca_cert_path(), "test_ca_path");
-  ASSERT_EQ(config_.tls().cert_path(), "test_cert_path");
-  ASSERT_EQ(config_.tls().key_path(), "test_key_path");
+
+  ASSERT_FALSE(config_.tls().ca_cert().IsBuffer());
+  ASSERT_EQ(config_.tls().ca_cert().value(), "test_ca_path");
+  ASSERT_FALSE(config_.tls().cert().IsBuffer());
+  ASSERT_EQ(config_.tls().cert().value(), "test_cert_path");
+  ASSERT_FALSE(config_.tls().key().IsBuffer());
+  ASSERT_EQ(config_.tls().key().value(), "test_key_path");
   ASSERT_EQ(config_.tls().key_password(), "test_key_password");
-  ASSERT_EQ(config_.tls().dh_path(), "test_dh_path");
+  ASSERT_FALSE(config_.tls().dh().IsBuffer());
+  ASSERT_EQ(config_.tls().dh().value(), "test_dh_path");
   ASSERT_EQ(config_.tls().cipher_alg(), "test_cipher_alg");
 
   ASSERT_EQ(config_.http_proxy().host(), "127.0.0.1");
@@ -191,9 +231,8 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   ASSERT_EQ(config_.http_proxy().domain(), "test_domain");
   ASSERT_EQ(config_.http_proxy().reuse_ntlm(), false);
   ASSERT_EQ(config_.http_proxy().reuse_kerb(), false);
-  
-  ASSERT_EQ(config_.socks_proxy().version(),
-            ssf::network::Socks::Version::kV4);
+
+  ASSERT_EQ(config_.socks_proxy().version(), ssf::network::Socks::Version::kV4);
   ASSERT_EQ(config_.socks_proxy().host(), "127.0.0.2");
   ASSERT_EQ(config_.socks_proxy().port(), "1080");
 

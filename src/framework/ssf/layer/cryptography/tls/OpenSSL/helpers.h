@@ -22,6 +22,8 @@ struct ExtendedTLSContext {
 
   explicit ExtendedTLSContext(std::shared_ptr<boost::asio::ssl::context> p_ctx);
 
+  ~ExtendedTLSContext();
+
   boost::asio::ssl::context& operator*();
   std::shared_ptr<boost::asio::ssl::context> operator->();
 
@@ -36,23 +38,25 @@ struct ExtendedTLSContext {
 ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
                                     const LayerParameters& parameters);
 bool SetCtxCipher(boost::asio::ssl::context& ctx,
-                  const LayerParameters& parameters);
-bool SetCtxCa(boost::asio::ssl::context& ctx,
-              const LayerParameters& parameters);
+                  const LayerParameters& parameters,
+                  boost::system::error_code& ec);
+
+bool SetCtxCa(boost::asio::ssl::context& ctx, const LayerParameters& parameters,
+              boost::system::error_code& ec);
+
 bool SetCtxCrt(boost::asio::ssl::context& ctx,
                const LayerParameters& parameters,
                boost::system::error_code& ec);
+
 bool SetCtxKey(boost::asio::ssl::context& ctx,
                const LayerParameters& parameters,
                boost::system::error_code& ec);
+
 bool SetCtxDhparam(boost::asio::ssl::context& ctx,
                    const LayerParameters& parameters,
                    boost::system::error_code& ec);
-bool verify_certificate(bool preverified,
-                        boost::asio::ssl::verify_context& ctx);
-std::vector<uint8_t> get_deserialized_vector(const std::string& serialized);
-std::vector<uint8_t> get_value_in_vector(const LayerParameters& parameters,
-                                         const std::string& key);
+
+bool VerifyCertificate(bool preverified, boost::asio::ssl::verify_context& ctx);
 
 }  // detail
 }  // cryptography

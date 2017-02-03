@@ -4,6 +4,7 @@
 
 Features:
 * #14 SOCKS proxy support (no authentication), cf. configuration file
+* Allow TLS parameters as buffers in config file (`tls.ca_cert_buffer`, `tls.cert_buffer`, `tls.key_buffer`, `tls.dh_buffer`)
 
 Fixed bugs:
 * #32 SOCKS v5 microservice

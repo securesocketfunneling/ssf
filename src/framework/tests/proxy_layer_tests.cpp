@@ -97,19 +97,19 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
 
   ssf::layer::ParameterStack acceptor_parameters;
   acceptor_parameters.push_back(
-      tests::virtual_network_helpers::tls_server_parameters);
+      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
   acceptor_parameters.push_back(empty_layer);
   acceptor_parameters.push_back(tcp_server_parameters);
 
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(
-      tests::virtual_network_helpers::tls_client_parameters);
+      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
   client_parameters.push_back(GetProxyParam());
   client_parameters.push_back(GetProxyTcpParam());
 
   ssf::layer::ParameterStack client_error_parameters;
   client_error_parameters.push_back(
-      tests::virtual_network_helpers::tls_client_parameters);
+      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
   client_error_parameters.push_back(GetProxyTcpParam());
   client_error_parameters.push_back(client_error_tcp_addr.ToTCPParam());
 

@@ -47,7 +47,8 @@ set(SSF_FRAMEWORK_LAYER_TEST_FIXTURES_FILES
   "stream_protocol_helpers.h"
   "tools.h"
   "transport_test_fixture.h"
-  "virtual_network_helpers.h")
+  "virtual_network_helpers.h"
+  "virtual_network_helpers.cpp")
 
 # --- Log tests
 add_target("log_tests"

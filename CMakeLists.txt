@@ -116,8 +116,10 @@ include_directories(${project_BINARY_DIR})
 # --- Test certs
 set(SSF_CERT_TEST_ROOT_FILES
   "${project_ROOT_DIR}/certs/certificate.crt"
-  "${project_ROOT_DIR}/certs/dh4096.pem"
-  "${project_ROOT_DIR}/certs/private.key")
+  "${project_ROOT_DIR}/certs/private.key"
+  "${project_ROOT_DIR}/certs/server.crt"
+  "${project_ROOT_DIR}/certs/server.key"
+  "${project_ROOT_DIR}/certs/dh4096.pem")
 set(SSF_CERT_TEST_TRUSTED_FILES
   "${project_ROOT_DIR}/certs/trusted/ca.crt"
 )
