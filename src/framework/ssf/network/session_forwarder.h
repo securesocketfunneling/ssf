@@ -21,18 +21,18 @@ template <typename InwardStream, typename ForwardStream>
 class SessionForwarder : public ssf::BaseSession {
  private:
   /// Buffer type for the transiting data
-  typedef std::array<char, 50 * 1024> buffer_type;
+  using StreamBuf = std::array<char, 50 * 1024>;
 
   /// Type for the class managing the different forwarding links
-  typedef ItemManager<BaseSessionPtr> SessionManager;
+  using SessionManager = ItemManager<BaseSessionPtr>;
 
  public:
-  typedef std::shared_ptr<SessionForwarder> p_SessionForwarder;
+  using SessionForwarderPtr = std::shared_ptr<SessionForwarder>;
 
  public:
   /// Return a shared pointer to a new SessionForwarder object
   template <typename... Args>
-  static p_SessionForwarder create(Args&&... args) {
+  static SessionForwarderPtr create(Args&&... args) {
     return std::shared_ptr<SessionForwarder>(
         new SessionForwarder(std::forward<Args>(args)...));
   }
@@ -126,8 +126,8 @@ class SessionForwarder : public ssf::BaseSession {
   SessionManager* manager_;
 
   // One buffer for each Half Duplex Link
-  buffer_type inwardBuffer_;
-  buffer_type forwardBuffer_;
+  StreamBuf inwardBuffer_;
+  StreamBuf forwardBuffer_;
 };
 
 }  // ssf

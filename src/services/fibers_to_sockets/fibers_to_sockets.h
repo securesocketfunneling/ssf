@@ -26,28 +26,32 @@ namespace fibers_to_sockets {
 template <typename Demux>
 class FibersToSockets : public BaseService<Demux> {
  private:
-  typedef typename Demux::local_port_type local_port_type;
+  using LocalPortType = typename Demux::local_port_type;
+  using RemotePortType = typename Demux::remote_port_type;
+  using FibersToSocketsPtr = std::shared_ptr<FibersToSockets>;
+  using SessionManager = ItemManager<BaseSessionPtr>;
+  using Parameters = typename ssf::BaseService<Demux>::Parameters;
+  using Fiber = typename ssf::BaseService<Demux>::fiber;
+  using FiberPtr = std::shared_ptr<Fiber>;
+  using FiberEndpoint = typename ssf::BaseService<Demux>::endpoint;
+  using FiberAcceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
 
-  typedef std::shared_ptr<FibersToSockets> FibersToSocketsPtr;
-  typedef ItemManager<BaseSessionPtr> SessionManager;
-  typedef typename ssf::BaseService<Demux>::Parameters Parameters;
-  typedef typename ssf::BaseService<Demux>::demux demux;
-  typedef typename ssf::BaseService<Demux>::fiber fiber;
-  typedef typename ssf::BaseService<Demux>::endpoint endpoint;
-  typedef typename ssf::BaseService<Demux>::fiber_acceptor fiber_acceptor;
-
-  typedef boost::asio::ip::tcp::socket socket;
+  using Tcp = boost::asio::ip::tcp;
 
  public:
-  enum { factory_id = 3 };
+  enum { kFactoryId = 3 };
 
  public:
   FibersToSockets() = delete;
   FibersToSockets(const FibersToSockets&) = delete;
 
+  ~FibersToSockets() {
+    SSF_LOG(kLogDebug) << "microservice[stream_forwarder]: destroy";
+  }
+
  public:
-  static FibersToSocketsPtr create(boost::asio::io_service& io_service,
-                                   demux& fiber_demux, Parameters parameters) {
+  static FibersToSocketsPtr Create(boost::asio::io_service& io_service,
+                                   Demux& fiber_demux, Parameters parameters) {
     if (!parameters.count("local_port") || !parameters.count("remote_ip") ||
         !parameters.count("remote_port")) {
       return FibersToSocketsPtr(nullptr);
@@ -70,30 +74,30 @@ class FibersToSockets : public BaseService<Demux> {
       return FibersToSocketsPtr(nullptr);
     }
 
-    return std::shared_ptr<FibersToSockets>(new FibersToSockets(
+    return FibersToSocketsPtr(new FibersToSockets(
         io_service, fiber_demux, local_port, parameters["remote_ip"],
-        static_cast<uint16_t>(remote_port)));
+        static_cast<RemotePortType>(remote_port)));
   }
 
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
       // service factory is not enabled
       return;
     }
 
-    p_factory->RegisterServiceCreator(factory_id, &FibersToSockets::create);
+    p_factory->RegisterServiceCreator(kFactoryId, &FibersToSockets::Create);
   }
 
-  static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
-      local_port_type local_port, std::string remote_addr,
-      uint16_t remote_port) {
-    ssf::services::admin::CreateServiceRequest<demux> create(factory_id);
-    create.add_parameter("local_port", std::to_string(local_port));
-    create.add_parameter("remote_ip", remote_addr);
-    create.add_parameter("remote_port", std::to_string(remote_port));
+  static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
+      LocalPortType local_port, std::string remote_addr,
+      RemotePortType remote_port) {
+    ssf::services::admin::CreateServiceRequest<Demux> create_req(kFactoryId);
+    create_req.add_parameter("local_port", std::to_string(local_port));
+    create_req.add_parameter("remote_ip", remote_addr);
+    create_req.add_parameter("remote_port", std::to_string(remote_port));
 
-    return create;
+    return create_req;
   }
 
  public:
@@ -102,36 +106,30 @@ class FibersToSockets : public BaseService<Demux> {
   uint32_t service_type_id() override;
 
  private:
-  FibersToSockets(boost::asio::io_service& io_service, demux& fiber_demux,
-                  local_port_type local, const std::string& ip,
-                  uint16_t remote_port);
+  FibersToSockets(boost::asio::io_service& io_service, Demux& fiber_demux,
+                  LocalPortType local_port, const std::string& ip,
+                  RemotePortType remote_port);
 
-  // No check on prioror presence implemented
-  void StartAcceptFibers();
+  void AsyncAcceptFibers();
 
-  void FiberAcceptHandler(const boost::system::error_code& ec);
+  void FiberAcceptHandler(FiberPtr new_connection,
+                          const boost::system::error_code& ec);
 
-  void SocketConnectHandler(const boost::system::error_code& ec);
+  void TcpSocketConnectHandler(std::shared_ptr<Tcp::socket> socket,
+                               FiberPtr fiber_connection,
+                               const boost::system::error_code& ec);
 
-  template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
-  }
-
-  std::shared_ptr<FibersToSockets> SelfFromThis() {
+  FibersToSocketsPtr SelfFromThis() {
     return std::static_pointer_cast<FibersToSockets>(this->shared_from_this());
   }
 
  private:
-  uint16_t remote_port_;
+  RemotePortType remote_port_;
   std::string ip_;
-  local_port_type local_port_;
-  fiber_acceptor fiber_acceptor_;
-  fiber fiber_;
-  socket socket_;
+  LocalPortType local_port_;
+  FiberAcceptor fiber_acceptor_;
 
-  boost::asio::ip::tcp::endpoint endpoint_;
+  Tcp::endpoint remote_endpoint_;
 
   SessionManager manager_;
 };

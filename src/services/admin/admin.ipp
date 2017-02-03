@@ -34,7 +34,7 @@ Admin<Demux>::Admin(boost::asio::io_service& io_service, Demux& fiber_demux)
 template <typename Demux>
 void Admin<Demux>::set_server() {
   is_server_ = 1;
-  endpoint ep(this->get_demux(), service_port);
+  FiberEndpoint ep(this->get_demux(), kServicePort);
   fiber_acceptor_.bind(ep, init_ec_);
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, init_ec_);
 }
@@ -50,12 +50,14 @@ template <typename Demux>
 void Admin<Demux>::start(boost::system::error_code& ec) {
   ec = init_ec_;
 
-  if (!init_ec_) {
-    if (is_server_) {
-      StartAccept();
-    } else {
-      StartConnect();
-    }
+  if (ec) {
+    return;
+  }
+
+  if (is_server_) {
+    AsyncAccept();
+  } else {
+    AsyncConnect();
   }
 }
 
@@ -69,19 +71,17 @@ void Admin<Demux>::stop(boost::system::error_code& ec) {
 
 template <typename Demux>
 uint32_t Admin<Demux>::service_type_id() {
-  return factory_id;
+  return kFactoryId;
 }
 
 template <typename Demux>
-void Admin<Demux>::StartAccept() {
-  fiber_acceptor_.async_accept(
-      fiber_, Then(&Admin::HandleAccept, this->SelfFromThis()));
+void Admin<Demux>::AsyncAccept() {
+  fiber_acceptor_.async_accept(fiber_, boost::bind(&Admin::FiberAcceptHandler,
+                                                   this->SelfFromThis(), _1));
 }
 
 template <typename Demux>
-void Admin<Demux>::HandleAccept(const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service[admin]: handleAccept";
-
+void Admin<Demux>::FiberAcceptHandler(const boost::system::error_code& ec) {
   if (!fiber_acceptor_.is_open()) {
     return;
   }
@@ -96,21 +96,20 @@ void Admin<Demux>::HandleAccept(const boost::system::error_code& ec) {
 }
 
 template <typename Demux>
-void Admin<Demux>::StartConnect() {
-  fiber_.async_connect(endpoint(this->get_demux(), service_port),
-                       Then(&Admin::HandleConnect, this->SelfFromThis()));
+void Admin<Demux>::AsyncConnect() {
+  fiber_.async_connect(
+      FiberEndpoint(this->get_demux(), kServicePort),
+      boost::bind(&Admin::FiberConnectHandler, this->SelfFromThis(), _1));
 }
 
 template <typename Demux>
-void Admin<Demux>::HandleConnect(const boost::system::error_code& ec) {
-  SSF_LOG(kLogTrace) << "service[admin]: handle connect";
-
+void Admin<Demux>::FiberConnectHandler(const boost::system::error_code& ec) {
   if (!fiber_.is_open() || ec) {
     SSF_LOG(kLogError) << "service[admin]: no new connection: " << ec.message()
                        << " " << ec.value();
     // Retry to connect if failed to open the fiber
-    if (retries_ < 50) {
-      this->StartConnect();
+    if (retries_ < kServiceStatusRetryCount) {
+      this->AsyncConnect();
       ++retries_;
     }
     return;
@@ -256,7 +255,7 @@ void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
 
     case 103:
       if (!ec) {
-        this->TreatInstructionId();
+        this->ProcessInstructionId();
       } else {
         this->get_io_service().post(
             boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
@@ -304,7 +303,7 @@ void Admin<Demux>::ReceiveInstructionParameters() {
 
 /// Execute the command received and send back the result
 template <typename Demux>
-void Admin<Demux>::TreatInstructionId() {
+void Admin<Demux>::ProcessInstructionId() {
   // Get the right function to execute the command
   using CommandExecuterType =
       typename ssf::CommandFactory<Demux>::CommandExecuterType;
@@ -361,26 +360,25 @@ void Admin<Demux>::TreatInstructionId() {
 
 template <typename Demux>
 void Admin<Demux>::StartRemoteService(
-    const admin::CreateServiceRequest<demux>& create_request,
+    const admin::CreateServiceRequest<Demux>& create_request,
     const CommandHandler& handler) {
   this->Command(create_request, handler);
 }
 
 template <typename Demux>
 void Admin<Demux>::StopRemoteService(
-    const admin::StopServiceRequest<demux>& stop_request,
+    const admin::StopServiceRequest<Demux>& stop_request,
     const CommandHandler& handler) {
   this->Command(stop_request, handler);
 }
 
 template <typename Demux>
 void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
+  auto self = this->SelfFromThis();
   if (!ec) {
     auto p_command = std::make_shared<AdminCommand>(
         0, reserved_keep_alive_id_, reserved_keep_alive_size_,
         reserved_keep_alive_parameters_);
-
-    auto self = this->SelfFromThis();
 
     auto do_handler =
         [self, p_command](const boost::system::error_code& ec, size_t length) {
@@ -390,7 +388,7 @@ void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
     this->async_SendCommand(*p_command, do_handler);
   } else {
     this->get_io_service().post(
-        boost::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+        boost::bind(&Admin<Demux>::ShutdownServices, self));
     return;
   }
 }
@@ -400,7 +398,7 @@ void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
                                  size_t length) {
   if (!ec) {
     reserved_keep_alive_timer_.expires_from_now(
-        boost::posix_time::seconds(keep_alive_interval));  // to define
+        boost::posix_time::seconds(kKeepAliveInterval));
     reserved_keep_alive_timer_.async_wait(
         boost::bind(&Admin::SendKeepAlive, SelfFromThis(), _1));
   } else {
@@ -414,9 +412,9 @@ template <typename Demux>
 void Admin<Demux>::ShutdownServices() {
   boost::recursive_mutex::scoped_lock lock(stopping_mutex_);
   if (!stopped_) {
-    demux& d = this->get_demux();
+    Demux& d = this->get_demux();
     auto p_service_factory =
-        ServiceFactoryManager<demux>::GetServiceFactory(&d);
+        ServiceFactoryManager<Demux>::GetServiceFactory(&d);
     if (p_service_factory) {
       p_service_factory->Destroy();
     }

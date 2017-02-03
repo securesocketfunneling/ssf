@@ -202,7 +202,8 @@ class basic_CryptoStreamSocket_service
       return ec;
     }
 
-    // impl.p_next_layer_socket->shutdown(ec);
+    impl.p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                                       ec);
     return impl.p_next_layer_socket->next_layer().close(ec);
   }
 

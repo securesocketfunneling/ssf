@@ -27,7 +27,7 @@ class FileEnquirer : public BaseService<Demux> {
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
 
  public:
-  enum { factory_id = 9 };
+  enum { kFactoryId = 9 };
 
   static FileEnquirerPtr Create(boost::asio::io_service& io_service,
                                 Demux& fiber_demux, Parameters parameters) {
@@ -48,16 +48,16 @@ class FileEnquirer : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(factory_id, &FileEnquirer::Create);
+    p_factory->RegisterServiceCreator(kFactoryId, &FileEnquirer::Create);
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
       const std::string& input_pattern, const std::string& output_pattern) {
-    ssf::services::admin::CreateServiceRequest<Demux> create(factory_id);
-    create.add_parameter("input_pattern", input_pattern);
-    create.add_parameter("output_pattern", output_pattern);
+    ssf::services::admin::CreateServiceRequest<Demux> create_req(kFactoryId);
+    create_req.add_parameter("input_pattern", input_pattern);
+    create_req.add_parameter("output_pattern", output_pattern);
 
-    return create;
+    return create_req;
   }
 
  public:
@@ -67,7 +67,7 @@ class FileEnquirer : public BaseService<Demux> {
 
   void stop(boost::system::error_code& ec) override { fiber_.close(ec); }
 
-  uint32_t service_type_id() override { return factory_id; }
+  uint32_t service_type_id() override { return kFactoryId; }
 
  private:
   FileEnquirer(boost::asio::io_service& io_service, Demux& fiber_demux,

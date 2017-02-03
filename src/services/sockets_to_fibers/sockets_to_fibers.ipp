@@ -10,17 +10,15 @@ namespace sockets_to_fibers {
 
 template <typename Demux>
 SocketsToFibers<Demux>::SocketsToFibers(boost::asio::io_service& io_service,
-                                        demux& fiber_demux,
+                                        Demux& fiber_demux,
                                         const std::string& local_addr,
-                                        uint16_t local_port,
-                                        remote_port_type remote_port)
+                                        LocalPortType local_port,
+                                        RemotePortType remote_port)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
       local_addr_(local_addr),
       local_port_(local_port),
       remote_port_(remote_port),
-      socket_acceptor_(io_service),
-      socket_(io_service),
-      fiber_(io_service) {}
+      socket_acceptor_(io_service) {}
 
 template <typename Demux>
 void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
@@ -28,22 +26,22 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
                     << local_addr_ << ":" << local_port_ << "> to fiber port "
                     << remote_port_;
 
-  boost::asio::ip::tcp::resolver resolver(socket_.get_io_service());
-  boost::asio::ip::tcp::resolver::query query(local_addr_,
-                                              std::to_string(local_port_));
+  Tcp::resolver resolver(this->get_io_service());
+  Tcp::resolver::query query(local_addr_, std::to_string(local_port_));
   auto ep_it = resolver.resolve(query, ec);
-
   if (ec) {
     SSF_LOG(kLogError) << "microservice[stream_listener]: could not resolve "
                           "query <" << local_addr_ << ":" << local_port_ << ">";
     return;
   }
 
-  boost::asio::ip::tcp::endpoint endpoint(*ep_it);
+  Tcp::endpoint endpoint(*ep_it);
 
   boost::system::error_code close_ec;
   socket_acceptor_.open(endpoint.protocol(), ec);
   if (ec) {
+    SSF_LOG(kLogError)
+        << "microservice[stream_listener]: could not open acceptor";
     socket_acceptor_.close(close_ec);
     return;
   }
@@ -76,7 +74,7 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
     return;
   }
 
-  this->StartAcceptSockets();
+  this->AsyncAcceptSocket();
 }
 
 template <typename Demux>
@@ -91,51 +89,74 @@ void SocketsToFibers<Demux>::stop(boost::system::error_code& ec) {
 
 template <typename Demux>
 uint32_t SocketsToFibers<Demux>::service_type_id() {
-  return factory_id;
+  return kFactoryId;
 }
 
 template <typename Demux>
-void SocketsToFibers<Demux>::StartAcceptSockets() {
+void SocketsToFibers<Demux>::AsyncAcceptSocket() {
   SSF_LOG(kLogTrace) << "microservice[stream_listener]: accepting new clients";
 
   if (!socket_acceptor_.is_open()) {
     return;
   }
 
+  std::shared_ptr<Tcp::socket> socket_connection =
+      std::make_shared<Tcp::socket>(this->get_io_service());
+
   socket_acceptor_.async_accept(
-      socket_,
-      Then(&SocketsToFibers::SocketAcceptHandler, this->SelfFromThis()));
+      *socket_connection,
+      boost::bind(&SocketsToFibers::SocketAcceptHandler, this->SelfFromThis(),
+                  socket_connection, _1));
 }
 
 template <typename Demux>
 void SocketsToFibers<Demux>::SocketAcceptHandler(
+    std::shared_ptr<Tcp::socket> socket_connection,
     const boost::system::error_code& ec) {
   SSF_LOG(kLogTrace) << "microservice[stream_listener]: accept handler";
 
-  if (!socket_acceptor_.is_open()) {
+  if (ec) {
+    SSF_LOG(kLogDebug)
+        << "microservice[stream_listener]: error accepting new connection: "
+        << ec.message() << " " << ec.value();
     return;
   }
 
-  if (!ec) {
-    endpoint ep(this->get_demux(), remote_port_);
-    fiber_.async_connect(
-        ep, Then(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis()));
+  if (socket_acceptor_.is_open()) {
+    this->AsyncAcceptSocket();
   }
+
+  FiberPtr fiber_connection = std::make_shared<Fiber>(this->get_io_service());
+  FiberEndpoint ep(this->get_demux(), remote_port_);
+  fiber_connection->async_connect(
+      ep,
+      boost::bind(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis(),
+                  fiber_connection, socket_connection, _1));
 }
 
 template <typename Demux>
 void SocketsToFibers<Demux>::FiberConnectHandler(
+    FiberPtr fiber_connection, std::shared_ptr<Tcp::socket> socket_connection,
     const boost::system::error_code& ec) {
   SSF_LOG(kLogTrace) << "microservice[stream_listener]: connect handler";
 
-  if (!ec) {
-    auto session = SessionForwarder<socket, fiber>::create(
-        &manager_, std::move(socket_), std::move(fiber_));
-    boost::system::error_code e;
-    manager_.start(session, e);
+  if (ec) {
+    SSF_LOG(kLogError)
+        << "microservice[stream_listener]: error connecting to remote fiber";
+    boost::system::error_code close_ec;
+    socket_connection->close(close_ec);
+    return;
   }
 
-  StartAcceptSockets();
+  auto session = SessionForwarder<Tcp::socket, Fiber>::create(
+      &manager_, std::move(*socket_connection), std::move(*fiber_connection));
+  boost::system::error_code start_ec;
+  manager_.start(session, start_ec);
+  if (start_ec) {
+    SSF_LOG(kLogError) << "microservice[stream_listener]: cannot start session";
+    start_ec.clear();
+    session->stop(start_ec);
+  }
 }
 
 }  // sockets_to_fibers

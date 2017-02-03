@@ -37,6 +37,7 @@ class ItemManager : private boost::noncopyable {
 
   /// Stop an item
   void stop(ActionableItem item, boost::system::error_code& ec) {
+    boost::recursive_mutex::scoped_lock lock(id_map_mutex_);
     do_stop(find_id_from_item(item), ec);
   }
 

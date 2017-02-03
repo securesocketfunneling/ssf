@@ -18,27 +18,30 @@
 #include "common/boost/fiber/stream_fiber.hpp"
 
 namespace ssf {
+namespace services {
 namespace socks {
+
+template <typename Demux>
+class SocksServer;
+
 namespace v4 {
 
 template <typename Demux>
 class Session : public ssf::BaseSession {
  private:
-  using StreamBuff = std::array<char, 50 * 1024>;
-
-  using socket = boost::asio::ip::tcp::socket;
-  using tcp_resolver = boost::asio::ip::tcp::resolver;
-
-  using fiber = typename boost::asio::fiber::stream_fiber<
+  using StreamBuf = std::array<char, 50 * 1024>;
+  using Tcp = boost::asio::ip::tcp;
+  using Fiber = typename boost::asio::fiber::stream_fiber<
       typename Demux::socket_type>::socket;
-
-  using SessionManager = ItemManager<BaseSessionPtr>;
 
   using Request = ssf::network::socks::v4::Request;
   using Reply = ssf::network::socks::v4::Reply;
 
+  using Server = SocksServer<Demux>;
+  using SocksServerWPtr = std::weak_ptr<Server>;
+
  public:
-  Session(SessionManager* sm, fiber client);
+  Session(SocksServerWPtr p_socks_server, Fiber client);
 
  public:
   virtual void start(boost::system::error_code&);
@@ -53,7 +56,7 @@ class Session : public ssf::BaseSession {
   void DoBindRequest();
 
   void HandleResolveServerEndpoint(const boost::system::error_code& err,
-                                   tcp_resolver::iterator ep_it);
+                                   Tcp::resolver::iterator ep_it);
 
   void HandleApplicationServerConnect(const boost::system::error_code&);
 
@@ -62,22 +65,22 @@ class Session : public ssf::BaseSession {
   void HandleStop();
 
  private:
-  std::shared_ptr<Session> self_shared_from_this() {
+  std::shared_ptr<Session> SelfFromThis() {
     return std::static_pointer_cast<Session>(shared_from_this());
   }
 
  private:
   boost::asio::io_service& io_service_;
-  SessionManager* p_session_manager_;
+  SocksServerWPtr socks_server_;
 
-  fiber client_;
-  socket server_;
-  tcp_resolver server_resolver_;
+  Fiber client_;
+  Tcp::socket server_;
+  Tcp::resolver server_resolver_;
 
   Request request_;
 
-  std::shared_ptr<StreamBuff> upstream_;
-  std::shared_ptr<StreamBuff> downstream_;
+  std::shared_ptr<StreamBuf> upstream_;
+  std::shared_ptr<StreamBuf> downstream_;
 };
 
 template <class VerifyHandler, class StreamSocket>
@@ -151,6 +154,7 @@ void AsyncSendReply(StreamSocket& c, const ssf::network::socks::v4::Reply& r,
 
 }  // v4
 }  // socks
+}  // services
 }  // ssf
 
 #include "services/socks/v4/session.ipp"

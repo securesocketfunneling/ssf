@@ -71,14 +71,18 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
                                ec);
   */
 
+  boost::system::error_code close_ec;
+
   network_acceptor_.bind(*endpoint_it, ec);
   if (ec) {
+    network_acceptor_.close(close_ec);
     SSF_LOG(kLogError) << "server: could not bind acceptor to network endpoint";
     return;
   }
 
   network_acceptor_.listen(100, ec);
   if (ec) {
+    network_acceptor_.close(close_ec);
     SSF_LOG(kLogError) << "server: could not listen for new connections";
     return;
   }
@@ -92,6 +96,8 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
 /// Stop accepting connections and end all on going connections
 template <class N, template <class> class T>
 void SSFServer<N, T>::Stop() {
+  SSF_LOG(kLogDebug) << "server: stop";
+
   RemoveAllDemuxes();
 
   // close acceptor

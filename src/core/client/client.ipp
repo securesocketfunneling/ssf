@@ -73,9 +73,7 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
 
 template <class N, template <class> class T>
 void SSFClient<N, T>::Stop() {
-  if (!async_engine_.IsStarted()) {
-    return;
-  }
+  SSF_LOG(kLogDebug) << "client: stop";
 
   fiber_demux_.close();
 
