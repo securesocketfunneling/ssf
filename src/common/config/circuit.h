@@ -1,13 +1,13 @@
-#ifndef SSF_CORE_CIRCUIT_CONFIG_H_
-#define SSF_CORE_CIRCUIT_CONFIG_H_
+#ifndef SSF_COMMON_CONFIG_CIRCUIT_H_
+#define SSF_COMMON_CONFIG_CIRCUIT_H_
 
 #include <list>
 #include <string>
 
-#include <boost/system/error_code.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace ssf {
-namespace circuit {
+namespace config {
 
 class CircuitNode {
  public:
@@ -27,31 +27,25 @@ class CircuitNode {
 
 using NodeList = std::list<CircuitNode>;
 
-class Config {
+class Circuit {
  public:
- public:
-  Config();
+  using PTree = boost::property_tree::ptree;
 
  public:
-  /**
-   * Parse circuit file
-   * If no file provided, try to load circuit data "circuit.txt" file
-   * @param filepath
-   */
-  void Update(const std::string& filepath, boost::system::error_code& ec);
+  Circuit();
 
-  /**
-   * Log configuration
-   */
+ public:
+  void Update(const PTree& pt);
+
   void Log() const;
 
-  inline NodeList nodes() const { return nodes_; };
+  const NodeList& nodes() const { return nodes_; };
 
  private:
   NodeList nodes_;
 };
 
-}  // circuit
+}  // config
 }  // ssf
 
-#endif  // SSF_CORE_CIRCUIT_CONFIG_H_
+#endif  // SSF_COMMON_CONFIG_CIRCUIT_H_

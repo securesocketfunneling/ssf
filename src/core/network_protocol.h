@@ -12,8 +12,6 @@
 #include <ssf/layer/physical/tlsotcp.h>
 #include <ssf/layer/proxy/basic_proxy_protocol.h>
 
-#include "core/circuit/config.h"
-
 namespace ssf {
 
 namespace config {
@@ -56,7 +54,7 @@ class NetworkProtocol {
   static Query GenerateClientQuery(const std::string& remote_addr,
                                    const std::string& remote_port,
                                    const ssf::config::Config& ssf_config,
-                                   const ssf::circuit::NodeList& circuit_nodes);
+                                   const ssf::config::NodeList& circuit_nodes);
 
   static Query GenerateServerQuery(const std::string& remote_addr,
                                    const std::string& remote_port,
@@ -65,12 +63,12 @@ class NetworkProtocol {
   static Query GenerateClientTCPQuery(
       const std::string& remote_addr, const std::string& remote_port,
       const ssf::config::Config& ssf_config,
-      const ssf::circuit::NodeList& circuit_nodes);
+      const ssf::config::NodeList& circuit_nodes);
 
   static Query GenerateClientTLSQuery(
       const std::string& remote_addr, const std::string& remote_port,
       const ssf::config::Config& ssf_config,
-      const ssf::circuit::NodeList& circuit_nodes);
+      const ssf::config::NodeList& circuit_nodes);
 
   static Query GenerateServerTCPQuery(const std::string& remote_addr,
                                       const std::string& remote_port,

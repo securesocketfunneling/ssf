@@ -206,6 +206,44 @@ TEST_F(LoadConfigTest, LoadServicesFileTest) {
   ASSERT_EQ(config_.services().process().args(), "-custom args");
 }
 
+TEST_F(LoadConfigTest, LoadCircuitFileTest) {
+  boost::system::error_code ec;
+
+  config_.UpdateFromFile("./config_files/circuit.json", ec);
+
+  ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
+  ASSERT_EQ(config_.circuit().nodes().size(), 3);
+  auto node_it = config_.circuit().nodes().begin();
+  ASSERT_EQ(node_it->addr(), "127.0.0.1");
+  ASSERT_EQ(node_it->port(), "8011");
+  ++node_it;
+  ASSERT_EQ(node_it->addr(), "127.0.0.2");
+  ASSERT_EQ(node_it->port(), "8012");
+  ++node_it;
+  ASSERT_EQ(node_it->addr(), "127.0.0.3");
+  ASSERT_EQ(node_it->port(), "8013");
+}
+
+TEST_F(LoadConfigTest, LoadArgumentsFileTest) {
+  boost::system::error_code ec;
+
+  config_.UpdateFromFile("./config_files/arguments.json", ec);
+
+  ASSERT_EQ(ec.value(), 0) << "Success if complete file format";
+  auto argv = config_.GetArgv();
+
+  ASSERT_EQ(argv.size(), 10);
+  ASSERT_STREQ(argv[1], "-c");
+  ASSERT_STREQ(argv[2], "a/path to/config_file.json");
+  ASSERT_STREQ(argv[3], "-D");
+  ASSERT_STREQ(argv[4], "9000");
+  ASSERT_STREQ(argv[5], "-X");
+  ASSERT_STREQ(argv[6], "10000");
+  ASSERT_STREQ(argv[7], "-L");
+  ASSERT_STREQ(argv[8], "11000:localhost:12000");
+  ASSERT_EQ(argv[9], nullptr);
+}
+
 TEST_F(LoadConfigTest, LoadCompleteFileTest) {
   boost::system::error_code ec;
 

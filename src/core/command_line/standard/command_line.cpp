@@ -22,9 +22,6 @@ void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
   auto* p_host_option =
       boost::program_options::value<std::string>(&host_)->value_name("host");
-  if (!IsServerCli()) {
-    p_host_option->required();
-  }
 
   if (IsServerCli()) {
     local_opts.add_options()(
@@ -61,18 +58,28 @@ bool CommandLine::IsServerCli() { return is_server_; }
 void CommandLine::ParseOptions(const VariableMap& vm,
                                ParsedParameters& parsed_params,
                                boost::system::error_code& ec) {
-  if (vm.count("host")) {
+  if (vm.count("host") && !vm["host"].empty()) {
     host_ = vm["host"].as<std::string>();
-    host_set_ = true;
+  } else {
+    host_ = "";
   }
+
   if (vm.count("status")) {
     show_status_ = vm["status"].as<bool>();
+  } else {
+    show_status_ = false;
   }
+
   if (vm.count("relay-only")) {
     relay_only_ = vm["relay-only"].as<bool>();
+  } else {
+    relay_only_ = false;
   }
+
   if (vm.count("gateway-ports")) {
     gateway_ports_ = vm["gateway-ports"].as<bool>();
+  } else {
+    gateway_ports_ = false;
   }
 }
 

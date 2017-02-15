@@ -1,0 +1,5 @@
+{
+    "ssf": {
+        "arguments": "-c \"a/path to/config_file.json\" -D 9000   -X 10000 -L  11000:localhost:12000"
+    }
+}

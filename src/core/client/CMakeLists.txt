@@ -20,6 +20,8 @@ file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
 set(CLIENT_NAME "ssfc")
 
 set(CLIENT_MAIN
+    client_helper.h
+    client_helper.cpp
     main.cpp)
 
 add_target(${CLIENT_NAME}
@@ -41,6 +43,8 @@ add_target(${CLIENT_NAME}
 # --- ssfcp
 set(CLIENT_CP_NAME "ssfcp")
 set(CLIENT_CP_MAIN
+    client_helper.h
+    client_helper.cpp
     main_cp.cpp)
 
 add_target(${CLIENT_CP_NAME}

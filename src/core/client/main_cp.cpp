@@ -10,8 +10,8 @@
 #include "common/config/config.h"
 #include "common/log/log.h"
 
-#include "core/circuit/config.h"
 #include "core/client/client.h"
+#include "core/client/client_helper.h"
 #include "core/command_line/copy/command_line.h"
 #include "core/factories/service_option_factory.h"
 #include "core/network_protocol.h"
@@ -27,40 +27,49 @@ using Client =
 
 using Demux = Client::Demux;
 using BaseUserServicePtr = Client::BaseUserServicePtr;
-using CircuitNodeList = ssf::circuit::NodeList;
-using CircuitConfig = ssf::circuit::Config;
-
-// Generate network query
-NetworkProtocol::Query GenerateNetworkQuery(
-    const std::string& remote_addr, const std::string& remote_port,
-    const ssf::config::Config& config, const CircuitConfig& circuit_config);
 
 int main(int argc, char** argv) {
-  // Parse the command line
   ssf::command_line::copy::CommandLine cmd;
 
   boost::system::error_code ec;
-  cmd.Parse(argc, argv, ec);
 
+  ssf::config::Config ssf_config;
+  ssf_config.Init();
+
+  cmd.Parse(argc, argv, ec);
   if (ec.value() == ::error::operation_canceled) {
     return 0;
-  }
-
-  if (ec) {
-    SSF_LOG(kLogError) << "client: wrong command line arguments";
+  } else if (ec) {
+    SSF_LOG(kLogError) << "ssfcp: wrong command line arguments";
     return 1;
   }
 
+  ssf_config.UpdateFromFile(cmd.config_file(), ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "ssfcp: invalid config file format";
+    return 1;
+  }
+
+  if (ssf_config.GetArgc() > 0) {
+    // update command line with config file argv
+    cmd.Parse(ssf_config.GetArgc(), ssf_config.GetArgv().data(), ec);
+    if (ec) {
+      SSF_LOG(kLogError) << "ssfcp: wrong command line arguments";
+      return 1;
+    }
+  }
+
+  ssf_config.Log();
   ssf::log::Configure(cmd.log_level());
 
-  // Create and initialize copy user service
+  // create and initialize copy user service
   auto p_copy_service =
       ssf::services::CopyFileService<Demux>::CreateServiceFromParams(
           cmd.from_stdin(), cmd.from_local_to_remote(), cmd.input_pattern(),
           cmd.output_pattern(), ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "client: copy service could not be created";
+    SSF_LOG(kLogError) << "ssfcp: copy service could not be created";
     return 1;
   }
 
@@ -68,42 +77,19 @@ int main(int argc, char** argv) {
   user_services.push_back(p_copy_service);
 
   if (!cmd.host_set()) {
-    SSF_LOG(kLogError) << "client: no remote host provided -- Exiting";
+    SSF_LOG(kLogError) << "ssfcp: no remote host provided";
     return 1;
   }
 
   if (!cmd.port_set()) {
-    SSF_LOG(kLogError) << "client: no host port provided -- Exiting";
+    SSF_LOG(kLogError) << "ssfcp: no host port provided";
     return 1;
   }
-
-  boost::system::error_code ec_config;
-  ssf::config::Config ssf_config;
-  ssf_config.Init();
-
-  ssf_config.UpdateFromFile(cmd.config_file(), ec_config);
-
-  if (ec_config) {
-    SSF_LOG(kLogError) << "client: invalid config file format";
-    return 1;
-  }
-
-  ssf_config.Log();
 
   std::promise<bool> closed;
 
-  CircuitConfig circuit_config;
-  circuit_config.Update(cmd.circuit_file(), ec);
-
-  if (ec) {
-    SSF_LOG(kLogError) << "client: invalid circuit config file -- Exiting";
-    return 1;
-  }
-
-  circuit_config.Log();
-
-  auto endpoint_query = GenerateNetworkQuery(
-      cmd.host(), std::to_string(cmd.port()), ssf_config, circuit_config);
+  auto endpoint_query = ssf::GenerateNetworkQuery(
+      cmd.host(), std::to_string(cmd.port()), ssf_config);
 
   std::condition_variable wait_stop_cv;
   std::mutex mutex;
@@ -114,7 +100,7 @@ int main(int argc, char** argv) {
       const boost::system::error_code& ec) {
     switch (type) {
       case ssf::services::initialisation::NETWORK: {
-        SSF_LOG(kLogInfo) << "client: connected to remote server "
+        SSF_LOG(kLogInfo) << "ssfcp: connected to remote server "
                           << (!ec ? "OK" : "NOK");
         break;
       }
@@ -138,18 +124,18 @@ int main(int argc, char** argv) {
     }
   };
 
-  // Initiating and starting the client
+  // initialize and run client
   Client client(user_services, ssf_config.services(), callback);
 
   client.Run(endpoint_query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "client: error happened when running client : "
+    SSF_LOG(kLogError) << "ssfcp: error happened when running client : "
                        << ec.message();
     return 1;
   }
 
-  SSF_LOG(kLogInfo) << "client: connecting to <" << cmd.host() << ":"
+  SSF_LOG(kLogInfo) << "ssfcp: connecting to <" << cmd.host() << ":"
                     << cmd.port() << ">";
 
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
@@ -166,7 +152,7 @@ int main(int argc, char** argv) {
   });
 
   // wait end transfer
-  SSF_LOG(kLogInfo) << "client: wait end of file transfer";
+  SSF_LOG(kLogInfo) << "ssfcp: wait end of file transfer";
   std::unique_lock<std::mutex> lock(mutex);
   wait_stop_cv.wait(lock, [&stopped] { return stopped; });
   lock.unlock();
@@ -175,26 +161,4 @@ int main(int argc, char** argv) {
   client.Stop();
 
   return 0;
-}
-
-NetworkProtocol::Query GenerateNetworkQuery(
-    const std::string& remote_addr, const std::string& remote_port,
-    const ssf::config::Config& ssf_config,
-    const CircuitConfig& circuit_config) {
-  std::string first_node_addr;
-  std::string first_node_port;
-  CircuitNodeList nodes = circuit_config.nodes();
-  if (nodes.size()) {
-    auto first_node = nodes.front();
-    nodes.pop_front();
-    first_node_addr = first_node.addr();
-    first_node_port = first_node.port();
-    nodes.emplace_back(remote_addr, remote_port);
-  } else {
-    first_node_addr = remote_addr;
-    first_node_port = remote_port;
-  }
-
-  return NetworkProtocol::GenerateClientQuery(first_node_addr, first_node_port,
-                                              ssf_config, nodes);
 }

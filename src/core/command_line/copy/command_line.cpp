@@ -36,7 +36,7 @@ void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
         boost::program_options::bool_switch()->default_value(false),
         "Input will be stdin")
     ("arg1",
-        boost::program_options::value<std::string>()->required()
+        boost::program_options::value<std::string>()
           ->value_name("[host@]/absolute/path/file"),
         "[host@]/absolute/path/file if host is present, " \
         "the file will be copied from the remote host to local")
@@ -70,7 +70,15 @@ void CommandLine::ParseOptions(const VariableMap& vm,
     from_stdin_ = stdin_it->second.as<bool>();
   }
 
+  const auto& arg1_it = vm.find("arg1");
+  if (arg1_it == vm_end_it) {
+    return;
+  }
+
   ParseFirstArgument(vm["arg1"].as<std::string>(), ec);
+  if (ec) {
+    return;
+  }
 
   const auto& arg2_it = vm.find("arg2");
   if (arg2_it != vm_end_it) {
@@ -91,7 +99,6 @@ void CommandLine::ParseFirstArgument(const std::string& first_arg,
     // Expecting host:filepath syntax
     ExtractHostPattern(first_arg, &host_, &output_pattern_, parse_ec);
     if (!parse_ec) {
-      host_set_ = true;
       from_local_to_remote_ = true;
     }
   } else {
@@ -99,7 +106,6 @@ void CommandLine::ParseFirstArgument(const std::string& first_arg,
     boost::system::error_code extract_ec;
     ExtractHostPattern(first_arg, &host_, &input_pattern_, extract_ec);
     if (!extract_ec) {
-      host_set_ = true;
       from_local_to_remote_ = false;
     } else {
       // Not host:dirpath syntax so it is filepath syntax
@@ -125,11 +131,9 @@ void CommandLine::ParseSecondArgument(const std::string& second_arg,
     // Expecting host:dirpath
     ExtractHostPattern(second_arg, &host_, &output_pattern_, parse_ec);
     if (parse_ec) {
-      host_set_ = false;
       return;
     }
 
-    host_set_ = true;
   } else {
     // Expecting dirpath
     output_pattern_ = second_arg;

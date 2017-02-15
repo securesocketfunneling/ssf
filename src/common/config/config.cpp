@@ -2,8 +2,10 @@
 #include <sstream>
 #include <string>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/asio/detail/config.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/regex.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
@@ -85,15 +87,30 @@ void Config::Log() const {
   http_proxy_.Log();
   socks_proxy_.Log();
   services_.Log();
+  circuit_.Log();
 }
 
 void Config::LogStatus() const { services_.LogServiceStatus(); }
+
+std::vector<char*> Config::GetArgv() const {
+  std::vector<char*> res_argv(argv_.size() + 1);
+  auto res_arg_it = res_argv.begin();
+  for (const auto& arg : argv_) {
+    *res_arg_it = const_cast<char*>(arg.data());
+    ++res_arg_it;
+  }
+  // last element is nullptr
+  *res_arg_it = nullptr;
+  return res_argv;
+}
 
 void Config::UpdateFromPTree(const PTree& pt) {
   UpdateTls(pt);
   UpdateHttpProxy(pt);
   UpdateSocksProxy(pt);
   UpdateServices(pt);
+  UpdateCircuit(pt);
+  UpdateArguments(pt);
 }
 
 void Config::UpdateTls(const PTree& pt) {
@@ -134,6 +151,45 @@ void Config::UpdateServices(const PTree& pt) {
   }
 
   services_.Update(services_optional.get());
+}
+
+void Config::UpdateCircuit(const PTree& pt) {
+  auto circuit_optional = pt.get_child_optional("ssf.circuit");
+  if (!circuit_optional) {
+    SSF_LOG(kLogDebug) << "config[update]: circuit configuration not found";
+    return;
+  }
+
+  circuit_.Update(circuit_optional.get());
+}
+
+void Config::UpdateArguments(const PTree& pt) {
+  auto arguments_optional = pt.get_child_optional("ssf.arguments");
+  if (!arguments_optional) {
+    SSF_LOG(kLogDebug) << "config[update]: arguments configuration not found";
+    return;
+  }
+
+  // basic arguments parsing
+  std::string arguments(arguments_optional.get().data());
+  if (arguments.empty()) {
+    return;
+  }
+  argv_.clear();
+
+  argv_.push_back("ssf");
+  // quoted arg or arg between space
+  boost::regex argv_regex("(\"[^\"]+\"|[^\\s\"]+)");
+  auto argv_it =
+      boost::sregex_iterator(arguments.begin(), arguments.end(), argv_regex);
+  auto argv_end = boost::sregex_iterator();
+  while (argv_it != argv_end) {
+    auto argv = argv_it->str();
+    // trim double quotes
+    boost::trim_if(argv, boost::is_any_of("\""));
+    argv_.push_back(argv);
+    ++argv_it;
+  }
 }
 
 const char* Config::default_config_ = R"RAWSTRING(
@@ -181,7 +237,9 @@ const char* Config::default_config_ = R"RAWSTRING(
         "args": ""
       },
       "socks": { "enable": true }
-    }
+    },
+    "circuit": [],
+    "arguments": ""
   }
 }
 )RAWSTRING";

@@ -10,7 +10,7 @@ namespace network {
 NetworkProtocol::Query NetworkProtocol::GenerateClientQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const ssf::circuit::NodeList& circuit_nodes) {
+    const ssf::config::NodeList& circuit_nodes) {
 #ifdef TLS_OVER_TCP_LINK
   return GenerateClientTLSQuery(remote_addr, remote_port, ssf_config,
                                 circuit_nodes);
@@ -33,7 +33,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerQuery(
 NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const ssf::circuit::NodeList& circuit_nodes) {
+    const ssf::config::NodeList& circuit_nodes) {
   ssf::layer::LayerParameters proxy_param_layer =
       ProxyConfigToLayerParameters(ssf_config, false);
 
@@ -45,7 +45,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
   nodes.AddTopLayerToBackNode({{"addr", remote_addr}, {"port", remote_port}});
   nodes.AddTopLayerToBackNode(proxy_param_layer);
 
-  for (auto& circuit_node : circuit_nodes) {
+  for (const auto& circuit_node : circuit_nodes) {
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode(
         {{"addr", circuit_node.addr()}, {"port", circuit_node.port()}});
@@ -59,7 +59,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
 NetworkProtocol::Query NetworkProtocol::GenerateClientTLSQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const ssf::circuit::NodeList& circuit_nodes) {
+    const ssf::config::NodeList& circuit_nodes) {
   ssf::layer::LayerParameters tls_param_layer =
       TlsConfigToLayerParameters(ssf_config);
 
@@ -75,7 +75,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTLSQuery(
   nodes.AddTopLayerToBackNode(proxy_param_layer);
   nodes.AddTopLayerToBackNode(tls_param_layer);
 
-  for (auto& circuit_node : circuit_nodes) {
+  for (const auto& circuit_node : circuit_nodes) {
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode(
         {{"addr", circuit_node.addr()}, {"port", circuit_node.port()}});

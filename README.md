@@ -36,8 +36,6 @@ Basic options:
 Local options:
   -c [ --config ] config_file_path      Set config file. If option empty, try to load 'config.json' file from working
                                         directory
-  -b [ --circuit ] circuit_file_path    Set circuit file. If option empty, try to load 'circuit.txt' file from working
-                                        directory
   -p [ --port ] port (=8011)            Set remote SSF server port
   -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify
                                         listening network interface on every services
@@ -93,7 +91,7 @@ Client will open port 9000 locally and wait SOCKS requests to be transferred to
 server **192.168.0.1:8000**
 
 ```plaintext
-ssfc[.exe] -D 9000 -b bounce.txt -c config.json -p 8000 192.168.0.1
+ssfc[.exe] -D 9000 -c config.json -p 8000 192.168.0.1
 ```
 
 #### Server example
@@ -138,8 +136,6 @@ Basic options:
 Local options:
   -c [ --config ] config_file_path    Set config file. If option empty, try to load 'config.json' file from working
                                       directory
-  -b [ --circuit ] circuit_file_path  Set circuit file. If option empty, try to load 'circuit.txt' file from working
-                                      directory
   -p [ --port ] port (=8011)          Set remote SSF server port
 
 Copy options:
@@ -149,37 +145,30 @@ Copy options:
 #### Copy from local to remote destination :
 
 ```plaintext
-ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] path/to/file host@absolute/path/directory_destination
+ssfcp[.exe] [-c config_file] [-p port] path/to/file host@absolute/path/directory_destination
 ```
 
 ```plaintext
-ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] path/to/file* host@absolute/path/directory_destination
+ssfcp[.exe] [-c config_file] [-p port] path/to/file* host@absolute/path/directory_destination
 ```
 
 #### From stdin to remote destination
 
 ```plaintext
-data_in_stdin | ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] -t host@path/to/destination/file_destination
+data_in_stdin | ssfcp[.exe] [-c config_file] [-p port] -t host@path/to/destination/file_destination
 ```
 
 #### Copy remote files to local destination :
 
 ```plaintext
-ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file absolute/path/directory_destination
+ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file absolute/path/directory_destination
 ```
 
 ```plaintext
-ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/directory_destination
+ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/directory_destination
 ```
 
 ### File example
-
-#### Bounce file (relay servers)
-
-```plaintext
-127.0.0.1:8002
-127.0.0.1:8003
-```
 
 #### Configuration file
 
@@ -228,7 +217,9 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
         "args": ""
       },
       "socks": { "enable": true }
-    }
+    },
+    "circuit": [],
+    "arguments": ""
   }
 }
 ```
@@ -237,7 +228,8 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
 |:----------------------------------|:----------------------------------------------------------------------------------------------------------|
 | tls.ca_cert_path                  | relative or absolute path to the CA certificate file                                                      |
 | tls.cert_path                     | relative or absolute path to the instance certificate file                                                |
-| key_path                          | relative or absolute path to the private key file                                                         |
+| tls.key_path                      | relative or absolute path to the private key file                                                         |
+| tls.key_password                  | key password                                                                                              |
 | tls.dh_path                       | relative or absolute path to the Diffie-Hellman file                                                      |
 | tls.cipher_alg                    | cipher algorithm                                                                                          |
 | http_proxy.host                   | HTTP proxy host                                                                                           |
@@ -254,7 +246,8 @@ ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] remote_host@path/to/file
 | services.*.gateway_ports          | enable/disable gateway ports                                                                              |
 | services.shell.path               | binary path used for shell creation                                                                       |
 | services.shell.args               | binary arguments used for shell creation                                                                  |
-
+| circuit                           | relay chain servers used to establish the connection to the remote server                                 |
+| arguments                         | use configuration arguments instead of standard CLI arguments (except `-c`)                               |
 
 ## How to configure
 
@@ -324,7 +317,37 @@ Where:
 
 However, if you want those files at different paths, it is possible to customize them with the configuration file option *-c*.
 
-An example is given in the file example section.
+```
+{
+  "ssf": {
+    "tls" : {
+      "ca_cert_path": "./certs/trusted/ca.crt",
+      "cert_path": "./certs/certificate.crt",
+      "key_path": "./certs/private.key",
+      "key_password": "",
+      "dh_path": "./certs/dh4096.pem",
+      "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
+    }
+  }
+}
+```
+
+You can also inline those files into the configuration file by using `ca_cert_buffer`, `cert_buffer`, `key_buffer` and `dh_buffer` TLS options.
+
+```
+{
+  "ssf": {
+    "tls" : {
+      "ca_cert_buffer":"-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+      "cert_buffer":"-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+      "key_buffer":"-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----",
+      "dh_buffer":"-----BEGIN DH PARAMETERS-----\n...\n-----END DH PARAMETERS-----"
+    }
+  }
+}
+```
+
+Certificates, private keys and DH parameters must be in PEM format. `\n` between data and PEM header/footer are mandatory.
 
 #### Microservices
 
@@ -377,18 +400,45 @@ To enable or disable a microservice, set its `enable` option to `true` or `false
 
 Trying to use a feature requiring a disabled microservice will result in an error message.
 
-### Relay chain file
+### Circuit
 
-This file will contain the bounce servers and ports which will be used to establish the connection.
-They will be listed as follow :
+This config section replaces the `-b` CLI option.
 
-```plaintext
-SERVER1:PORT1
-SERVER2:PORT2
-SERVER3:PORT3
+The circuit is a JSON array containing the bounce servers and ports which will be used to establish the connection.
+They are listed as follow:
+
+```
+"ssf": {
+  "circuit": [
+    {"host": "SERVER1", "port":"PORT1"},
+    {"host": "SERVER2", "port":"PORT2"},
+    {"host": "SERVER3", "port":"PORT3"}
+  ]
+}
 ```
 
 The chain will be CLIENT -> SERVER1:PORT1 -> SERVER2:PORT2 -> SERVER3:PORT3 -> TARGET
+
+### Arguments
+
+The arguments section lets the user customize the command line arguments in the configuration file.
+
+Given the following config file `conf.json`:
+
+```
+"ssf": {
+  "arguments": "10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug"
+}
+```
+
+SSF will extract the given arguments and use them as a replacement of the initial arguments (except `-c`).
+
+For example, `ssfc -c conf.json` will be equivalent to `ssfc 10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug`:
+
+  * connect to `10.0.0.1:443` (`10.0.0.1 -p 443`)
+  * start the SOCKS service (`-D 9000`)
+  * start the TCP port forwarding service (`-L 11000:localhost:12000`)
+  * set verbosity level to debug (`-v debug`)
 
 ## How to build
 

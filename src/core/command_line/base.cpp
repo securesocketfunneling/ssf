@@ -18,9 +18,7 @@ BaseCommandLine::BaseCommandLine()
     : host_(""),
       port_(0),
       config_file_(""),
-      circuit_file_(""),
       log_level_(ssf::log::kLogInfo),
-      host_set_(false),
       port_set_(false) {}
 
 BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
@@ -30,11 +28,11 @@ BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
 }
 
 BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
-    int ac, char* av[], const OptionDescription& services,
+    int argc, char* argv[], const OptionDescription& services,
     boost::system::error_code& ec) {
   // Set executable name
-  if (ac > 0) {
-    boost::filesystem::path path(av[0]);
+  if (argc > 0) {
+    boost::filesystem::path path(argv[0]);
     exec_name_ = path.filename().string();
   }
 
@@ -64,7 +62,7 @@ BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
 
     VariableMap vm;
     boost::program_options::store(
-        boost::program_options::command_line_parser(ac, av)
+        boost::program_options::command_line_parser(argc, argv)
             .options(cmd_line)
             .positional(pos_opts)
             .run(),
@@ -123,6 +121,11 @@ bool BaseCommandLine::DisplayHelp(const VariableMap& vm,
 
 void BaseCommandLine::ParseBasicOptions(const VariableMap& vm,
                                         boost::system::error_code& ec) {
+  log_level_ = ssf::log::kLogInfo;
+  port_ = 0;
+  port_set_ = false;
+  config_file_ = "";
+
   for (const auto& option : vm) {
     if (option.first == "quiet") {
       log_level_ = ssf::log::kLogNone;
@@ -139,8 +142,6 @@ void BaseCommandLine::ParseBasicOptions(const VariableMap& vm,
                "between 1 - 65536";
         ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       }
-    } else if (option.first == "circuit") {
-      circuit_file_ = option.second.as<std::string>();
     } else if (option.first == "config") {
       config_file_ = option.second.as<std::string>();
     }
@@ -201,13 +202,6 @@ void BaseCommandLine::InitLocalOptions(OptionDescription& local_opts) {
         " working directory");
 
   if (!IsServerCli()) {
-    local_opts.add_options()
-      ("circuit,b",
-          boost::program_options::value<std::string>()
-            ->value_name("circuit_file_path"),
-          "Set circuit file. If option empty, try to load 'circuit.txt' file "
-          "from working directory");
-    
     local_opts.add_options()
       ("port,p",
           boost::program_options::value<int>()->default_value(8011)
