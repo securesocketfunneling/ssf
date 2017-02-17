@@ -1,6 +1,7 @@
 #ifndef SSF_COMMON_CONFIG_CONFIG_H_
 #define SSF_COMMON_CONFIG_CONFIG_H_
 
+#include <list>
 #include <string>
 #include <vector>
 
@@ -139,7 +140,7 @@ class Config {
   SocksProxy socks_proxy_;
   Services services_;
   Circuit circuit_;
-  std::vector<std::string> argv_;
+  std::list<std::string> argv_;
 };
 
 }  // config

@@ -12,6 +12,8 @@
 #include <ssf/layer/physical/tlsotcp.h>
 #include <ssf/layer/proxy/basic_proxy_protocol.h>
 
+#include "common/config/config.h"
+
 namespace ssf {
 
 namespace config {

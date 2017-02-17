@@ -15,6 +15,8 @@ namespace ssf {
 namespace command_line {
 namespace copy {
 
+static const char kHostDirectorySeparator = '@';
+
 CommandLine::CommandLine() : BaseCommandLine(), from_stdin_(false) {}
 
 CommandLine::~CommandLine() {}
@@ -63,14 +65,14 @@ std::string CommandLine::output_pattern() const { return output_pattern_; }
 void CommandLine::ParseOptions(const VariableMap& vm,
                                ParsedParameters& parsed_params,
                                boost::system::error_code& ec) {
-  const auto& stdin_it = vm.find("stdin");
-  const auto& vm_end_it = vm.end();
+  auto vm_end_it = vm.end();
+  auto stdin_it = vm.find("stdin");
 
   if (stdin_it != vm_end_it) {
     from_stdin_ = stdin_it->second.as<bool>();
   }
 
-  const auto& arg1_it = vm.find("arg1");
+  auto arg1_it = vm.find("arg1");
   if (arg1_it == vm_end_it) {
     return;
   }
@@ -80,7 +82,7 @@ void CommandLine::ParseOptions(const VariableMap& vm,
     return;
   }
 
-  const auto& arg2_it = vm.find("arg2");
+  auto arg2_it = vm.find("arg2");
   if (arg2_it != vm_end_it) {
     ParseSecondArgument(arg2_it->second.as<std::string>(), ec);
   }
@@ -150,7 +152,7 @@ void CommandLine::ExtractHostPattern(const std::string& string,
                                      std::string* p_host,
                                      std::string* p_pattern,
                                      boost::system::error_code& ec) const {
-  std::size_t found = string.find_first_of(GetHostDirectorySeparator());
+  std::size_t found = string.find_first_of(kHostDirectorySeparator);
   if (found == std::string::npos || string.empty()) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return;
@@ -160,8 +162,6 @@ void CommandLine::ExtractHostPattern(const std::string& string,
   *p_pattern = string.substr(found + 1);
   ec.assign(::error::success, ::error::get_ssf_category());
 }
-
-char CommandLine::GetHostDirectorySeparator() const { return '@'; }
 
 }  // copy
 }  // command_line
