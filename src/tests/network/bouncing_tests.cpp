@@ -10,7 +10,6 @@
 
 #include "common/config/config.h"
 
-#include "core/circuit/config.h"
 #include "core/network_protocol.h"
 
 #include "core/client/client.h"
@@ -38,7 +37,7 @@ TEST(BouncingTests, BouncingChain) {
   std::promise<bool> service_set;
 
   std::list<Server> servers;
-  ssf::circuit::NodeList node_list;
+  ssf::config::NodeList node_list;
 
   uint16_t initial_server_port = 11000;
   uint8_t nb_of_servers = 5;

@@ -21,58 +21,62 @@ using Server =
     ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
 int main(int argc, char** argv) {
-  // The command line parser
   ssf::command_line::standard::CommandLine cmd(true);
 
-  // Parse the command line
+  ssf::config::Config ssf_config;
+  ssf_config.Init();
+
+  // parse command line
   boost::system::error_code ec;
   cmd.Parse(argc, argv, ec);
 
   if (ec.value() == ::error::operation_canceled) {
     return 0;
+  } else if (ec) {
+    SSF_LOG(kLogError) << "ssfs: wrong command line arguments";
+    return 1;
   }
 
+  // load config file
+  ssf_config.UpdateFromFile(cmd.config_file(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "server: wrong arguments -- Exiting";
+    SSF_LOG(kLogError) << "ssfs: invalid config file format";
     return 1;
+  }
+
+  if (ssf_config.GetArgc() > 0) {
+    // update command line with config file argv
+    cmd.Parse(ssf_config.GetArgc(), ssf_config.GetArgv().data(), ec);
+    if (ec) {
+      SSF_LOG(kLogError) << "ssfs: wrong command line arguments";
+      return 1;
+    }
   }
 
   ssf::log::Configure(cmd.log_level());
 
-  // Load SSF config if any
-  ssf::config::Config ssf_config;
-  ssf_config.Init();
-
-  ssf_config.services().SetGatewayPorts(cmd.gateway_ports());
-
-  ssf_config.UpdateFromFile(cmd.config_file(), ec);
-
-  if (ec) {
-    SSF_LOG(kLogError) << "server: invalid config file format -- Exiting";
-    return 1;
-  }
-
   ssf_config.Log();
-
   if (cmd.show_status()) {
     ssf_config.LogStatus();
   }
 
-  // Initiate and start the server
+  ssf_config.services().SetGatewayPorts(cmd.gateway_ports());
+
+  // initialize and run the server
   Server server(ssf_config.services(), cmd.relay_only());
 
   // construct endpoint parameter stack
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(
       cmd.host(), std::to_string(cmd.port()), ssf_config);
 
-  SSF_LOG(kLogInfo) << "server: listening on <"
+  SSF_LOG(kLogInfo) << "ssfs: listening on <"
                     << (!cmd.host().empty() ? cmd.host() : "*") << ":"
                     << cmd.port() << ">";
 
   server.Run(endpoint_query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "server: error happened when running server: "
+    SSF_LOG(kLogError) << "ssfs: error happened when running server: "
                        << ec.message();
     return 1;
   }
@@ -94,13 +98,13 @@ int main(int argc, char** argv) {
     wait_stop_cv.notify_all();
   });
 
-  SSF_LOG(kLogInfo) << "server: running (Ctrl + C to stop)";
+  SSF_LOG(kLogInfo) << "ssfs: running (Ctrl + C to stop)";
 
   std::unique_lock<std::mutex> lock(mutex);
   wait_stop_cv.wait(lock, [&stopped] { return stopped; });
   lock.unlock();
 
-  SSF_LOG(kLogInfo) << "server: stop";
+  SSF_LOG(kLogInfo) << "ssfs: stop";
   signal.cancel(ec);
   server.Stop();
 

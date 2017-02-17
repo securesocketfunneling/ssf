@@ -44,8 +44,6 @@ class CommandLine : public BaseCommandLine {
                           std::string* p_pattern,
                           boost::system::error_code& ec) const;
 
-  char GetHostDirectorySeparator() const;
-
  private:
   std::string input_pattern_;
   std::string output_pattern_;

@@ -15,6 +15,8 @@ namespace ssf {
 namespace command_line {
 namespace copy {
 
+static const char kHostDirectorySeparator = '@';
+
 CommandLine::CommandLine() : BaseCommandLine(), from_stdin_(false) {}
 
 CommandLine::~CommandLine() {}
@@ -36,7 +38,7 @@ void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
         boost::program_options::bool_switch()->default_value(false),
         "Input will be stdin")
     ("arg1",
-        boost::program_options::value<std::string>()->required()
+        boost::program_options::value<std::string>()
           ->value_name("[host@]/absolute/path/file"),
         "[host@]/absolute/path/file if host is present, " \
         "the file will be copied from the remote host to local")
@@ -63,16 +65,24 @@ std::string CommandLine::output_pattern() const { return output_pattern_; }
 void CommandLine::ParseOptions(const VariableMap& vm,
                                ParsedParameters& parsed_params,
                                boost::system::error_code& ec) {
-  const auto& stdin_it = vm.find("stdin");
-  const auto& vm_end_it = vm.end();
+  auto vm_end_it = vm.end();
+  auto stdin_it = vm.find("stdin");
 
   if (stdin_it != vm_end_it) {
     from_stdin_ = stdin_it->second.as<bool>();
   }
 
-  ParseFirstArgument(vm["arg1"].as<std::string>(), ec);
+  auto arg1_it = vm.find("arg1");
+  if (arg1_it == vm_end_it) {
+    return;
+  }
 
-  const auto& arg2_it = vm.find("arg2");
+  ParseFirstArgument(vm["arg1"].as<std::string>(), ec);
+  if (ec) {
+    return;
+  }
+
+  auto arg2_it = vm.find("arg2");
   if (arg2_it != vm_end_it) {
     ParseSecondArgument(arg2_it->second.as<std::string>(), ec);
   }
@@ -91,7 +101,6 @@ void CommandLine::ParseFirstArgument(const std::string& first_arg,
     // Expecting host:filepath syntax
     ExtractHostPattern(first_arg, &host_, &output_pattern_, parse_ec);
     if (!parse_ec) {
-      host_set_ = true;
       from_local_to_remote_ = true;
     }
   } else {
@@ -99,7 +108,6 @@ void CommandLine::ParseFirstArgument(const std::string& first_arg,
     boost::system::error_code extract_ec;
     ExtractHostPattern(first_arg, &host_, &input_pattern_, extract_ec);
     if (!extract_ec) {
-      host_set_ = true;
       from_local_to_remote_ = false;
     } else {
       // Not host:dirpath syntax so it is filepath syntax
@@ -125,11 +133,9 @@ void CommandLine::ParseSecondArgument(const std::string& second_arg,
     // Expecting host:dirpath
     ExtractHostPattern(second_arg, &host_, &output_pattern_, parse_ec);
     if (parse_ec) {
-      host_set_ = false;
       return;
     }
 
-    host_set_ = true;
   } else {
     // Expecting dirpath
     output_pattern_ = second_arg;
@@ -146,7 +152,7 @@ void CommandLine::ExtractHostPattern(const std::string& string,
                                      std::string* p_host,
                                      std::string* p_pattern,
                                      boost::system::error_code& ec) const {
-  std::size_t found = string.find_first_of(GetHostDirectorySeparator());
+  std::size_t found = string.find_first_of(kHostDirectorySeparator);
   if (found == std::string::npos || string.empty()) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return;
@@ -156,8 +162,6 @@ void CommandLine::ExtractHostPattern(const std::string& string,
   *p_pattern = string.substr(found + 1);
   ec.assign(::error::success, ::error::get_ssf_category());
 }
-
-char CommandLine::GetHostDirectorySeparator() const { return '@'; }
 
 }  // copy
 }  // command_line

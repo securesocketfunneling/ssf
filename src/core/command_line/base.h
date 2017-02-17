@@ -26,20 +26,19 @@ class BaseCommandLine {
 
   ParsedParameters Parse(int argc, char* argv[], boost::system::error_code& ec);
 
-  ParsedParameters Parse(int ac, char* av[], const OptionDescription& services,
+  ParsedParameters Parse(int argc, char* argv[],
+                         const OptionDescription& services,
                          boost::system::error_code& ec);
 
   inline std::string host() const { return host_; }
 
   inline uint16_t port() const { return port_; };
 
-  inline std::string circuit_file() const { return circuit_file_; }
-
   inline std::string config_file() const { return config_file_; }
 
   inline ssf::log::LogLevel log_level() const { return log_level_; }
 
-  inline bool host_set() const { return host_set_; }
+  inline bool host_set() const { return !host_.empty(); }
 
   inline bool port_set() const { return port_set_; }
 
@@ -83,9 +82,7 @@ class BaseCommandLine {
   std::string host_;
   uint16_t port_;
   std::string config_file_;
-  std::string circuit_file_;
   ssf::log::LogLevel log_level_;
-  bool host_set_;
   bool port_set_;
 };
 
