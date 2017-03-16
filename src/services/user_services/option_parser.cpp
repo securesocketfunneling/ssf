@@ -44,6 +44,7 @@ ForwardOptions OptionParser::ParseForwardOptions(
     return forward_options;
   }
 
+  forward_options = {};
   begin = option.begin(), end = option.end();
   // extended format
   if (boost::spirit::qi::parse(
@@ -90,6 +91,7 @@ Endpoint OptionParser::ParseListeningOption(const std::string& option,
     return listening_option;
   }
 
+  listening_option = {};
   begin = option.begin(), end = option.end();
   // extended format
   if (boost::spirit::qi::parse(begin, end, local_addr_pattern >> ":" >> ushort_,

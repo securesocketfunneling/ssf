@@ -46,8 +46,6 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
     return;
   }
 
-  /**
-  // TODO: reuse_address = legit socket option?
   boost::asio::socket_base::reuse_address option(true);
   socket_acceptor_.set_option(option, ec);
   if (ec) {
@@ -56,7 +54,6 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
     socket_acceptor_.close(close_ec);
     return;
   }
-  */
 
   socket_acceptor_.bind(endpoint, ec);
   if (ec) {

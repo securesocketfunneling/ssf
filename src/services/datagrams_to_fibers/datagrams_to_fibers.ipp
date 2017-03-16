@@ -53,8 +53,6 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
     return;
   }
 
-  /**
-  // TODO: reuse_address = legit socket option?
   boost::asio::socket_base::reuse_address reuse_address_option(true);
   socket_.set_option(reuse_address_option, ec);
   if (ec) {
@@ -62,7 +60,7 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
                           "reuse address option";
     socket_.close(close_ec);
     return;
-  }*/
+  }
 
   socket_.bind(from_endpoint_, ec);
   if (ec) {
