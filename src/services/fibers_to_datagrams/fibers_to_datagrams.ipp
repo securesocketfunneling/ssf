@@ -24,14 +24,10 @@ FibersToDatagrams<Demux>::FibersToDatagrams(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: start forwarding "
-                       "fiber datagrams from fiber port " << local_port_
-                    << " to <" << ip_ << ":" << remote_port_ << ">";
-
   fiber_.bind(FiberEndpoint(this->get_demux(), local_port_), ec);
   if (ec) {
-    SSF_LOG(kLogInfo)
-        << "microservice[datagram_forwarder]: cannot bind datagram fiber";
+    SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: cannot bind "
+                         "datagram fiber to port " << local_port_;
     return;
   }
 
@@ -41,11 +37,17 @@ void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
   Udp::resolver::iterator iterator(resolver.resolve(query, ec));
   if (ec) {
     SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: cannot resolve "
-                         "remote udp endpoint";
+                         "remote UDP endpoint <" << ip_ << ":" << remote_port_
+                      << ">";
     return;
   }
 
   to_endpoint_ = *iterator;
+
+  SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: forward "
+                       "fiber datagrams from fiber port " << local_port_
+                    << " to <" << ip_ << ":" << remote_port_ << ">";
+
   this->AsyncReceiveDatagram();
 }
 
@@ -65,9 +67,6 @@ uint32_t FibersToDatagrams<Demux>::service_type_id() {
 
 template <typename Demux>
 void FibersToDatagrams<Demux>::AsyncReceiveDatagram() {
-  SSF_LOG(kLogTrace)
-      << "microservice[datagram_forwarder]: receiving new datagrams";
-
   fiber_.async_receive_from(
       boost::asio::buffer(working_buffer_), from_endpoint_,
       boost::bind(&FibersToDatagrams::FiberDatagramReceiveHandler,

@@ -70,7 +70,7 @@ class ServiceStatus {
           status.id(), status.error_code_value(), ec);
     }
 
-    SSF_LOG(kLogDebug) << "service status: received "
+    SSF_LOG(kLogDebug) << "service[admin]: service status: received "
                        << "service unique id " << status.id() << " service id "
                        << status.service_id() << " - error_code "
                        << status.error_code_value();

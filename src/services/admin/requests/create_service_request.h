@@ -65,7 +65,7 @@ class CreateServiceRequest {
     auto id = p_service_factory->CreateRunNewService(request.service_id(),
                                                      request.parameters(), ec);
 
-    SSF_LOG(kLogDebug) << "service status: create "
+    SSF_LOG(kLogDebug) << "service[admin]: create service request: "
                        << "service unique id " << id << " - error_code "
                        << ec.value();
 
@@ -87,7 +87,8 @@ class CreateServiceRequest {
       ar >> request;
     } catch (const std::exception&) {
       // TODO: ec?
-      SSF_LOG(kLogWarning) << "create service request: extract request failed";
+      SSF_LOG(kLogWarning)
+          << "service[admin]: create service request: extract request failed";
       return std::string();
     }
 
@@ -96,7 +97,8 @@ class CreateServiceRequest {
       id = std::stoul(serialized_result);
     } catch (const std::exception&) {
       // TODO: ec?
-      SSF_LOG(kLogWarning) << "stop service request: extract reply id failed";
+      SSF_LOG(kLogWarning)
+          << "service[admin]: stop service request: extract reply id failed";
       return std::string();
     }
 
