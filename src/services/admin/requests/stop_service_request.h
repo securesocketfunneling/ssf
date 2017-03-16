@@ -61,7 +61,8 @@ class StopServiceRequest {
 
     p_service_factory->StopService(request.unique_id());
 
-    SSF_LOG(kLogDebug) << "service status: stop request";
+    SSF_LOG(kLogDebug) << "service[admin]: stop service request: service id "
+                       << request.unique_id();
 
     ec.assign(boost::system::errc::interrupted,
               boost::system::system_category());
@@ -84,7 +85,8 @@ class StopServiceRequest {
       ar >> request;
     } catch (const std::exception&) {
       // TODO: ec?
-      SSF_LOG(kLogWarning) << "stop service request: extract request failed";
+      SSF_LOG(kLogWarning)
+          << "service[admin]: stop service request: extract request failed";
       return std::string();
     }
 
@@ -92,7 +94,8 @@ class StopServiceRequest {
     try {
       id = std::stoul(serialized_result);
     } catch (const std::exception&) {
-      SSF_LOG(kLogWarning) << "stop service request: extract reply id failed";
+      SSF_LOG(kLogWarning)
+          << "service[admin]: stop service request: extract reply id failed";
       return std::string();
     }
     ServiceStatus<Demux> reply(id, 0, ec.value(), Parameters());

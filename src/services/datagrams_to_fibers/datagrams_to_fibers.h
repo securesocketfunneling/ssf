@@ -82,12 +82,18 @@ class DatagramsToFibers : public BaseService<Demux> {
     }
 
     std::string local_addr("127.0.0.1");
-    if (gateway_ports && parameters.count("local_addr") &&
-        !parameters["local_addr"].empty()) {
-      if (parameters["local_addr"] == "*") {
-        local_addr = "0.0.0.0";
+    if (parameters.count("local_addr") && !parameters["local_addr"].empty()) {
+      if (gateway_ports) {
+        if (parameters["local_addr"] == "*") {
+          local_addr = "0.0.0.0";
+        } else {
+          local_addr = parameters["local_addr"];
+        }
       } else {
-        local_addr = parameters["local_addr"];
+        SSF_LOG(kLogWarning) << "microservice[datagram_listener]: cannot "
+                                "listen on network interface <"
+                             << parameters["local_addr"]
+                             << "> without gateway ports option";
       }
     }
 

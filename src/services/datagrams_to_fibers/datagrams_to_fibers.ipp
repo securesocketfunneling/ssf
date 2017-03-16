@@ -26,10 +26,6 @@ DatagramsToFibers<Demux>::DatagramsToFibers(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo)
-      << "microservice[datagram_listener]: start forwarding local UDP port <"
-      << local_addr_ << ":" << local_port_ << "> to fiber port "
-      << remote_port_;
 
   Udp::resolver resolver(socket_.get_io_service());
   Udp::resolver::query query(local_addr_, std::to_string(local_port_));
@@ -48,13 +44,11 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   socket_.open(Udp::v4(), ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "microservice[datagram_listener]: could not open socket";
+        << "microservice[datagram_listener]: could not open UDP socket";
     socket_.close(close_ec);
     return;
   }
 
-  /**
-  // TODO: reuse_address = legit socket option?
   boost::asio::socket_base::reuse_address reuse_address_option(true);
   socket_.set_option(reuse_address_option, ec);
   if (ec) {
@@ -62,15 +56,21 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
                           "reuse address option";
     socket_.close(close_ec);
     return;
-  }*/
+  }
 
   socket_.bind(from_endpoint_, ec);
   if (ec) {
     SSF_LOG(kLogError)
-        << "microservice[datagram_listener]: could not bind socket";
+        << "microservice[datagram_listener]: could not bind UDP socket <"
+        << local_addr_ << ":" << local_port_ << ">";
     socket_.close(close_ec);
     return;
   }
+
+  SSF_LOG(kLogInfo)
+      << "microservice[datagram_listener]: forward UDP datagrams from <"
+      << local_addr_ << ":" << local_port_ << "> to fiber port "
+      << remote_port_;
 
   this->AsyncReceiveDatagram();
 }
