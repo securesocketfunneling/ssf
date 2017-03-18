@@ -495,8 +495,12 @@ Copy [the diff from OpenSSL Github](https://github.com/openssl/openssl/commit/77
 git submodule update --init --recursive
 mkdir PROJECT_PATH/build
 cd PROJECT_PATH/build
-cmake -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
+cmake .. -T "v120_xp" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY"
 ```
+
+Platform toolset option (`-T`):
+* `v120_xp` : Visual Studio 2013, XP support
+* `v140_xp` : Visual Studio 2015, XP support
 
 * Build project
 

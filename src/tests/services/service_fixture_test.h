@@ -59,8 +59,12 @@ class ServiceFixtureTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    p_ssf_client_->Stop();
-    p_ssf_server_->Stop();
+    if (p_ssf_client_) {
+      p_ssf_client_->Stop();
+    }
+    if (p_ssf_server_) {
+      p_ssf_server_->Stop();
+    }
   }
 
   virtual void SetServerConfig(ssf::config::Config& config) {}

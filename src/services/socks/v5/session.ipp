@@ -232,13 +232,13 @@ void Session<Demux>::HandleApplicationServerConnect(
   } else {
     // copy request data into reply in case of failure
     switch (request_.address_type()) {
-      case ToIntegral(AddressType::kIPv4):
+      case static_cast<uint8_t>(AddressType::kIPv4):
         p_reply->set_ipv4(request_.ipv4());
         break;
-      case ToIntegral(AddressType::kDNS):
+      case static_cast<uint8_t>(AddressType::kDNS):
         p_reply->set_domain(request_.domain());
         break;
-      case ToIntegral(AddressType::kIPv6):
+      case static_cast<uint8_t>(AddressType::kIPv6):
         p_reply->set_ipv6(request_.ipv6());
         break;
     };
