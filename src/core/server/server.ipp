@@ -169,52 +169,52 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
 
   // Register supported admin commands
-  services::admin::CreateServiceRequest<demux>::RegisterToCommandFactory();
-  services::admin::StopServiceRequest<demux>::RegisterToCommandFactory();
-  services::admin::ServiceStatus<demux>::RegisterToCommandFactory();
+  services::admin::CreateServiceRequest<Demux>::RegisterToCommandFactory();
+  services::admin::StopServiceRequest<Demux>::RegisterToCommandFactory();
+  services::admin::ServiceStatus<Demux>::RegisterToCommandFactory();
 
   // Make a new fiber demux and fiberize
-  auto p_fiber_demux = std::make_shared<demux>(async_engine_.get_io_service());
+  auto p_fiber_demux = std::make_shared<Demux>(async_engine_.get_io_service());
   auto close_demux_handler =
       [this, p_fiber_demux]() { RemoveDemux(p_fiber_demux); };
   p_fiber_demux->fiberize(std::move(*p_socket), close_demux_handler);
 
   // Make a new service manager
-  auto p_service_manager = std::make_shared<ServiceManager<demux>>();
+  auto p_service_manager = std::make_shared<ServiceManager<Demux>>();
 
   // Save the demux, the socket and the service manager
   AddDemux(p_fiber_demux, p_service_manager);
 
   // Make a new service factory
-  auto p_service_factory = ServiceFactory<demux>::Create(
+  auto p_service_factory = ServiceFactory<Demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, p_service_manager);
 
   // Register supported microservices
-  services::socks::SocksServer<demux>::RegisterToServiceFactory(
+  services::socks::SocksServer<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.socks());
-  services::fibers_to_sockets::FibersToSockets<demux>::RegisterToServiceFactory(
+  services::fibers_to_sockets::FibersToSockets<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.stream_forwarder());
-  services::sockets_to_fibers::SocketsToFibers<demux>::RegisterToServiceFactory(
+  services::sockets_to_fibers::SocketsToFibers<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.stream_listener());
   services::fibers_to_datagrams::FibersToDatagrams<
-      demux>::RegisterToServiceFactory(p_service_factory,
+      Demux>::RegisterToServiceFactory(p_service_factory,
                                        services_config_.datagram_forwarder());
   services::datagrams_to_fibers::DatagramsToFibers<
-      demux>::RegisterToServiceFactory(p_service_factory,
+      Demux>::RegisterToServiceFactory(p_service_factory,
                                        services_config_.datagram_listener());
   services::copy_file::file_to_fiber::FileToFiber<
-      demux>::RegisterToServiceFactory(p_service_factory,
+      Demux>::RegisterToServiceFactory(p_service_factory,
                                        services_config_.file_copy());
   services::copy_file::fiber_to_file::FiberToFile<
-      demux>::RegisterToServiceFactory(p_service_factory,
+      Demux>::RegisterToServiceFactory(p_service_factory,
                                        services_config_.file_copy());
-  services::process::Server<demux>::RegisterToServiceFactory(
+  services::process::Server<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
   // Start the admin microservice
   std::map<std::string, std::string> empty_map;
 
-  auto p_admin_service = services::admin::Admin<demux>::Create(
+  auto p_admin_service = services::admin::Admin<Demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, empty_map);
   p_admin_service->set_server();
   p_service_manager->start(p_admin_service, ec);
@@ -222,7 +222,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
-                               ServiceManagerPtr p_service_manager) {
+                               ServiceManagerPtr<Demux> p_service_manager) {
   boost::recursive_mutex::scoped_lock lock(storage_mutex_);
   SSF_LOG(kLogTrace) << "server: adding a new demux";
 
@@ -245,7 +245,7 @@ void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   }
 
   auto p_service_factory =
-      ServiceFactoryManager<demux>::GetServiceFactory(p_fiber_demux.get());
+      ServiceFactoryManager<Demux>::GetServiceFactory(p_fiber_demux.get());
   if (p_service_factory) {
     p_service_factory->Destroy();
   }
@@ -266,7 +266,7 @@ void SSFServer<N, T>::RemoveAllDemuxes() {
     }
 
     auto p_service_factory =
-        ServiceFactoryManager<demux>::GetServiceFactory(p_fiber_demux.get());
+        ServiceFactoryManager<Demux>::GetServiceFactory(p_fiber_demux.get());
     if (p_service_factory) {
       p_service_factory->Destroy();
     }

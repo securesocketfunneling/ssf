@@ -51,8 +51,11 @@ void SSFClient<N, T>::Run(const NetworkQuery& query,
     return;
   }
 
-  // Create network socket
+  // create network socket
   p_socket_ = std::make_shared<NetworkSocket>(async_engine_.get_io_service());
+
+  // make a new service manager
+  p_service_manager_ = std::make_shared<ServiceManager<Demux>>();
 
   // resolve remote endpoint with query
   NetworkResolver resolver(async_engine_.get_io_service());
@@ -76,8 +79,11 @@ void SSFClient<N, T>::Stop() {
   SSF_LOG(kLogDebug) << "client: stop";
 
   fiber_demux_.close();
+  if (p_service_manager_) {
+    p_service_manager_->stop_all();
+  }
 
-  if (p_socket_.get() != nullptr) {
+  if (p_socket_) {
     boost::system::error_code close_ec;
     p_socket_->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
     p_socket_->close(close_ec);
@@ -131,12 +137,9 @@ void SSFClient<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   auto close_demux_handler = [this]() { OnDemuxClose(); };
   fiber_demux_.fiberize(std::move(*p_socket), close_demux_handler);
 
-  // Make a new service manager
-  auto p_service_manager = std::make_shared<ServiceManager<Demux>>();
-
   // Make a new service factory
   auto p_service_factory = ServiceFactory<Demux>::Create(
-      async_engine_.get_io_service(), fiber_demux_, p_service_manager);
+      async_engine_.get_io_service(), fiber_demux_, p_service_manager_);
 
   // Register supported micro services
   services::socks::SocksServer<Demux>::RegisterToServiceFactory(
@@ -169,7 +172,7 @@ void SSFClient<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   auto p_admin_service = services::admin::Admin<Demux>::Create(
       async_engine_.get_io_service(), fiber_demux_, empty_map);
   p_admin_service->set_client(user_services_, callback_);
-  p_service_manager->start(p_admin_service, ec);
+  p_service_manager_->start(p_admin_service, ec);
 }
 
 template <class N, template <class> class T>

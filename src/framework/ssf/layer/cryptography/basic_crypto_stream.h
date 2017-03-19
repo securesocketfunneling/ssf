@@ -433,7 +433,6 @@ class basic_CryptoStreamAcceptor_service
  private:
   using acceptor_type = typename protocol_type::acceptor;
   using socket_type = typename protocol_type::socket;
-  using endpoint_type = typename protocol_type::endpoint;
   using acceptor_context_type = typename protocol_type::acceptor_context;
   using next_acceptor_type =
       typename protocol_type::next_layer_protocol::acceptor;
@@ -601,7 +600,7 @@ class basic_CryptoStreamAcceptor_service
       connection_queue.pop();
 
       auto& peer_impl = peer.native_handle();
-      peer_impl = p_socket->native_handle();
+      peer_impl = std::move(p_socket->native_handle());
       break;
     }
 
@@ -778,7 +777,7 @@ class basic_CryptoStreamAcceptor_service
       auto& peer = p_accept_op->peer();
 
       auto& native_handle = peer.native_handle();
-      native_handle = connection->native_handle();
+      native_handle = std::move(connection->native_handle());
 
       auto do_complete = [p_accept_op, ec]() { p_accept_op->complete(ec); };
       this->get_io_service().post(do_complete);

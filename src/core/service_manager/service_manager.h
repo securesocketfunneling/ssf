@@ -151,6 +151,9 @@ class ServiceManager
   ServiceTypeIdToInstancesListMap error_lists_;
 };
 
+template <class Demux>
+using ServiceManagerPtr = std::shared_ptr<ServiceManager<Demux>>;
+
 }  // ssf
 
 #endif  // SSF_CORE_SERVICE_MANAGER_SERVICE_MANAGER_H_

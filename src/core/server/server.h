@@ -27,13 +27,12 @@ class SSFServer
   using NetworkAcceptor = typename NetworkProtocol::acceptor;
 
  public:
-  using demux = boost::asio::fiber::basic_fiber_demux<NetworkSocket>;
+  using Demux = boost::asio::fiber::basic_fiber_demux<NetworkSocket>;
 
  private:
-  using DemuxPtr = std::shared_ptr<demux>;
+  using DemuxPtr = std::shared_ptr<Demux>;
   using DemuxPtrSet = std::set<DemuxPtr>;
-  using ServiceManagerPtr = std::shared_ptr<ServiceManager<demux>>;
-  using ServiceManagerPtrMap = std::map<DemuxPtr, ServiceManagerPtr>;
+  using ServiceManagerPtrMap = std::map<DemuxPtr, ServiceManagerPtr<Demux>>;
 
  public:
   SSFServer(const ssf::config::Services& services_config,
@@ -51,7 +50,8 @@ class SSFServer
   void AsyncAcceptConnection();
   void NetworkToTransport(const boost::system::error_code& ec,
                           NetworkSocketPtr p_socket);
-  void AddDemux(DemuxPtr p_fiber_demux, ServiceManagerPtr p_service_manager);
+  void AddDemux(DemuxPtr p_fiber_demux,
+                ServiceManagerPtr<Demux> p_service_manager);
   void DoSSFStart(NetworkSocketPtr p_socket,
                   const boost::system::error_code& ec);
   void DoFiberize(NetworkSocketPtr p_socket, boost::system::error_code& ec);

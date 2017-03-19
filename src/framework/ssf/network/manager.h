@@ -28,7 +28,7 @@ class ItemManager : private boost::noncopyable {
  public:
   ItemManager() : id_map_mutex_(), id_map_() {}
 
-  ~ItemManager() { do_stop_all(); }
+  virtual ~ItemManager() { do_stop_all(); }
 
   /// Activate an Item and return a unique ID
   instance_id_type start(ActionableItem item, boost::system::error_code& ec) {
