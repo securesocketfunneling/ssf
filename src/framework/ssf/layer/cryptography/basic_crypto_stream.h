@@ -3,15 +3,17 @@
 
 #include <map>
 #include <memory>
+#include <queue>
 #include <string>
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/basic_stream_socket.hpp>
 #include <boost/asio/detail/config.hpp>
+#include <boost/asio/detail/op_queue.hpp>
 #include <boost/asio/handler_type.hpp>
 #include <boost/asio/io_service.hpp>
-
 #include <boost/property_tree/ptree.hpp>
+#include <boost/thread.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "ssf/io/handler_helpers.h"
@@ -25,6 +27,8 @@
 
 #include "ssf/layer/parameters.h"
 #include "ssf/layer/protocol_attributes.h"
+
+#include "ssf/io/accept_op.h"
 
 namespace ssf {
 namespace layer {
@@ -50,7 +54,7 @@ class basic_CryptoStreamProtocol {
 
   typedef NextLayer next_layer_protocol;
   typedef char socket_context;
-  typedef char acceptor_context;
+
   using endpoint_context_type = typename CryptoProtocol::endpoint_context_type;
   using next_endpoint_type = typename next_layer_protocol::endpoint;
 
@@ -64,6 +68,19 @@ class basic_CryptoStreamProtocol {
       basic_CryptoStreamProtocol,
       basic_CryptoStreamAcceptor_service<basic_CryptoStreamProtocol,
                                          CryptoProtocol>> acceptor;
+
+  struct acceptor_context {
+    using op_queue_type =
+        boost::asio::detail::op_queue<io::basic_pending_accept_operation<
+            basic_CryptoStreamProtocol<NextLayer, Crypto>>>;
+    using connection_queue_type = std::queue<std::shared_ptr<socket>>;
+
+    boost::recursive_mutex accept_mutex;
+    bool listening;
+    uint64_t max_connections_count;
+    op_queue_type accept_queue;
+    connection_queue_type connection_queue;
+  };
 
  private:
   using query = typename resolver::query;
@@ -304,9 +321,8 @@ class basic_CryptoStreamSocket_service
     impl.p_local_endpoint =
         std::make_shared<endpoint_type>(peer_endpoint.endpoint_context());
 
-    detail::CryptoStreamConnectOp<
-        CryptoProtocol, crypto_stream_type, endpoint_type,
-          decltype(init.handler)> (
+    detail::CryptoStreamConnectOp<CryptoProtocol, crypto_stream_type,
+                                  endpoint_type, decltype(init.handler)> (
         *impl.p_next_layer_socket, impl.p_local_endpoint.get(), peer_endpoint,
         init.handler)();
 
@@ -415,8 +431,24 @@ class basic_CryptoStreamAcceptor_service
   using native_type = native_handle_type;
 
  private:
+  using acceptor_type = typename protocol_type::acceptor;
+  using socket_type = typename protocol_type::socket;
+  using endpoint_type = typename protocol_type::endpoint;
+  using acceptor_context_type = typename protocol_type::acceptor_context;
   using next_acceptor_type =
       typename protocol_type::next_layer_protocol::acceptor;
+  using next_socket_type = typename protocol_type::next_layer_protocol::socket;
+  using next_endpoint_type =
+      typename protocol_type::next_layer_protocol::endpoint;
+
+  using p_socket_type = std::shared_ptr<socket_type>;
+  using p_endpoint_type = std::shared_ptr<endpoint_type>;
+  using p_acceptor_type = std::shared_ptr<acceptor_type>;
+  using p_acceptor_context_type = std::shared_ptr<acceptor_context_type>;
+  using p_next_acceptor_type = std::shared_ptr<next_acceptor_type>;
+  using p_next_socket_type = std::shared_ptr<next_socket_type>;
+  using p_next_endpoint_type = std::shared_ptr<next_endpoint_type>;
+
   using crypto_stream_type = typename CryptoProtocol::Stream;
 
  public:
@@ -430,6 +462,9 @@ class basic_CryptoStreamAcceptor_service
   void construct(implementation_type& impl) {
     impl.p_next_layer_acceptor =
         std::make_shared<next_acceptor_type>(this->get_io_service());
+    impl.p_acceptor_context = std::make_shared<acceptor_context_type>();
+    impl.p_acceptor_context->listening = false;
+    impl.p_acceptor_context->max_connections_count = 0;
   }
 
   void destroy(implementation_type& impl) {
@@ -479,7 +514,22 @@ class basic_CryptoStreamAcceptor_service
 
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
-    return impl.p_next_layer_acceptor->close(ec);
+    boost::system::error_code close_ec(ssf::error::interrupted,
+                                       ssf::error::get_ssf_category());
+
+    {
+      boost::recursive_mutex::scoped_lock lock(
+          impl.p_acceptor_context->accept_mutex);
+      impl.p_acceptor_context->max_connections_count = 0;
+      impl.p_acceptor_context->listening = false;
+    }
+
+    impl.p_next_layer_acceptor->close(ec);
+
+    clean_pending_accepts(impl.p_acceptor_context, close_ec);
+    connection_queue_handler(impl.p_acceptor_context, close_ec);
+
+    return ec;
   }
 
   native_type native(implementation_type& impl) { return impl; }
@@ -489,8 +539,8 @@ class basic_CryptoStreamAcceptor_service
   /// Set a socket option.
   template <typename SettableSocketOption>
   boost::system::error_code set_option(implementation_type& impl,
-      const SettableSocketOption& option, boost::system::error_code& ec)
-  {
+                                       const SettableSocketOption& option,
+                                       boost::system::error_code& ec) {
     if (impl.p_next_layer_acceptor) {
       return impl.p_next_layer_acceptor->set_option(option, ec);
     }
@@ -511,7 +561,22 @@ class basic_CryptoStreamAcceptor_service
 
   boost::system::error_code listen(implementation_type& impl, int backlog,
                                    boost::system::error_code& ec) {
-    return impl.p_next_layer_acceptor->listen(backlog, ec);
+    impl.p_next_layer_acceptor->listen(backlog, ec);
+    if (ec) {
+      return ec;
+    }
+
+    {
+      boost::recursive_mutex::scoped_lock lock(
+          impl.p_acceptor_context->accept_mutex);
+      impl.p_acceptor_context->max_connections_count =
+          static_cast<uint64_t>(backlog);
+      impl.p_acceptor_context->listening = true;
+    }
+
+    start_accepting(impl.p_next_layer_acceptor, impl.p_local_endpoint,
+                    impl.p_acceptor_context);
+    return ec;
   }
 
   template <typename Protocol1, typename SocketService>
@@ -521,27 +586,23 @@ class basic_CryptoStreamAcceptor_service
       endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
       typename std::enable_if<boost::thread_detail::is_convertible<
           protocol_type, Protocol1>::value>::type* = 0) {
-    auto& peer_impl = peer.native_handle();
-    peer_impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
-        this->get_io_service(), impl.p_local_endpoint->endpoint_context());
-    peer_impl.p_local_endpoint = impl.p_local_endpoint;
-    peer_impl.p_remote_endpoint =
-        std::make_shared<typename Protocol1::endpoint>(
-            impl.p_local_endpoint->endpoint_context());
+    auto p_acceptor_context = impl.p_acceptor_context;
+    auto& connection_queue = p_acceptor_context->connection_queue;
 
-    impl.p_next_layer_acceptor->accept(
-        peer_impl.p_next_layer_socket->next_layer(),
-        peer_impl.p_remote_endpoint->next_layer_endpoint(), ec);
-
-    if (!ec) {
-      peer_impl.p_remote_endpoint->set();
-
-      if (p_peer_endpoint) {
-        *p_peer_endpoint = *(peer_impl.p_remote_endpoint);
+    while (true) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+      boost::recursive_mutex::scoped_lock lock(
+          p_acceptor_context->accept_mutex);
+      if (connection_queue.empty()) {
+        continue;
       }
 
-      peer_impl.p_next_layer_socket->handshake(
-          CryptoProtocol::handshake_type::server, ec);
+      auto p_socket = connection_queue.front();
+      connection_queue.pop();
+
+      auto& peer_impl = peer.native_handle();
+      peer_impl = p_socket->native_handle();
+      break;
     }
 
     return ec;
@@ -559,28 +620,186 @@ class basic_CryptoStreamAcceptor_service
         init(std::forward<AcceptHandler>(handler));
 
     auto& peer_impl = peer.native_handle();
-    peer_impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
-        this->get_io_service(), impl.p_local_endpoint->endpoint_context());
     peer_impl.p_local_endpoint = std::make_shared<typename Protocol1::endpoint>(
         impl.p_local_endpoint->endpoint_context());
     peer_impl.p_remote_endpoint =
         std::make_shared<typename Protocol1::endpoint>(
             impl.p_local_endpoint->endpoint_context());
 
-    detail::CryptoStreamAcceptOp<
-        CryptoProtocol, next_acceptor_type,
-        typename std::remove_reference<typename boost::asio::basic_socket<
-            Protocol1, SocketService>::native_handle_type>::type,
-        endpoint_type,
-        decltype(init.handler)> (
-        *impl.p_next_layer_acceptor, &peer_impl, p_peer_endpoint,
-        init.handler)();
+    auto p_acceptor_context = impl.p_acceptor_context;
+
+    {
+      boost::recursive_mutex::scoped_lock lock(
+          p_acceptor_context->accept_mutex);
+      auto& accept_queue = p_acceptor_context->accept_queue;
+
+      typedef io::pending_accept_operation<
+          typename boost::asio::handler_type<
+              AcceptHandler, void(boost::system::error_code)>::type,
+          protocol_type> op;
+      typename op::ptr p = {
+          boost::asio::detail::addressof(init.handler),
+          boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),
+          0};
+
+      p.p = new (p.v) op(peer, peer_impl.p_remote_endpoint.get(), init.handler);
+      accept_queue.push(p.p);
+      p.v = p.p = 0;
+    }
+
+    connection_queue_handler(impl.p_acceptor_context);
 
     return init.result.get();
   }
 
  private:
   void shutdown_service() {}
+
+  void start_accepting(p_next_acceptor_type p_next_layer_acceptor,
+                       p_endpoint_type p_local_endpoint,
+                       p_acceptor_context_type p_acceptor_context) {
+    if (!p_next_layer_acceptor->is_open()) {
+      return;
+    }
+
+    {
+      boost::recursive_mutex::scoped_lock lock(
+          p_acceptor_context->accept_mutex);
+      if (!p_acceptor_context->listening) {
+        return;
+      }
+    }
+
+    auto p_socket = std::make_shared<socket_type>(this->get_io_service());
+
+    auto& peer_impl = p_socket->native_handle();
+    peer_impl.p_next_layer_socket = std::make_shared<crypto_stream_type>(
+        this->get_io_service(), p_local_endpoint->endpoint_context());
+    peer_impl.p_local_endpoint =
+        std::make_shared<endpoint_type>(p_local_endpoint->endpoint_context());
+    peer_impl.p_remote_endpoint =
+        std::make_shared<endpoint_type>(p_local_endpoint->endpoint_context());
+
+    p_next_layer_acceptor->async_accept(
+        peer_impl.p_next_layer_socket->next_layer(),
+        peer_impl.p_remote_endpoint->next_layer_endpoint(),
+        boost::bind(&basic_CryptoStreamAcceptor_service::accepted, this,
+                    p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
+                    p_socket, _1));
+  }
+
+  void accepted(p_next_acceptor_type p_next_layer_acceptor,
+                p_endpoint_type p_local_endpoint,
+                p_acceptor_context_type p_acceptor_context,
+                p_socket_type p_socket, const boost::system::error_code& ec) {
+    // Do not break accept loop
+    start_accepting(p_next_layer_acceptor, p_local_endpoint,
+                    p_acceptor_context);
+
+    auto& peer_impl = p_socket->native_handle();
+    if (ec) {
+      SSF_LOG(kLogDebug) << "network[crypto]: could not accept connection ("
+                         << ec.message() << ")";
+      boost::system::error_code close_ec;
+
+      peer_impl.p_next_layer_socket->close(close_ec);
+      return;
+    }
+
+    peer_impl.p_remote_endpoint->set();
+
+    peer_impl.p_local_endpoint->next_layer_endpoint() =
+        peer_impl.p_next_layer_socket->next_layer().local_endpoint();
+    peer_impl.p_local_endpoint->set();
+
+    peer_impl.p_next_layer_socket->async_handshake(
+        CryptoProtocol::handshake_type::server,
+        boost::bind(&basic_CryptoStreamAcceptor_service::crypto_handshaked,
+                    this, p_acceptor_context, p_socket, _1));
+  }
+
+  void crypto_handshaked(p_acceptor_context_type p_acceptor_context,
+                         p_socket_type p_socket,
+                         const boost::system::error_code& ec) {
+    if (ec) {
+      boost::system::error_code close_ec;
+      p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+      p_socket->close(close_ec);
+      return;
+    }
+
+    {
+      boost::recursive_mutex::scoped_lock lock(
+          p_acceptor_context->accept_mutex);
+      auto& connection_queue = p_acceptor_context->connection_queue;
+      if (connection_queue.size() < p_acceptor_context->max_connections_count) {
+        // save connection for further accept operations
+        connection_queue.emplace(p_socket);
+      } else {
+        // drop connection
+        boost::system::error_code close_ec;
+        p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+        p_socket->close(close_ec);
+      }
+    }
+
+    connection_queue_handler(p_acceptor_context);
+  }
+
+  void connection_queue_handler(
+      p_acceptor_context_type p_acceptor_context,
+      const boost::system::error_code& ec = boost::system::error_code()) {
+    boost::recursive_mutex::scoped_lock lock(p_acceptor_context->accept_mutex);
+
+    auto& connection_queue = p_acceptor_context->connection_queue;
+    auto& accept_queue = p_acceptor_context->accept_queue;
+
+    if (ec) {
+      // clean connection queue
+      while (!connection_queue.empty()) {
+        auto p_socket = connection_queue.front();
+        boost::system::error_code close_ec;
+        p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+        p_socket->close(close_ec);
+        connection_queue.pop();
+      }
+      return;
+    }
+
+    if (!connection_queue.empty() && !accept_queue.empty()) {
+      auto connection = connection_queue.front();
+      connection_queue.pop();
+      auto* p_accept_op = accept_queue.front();
+      accept_queue.pop();
+
+      boost::system::error_code remote_ep_ec;
+      p_accept_op->set_p_endpoint(connection->remote_endpoint(remote_ep_ec));
+
+      auto& peer = p_accept_op->peer();
+
+      auto& native_handle = peer.native_handle();
+      native_handle = connection->native_handle();
+
+      auto do_complete = [p_accept_op, ec]() { p_accept_op->complete(ec); };
+      this->get_io_service().post(do_complete);
+
+      this->get_io_service().post(boost::bind(
+          &basic_CryptoStreamAcceptor_service::connection_queue_handler, this,
+          p_acceptor_context, ec));
+    }
+  }
+
+  void clean_pending_accepts(p_acceptor_context_type p_acceptor_context,
+                             const boost::system::error_code& ec) {
+    boost::recursive_mutex::scoped_lock(p_acceptor_context->accept_mutex);
+    auto& accept_queue = p_acceptor_context->accept_queue;
+
+    while (!accept_queue.empty()) {
+      auto* p_accept_op = accept_queue.front();
+      accept_queue.pop();
+      p_accept_op->complete(ec);
+    }
+  }
 };
 
 #include <boost/asio/detail/pop_options.hpp>

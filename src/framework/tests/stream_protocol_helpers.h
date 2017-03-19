@@ -7,6 +7,7 @@
 
 #include <array>
 #include <condition_variable>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -784,6 +785,118 @@ void TestStreamProtocol(
   threads.join_all();
 }
 
+template <class StreamProtocol>
+void TestMultiConnectionsProtocol(
+    typename StreamProtocol::resolver::query client_parameters,
+    typename StreamProtocol::resolver::query acceptor_parameters) {
+  std::cout << "  * TestMultiConnectionsProtocol" << std::endl;
+
+  boost::asio::io_service io_service;
+  boost::system::error_code resolve_ec;
+  auto p_worker = std::unique_ptr<boost::asio::io_service::work>(
+      new boost::asio::io_service::work(io_service));
+
+  std::list<std::promise<bool>> clients_connected;
+  std::list<std::promise<bool>> servers_connected;
+  std::list<typename StreamProtocol::socket> client_sockets;
+  std::list<typename StreamProtocol::socket> server_sockets;
+
+  typename StreamProtocol::resolver resolver(io_service);
+  typename StreamProtocol::acceptor acceptor(io_service);
+
+  auto acceptor_endpoint_it = resolver.resolve(acceptor_parameters, resolve_ec);
+  ASSERT_EQ(0, resolve_ec.value())
+      << "Resolving acceptor endpoint should not be in error: "
+      << resolve_ec.message();
+
+  typename StreamProtocol::endpoint acceptor_endpoint(*acceptor_endpoint_it);
+
+  auto remote_endpoint_it = resolver.resolve(client_parameters, resolve_ec);
+  ASSERT_EQ(0, resolve_ec.value())
+      << "Resolving remote endpoint should not be in error: "
+      << resolve_ec.message();
+  typename StreamProtocol::endpoint remote_endpoint(*remote_endpoint_it);
+
+  boost::system::error_code acceptor_ec;
+  acceptor.open();
+  acceptor.set_option(boost::asio::socket_base::reuse_address(true),
+                      acceptor_ec);
+  acceptor_ec.clear();
+  acceptor.bind(acceptor_endpoint, acceptor_ec);
+  ASSERT_EQ(0, acceptor_ec.value())
+      << "Bind acceptor should not be in error: " << acceptor_ec.message();
+  acceptor.listen(100, acceptor_ec);
+  ASSERT_EQ(0, acceptor_ec.value())
+      << "Listen acceptor should not be in error: " << acceptor_ec.message();
+
+  boost::thread_group test_threads;
+  uint32_t connections_count = 15;
+  std::promise<bool> clients_init;
+  test_threads.create_thread(
+      [connections_count, &clients_init, &client_sockets, &clients_connected,
+       &remote_endpoint, &io_service]() {
+        for (uint32_t i = 0; i < connections_count; ++i) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          client_sockets.emplace_front(io_service);
+          clients_connected.emplace_front();
+          std::promise<bool>& client_connected = clients_connected.front();
+          client_sockets.front().async_connect(
+              remote_endpoint,
+              [&client_connected, i](
+                  const boost::system::error_code& connect_ec) {
+                EXPECT_EQ(connect_ec.value(), 0) << connect_ec.message();
+                client_connected.set_value(true);
+              });
+        }
+        clients_init.set_value(true);
+      });
+
+  std::promise<bool> servers_init;
+  test_threads.create_thread([connections_count, &servers_init, &server_sockets,
+                              &servers_connected, &io_service, &acceptor]() {
+    for (uint32_t i = 0; i < connections_count; ++i) {
+      server_sockets.emplace_front(io_service);
+      servers_connected.emplace_front();
+      std::promise<bool>& server_connected = servers_connected.front();
+      acceptor.async_accept(
+          server_sockets.front(),
+          [&server_connected, i](const boost::system::error_code& accept_ec) {
+            EXPECT_EQ(accept_ec.value(), 0) << accept_ec.message();
+            server_connected.set_value(true);
+          });
+    }
+    servers_init.set_value(true);
+  });
+
+  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
+    test_threads.create_thread([&io_service]() { io_service.run(); });
+  }
+
+  clients_init.get_future().wait();
+  servers_init.get_future().wait();
+
+  for (auto& client_connected : clients_connected) {
+    client_connected.get_future().wait();
+  }
+  for (auto& server_connected : servers_connected) {
+    server_connected.get_future().wait();
+  }
+
+  for (uint32_t i = 0; i < connections_count; ++i) {
+    boost::system::error_code close_ec;
+    server_sockets.front().close(close_ec);
+    client_sockets.front().close(close_ec);
+    server_sockets.pop_front();
+    client_sockets.pop_front();
+  }
+
+  boost::system::error_code close_acceptor_ec;
+  acceptor.close(close_acceptor_ec);
+
+  p_worker.reset();
+  test_threads.join_all();
+}
+
 /// Test a stream protocol future interface
 template <class StreamProtocol>
 void TestStreamProtocolFuture(
@@ -1332,5 +1445,4 @@ void TestBindLocalClientStreamProtocol(
   }
   threads.join_all();
 }
-
 #endif  // SSF_TESTS_STREAM_PROTOCOL_HELPERS_H_

@@ -62,6 +62,9 @@ TEST_F(ProxyTestFixture, ProxySetTest) {
   TestStreamProtocol<StreamStackProtocol>(client_parameters,
                                           acceptor_parameters, 1024);
 
+  TestMultiConnectionsProtocol<StreamStackProtocol>(client_parameters,
+                                                    acceptor_parameters);
+
   TestStreamProtocolFuture<StreamStackProtocol>(client_parameters,
                                                 acceptor_parameters);
 
@@ -122,6 +125,9 @@ TEST_F(ProxyTestFixture, TLSOverProxyTCPTest) {
   TestStreamProtocol<TLSStackProtocol>(client_parameters, acceptor_parameters,
                                        1024);
 
+  TestMultiConnectionsProtocol<TLSStackProtocol>(client_parameters,
+                                                    acceptor_parameters);
+
   TestStreamProtocolFuture<TLSStackProtocol>(client_parameters,
                                              acceptor_parameters);
 
@@ -164,6 +170,9 @@ TEST_F(ProxyTestFixture, Socks4ProxySetTest) {
   TestStreamProtocol<StreamStackProtocol>(client_parameters,
                                           acceptor_parameters, 1024);
 
+  TestMultiConnectionsProtocol<StreamStackProtocol>(client_parameters,
+                                                    acceptor_parameters);
+
   TestStreamProtocolFuture<StreamStackProtocol>(client_parameters,
                                                 acceptor_parameters);
 
@@ -203,6 +212,9 @@ TEST_F(ProxyTestFixture, Socks5ProxySetTest) {
 
   TestStreamProtocol<StreamStackProtocol>(client_parameters,
                                           acceptor_parameters, 1024);
+
+  TestMultiConnectionsProtocol<StreamStackProtocol>(client_parameters,
+                                                    acceptor_parameters);
 
   TestStreamProtocolFuture<StreamStackProtocol>(client_parameters,
                                                 acceptor_parameters);
@@ -253,6 +265,9 @@ TEST_F(ProxyTestFixture, ProxyNotSetTest) {
 
   TestStreamProtocol<StreamStackProtocol>(client_parameters,
                                           acceptor_parameters, 1024);
+
+  TestMultiConnectionsProtocol<StreamStackProtocol>(client_parameters,
+                                                    acceptor_parameters);
 
   TestStreamProtocolFuture<StreamStackProtocol>(client_parameters,
                                                 acceptor_parameters);
