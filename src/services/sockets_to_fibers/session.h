@@ -1,5 +1,5 @@
-#ifndef SSF_NETWORK_SESSION_FORWARDER_H
-#define SSF_NETWORK_SESSION_FORWARDER_H
+#ifndef SSF_SERVICES_SOCKETS_TO_FIBERS_SESSION_H_
+#define SSF_SERVICES_SOCKETS_TO_FIBERS_SESSION_H_
 
 #include <array>
 #include <memory>
@@ -12,42 +12,43 @@
 
 #include "ssf/network/base_session.h"  // NOLINT
 #include "ssf/network/socket_link.h"
-#include "ssf/network/manager.h"
 
 namespace ssf {
+namespace services {
+namespace sockets_to_fibers {
 
 /// Create a Full Duplex Forwarding Link
-template <typename InwardStream, typename ForwardStream>
-class SessionForwarder : public ssf::BaseSession {
+template <typename Demux, typename InwardStream, typename ForwardStream>
+class Session : public ssf::BaseSession {
  private:
   /// Buffer type for the transiting data
   using StreamBuf = std::array<char, 50 * 1024>;
 
-  /// Type for the class managing the different forwarding links
-  using SessionManager = ItemManager<BaseSessionPtr>;
+ public:
+  using Server = SocketsToFibers<Demux>;
+  using SocketsToFibersWPtr = std::weak_ptr<Server>;
 
  public:
-  using SessionForwarderPtr = std::shared_ptr<SessionForwarder>;
+  using SessionPtr = std::shared_ptr<Session>;
 
  public:
   /// Return a shared pointer to a new SessionForwarder object
   template <typename... Args>
-  static SessionForwarderPtr create(Args&&... args) {
-    return std::shared_ptr<SessionForwarder>(
-        new SessionForwarder(std::forward<Args>(args)...));
+  static SessionPtr create(Args&&... args) {
+    return SessionPtr(new Session(std::forward<Args>(args)...));
   }
 
-  virtual ~SessionForwarder() {}
+  ~Session() {}
 
   /// Start forwarding
   void start(boost::system::error_code&) override {
-    SSF_LOG(kLogInfo) << "session[forwarder]: start";
+    SSF_LOG(kLogInfo) << "session[stream_listener]: start";
     DoForward();
   }
 
   /// Stop forwarding
   void stop(boost::system::error_code&) override {
-    SSF_LOG(kLogInfo) << "session[forwarder]: stop";
+    SSF_LOG(kLogInfo) << "session[stream_listener]: stop";
     boost::system::error_code ec;
     if (inbound_.lowest_layer().is_open()) {
       inbound_.lowest_layer().shutdown(boost::asio::socket_base::shutdown_both,
@@ -73,17 +74,17 @@ class SessionForwarder : public ssf::BaseSession {
 
   /// It is needed to cast the shared pointer from shared_from_this because it
   /// is the base class which inherit from enable_shared_from_this
-  std::shared_ptr<SessionForwarder> SelfFromThis() {
-    return std::static_pointer_cast<SessionForwarder>(this->shared_from_this());
+  std::shared_ptr<Session> SelfFromThis() {
+    return std::static_pointer_cast<Session>(this->shared_from_this());
   }
 
  private:
   /// The constructor is made private to ensure users only use create()
-  SessionForwarder(SessionManager* manager, InwardStream inbound,
-                   ForwardStream outbound)
-      : inbound_(std::move(inbound)),
-        outbound_(std::move(outbound)),
-        manager_(manager) {}
+  Session(SocketsToFibersWPtr server, InwardStream inbound,
+          ForwardStream outbound)
+      : server_(server),
+        inbound_(std::move(inbound)),
+        outbound_(std::move(outbound)) {}
 
   /// Start forwarding
   void DoForward() {
@@ -91,33 +92,36 @@ class SessionForwarder : public ssf::BaseSession {
     AsyncEstablishHDLink(
         ReadFrom(inbound_), WriteTo(outbound_),
         boost::asio::buffer(inwardBuffer_),
-        boost::bind(&SessionForwarder::StopHandler, this->SelfFromThis(), _1));
+        boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
 
     AsyncEstablishHDLink(
         ReadFrom(outbound_), WriteTo(inbound_),
         boost::asio::buffer(forwardBuffer_),
-        boost::bind(&SessionForwarder::StopHandler, this->SelfFromThis(), _1));
+        boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
   }
 
   /// Stop forwarding
   void StopHandler(const boost::system::error_code& ec) {
     boost::system::error_code e;
-    manager_->stop(this->SelfFromThis(), e);
+    if (auto p_server = server_.lock()) {
+      p_server->StopSession(this->SelfFromThis(), e);
+    }
   }
 
  private:
+  SocketsToFibersWPtr server_;
+
   // The streams to forward to each other
   InwardStream inbound_;
   ForwardStream outbound_;
-
-  /// The manager handling multiple SessionForwarder
-  SessionManager* manager_;
 
   // One buffer for each Half Duplex Link
   StreamBuf inwardBuffer_;
   StreamBuf forwardBuffer_;
 };
 
+}  // sockets_to_fibers
+}  // services
 }  // ssf
 
-#endif  // SSF_NETWORK_SESSION_FORWARDER_H
+#endif  // SSF_SERVICES_SOCKETS_TO_FIBERS_SESSION_H_

@@ -2,7 +2,7 @@
 #define SSF_SERVICES_SOCKETS_TO_FIBERS_SOCKETS_TO_FIBERS_IPP_
 
 #include <ssf/log/log.h>
-#include <ssf/network/session_forwarder.h>
+#include "services/sockets_to_fibers/session.h"
 
 namespace ssf {
 namespace services {
@@ -92,6 +92,12 @@ uint32_t SocketsToFibers<Demux>::service_type_id() {
 }
 
 template <typename Demux>
+void SocketsToFibers<Demux>::StopSession(BaseSessionPtr session,
+                                         boost::system::error_code& ec) {
+  manager_.stop(session, ec);
+}
+
+template <typename Demux>
 void SocketsToFibers<Demux>::AsyncAcceptSocket() {
   SSF_LOG(kLogTrace) << "microservice[stream_listener]: accepting new clients";
 
@@ -147,8 +153,9 @@ void SocketsToFibers<Demux>::FiberConnectHandler(
     return;
   }
 
-  auto session = SessionForwarder<Tcp::socket, Fiber>::create(
-      &manager_, std::move(*socket_connection), std::move(*fiber_connection));
+  auto session = Session<Demux, Tcp::socket, Fiber>::create(
+      this->SelfFromThis(), std::move(*socket_connection),
+      std::move(*fiber_connection));
   boost::system::error_code start_ec;
   manager_.start(session, start_ec);
   if (start_ec) {

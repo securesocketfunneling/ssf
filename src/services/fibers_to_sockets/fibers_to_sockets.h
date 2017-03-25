@@ -105,6 +105,9 @@ class FibersToSockets : public BaseService<Demux> {
   void stop(boost::system::error_code& ec) override;
   uint32_t service_type_id() override;
 
+ public:
+  void StopSession(BaseSessionPtr session, boost::system::error_code& ec);
+
  private:
   FibersToSockets(boost::asio::io_service& io_service, Demux& fiber_demux,
                   LocalPortType local_port, const std::string& ip,

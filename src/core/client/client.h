@@ -67,15 +67,11 @@ class SSFClient
 
  private:
   AsyncEngine async_engine_;
-
   NetworkSocketPtr p_socket_;
-
+  ServiceManagerPtr<Demux> p_service_manager_;
   Demux fiber_demux_;
-
   std::vector<BaseUserServicePtr> user_services_;
-
   ssf::config::Services services_config_;
-
   ClientCallback callback_;
 };
 

@@ -62,6 +62,9 @@ TEST(LinkLayerTest, SimpleCircuitProtocolTest) {
   TestStreamProtocol<DataLinkProtocol>(client_parameters, acceptor_parameters,
                                        100 * 10);
 
+  TestMultiConnectionsProtocol<DataLinkProtocol>(client_parameters,
+                                                 acceptor_parameters);
+
   /* Uncomment after fix on boost build system
   TestStreamProtocolSpawn<DataLinkProtocol>(client_parameters,
                                             acceptor_parameters);*/
@@ -110,6 +113,9 @@ TEST(LinkLayerTest, SimpleTLSCircuitProtocolTest) {
   TestStreamProtocol<DataLinkProtocol>(client_parameters, acceptor_parameters,
                                        100 * 10);
 
+  TestMultiConnectionsProtocol<DataLinkProtocol>(client_parameters,
+                                                 acceptor_parameters);
+
   /* Uncomment after fix on boost build system
   TestStreamProtocolSpawn<DataLinkProtocol>(client_parameters,
                                             acceptor_parameters);*/
@@ -153,6 +159,9 @@ TEST_F(CircuitTestFixture, CircuitTest) {
   TestStreamProtocol<DataLinkProtocol>(client_parameters, acceptor_parameters,
                                        100 * 10);
 
+  TestMultiConnectionsProtocol<DataLinkProtocol>(client_parameters,
+                                                 acceptor_parameters);
+
   /* Uncomment after fix on boost build system
   TestStreamProtocolSpawn<DataLinkProtocol>(client_parameters,
                                             acceptor_parameters);*/
@@ -195,6 +204,9 @@ TEST_F(CircuitTestFixture, CircuitTLSTest) {
 
   TestStreamProtocol<DataLinkProtocol>(client_parameters, acceptor_parameters,
                                        100 * 10);
+
+  TestMultiConnectionsProtocol<DataLinkProtocol>(client_parameters,
+                                                 acceptor_parameters);
 
   /* Uncomment after fix on boost build system
   TestStreamProtocolSpawn<DataLinkProtocol>(client_parameters,
@@ -243,6 +255,9 @@ TEST_F(CircuitTestFixture, CircuitDefaultTLSTest) {
 
   TestStreamProtocol<DataLinkProtocol>(client_parameters, acceptor_parameters,
                                        100 * 10);
+
+  TestMultiConnectionsProtocol<DataLinkProtocol>(client_parameters,
+                                                 acceptor_parameters);
 
   /* Uncomment after fix on boost build system
   TestStreamProtocolSpawn<DataLinkProtocol>(client_parameters,
