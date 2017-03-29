@@ -112,12 +112,14 @@ ssfs[.exe] -p 9000 192.168.0.1
 
 Copy feature must be enabled both on client and server before usage.
 
-Config file example:
+Configuration file example:
 
-```
-"ssf": {
-  "services": {
-    "file_copy": { "enable": true }
+```json
+{
+  "ssf": {
+    "services": {
+      "file_copy": { "enable": true }
+    }
   }
 }
 ```
@@ -168,21 +170,13 @@ ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file absolute/path/di
 ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/directory_destination
 ```
 
-### File example
+### Configuration file
 
-#### Configuration file
-
-```plaintext
+```json
 {
   "ssf": {
-    "tls" : {
-      "ca_cert_path": "./certs/trusted/ca.crt",
-      "cert_path": "./certs/certificate.crt",
-      "key_path": "./certs/private.key",
-      "key_password": "",
-      "dh_path": "./certs/dh4096.pem",
-      "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
-    },
+    "arguments": "",
+    "circuit": [],
     "http_proxy": {
       "host": "",
       "port": "",
@@ -198,6 +192,14 @@ ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/d
       "version": 5,
       "host": "",
       "port": "1080"
+    },
+    "tls" : {
+      "ca_cert_path": "./certs/trusted/ca.crt",
+      "cert_path": "./certs/certificate.crt",
+      "key_path": "./certs/private.key",
+      "key_password": "",
+      "dh_path": "./certs/dh4096.pem",
+      "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
     },
     "services": {
       "datagram_forwarder": { "enable": true },
@@ -217,21 +219,78 @@ ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/d
         "args": ""
       },
       "socks": { "enable": true }
-    },
-    "circuit": [],
-    "arguments": ""
+    }
   }
 }
 ```
 
+#### Arguments
+
+| Configuration key | Description                                                              |
+|:------------------|:-------------------------------------------------------------------------|
+| arguments         | use configuration arguments instead of given CLI arguments (except `-c`) |
+
+The `arguments` key lets the user customize the command line arguments in the configuration file.
+This feature is a convenient way to save different client connection profiles.
+
+Given the following configuration file `conf.json`:
+
+```json
+{
+  "ssf": {
+    "arguments": "10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug"
+  }
+}
+```
+
+SSF will extract the given arguments and use them as a replacement of the initial arguments (except `-c`).
+
+For example, `ssfc -c conf.json` will be equivalent to `ssfc 10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug`:
+
+  * connect to `10.0.0.1:443` (`10.0.0.1 -p 443`)
+  * start the SOCKS service (`-D 9000`)
+  * start the TCP port forwarding service (`-L 11000:localhost:12000`)
+  * set verbosity level to debug (`-v debug`)
+
+#### Circuit
+
+| Configuration key | Description                                                               |
+|:------------------|:--------------------------------------------------------------------------|
+| circuit           | relay chain servers used to establish the connection to the remote server |
+
+The `circuit` key replaces the `-b` client command line option.
+
+The circuit is a JSON array containing the bounce servers and ports which will be used to establish the connection.
+They are listed as follow:
+
+```json
+{
+  "ssf": {
+    "circuit": [
+      {"host": "SERVER1", "port":"PORT1"},
+      {"host": "SERVER2", "port":"PORT2"},
+      {"host": "SERVER3", "port":"PORT3"}
+    ]
+  }
+}
+```
+
+This configuration will create the following connection chain:
+
+```
+CLIENT -> SERVER1:PORT1 -> SERVER2:PORT2 -> SERVER3:PORT3 -> TARGET
+```
+
+#### Proxy
+
+SSF supports connection through:
+* HTTP proxy by using the `CONNECT` HTTP method
+* SOCKS proxy (v4 or v5)
+
+##### HTTP proxy
+
 | Configuration key                 | Description                                                                                               |
 |:----------------------------------|:----------------------------------------------------------------------------------------------------------|
-| tls.ca_cert_path                  | relative or absolute path to the CA certificate file                                                      |
-| tls.cert_path                     | relative or absolute path to the instance certificate file                                                |
-| tls.key_path                      | relative or absolute path to the private key file                                                         |
-| tls.key_password                  | key password                                                                                              |
-| tls.dh_path                       | relative or absolute path to the Diffie-Hellman file                                                      |
-| tls.cipher_alg                    | cipher algorithm                                                                                          |
 | http_proxy.host                   | HTTP proxy host                                                                                           |
 | http_proxy.port                   | HTTP proxy port                                                                                           |
 | http_proxy.credentials.username   | proxy username credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)  |
@@ -239,70 +298,37 @@ ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/d
 | http_proxy.credentials.domain     | user domain (NTLM and Negotiate auth on Windows only)                                                     |
 | http_proxy.credentials.reuse_ntlm | reuse current computer user credentials to authenticate with proxy NTLM auth (SSO)                        |
 | http_proxy.credentials.reuse_kerb | reuse current computer user credentials (Kerberos ticket) to authenticate with proxy Negotiate auth (SSO) |
-| socks_proxy.version               | SOCKS version (4 or 5)                                                                                    |
-| socks_proxy.host                  | SOCKS proxy host                                                                                          |
-| socks_proxy.port                  | SOCKS proxy port                                                                                          |
-| services.*.enable                 | [enable/disable microservice](#microservices)                                                             |
-| services.*.gateway_ports          | enable/disable gateway ports                                                                              |
-| services.shell.path               | binary path used for shell creation                                                                       |
-| services.shell.args               | binary arguments used for shell creation                                                                  |
-| circuit                           | relay chain servers used to establish the connection to the remote server                                 |
-| arguments                         | use configuration arguments instead of standard CLI arguments (except `-c`)                               |
 
-## How to configure
+Supported authentication schemes:
+* Basic
+* Digest
+* NTLM (Windows only)
+* Negotiate with Kerberos (reuse computer user credentials)
 
-### Generating certificates for TLS connections
+##### SOCKS proxy
 
-#### With tool script
+| Configuration key   | Description            |
+|:--------------------|:-----------------------|
+| socks_proxy.version | SOCKS version (4 or 5) |
+| socks_proxy.host    | SOCKS proxy host       |
+| socks_proxy.port    | SOCKS proxy port       |
 
-```bash
-./tools/generate_cert.sh /path/to/store/certs
-```
-
-The first argument should be the directory where the CA and certificates will be generated
-
-#### Manually
-
-##### Generating Diffie-Hellman parameters
-
-```bash
-openssl dhparam 4096 -outform PEM -out dh4096.pem
-```
-
-##### Generating a self-signed Certification Authority (CA)
-First of all, create a file named *extfile.txt* containing the following lines:
-
-```plaintext
-[ v3_req_p ]
-basicConstraints = CA:FALSE
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment
-```
-
-Then, generate a self-signed certificate (the CA) *ca.crt* and its private key *ca.key*:
-
-```bash
-openssl req -x509 -nodes -newkey rsa:4096 -keyout ca.key -out ca.crt -days 3650
-```
-
-##### Generating a certificate (signed with the CA) and its private key
-
-Generate a private key *private.key* and signing request *certificate.csr*:
-
-```bash
-openssl req -newkey rsa:4096 -nodes -keyout private.key -out certificate.csr
-```
-
-Sign with the CA (*ca.crt*, *ca.key*) the signing request to get the certificate *certificate.pem* :
-
-```bash
-openssl x509 -extfile extfile.txt -extensions v3_req_p -req -sha1 -days 3650 -CA ca.crt -CAkey ca.key -CAcreateserial -in certificate.csr -out certificate.pem
-```
-
-### Configuration file
+No authentication scheme supported.
 
 #### TLS
 
-With default options, the following files and folders should be in the directory of execution of a client or a server:
+##### Using external files
+
+| Configuration key | Description                                                            |
+|:------------------|:-----------------------------------------------------------------------|
+| tls.ca_cert_path  | relative or absolute filepath to the CA certificate file               |
+| tls.cert_path     | relative or absolute filepath to the instance certificate file         |
+| tls.key_path      | relative or absolute filepath to the private key file                  |
+| tls.key_password  | key password                                                           |
+| tls.dh_path       | relative or absolute filepath to the Diffie-Hellman file (server only) |
+| tls.cipher_alg    | cipher algorithm                                                       |
+
+With default options, the following files and folders should be in the working directory of the client or the server:
 
 * `./certs/dh4096.pem`
 * `./certs/certificate.crt`
@@ -311,13 +337,13 @@ With default options, the following files and folders should be in the directory
 
 Where:
 
-* *dh4096.pem* contains the Diffie-Hellman parameters (see above for how to generate the file)
-* *certificate.crt* and *private.key* are the certificate and the private key of the ssf server or client
-* *ca.crt* is the concatenated list of certificates trusted by the ssf server or client
+* **dh4096.pem** contains the Diffie-Hellman parameters ([generate DH parameters](#generating-diffie-hellman-parameters))
+* **certificate.crt** and **private.key** are the certificate and the private key of the SSF server or client ([generate certificate](#generating-a-certificate-signed-with-the-ca-and-its-private-key))
+* **ca.crt** is the concatenated list of certificates trusted by the SSF server or client ([generate CA](#generating-a-self-signed-certification-authority-ca))
 
-However, if you want those files at different paths, it is possible to customize them with the configuration file option *-c*.
+If you want those files at different paths, it is possible to customize them thanks to the TLS path keys:
 
-```
+```json
 {
   "ssf": {
     "tls" : {
@@ -332,24 +358,44 @@ However, if you want those files at different paths, it is possible to customize
 }
 ```
 
-You can also inline those files into the configuration file by using `ca_cert_buffer`, `cert_buffer`, `key_buffer` and `dh_buffer` TLS options.
+##### Using configuration file only
 
-```
+| Configuration key  | Description                                                                                                           |
+|:-------------------|:----------------------------------------------------------------------------------------------------------------------|
+| tls.ca_cert_buffer | CA certificate file content in PEM format (:warning: `\n` between data and PEM header/footer)                         |
+| tls.cert_buffer    | instance certificate file content in PEM format (:warning: `\n` between data and PEM header/footer)                   |
+| tls.key_buffer     | private key file content in PEM format (:warning: `\n` between data and PEM header/footer)                            |
+| tls.key_password   | key password                                                                                                          |
+| tls.dh_buffer      | Diffie-Hellman parameters file content in PEM format (:warning: `\n` between data and PEM header/footer, server only) |
+| tls.cipher_alg     | cipher algorithm                                                                                                      |
+
+You can integrate the TLS parameters directly into the configuration file by using the `tls.ca_cert_buffer`, `tls.cert_buffer`, `tls.key_buffer` and `tls.dh_buffer` keys.
+
+```json
 {
   "ssf": {
     "tls" : {
       "ca_cert_buffer":"-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
       "cert_buffer":"-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
       "key_buffer":"-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----",
-      "dh_buffer":"-----BEGIN DH PARAMETERS-----\n...\n-----END DH PARAMETERS-----"
+      "key_password": "",
+      "dh_buffer":"-----BEGIN DH PARAMETERS-----\n...\n-----END DH PARAMETERS-----",
+      "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
     }
   }
 }
 ```
 
-Certificates, private keys and DH parameters must be in PEM format. `\n` between data and PEM header/footer are mandatory.
+Certificates, private keys and DH parameters must be in PEM format. :warning: `\n` between data and PEM header/footer are mandatory.
 
 #### Microservices
+
+| Configuration key        | Description                              |
+|:-------------------------|:-----------------------------------------|
+| services.*.enable        | enable/disable microservice              |
+| services.*.gateway_ports | enable/disable gateway ports             |
+| services.shell.path      | binary path used for shell creation      |
+| services.shell.args      | binary arguments used for shell creation |
 
 SSF is using microservices to build its features (TCP forwarding, remote SOCKS, ...)
 
@@ -382,16 +428,18 @@ This architecture makes it easier to build remote features: they use the same mi
 `ssfc` and `ssfs` come with pre-enabled microservices.
 Here is the default microservices configuration:
 
-```
-"ssf": {
-  "services": {
-    "datagram_forwarder": { "enable": true },
-    "datagram_listener": { "enable": true },
-    "stream_forwarder": { "enable": true },
-    "stream_listener": { "enable": true },
-    "socks": { "enable": true },
-    "file_copy": { "enable": false },
-    "shell": { "enable": false }
+```json
+{
+  "ssf": {
+    "services": {
+      "datagram_forwarder": { "enable": true },
+      "datagram_listener": { "enable": true },
+      "stream_forwarder": { "enable": true },
+      "stream_listener": { "enable": true },
+      "socks": { "enable": true },
+      "file_copy": { "enable": false },
+      "shell": { "enable": false }
+    }
   }
 }
 ```
@@ -400,45 +448,56 @@ To enable or disable a microservice, set its `enable` option to `true` or `false
 
 Trying to use a feature requiring a disabled microservice will result in an error message.
 
-### Circuit
 
-This config section replaces the `-b` CLI option.
 
-The circuit is a JSON array containing the bounce servers and ports which will be used to establish the connection.
-They are listed as follow:
+## How to generate certificates for TLS connections
 
-```
-"ssf": {
-  "circuit": [
-    {"host": "SERVER1", "port":"PORT1"},
-    {"host": "SERVER2", "port":"PORT2"},
-    {"host": "SERVER3", "port":"PORT3"}
-  ]
-}
+### With tool script
+
+```bash
+./tools/generate_cert.sh /path/to/store/certs
 ```
 
-The chain will be CLIENT -> SERVER1:PORT1 -> SERVER2:PORT2 -> SERVER3:PORT3 -> TARGET
+The first argument should be the directory where the CA and certificates will be generated
 
-### Arguments
+### Manually
 
-The arguments section lets the user customize the command line arguments in the configuration file.
+#### Generating Diffie-Hellman parameters
 
-Given the following config file `conf.json`:
-
-```
-"ssf": {
-  "arguments": "10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug"
-}
+```bash
+openssl dhparam 4096 -outform PEM -out dh4096.pem
 ```
 
-SSF will extract the given arguments and use them as a replacement of the initial arguments (except `-c`).
+#### Generating a self-signed Certification Authority (CA)
+First of all, create a file named *extfile.txt* containing the following lines:
 
-For example, `ssfc -c conf.json` will be equivalent to `ssfc 10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug`:
+```plaintext
+[ v3_req_p ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+```
 
-  * connect to `10.0.0.1:443` (`10.0.0.1 -p 443`)
-  * start the SOCKS service (`-D 9000`)
-  * start the TCP port forwarding service (`-L 11000:localhost:12000`)
-  * set verbosity level to debug (`-v debug`)
+Then, generate a self-signed certificate (the CA) *ca.crt* and its private key *ca.key*:
+
+```bash
+openssl req -x509 -nodes -newkey rsa:4096 -keyout ca.key -out ca.crt -days 3650
+```
+
+#### Generating a certificate (signed with the CA) and its private key
+
+Generate a private key *private.key* and signing request *certificate.csr*:
+
+```bash
+openssl req -newkey rsa:4096 -nodes -keyout private.key -out certificate.csr
+```
+
+Sign with the CA (*ca.crt*, *ca.key*) the signing request to get the certificate *certificate.pem* :
+
+```bash
+openssl x509 -extfile extfile.txt -extensions v3_req_p -req -sha1 -days 3650 -CA ca.crt -CAkey ca.key -CAcreateserial -in certificate.csr -out certificate.pem
+```
+
+
 
 ## How to build
 

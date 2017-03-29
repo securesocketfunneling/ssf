@@ -4,10 +4,19 @@
 
 Features:
 * #14 SOCKS proxy support (no authentication), cf. configuration file
-* Allow TLS parameters as buffers in config file (`tls.ca_cert_buffer`, `tls.cert_buffer`, `tls.key_buffer`, `tls.dh_buffer`)
+* Remove `-b` client command line option (replaced by `circuit` configuration file key)
+* Compatibility with `boost-1.63.0` and `openssl-1.0.2k`
 
 Fixed bugs:
 * #32 SOCKS v5 microservice
+* #35 Use `reuse_addr` socket option on listener microservices (`stream_listener`, `datagram_listener`)
+* Improve memory management
+* Improve server stability
+
+[Configuration file](README.md#configuration-file):
+* Allow TLS parameters as buffers (`tls.ca_cert_buffer`, `tls.cert_buffer`, `tls.key_buffer`, `tls.dh_buffer` keys)
+* Move circuit configuration into configuration file (`circuit` key)
+* Add an option to save command line arguments (`arguments` key)
 
 ## 2.2.0
 
@@ -23,7 +32,7 @@ Fixed bugs:
 * #25 Fix server DOS on bogus connection
 * #26 Fix a hang when the client stops during the connection stage
 
-File configuration:
+[Configuration file](README.md#configuration-file):
 * `http_proxy.credentials.reuse_ntlm` and `http_proxy.credentials.reuse_kerb`: boolean instead of string
 
 ## 2.1.0
