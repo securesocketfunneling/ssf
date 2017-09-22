@@ -42,7 +42,7 @@ set(project_EXEC_DIR_NAME "ssf-${SSF_VERSION}")
 set(project_EXEC_DIR "${project_BINARY_DIR}/ssf/${project_EXEC_DIR_NAME}")
 
 # --- Include CMake build system scripts
-add_subdirectory("${project_THIRDPARTY_DIR}/cmake-build-system")
+add_subdirectory(cmake)
 include(HelpersIdeTarget)
 
 set(BOOST_ROOT "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
@@ -56,15 +56,11 @@ set(BOOST_PLATFORM_FLAGS "")
 set(BOOST_PLATFORM_COMPONENTS "")
 set(OPENSSL_PLATFORM_COMPONENTS "")
 
-# --- Include platform specific CMakeList
+# --- Include platform specific settings
 set(ICON_RC "")
 set(EXEC_FLAG "")
 
-if (WIN32)
-  include(./cmake-ms/CMakeLists.txt)
-elseif (UNIX)
-  include(./cmake-unix/CMakeLists.txt)
-endif ()
+include(Platform)
 
 # --- Define boost version if not set
 if(NOT DEP_BOOST_VERSION)
