@@ -140,7 +140,7 @@ if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
   enable_testing()
 
   # --- Add GTest project
-  add_subdirectory(${GTEST_ROOT_DIR})
+  add_subdirectory(${GTEST_ROOT_DIR} third_party/gtest)
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
 # --- Add sources
