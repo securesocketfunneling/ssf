@@ -618,34 +618,92 @@ function(external_unpack_archive)
 
   # Find tools needed for unpacking archives
   unset(_search_paths)
-  unset(_unpacker_name)
-  unset(_unpacker CACHE)
+  unset(_unpackers)
   if(CMAKE_HOST_WIN32)
-    set(_unpacker_name "winrar")
-  else()
-    if("${PACK_SOURCE}" MATCHES "^.*\\.zip$")
-        set(_unpacker_name "unzip")
+    if("${PACK_SOURCE}" MATCHES "^.*\\.(zip|7z)$")
+      set(_unpackers "7z" "winrar")
     else()
-        set(_unpacker_name "tar")
+      set(_unpackers "7z" "winrar" "tar")
+    endif()
+
+    set(_search_paths
+      "c:\\Program Files (x86)\\7-Zip"
+      "c:\\Program Files\\7-Zip"
+      "c:\\Program Files (x86)\\WinRAR"
+      "c:\\Program Files\\WinRAR"
+    )
+  else()
+    if("${PACK_SOURCE}" MATCHES "^.*\\.(zip|7z)$")
+        set(_unpackers "unzip")
+    else()
+        set(_unpackers "tar")
     endif()
   endif()
 
-  find_program(_unpacker "${_unpacker_name}" "${_search_paths}")
+  unset(_unpacker_name)
+  unset(_unpacker)
+  unset(_unpacker CACHE)
+  foreach(_name IN LISTS _unpackers)
+    find_program(_unpacker NAMES "${_name}" PATHS ${_search_paths})
+    if(_unpacker)
+      set(_unpacker_name "${_name}")
+      break()
+    endif()
+  endforeach()
+
   if(NOT _unpacker)
-     external_error("No '${_unpacker_name}' tool found")
+     external_error("No unpacker tools ('${_unpackers}') found.")
   endif()
 
   # Compute arguments to extract package's source tree from archive
-  unset(_unpacker_args)
-  if(CMAKE_HOST_WIN32)
-    list(APPEND _unpacker_args
-      "x"      # Extract files from archive
-      "-inul"  # Do not prompt dialogue box in case of errors
-      "-o+"    # Always overwrite destination files
-      "-ibck"  # Run in background (i.e. no progress window displayed)
-      "${PACK_SOURCE}"
+  unset(_commands)
+  if(_unpacker_name STREQUAL "winrar")
+    list(APPEND _commands
+      COMMAND "${_unpacker}"
+      ARGS
+        "x"      # Extract files from archive
+        "-inul"  # Do not prompt dialog box in case of errors
+        "-o+"    # Always overwrite destination files
+        "-ibck"  # Run in background (i.e. no progress window displayed)
+        "${PACK_SOURCE}"
     )
-  else()
+  elseif(_unpacker_name STREQUAL "7z")
+    if("${PACK_SOURCE}" MATCHES "^.*\\.(t[bg]z|tar\\.(gz|bz2|Z))$")
+      # Piped commands to: ...
+      # ... uncompress the archive
+      list(APPEND _commands
+        COMMAND "${_unpacker}"
+        ARGS
+          "x"     # Extract files from archive
+          "-so"   # Push result to standard output
+          "${PACK_SOURCE}"
+      )
+      # ... and unpack the tarball
+      list(APPEND _commands
+        COMMAND "${_unpacker}"
+        ARGS
+          "x"     # Extract files from archive
+          "-si"   # Read stream from standard in
+          "-aoa"  # Overwrite ALL exixting files without prompt
+          "-ttar" # Unpack TAR stream
+      )
+    else()
+      list(APPEND _commands
+        COMMAND "${_unpacker}"
+        ARGS
+          "x"     # Extract files from archive
+          "-aoa"  # Overwrite ALL exixting files without prompt
+          "${PACK_SOURCE}"
+      )
+    endif()
+  elseif(_unpacker_name STREQUAL "unzip")
+    unset(_unpacker_args)
+    list(APPEND _commands
+      COMMAND "${_unpacker}"
+      ARGS    "${PACK_SOURCE}"
+    )
+  elseif(_unpacker_name STREQUAL "tar")
+    unset(_unpacker_args)
     list(APPEND _unpacker_args
       "x"     # Extract files from archive
       "-f"    # Unpack following file
@@ -658,25 +716,29 @@ function(external_unpack_archive)
       list(INSERT _unpacker_args 1 "-j")
     elseif("${PACK_SOURCE}" MATCHES "^.*\\.(tar\\.Z)$")
       list(INSERT _unpacker_args 1 "-Z")
-    elseif("${PACK_SOURCE}" MATCHES "^.*\\.zip$")
-      unset(_unpacker_args)
-      list(APPEND _unpacker_args "${PACK_SOURCE}")
     elseif(NOT "${PACK_SOURCE}" MATCHES "^.*\\.tar$")
       external_error("Unsuported archive type '${PACK_SOURCE}'")
     endif()
+
+    list(APPEND _commands
+      COMMAND "${_unpacker}"
+      ARGS    "${_unpacker_args}"
+    )
+  else()
+    external_error("Unsuported unpacker tool '${_unpacker_name}'")
   endif()
 
   if(${PKG_NAME}_DEBUG)
     external_debug("Archive path '${PACK_SOURCE}':")
     external_debug("  extract base  = '${PACK_DESTINATION}'")
     external_debug("  unpacker      = '${_unpacker_name}' [${_unpacker}]")
-    external_debug("  unpacker args = '${_unpacker_args}'")
+    external_debug("  commands      = '${_commands}'")
   endif()
 
   # Expand archive
   system_execute(
     WORKING_DIR "${PACK_DESTINATION}"
-    COMMAND "${_unpacker}" ARGS "${_unpacker_args}"
+    "${_commands}"
   )
 endfunction()
 
@@ -752,7 +814,7 @@ function(external_search_source_path)
   endif()
 
   set(_archive_pattern
-    "((${PKG_NAME}|${PKG_NAME_LOWER})[-_].*)\\.(t[bg]z|tar(\\.(gz|bz2))?|zip)"
+    "((${PKG_NAME}|${PKG_NAME_LOWER})[-_].*)\\.(t[bg]z|tar(\\.(gz|bz2|Z))?|zip|7z)"
   )
   unset(_witness_file)
   external_find_file(_witness_file
