@@ -7,6 +7,7 @@ set(__H_SYSTEM_TOOLS_INCLUDED TRUE)
 
 include(HelpersArguments)
 include(FileEdit)
+include(MultiList)
 
 # ==============================================================================
 # ======================= D e f i n e   f u n c t i o n s ======================
@@ -103,19 +104,15 @@ function(system_execute)
   # Parse arguments
   parse_arguments("EXEC"
     "NO_LOG;NO_LOG_DUMP;DEBUG"
-    "WORKING_DIR;LOG;LOG_VAR;COMMAND"
-    "ARGS;ENV"
-    ""
+    "WORKING_DIR;LOG;LOG_VAR"
+    "ENV"
+    "COMMAND"
     ${ARGN}
   )
 
-  if(NOT EXEC_COMMAND)
-    list(GET EXEC_ARGN 0 EXEC_COMMAND)
-    list(REMOVE_AT EXEC_ARGN 0)
-  endif()
-
-  if(EXEC_ARGN)
-    list(APPEND EXEC_ARGS ${EXEC_ARGN})
+  if(NOT EXEC_COMMAND AND EXEC_ARGN)
+    unset(EXEC_COMMAND)
+    multi_list(APPEND EXEC_COMMAND ${EXEC_ARGN})
     unset(EXEC_ARGN)
   endif()
 
@@ -135,13 +132,25 @@ function(system_execute)
   endif()
 
   if(EXEC_DEBUG)
-    message(STATUS "*RUNNING COMMAND   : '${EXEC_COMMAND}'")
-    foreach(_var NO_LOG LOG WORKING_DIR ARGS ENV)
-      message(STATUS "*  ${_var} : ${EXEC_${_var}}")
+    message(STATUS "*RUNNING ENVIRONMENT:")
+    foreach(_var NO_LOG LOG WORKING_DIR ENV)
+    message(STATUS "*  ${_var} : ${EXEC_${_var}}")
+    endforeach()
+    message(STATUS "*RUNNING COMMANDS:")
+    foreach(_cmdline IN LISTS EXEC_COMMAND)
+      list(GET _cmdline 0 _command)
+      list(REMOVE_AT _cmdline 0)
+      message(STATUS "*  COMMAND : '${_command}'")
+      message(STATUS "*  ARGS    : ${_cmdline}")
+      unset(_cmdline)
     endforeach()
   endif()
 
-  set(_command_exec ${EXEC_COMMAND} ${EXEC_ARGS})
+  unset(_command_exec)
+  foreach(_cmdline IN LISTS EXEC_COMMAND)
+    list(REMOVE_ITEM _cmdline ARGS)
+    list(APPEND _command_exec COMMAND ${_cmdline})
+  endforeach()
 
   # Execute command
   unset(_log_fields)
@@ -174,7 +183,7 @@ function(system_execute)
     WORKING_DIRECTORY "${EXEC_WORKING_DIR}"
     RESULT_VARIABLE _ret_result
     ${_log_fields}
-    COMMAND ${_command_exec}
+    ${_command_exec}
   )
 
   foreach(_var_name IN LISTS _env_vars)
@@ -194,7 +203,7 @@ function(system_execute)
   if(NOT _ret_result EQUAL 0)
     message("### Error [${_ret_result}] while executing:")
     unset(_error_message)
-    foreach(arg ${EXEC_COMMAND} ${EXEC_ARGS})
+    foreach(arg ${_command_exec})
       set(_error_message "${_error_message}'${arg}' ")
     endforeach()
     message("### ${_error_message}")
