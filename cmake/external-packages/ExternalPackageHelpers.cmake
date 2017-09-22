@@ -111,8 +111,20 @@ function(external_execute)
 
   # Get Visual Studio profile
   get_filename_component(_vc_profile "${_vc_path}" NAME)
-  if("${_vc_profile}" STREQUAL "bin")
-    set(_vc_profile "32")
+
+  if (CMAKE_GENERATOR STREQUAL "Visual Studio 15 2017")
+    if("${_vc_profile}" STREQUAL "x86")
+      set(_vc_profile "32")
+	elseif("${_vc_profile}" STREQUAL "x64")
+	  set(_vc_profile "64")
+    endif()
+
+	find_file(_vc_vars "vcvars${_vc_profile}.bat" "${_vc_path}/../../../../../../Auxiliary/Build")
+  else()
+    if("${_vc_profile}" STREQUAL "bin")
+      set(_vc_profile "32")
+    endif()
+	find_file(_vc_vars "vcvars${_vc_profile}.bat" "${_vc_path}")
   endif()
 
   # Build BAT script to execute input command
@@ -127,7 +139,7 @@ function(external_execute)
     CONTENT
       "@REM Auto generated BAT file
        @echo ${_debug}
-       call \"${_vc_path}/vcvars${_vc_profile}.bat\" && goto :next
+       call \"${_vc_vars}\" && goto :next
        exit /b %ERRORLEVEL%
        goto :eof
        :next
