@@ -1,4 +1,2 @@
-/build*
-/.build*
-/third_party
-/src/framework/tests/proxy/proxy.json
+third_party
+src/framework/tests/proxy/proxy.json
