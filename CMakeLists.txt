@@ -15,7 +15,7 @@ message("** SSF_VERSION: ${SSF_VERSION}")
 message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 # --- Options
-option(BUILD_UNIT_TESTS "Build SSF unit tests" ON)
+option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
 option(BUILD_FRAMEWORK_UNIT_TESTS "Build SSF framework unit tests" OFF)
 option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
 
