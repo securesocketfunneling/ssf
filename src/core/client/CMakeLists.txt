@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 include_directories(
-  ${OpenSSL_INCLUDE_DIRS}
+  ${OPENSSL_INCLUDE_DIR}
   ${Boost_INCLUDE_DIRS})
 
 # --- Copy test certs for client
@@ -34,7 +34,7 @@ add_target(${CLIENT_NAME}
     ${CLIENT_MAIN}
   LINKS
     ${Boost_LIBRARIES}
-    ${OpenSSL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
     lib_ssf_network
   PREFIX_SKIP
@@ -57,7 +57,7 @@ add_target(${CLIENT_CP_NAME}
     ${CLIENT_CP_MAIN}
   LINKS
     ${Boost_LIBRARIES}
-    ${OpenSSL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
     lib_ssf_network
   PREFIX_SKIP

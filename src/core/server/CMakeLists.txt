@@ -17,7 +17,7 @@ set(SERVER_MAIN
       "${project_SRC_DIR}/core/server/main.cpp")
 
 include_directories(
-  ${OpenSSL_INCLUDE_DIRS}
+  ${OPENSSL_INCLUDE_DIR}
   ${Boost_INCLUDE_DIRS})
 
 add_target(${SERVER_NAME}
@@ -30,7 +30,7 @@ add_target(${SERVER_NAME}
     ${SERVER_MAIN}
   LINKS
     ${Boost_LIBRARIES}
-    ${OpenSSL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
     lib_ssf_network
   PREFIX_SKIP

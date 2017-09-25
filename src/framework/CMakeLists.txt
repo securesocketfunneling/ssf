@@ -109,7 +109,7 @@ add_target("lib_ssf_network"
   TYPE
     library ${EXEC_FLAG} STATIC
   LINKS
-    ${OpenSSL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
     lib_http_parser
@@ -126,14 +126,14 @@ add_target("lib_ssf_network"
     #${SSF_FRAMEWORK_INTERFACES_SYSTEM_FILES}
     #${SSF_FRAMEWORK_ROUTERS_SYSTEM_FILES}
   INCLUDE_DIRECTORIES
-    ${OpenSSL_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_include_directories(lib_ssf_network
   INTERFACE
-    ${OpenSSL_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
 )

@@ -45,59 +45,29 @@ set(project_EXEC_DIR "${project_BINARY_DIR}/ssf/${project_EXEC_DIR_NAME}")
 add_subdirectory(cmake)
 include(HelpersIdeTarget)
 
-set(BOOST_ROOT "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
-message("** BOOST_ROOT: ${BOOST_ROOT}")
-
-set(OPENSSL_ROOT_DIR "${project_THIRDPARTY_DIR}/openssl" CACHE PATH "Path of openssl library")
-message("** OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR}")
-
-# ---- Third party parameters
-set(BOOST_PLATFORM_FLAGS "")
-set(BOOST_PLATFORM_COMPONENTS "")
-set(OPENSSL_PLATFORM_COMPONENTS "")
-
 # --- Include platform specific settings
 set(ICON_RC "")
 set(EXEC_FLAG "")
 
 include(Platform)
 
-# --- Define boost version if not set
-if(NOT DEP_BOOST_VERSION)
-  set(DEP_BOOST_VERSION 1.56.0)
-endif()
-
-# --- Setup Boost dependencies
-set(Boost_USE_STATIC_LIBS       ON)
-set(Boost_USE_MULTITHREADED     ON)
-set(Boost_USE_STATIC_RUNTIME    ON)
-
 # --- Boost components
-find_package(
-  Boost REQUIRED
-  FLAGS
-    STATIC
-    ${BOOST_PLATFORM_FLAGS}
-  WITH_COMPONENTS
-    system
-    serialization
-    program_options
-    date_time
-    filesystem
-    regex
-    thread
-    chrono
-    context
-    coroutine
-)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME ON)
+find_package(Boost REQUIRED
+             COMPONENTS system
+                        serialization
+                        program_options
+                        date_time
+                        filesystem
+                        regex
+                        thread
+                        chrono
+                        context
+                        coroutine)
 
 # --- OpenSSL components
-find_package(
-  OpenSSL REQUIRED
-  FLAGS
-    STATIC
-    ${OPENSSL_PLATFORM_FLAGS}
-)
+find_package(OpenSSL REQUIRED)
 
 # --- http-parser components
 add_subdirectory(third_party/http-parser)
