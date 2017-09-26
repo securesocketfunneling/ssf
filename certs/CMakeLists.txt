@@ -12,3 +12,14 @@ function(copy_certs _tgt)
     COMMAND ${CMAKE_COMMAND} -E copy ${TEST_CERT_TRUSTED_FILES} $<TARGET_FILE_DIR:${_tgt}>/certs/trusted)
 endfunction(copy_certs)
 
+include(bin2c)
+
+bin2c(client_cert certificate.crt client_cert.h)
+bin2c(client_key private.key client_key.h)
+bin2c(server_cert server.crt server_cert.h)
+bin2c(server_key server.key server_key.h)
+bin2c(server_dh dh4096.pem server_dh.h)
+bin2c(ca_cert trusted/ca.crt ca_cert.h)
+
+add_library(test_certs INTERFACE)
+target_include_directories(test_certs INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
