@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.8)
-
 set(services_tests_group_name "Unit Tests/Services")
 
 set(TCP_HELPERS_FILES

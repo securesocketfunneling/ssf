@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 2.8)
 include_directories(${OPENSSL_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 
 set(SERVER_NAME "ssfs")

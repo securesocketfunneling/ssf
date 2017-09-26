@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.8)
-
 set(config_tests_group_name "Unit Tests/Config")
 
 file(GLOB_RECURSE CONFIG_TEST_FILES

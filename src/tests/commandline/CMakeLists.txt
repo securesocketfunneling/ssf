@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.8)
-
 set(commandline_tests_group_name "Unit Tests/CommandLine")
 
 # --- Fiber asio tests
