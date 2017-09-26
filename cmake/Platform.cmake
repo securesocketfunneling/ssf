@@ -39,12 +39,6 @@ elseif (WIN32)
 
   set(EXEC_FLAG "RUNTIME_STATIC")
 
-  # --- Boost platform requirements
-  list(APPEND BOOST_PLATFORM_FLAGS "RUNTIME_STATIC")
-
-  # --- OpenSSL platform requirements
-  list(APPEND OPENSSL_PLATFORM_FLAGS "RUNTIME_STATIC")
-
   # --- Flags for compilation
   add_definitions(-D_WIN32_WINNT=0x0501)
   if (MSVC)

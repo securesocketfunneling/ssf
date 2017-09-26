@@ -18,6 +18,7 @@ message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
 option(BUILD_FRAMEWORK_UNIT_TESTS "Build SSF framework unit tests" OFF)
 option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
+option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
 
 # --- Set client/server security
 if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
@@ -38,8 +39,8 @@ include(HelpersIdeTarget)
 include(Platform)
 
 # --- Boost components
+set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME ON)
 find_package(Boost REQUIRED
              COMPONENTS system
                         serialization
@@ -53,6 +54,7 @@ find_package(Boost REQUIRED
                         coroutine)
 
 # --- OpenSSL components
+set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 find_package(OpenSSL REQUIRED)
 
 # --- http-parser components

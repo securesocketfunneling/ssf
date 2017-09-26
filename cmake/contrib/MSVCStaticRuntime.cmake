@@ -30,4 +30,5 @@ if(MSVC)
 	endforeach()
 endif()
 
-set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME ON)
+set(OPENSSL_MSVC_STATIC_RT TRUE)
