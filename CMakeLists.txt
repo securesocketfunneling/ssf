@@ -65,18 +65,8 @@ add_subdirectory(certs)
 
 # --- Unit tests
 if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
-  include(GTest)
-
-  set(GTEST_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gtest
-      CACHE PATH "Path of gtest library")
-
-  # --- Extract GTest archive in build directory
-  gtest_unpack_archive()
-
   enable_testing()
-
-  # --- Add GTest project
-  add_subdirectory(${GTEST_ROOT_DIR} third_party/gtest)
+  add_subdirectory(third_party/googletest/googletest)
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
 # -- Images
