@@ -1,30 +1,29 @@
 set(services_tests_group_name "Unit Tests/Services")
 
 set(TCP_HELPERS_FILES
-  "tcp_helpers.h"
-  "tcp_helpers.cpp")
+  tcp_helpers.h
+  tcp_helpers.cpp)
 
 set(UDP_HELPERS_FILES
-  "udp_helpers.h"
-  "udp_helpers.cpp")
+  udp_helpers.h
+  udp_helpers.cpp)
 
 set(SOCKS_HELPERS_FILES
-  "socks_helpers.h"
-  "socks_helpers.cpp")
+  socks_helpers.h
+  socks_helpers.cpp)
 
 set(SERVICE_TESTS_FILES
-  "datagram_fixture_test.h"
-  "service_fixture_test.h"
-  "process_fixture_test.h"
-  "socks_fixture_test.h"
-  "stream_fixture_test.h"
-)
+  datagram_fixture_test.h
+  service_fixture_test.h
+  process_fixture_test.h
+  socks_fixture_test.h
+  stream_fixture_test.h)
 
 # --- Service tests
 
 # --- Option parser
 
-add_target("option_parser_tests"
+add_target(option_parser_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -34,22 +33,14 @@ add_target("option_parser_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    "option_parser_tests.cpp"
+    option_parser_tests.cpp
     ${USER_SERVICE_FILES}
     ${COMMON_ERROR_FILES}
 )
 project_group(${services_tests_group_name} option_parser_tests)
 
 # --- Socks test
-set(socks_test_source_files
-  "socks_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SOCKS_HELPERS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("socks_tests"
+add_target(socks_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -60,20 +51,16 @@ add_target("socks_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${socks_test_source_files}
+    socks_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${SOCKS_HELPERS_FILES}
+    ${TCP_HELPERS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} socks_tests)
 
 # --- Remote socks test
-set(remote_socks_test_source_files
-  "remote_socks_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SOCKS_HELPERS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_socks_tests"
+add_target(remote_socks_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -84,19 +71,16 @@ add_target("remote_socks_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${remote_socks_test_source_files}
+    remote_socks_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${SOCKS_HELPERS_FILES}
+    ${TCP_HELPERS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} remote_socks_tests)
 
 # --- Stream forward test
-set(stream_forwarding_test_source_files
-  "stream_forwarding_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("stream_forward_tests"
+add_target(stream_forward_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -107,19 +91,15 @@ add_target("stream_forward_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${stream_forwarding_test_source_files}
+    stream_forwarding_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${TCP_HELPERS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} stream_forward_tests)
 
 # --- Remote stream forward test
-set(remote_stream_forwarding_test_source_files
-  "remote_stream_forwarding_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_stream_forward_tests"
+add_target(remote_stream_forward_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -130,19 +110,15 @@ add_target("remote_stream_forward_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${remote_stream_forwarding_test_source_files}
+    remote_stream_forwarding_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${TCP_HELPERS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} remote_stream_forward_tests)
 
 # --- UDP forward test
-set(datagram_test_source_files
-  "datagram_forward_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${UDP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("datagram_forward_tests"
+add_target(datagram_forward_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -153,19 +129,15 @@ add_target("datagram_forward_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${datagram_test_source_files}
+    datagram_forward_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${UDP_HELPERS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} datagram_forward_tests)
 
 # --- Remote UDP forward test
-set(remote_datagram_test_source_files
-  "remote_datagram_forward_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${UDP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_datagram_forward_tests"
+add_target(remote_datagram_forward_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -176,7 +148,10 @@ add_target("remote_datagram_forward_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${remote_datagram_test_source_files}
+    remote_datagram_forward_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${UDP_HELPERS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} remote_datagram_forward_tests)
 
@@ -187,14 +162,8 @@ file(MAKE_DIRECTORY files_copied)
 FILE(GLOB_RECURSE TEST_FILES_TO_COPY ${CMAKE_CURRENT_SOURCE_DIR}/files_to_copy/*)
 
 file(COPY ${TEST_FILES_TO_COPY} DESTINATION files_to_copy)
-set(file_copy_from_client_files
-  "file_copy_from_client_tests.cpp"
-  "file_copy_fixture_test.h"
-  "file_copy_fixture_test.cpp"
-  ${SSF_SOURCES}
-)
 
-add_target("file_copy_from_client_tests"
+add_target(file_copy_from_client_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -205,18 +174,15 @@ add_target("file_copy_from_client_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${file_copy_from_client_files}
+    file_copy_from_client_tests.cpp
+    file_copy_fixture_test.h
+    file_copy_fixture_test.cpp
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} file_copy_from_client_tests)
 
 # --- Process test
-set(process_test_source_files
-  "process_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("process_tests"
+add_target(process_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -227,18 +193,14 @@ add_target("process_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${process_test_source_files}
+    process_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} process_tests)
 
 # --- Remote process test
-set(remote_process_test_source_files
-  "remote_process_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_process_tests"
+add_target(remote_process_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -249,6 +211,8 @@ add_target("remote_process_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${remote_process_test_source_files}
+    remote_process_tests.cpp
+    ${SERVICE_TESTS_FILES}
+    ${SSF_SOURCES}
 )
 project_group(${services_tests_group_name} remote_process_tests)

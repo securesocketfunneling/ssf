@@ -9,14 +9,7 @@ file(COPY ${CONFIG_TEST_FILES} DESTINATION config_files)
 # --- Config tests
 
 # --- Load config test
-set(load_config_test_source_files
-  "load_config_tests.cpp"
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${SERVICES_FILES}
-)
-
-add_target("load_config_tests"
+add_target(load_config_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   LINKS
@@ -27,6 +20,9 @@ add_target("load_config_tests"
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   FILES
-    ${load_config_test_source_files}
+    load_config_tests.cpp
+    ${COMMON_CONFIG_FILES}
+    ${COMMON_ERROR_FILES}
+    ${SERVICES_FILES}
 )
 project_group(${config_tests_group_name} load_config_tests)

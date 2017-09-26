@@ -1,21 +1,13 @@
 include_directories(${OPENSSL_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 
-set(SERVER_NAME "ssfs")
-set(SERVER_MAIN
-      "${project_SRC_DIR}/core/server/main.cpp")
-
-include_directories(
-  ${OPENSSL_INCLUDE_DIR}
-  ${Boost_INCLUDE_DIRS})
-
-add_target(${SERVER_NAME}
+add_target(ssfs
   TYPE
     executable ${EXEC_FLAG} INSTALL
   FILES
     ${CORE_COMMAND_LINE_STANDARD_FILES}
     ${SSF_SOURCES}
     ${ICON_RC}
-    ${SERVER_MAIN}
+    main.cpp
   LINKS
     ${Boost_LIBRARIES}
     ${OPENSSL_LIBRARIES}
