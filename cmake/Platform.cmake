@@ -28,9 +28,7 @@ if (UNIX)
       # Force libc version function and wrap it with linker
       #   * memcpy 2.14 -> 2.2.5
 
-      add_library(linux_libc_funcs_version_downgrade
-        "${project_SRC_DIR}/linux_compatibility/memcpy.cpp"
-      )
+      add_library(linux_libc_funcs_version_downgrade ${CMAKE_SOURCE_DIR}/src/linux_compatibility/memcpy.cpp)
 
       list(APPEND PLATFORM_SPECIFIC_LIB_DEP "linux_libc_funcs_version_downgrade")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--wrap=memcpy")
@@ -41,8 +39,6 @@ elseif (WIN32)
   include(MSVCStaticRuntime)
   include(HelpersIdeTarget)
 
-  # --- Icon path
-  set(ICON_RC "${project_IMG_DIR}/icon.rc")
   set(EXEC_FLAG "RUNTIME_STATIC")
 
   # --- Boost platform requirements

@@ -2,19 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 set(services_tests_group_name "Unit Tests/Services")
 
-set(project_BINARY_SERVICES_TESTS_DIR "${project_BINARY_DIR}/src/tests/services")
-
-# --- Copy test certs for tests
-set(project_BINARY_SERVICES_TESTS_CERT_DIR ${project_BINARY_SERVICES_TESTS_DIR}/certs)
-
-file(MAKE_DIRECTORY ${project_BINARY_SERVICES_TESTS_CERT_DIR})
-file(MAKE_DIRECTORY ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
-
-file(COPY ${SSF_CERT_TEST_ROOT_FILES}
-     DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR})
-file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
-     DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
-
 set(TCP_HELPERS_FILES
   "tcp_helpers.h"
   "tcp_helpers.cpp")
@@ -196,15 +183,12 @@ add_target("remote_datagram_forward_tests"
 project_group(${services_tests_group_name} remote_datagram_forward_tests)
 
 # --- File copy from client test
-file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_to_copy)
-file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_copied)
+file(MAKE_DIRECTORY files_to_copy)
+file(MAKE_DIRECTORY files_copied)
 
-FILE(GLOB_RECURSE TEST_FILES_TO_COPY
-  "${project_SRC_DIR}/tests/services/files_to_copy/*"
-)
+FILE(GLOB_RECURSE TEST_FILES_TO_COPY ${CMAKE_CURRENT_SOURCE_DIR}/files_to_copy/*)
 
-file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${project_BINARY_DIR}/src/tests/services/files_to_copy)
-
+file(COPY ${TEST_FILES_TO_COPY} DESTINATION files_to_copy)
 set(file_copy_from_client_files
   "file_copy_from_client_tests.cpp"
   "file_copy_fixture_test.h"

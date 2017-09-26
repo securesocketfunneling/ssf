@@ -1,20 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
-
-include_directories(
-  ${OPENSSL_INCLUDE_DIR}
-  ${Boost_INCLUDE_DIRS})
-
-# --- Copy test certs for client
-set(project_BINARY_SERVER_DIR "${project_BINARY_DIR}/src/core/client")
-set(project_BINARY_SERVER_CERT_DIR ${project_BINARY_SERVER_DIR}/certs)
-
-file(MAKE_DIRECTORY ${project_BINARY_SERVER_CERT_DIR})
-file(MAKE_DIRECTORY ${project_BINARY_SERVER_CERT_DIR}/trusted)
-
-file(COPY ${SSF_CERT_TEST_ROOT_FILES}
-     DESTINATION ${project_BINARY_SERVER_CERT_DIR})
-file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
-     DESTINATION ${project_BINARY_SERVER_CERT_DIR}/trusted)
+include_directories(${OPENSSL_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 
 # --- ssfc
 set(CLIENT_NAME "ssfc")
@@ -63,8 +47,6 @@ add_target(${CLIENT_CP_NAME}
   PREFIX_SKIP
     ${project_SRC_DIR})
 
-install(
-  TARGETS ssfc ssfcp
-  RUNTIME
-  DESTINATION ssf/${project_EXEC_DIR_NAME}
-)
+install(TARGETS ssfc ssfcp RUNTIME DESTINATION bin)
+
+copy_certs(ssfc)

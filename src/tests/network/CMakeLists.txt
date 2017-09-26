@@ -2,18 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 set(network_tests_group_name "Unit Tests/Network")
 
-set(project_BINARY_NETWORK_TESTS_DIR "${project_BINARY_DIR}/src/tests/network")
-
-# --- Copy test certs for tests
-set(project_BINARY_NETWORK_TESTS_CERT_DIR ${project_BINARY_NETWORK_TESTS_DIR}/certs)
-
-file(MAKE_DIRECTORY ${project_BINARY_NETWORK_TESTS_CERT_DIR})
-file(MAKE_DIRECTORY ${project_BINARY_NETWORK_TESTS_CERT_DIR}/trusted)
-
-file(COPY ${SSF_CERT_TEST_ROOT_FILES}
-     DESTINATION ${project_BINARY_NETWORK_TESTS_CERT_DIR})
-file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
-     DESTINATION ${project_BINARY_NETWORK_TESTS_CERT_DIR}/trusted)
 
 # --- Network tests
 

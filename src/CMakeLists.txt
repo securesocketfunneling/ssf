@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 2.8)
-
 # --- Project files declaration
-set(VERSIONS_FILES
-      "${project_BINARY_DIR}/versions.h")
+configure_file(versions.h.in versions.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+set(VERSIONS_FILES ${CMAKE_CURRENT_BINARY_DIR}/versions.h)
 
 FILE(GLOB_RECURSE COMMON_BOOST_FIBER_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/common/boost/fiber/*.hpp"
