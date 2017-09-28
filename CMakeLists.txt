@@ -56,6 +56,17 @@ find_package(Boost REQUIRED
 # --- OpenSSL components
 set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 find_package(OpenSSL REQUIRED)
+if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
+  include(CheckFunctionExists)
+  CHECK_FUNCTION_EXISTS("snprintf" HAVE_SNPRINTF)
+  if(NOT HAVE_SNPRINTF)
+    list(APPEND OPENSSL_LIBRARIES legacy_stdio_definitions.lib)
+  endif(NOT HAVE_SNPRINTF)
+  CHECK_FUNCTION_EXISTS("__iob_func" HAVE_IOB_FUNC)
+  if(NOT HAVE_IOB_FUNC)
+    list(APPEND OPENSSL_LIBRARIES iob_func)
+  endif(NOT HAVE_IOB_FUNC)
+endif()
 
 # --- http-parser components
 add_subdirectory(third_party/http-parser)
