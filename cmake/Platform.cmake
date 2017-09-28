@@ -25,11 +25,7 @@ if (UNIX)
       # Downgrade version of libc function for 64 bits executables
       # Force libc version function and wrap it with linker
       #   * memcpy 2.14 -> 2.2.5
-
-      add_library(linux_libc_funcs_version_downgrade ${CMAKE_SOURCE_DIR}/src/linux_compatibility/memcpy.cpp)
-
-      list(APPEND PLATFORM_SPECIFIC_LIB_DEP "linux_libc_funcs_version_downgrade")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--wrap=memcpy")
+      list(APPEND PLATFORM_SPECIFIC_LIB_DEP linux_libc_funcs_version_downgrade)
     endif()
 
   endif ()
