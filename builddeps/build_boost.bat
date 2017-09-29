@@ -5,7 +5,7 @@ setlocal enabledelayedexpansion
 set BOOST_VERSION=1_64_0
 set BOOST_ARCHIVE=boost_%BOOST_VERSION%.tar.bz2
 set BOOST_SOURCE=boost_%BOOST_VERSION%
-set BOOST_LIBRARIES=system,serialization,program_options,date_time,filesystem,regex,thread,chrono,context,coroutine
+set BOOST_LIBRARIES=system,serialization,program_options,date_time,filesystem,regex,thread,chrono
 
 if "%1"=="32" (
   set ARCH=32
