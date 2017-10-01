@@ -17,8 +17,8 @@ enum Versions : uint8_t {
   transport = @SSF_VERSION_TRANSPORT@
 };
 
-const std::string boost_version = "@SSF_VERSION_BOOST@";
-const std::string openssl_version = "@SSF_VERSION_OPENSSL@";
+const std::string boost_version = "@Boost_VERSION@";
+const std::string openssl_version = "@OPENSSL_VERSION@";
 
 }  // versions
 }  // ssf

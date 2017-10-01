@@ -15,9 +15,10 @@ message("** SSF_VERSION: ${SSF_VERSION}")
 message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 # --- Options
-option(BUILD_UNIT_TESTS "Build SSF unit tests" ON)
+option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
 option(BUILD_FRAMEWORK_UNIT_TESTS "Build SSF framework unit tests" OFF)
 option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
+option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
 
 # --- Set client/server security
 if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
@@ -30,122 +31,57 @@ else()
   set(SSF_VERSION_SECURITY 2)
 endif()
 
-# --- Project variables
-set(project_BINARY_DIR "${${project_name}_BINARY_DIR}")
-set(project_ROOT_DIR "${${project_name}_SOURCE_DIR}")
-set(project_SRC_DIR "${project_ROOT_DIR}/src")
-set(project_IMG_DIR "${project_ROOT_DIR}/img")
-set(project_THIRDPARTY_DIR "${project_ROOT_DIR}/third_party")
-
-set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
-set(project_EXEC_DIR_NAME "ssf-${SSF_VERSION}")
-set(project_EXEC_DIR "${project_BINARY_DIR}/ssf/${project_EXEC_DIR_NAME}")
-
 # --- Include CMake build system scripts
-add_subdirectory("${project_THIRDPARTY_DIR}/cmake-build-system")
+add_subdirectory(cmake)
 include(HelpersIdeTarget)
 
-set(BOOST_ROOT "${project_THIRDPARTY_DIR}/boost" CACHE PATH "Path of boost library")
-message("** BOOST_ROOT: ${BOOST_ROOT}")
-
-set(OPENSSL_ROOT_DIR "${project_THIRDPARTY_DIR}/openssl" CACHE PATH "Path of openssl library")
-message("** OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR}")
-
-# ---- Third party parameters
-set(BOOST_PLATFORM_FLAGS "")
-set(BOOST_PLATFORM_COMPONENTS "")
-set(OPENSSL_PLATFORM_COMPONENTS "")
-
-# --- Include platform specific CMakeList
-set(ICON_RC "")
-set(EXEC_FLAG "")
-
-if (WIN32)
-  include(./cmake-ms/CMakeLists.txt)
-elseif (UNIX)
-  include(./cmake-unix/CMakeLists.txt)
-endif ()
-
-# --- Define boost version if not set
-if(NOT DEP_BOOST_VERSION)
-  set(DEP_BOOST_VERSION 1.56.0)
-endif()
-
-# --- Setup Boost dependencies
-set(Boost_USE_STATIC_LIBS       ON)
-set(Boost_USE_MULTITHREADED     ON)
-set(Boost_USE_STATIC_RUNTIME    ON)
+# --- Include platform specific settings
+include(Platform)
 
 # --- Boost components
-find_package(
-  Boost REQUIRED
-  FLAGS
-    STATIC
-    ${BOOST_PLATFORM_FLAGS}
-  WITH_COMPONENTS
-    system
-    serialization
-    program_options
-    date_time
-    filesystem
-    regex
-    thread
-    chrono
-    context
-    coroutine
-)
+set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+set(Boost_USE_MULTITHREADED ON)
+find_package(Boost REQUIRED
+             COMPONENTS system
+                        serialization
+                        program_options
+                        date_time
+                        filesystem
+                        regex
+                        thread
+                        chrono
+                        context
+                        coroutine)
 
 # --- OpenSSL components
-find_package(
-  OpenSSL REQUIRED
-  FLAGS
-    STATIC
-    ${OPENSSL_PLATFORM_FLAGS}
-)
+set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+find_package(OpenSSL REQUIRED)
+if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
+  include(CheckFunctionExists)
+  CHECK_FUNCTION_EXISTS("snprintf" HAVE_SNPRINTF)
+  if(NOT HAVE_SNPRINTF)
+    list(APPEND OPENSSL_LIBRARIES legacy_stdio_definitions.lib)
+  endif(NOT HAVE_SNPRINTF)
+  CHECK_FUNCTION_EXISTS("__iob_func" HAVE_IOB_FUNC)
+  if(NOT HAVE_IOB_FUNC)
+    list(APPEND OPENSSL_LIBRARIES iob_func)
+  endif(NOT HAVE_IOB_FUNC)
+endif()
 
 # --- http-parser components
 add_subdirectory(third_party/http-parser)
 
-# --- Setup version.h file
-set(SSF_VERSION_BOOST ${Boost_VERSION})
-set(SSF_VERSION_OPENSSL ${OpenSSL_VERSION})
-
-configure_file(${project_SRC_DIR}/versions.h.in ${project_BINARY_DIR}/versions.h)
-include_directories(${project_BINARY_DIR})
-
 # --- Test certs
-set(SSF_CERT_TEST_ROOT_FILES
-  "${project_ROOT_DIR}/certs/certificate.crt"
-  "${project_ROOT_DIR}/certs/private.key"
-  "${project_ROOT_DIR}/certs/server.crt"
-  "${project_ROOT_DIR}/certs/server.key"
-  "${project_ROOT_DIR}/certs/dh4096.pem")
-set(SSF_CERT_TEST_TRUSTED_FILES
-  "${project_ROOT_DIR}/certs/trusted/ca.crt"
-)
-
-# --- Copy test certs in ssf install dir
-set(project_EXEC_CERTS_DIR "${project_EXEC_DIR}/certs")
-file(MAKE_DIRECTORY ${project_EXEC_CERTS_DIR})
-file(MAKE_DIRECTORY ${project_EXEC_CERTS_DIR}/trusted)
-
-file(COPY ${SSF_CERT_TEST_ROOT_FILES} DESTINATION ${project_EXEC_CERTS_DIR})
-file(COPY ${SSF_CERT_TEST_TRUSTED_FILES} DESTINATION "${project_EXEC_CERTS_DIR}/trusted")
+add_subdirectory(certs)
 
 # --- Unit tests
 if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
-  include(GTest)
-
-  set(GTEST_ROOT_DIR "${project_THIRDPARTY_DIR}/gtest" CACHE PATH "Path of gtest library")
-
-  # --- Extract GTest archive in build directory
-  gtest_unpack_archive()
-
   enable_testing()
-
-  # --- Add GTest project
-  add_subdirectory(${GTEST_ROOT_DIR})
+  add_subdirectory(third_party/googletest/googletest)
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
+
+# -- Images
+add_subdirectory(img)
 
 # --- Add sources
 add_subdirectory(src)
