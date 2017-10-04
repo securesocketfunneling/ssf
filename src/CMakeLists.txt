@@ -194,7 +194,7 @@ set(SSF_SOURCES
 # --- Include source directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_subdirectory(framework)
+add_subdirectory(network)
 add_subdirectory(core)
 add_subdirectory(compat)
 
@@ -205,7 +205,7 @@ add_target(lib_ssf_framework
     ${SSF_SOURCES}
   LINKS
     ${Boost_LIBRARIES}
-    ${OpenSSL_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
     lib_ssf_network
 )

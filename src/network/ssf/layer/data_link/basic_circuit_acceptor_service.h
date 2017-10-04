@@ -489,9 +489,9 @@ class basic_CircuitAcceptor_service
       SSF_LOG(kLogDebug) << "network[data_link]: connection not initialized ("
                          << ec.message() << ")";
       boost::system::error_code close_ec;
-      p_next_socket->shutdown(boost::asio::socket_base::shutdown_both,
+      p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
                               close_ec);
-      p_next_socket->close(close_ec);
+      p_next_layer_socket->close(close_ec);
       return;
     }
 
@@ -537,9 +537,9 @@ class basic_CircuitAcceptor_service
       SSF_LOG(kLogDebug) << "network[data_link]: connection not valid ("
                          << ec.message() << ")";
       boost::system::error_code close_ec;
-      p_next_socket->shutdown(boost::asio::socket_base::shutdown_both,
+      p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
                               close_ec);
-      p_next_socket->close(close_ec);
+      p_next_layer_socket->close(close_ec);
       return;
     }
 

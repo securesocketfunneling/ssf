@@ -232,60 +232,60 @@ TEST(QueueTest, async_queue_future_test) {
   queue.clear();
 }
 
-TEST(QueueTest, async_queue_spawn_test) {
-  boost::asio::io_service io_service;
-  auto p_work = std::unique_ptr<boost::asio::io_service::work>(
-      new boost::asio::io_service::work(io_service));
-
-  typedef ssf::layer::queue::basic_async_queue<
-      EmptyLog, std::queue<EmptyLog>, 3, 3> LimitQueueTest;
-
-  LimitQueueTest queue(io_service);
-
-  boost::system::error_code main_ec;
-
-  auto pushing_lambda = [&](boost::asio::yield_context context) {
-    try {
-      for (uint8_t i = 0; i < nb_of_elements; ++i) {
-        queue.async_push(i, context);
-      }
-    }
-    catch (const std::exception& e) {
-      std::cout << "exception: " << e.what() << std::endl;
-    }
-  };
-  auto getting_lambda = [&](boost::asio::yield_context context) {
-    try {
-      for (uint8_t i = 0; i < nb_of_elements * nb_of_pushing_threads; ++i) {
-        auto got = queue.async_get(context);
-      }
-      p_work.reset();
-    }
-    catch (const std::exception& e) {
-      std::cout << "exception: " << e.what() << std::endl;
-      p_work.reset();
-    }
-  };
-
-  boost::asio::spawn(io_service, getting_lambda);
-
-  for (uint8_t i = 0; i < nb_of_pushing_threads; ++i) {
-    boost::asio::spawn(io_service, pushing_lambda);
-  }
-
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
-  }
-
-  threads.join_all();
-
-  queue.close(main_ec);
-  EXPECT_EQ(0, main_ec.value());
-
-  EXPECT_EQ(0, queue.size());
-  queue.clear();
-}
+//TEST(QueueTest, async_queue_spawn_test) {
+//  boost::asio::io_service io_service;
+//  auto p_work = std::unique_ptr<boost::asio::io_service::work>(
+//      new boost::asio::io_service::work(io_service));
+//
+//  typedef ssf::layer::queue::basic_async_queue<
+//      EmptyLog, std::queue<EmptyLog>, 3, 3> LimitQueueTest;
+//
+//  LimitQueueTest queue(io_service);
+//
+//  boost::system::error_code main_ec;
+//
+//  auto pushing_lambda = [&](boost::asio::yield_context context) {
+//    try {
+//      for (uint8_t i = 0; i < nb_of_elements; ++i) {
+//        queue.async_push(i, context);
+//      }
+//    }
+//    catch (const std::exception& e) {
+//      std::cout << "exception: " << e.what() << std::endl;
+//    }
+//  };
+//  auto getting_lambda = [&](boost::asio::yield_context context) {
+//    try {
+//      for (uint8_t i = 0; i < nb_of_elements * nb_of_pushing_threads; ++i) {
+//        auto got = queue.async_get(context);
+//      }
+//      p_work.reset();
+//    }
+//    catch (const std::exception& e) {
+//      std::cout << "exception: " << e.what() << std::endl;
+//      p_work.reset();
+//    }
+//  };
+//
+//  boost::asio::spawn(io_service, getting_lambda);
+//
+//  for (uint8_t i = 0; i < nb_of_pushing_threads; ++i) {
+//    boost::asio::spawn(io_service, pushing_lambda);
+//  }
+//
+//  boost::thread_group threads;
+//  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
+//    threads.create_thread([&io_service]() { io_service.run(); });
+//  }
+//
+//  threads.join_all();
+//
+//  queue.close(main_ec);
+//  EXPECT_EQ(0, main_ec.value());
+//
+//  EXPECT_EQ(0, queue.size());
+//  queue.clear();
+//}
 
  TEST(QueueTest, send_queued_datagram_socket) {
   static const uint32_t number_of_senders = 100;
