@@ -18,8 +18,6 @@
 #include "services/user_services/base_user_service.h"
 #include "services/user_services/option_parser.h"
 
-#include "core/factories/service_option_factory.h"
-
 namespace ssf {
 namespace services {
 
@@ -37,22 +35,37 @@ class Socks : public BaseUserService<Demux> {
            "[[loc_ip]:]loc_port";
   }
 
-  static std::shared_ptr<Socks> CreateServiceOptions(
-      std::string line, boost::system::error_code& ec) {
+  static UserServiceParameterBag CreateUserServiceParameters(
+      const std::string& line, boost::system::error_code& ec) {
     auto listener = OptionParser::ParseListeningOption(line, ec);
 
     if (ec) {
+      SSF_LOG(kLogError) << "user_service " << GetParseName()
+                         << ": cannot parse " << line;
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
+    }
+
+    return {{"addr", listener.addr}, {"port", std::to_string(listener.port)}};
+  }
+
+  static std::shared_ptr<Socks> CreateUserService(
+      const UserServiceParameterBag& parameters,
+      boost::system::error_code& ec) {
+    if (parameters.count("addr") == 0 || parameters.count("port") == 0) {
+      SSF_LOG(kLogError) << "user_service " << GetParseName()
+                         << ": missing parameters";
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<Socks>(nullptr);
     }
 
-    return std::shared_ptr<Socks>(new Socks(listener.addr, listener.port));
-  }
-
-  static void RegisterToServiceOptionFactory() {
-    ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
-        &Socks::CreateServiceOptions);
+    uint16_t port = OptionParser::ParsePort(parameters.at("port"), ec);
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service tcp-forward: invalid port: "
+                         << "(" << ec.message() << ")";
+      return std::shared_ptr<Socks>(nullptr);
+    }
+    return std::shared_ptr<Socks>(new Socks(parameters.at("addr"), port));
   }
 
  public:

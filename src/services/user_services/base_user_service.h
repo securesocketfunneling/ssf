@@ -8,6 +8,8 @@
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 
+#include "services/user_services/parameters.h"
+
 namespace ssf {
 namespace services {
 

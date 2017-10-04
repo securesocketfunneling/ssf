@@ -2,7 +2,10 @@
 
 SSFFixtureTest::SSFFixtureTest() : success_(false), stopped_(false) {}
 
-void SSFFixtureTest::SetUp() { StartAsyncEngine(); }
+void SSFFixtureTest::SetUp() {
+  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogDebug);
+  StartAsyncEngine();
+}
 
 void SSFFixtureTest::TearDown() { StopAsyncEngine(); }
 
@@ -17,7 +20,7 @@ void SSFFixtureTest::StopAsyncEngine() { async_engine_.Stop(); }
 void SSFFixtureTest::StartClient(const std::string& server_port,
                                  ClientCallback callback,
                                  boost::system::error_code& ec) {
-  std::vector<BaseUserServicePtr> client_options;
+  std::vector<UserServicePtr> client_options;
 
   ssf::config::Config ssf_config;
 
@@ -26,17 +29,28 @@ void SSFFixtureTest::StartClient(const std::string& server_port,
   auto endpoint_query = NetworkProtocol::GenerateClientQuery(
       "127.0.0.1", server_port, ssf_config, {});
 
-  p_ssf_client_.reset(
-      new Client(client_options, ssf_config.services(), callback));
+  auto on_user_service_status =
+      [](UserServicePtr p_user_service, const boost::system::error_code& ec) {};
+  p_ssf_client_.reset(new Client());
+  p_ssf_client_->Init(endpoint_query, 1, 0, false, {}, ssf_config.services(),
+                      callback, on_user_service_status, ec);
+  if (ec) {
+    return;
+  }
 
-  p_ssf_client_->Run(endpoint_query, ec);
+  p_ssf_client_->Run(ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "Could not run client";
+    return;
+  }
 }
 
 void SSFFixtureTest::StopClient() {
   if (!p_ssf_client_.get()) {
     return;
   }
-  p_ssf_client_->Stop();
+  boost::system::error_code stop_ec;
+  p_ssf_client_->Stop(stop_ec);
 }
 
 void SSFFixtureTest::StartServer(const std::string& addr,

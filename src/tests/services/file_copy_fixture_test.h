@@ -20,37 +20,37 @@
 
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-#include "services/initialisation.h"
 #include "services/user_services/copy_file_service.h"
+#include "services/user_services/parameters.h"
 
 using NetworkProtocol = ssf::network::NetworkProtocol;
 
 class FileCopyTestFixture : public ::testing::Test {
  public:
-  using Client =
-      ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+  using Client = ssf::Client;
   using Server =
       ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
-  using demux = Client::Demux;
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
+  using Demux = Client::Demux;
+  using UserServicePtr =
+      ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
+  using CopyFileService = ssf::services::CopyFileService<Demux>;
 
  protected:
   FileCopyTestFixture();
 
   virtual ~FileCopyTestFixture();
 
+  void StartClient(const std::string& server_port);
   void StartServer(const std::string& server_port);
   bool Wait();
   bool WaitClose();
   void StopServerThreads();
   void StopClientThreads();
-  void SSFClientCallback(ssf::services::initialisation::type type,
-                         BaseUserServicePtr p_user_service,
-                         const boost::system::error_code& ec);
+  void OnClientStatus(ssf::Status status);
+  void OnClientUserServiceStatus(UserServicePtr p_user_service,
+                                 const boost::system::error_code& ec);
 
   void SetUp() override;
-  void StartClient(const std::string& server_port);
   void TearDown() override;
 
   virtual std::string GetOutputPattern() const;

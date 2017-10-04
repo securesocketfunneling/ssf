@@ -99,7 +99,8 @@ class FiberToFile : public BaseService<Demux> {
   // Create a session to transmit files for the new connection
   void StartDataForwarderSessionHandler(const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogInfo) << "microservice[fiber to file]: fail accept fiber";
+      SSF_LOG(kLogInfo) << "microservice[fiber to file]: accept fiber failed "
+                        << ec.message();
       return;
     }
 

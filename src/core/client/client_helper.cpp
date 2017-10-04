@@ -5,6 +5,7 @@ namespace ssf {
 NetworkProtocol::Query GenerateNetworkQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config) {
+  // put remote_addr and remote_port as last node in the circuit
   std::string first_node_addr;
   std::string first_node_port;
   ssf::config::NodeList nodes = ssf_config.circuit().nodes();

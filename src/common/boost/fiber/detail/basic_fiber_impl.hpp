@@ -191,8 +191,10 @@ class basic_fiber_impl
       this->set_opened();
 
       this->init_connect_in_out();
-
       this->connect_user_handler(ec);
+
+      // reset connect handler
+      this->connect_user_handler = [](const boost::system::error_code&) {};
     };
 
     receive_handler =

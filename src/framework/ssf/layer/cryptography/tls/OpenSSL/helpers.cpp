@@ -89,8 +89,7 @@ ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
   bool success = true;
 
   if (!SetCtxCipher(ctx, parameters, ec)) {
-    SSF_LOG(kLogError) << "network[crypto]: set context cipher suite failed: "
-                       << ec.message();
+    SSF_LOG(kLogError) << "network[crypto]: set context cipher suite failed";
     success = false;
   }
   if (!SetCtxCa(ctx, parameters, ec)) {

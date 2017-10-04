@@ -28,14 +28,38 @@ class CopyFileService : public BaseUserService<Demux> {
   using CopyFileServicePtr = std::shared_ptr<CopyFileService>;
 
  public:
-  // Create user service from parameters (factory method)
-  static std::shared_ptr<CopyFileService> CreateServiceFromParams(
+  static std::string GetParseName() { return "copy_file"; }
+
+  static UserServiceParameterBag CreateUserServiceParameters(
       bool from_stdin, bool from_local_to_remote,
       const std::string& input_pattern, const std::string& output_pattern,
       boost::system::error_code& ec) {
-    ec.assign(::error::success, ::error::get_ssf_category());
+    return {{"from_stdin", from_stdin ? "true" : "false"},
+            {"from_local_to_remote", from_local_to_remote ? "true" : "false"},
+            {"input_pattern", input_pattern},
+            {"output_pattern", output_pattern}};
+  }
+
+  static std::shared_ptr<CopyFileService> CreateUserService(
+      const UserServiceParameterBag& params, boost::system::error_code& ec) {
+    if (params.count("from_stdin") == 0 ||
+        params.count("from_local_to_remote") == 0 ||
+        params.count("input_pattern") == 0 ||
+        params.count("output_pattern") == 0) {
+      SSF_LOG(kLogError) << "user_service " << GetParseName()
+                         << ": missing parameters";
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return std::shared_ptr<CopyFileService>(nullptr);
+    }
+
+    bool from_stdin = params.at("from_stdin") == "true";
+    bool from_local_to_remote = params.at("from_local_to_remote") == "true";
+    std::string input_pattern;
+    std::string output_pattern;
+
     return CopyFileServicePtr(new CopyFileService(
-        from_stdin, from_local_to_remote, input_pattern, output_pattern));
+        from_stdin, from_local_to_remote, params.at("input_pattern"),
+        params.at("output_pattern")));
   }
 
   virtual std::string GetName() { return "copy_file"; }

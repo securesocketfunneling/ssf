@@ -19,12 +19,29 @@ TEST_F(SSFFixtureTest, ConnectToUnknownHost) {
   };
   StartTimer(std::chrono::seconds(5), timer_callback, timer_ec);
 
-  auto client_callback = [this](ssf::services::initialisation::type type,
-                                BaseUserServicePtr p_user_service,
-                                const boost::system::error_code& ec) {
-    EXPECT_EQ(ssf::services::initialisation::NETWORK, type);
-    EXPECT_NE(0, ec.value());
-    SendNotification(ec.value() != 0);
+  auto client_callback = [this](ssf::Status status) {
+    switch(status) {
+      case ssf::Status::kEndpointNotResolvable:
+      case ssf::Status::kServerUnreachable:
+        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SendNotification(true);
+        break;
+      case ssf::Status::kServerNotSupported:
+        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SendNotification(false);
+        break;
+      case ssf::Status::kConnected:
+        SendNotification(false);
+        break;
+      case ssf::Status::kDisconnected:
+        SSF_LOG(kLogInfo) << "client: disconnected";
+        break;
+      case ssf::Status::kRunning:
+        SendNotification(false);
+        break;
+      default:
+        break;
+    }
   };
 
   boost::system::error_code run_ec;
@@ -54,16 +71,33 @@ TEST_F(SSFFixtureTest, CloseWhileConnecting) {
       SendNotification(false);
     }
   };
-  StartTimer(std::chrono::seconds(5), timer_callback, timer_ec);
+  StartTimer(std::chrono::seconds(20), timer_callback, timer_ec);
   ASSERT_EQ(0, timer_ec.value()) << "Could not start timer";
 
   // Init client
-  auto client_callback = [this](ssf::services::initialisation::type type,
-                                BaseUserServicePtr p_user_service,
-                                const boost::system::error_code& ec) {
-    EXPECT_EQ(ssf::services::initialisation::NETWORK, type);
-    EXPECT_NE(0, ec.value());
-    SendNotification(ec.value() != 0);
+  auto client_callback = [this](ssf::Status status) {
+    switch(status) {
+      case ssf::Status::kEndpointNotResolvable:
+      case ssf::Status::kServerUnreachable:
+        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SendNotification(true);
+        break;
+      case ssf::Status::kServerNotSupported:
+        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SendNotification(true);
+        break;
+      case ssf::Status::kConnected:
+        SendNotification(true);
+        break;
+      case ssf::Status::kDisconnected:
+        SSF_LOG(kLogInfo) << "client: disconnected";
+        break;
+      case ssf::Status::kRunning:
+        SendNotification(false);
+        break;
+      default:
+        break;
+    }
   };
   boost::system::error_code run_ec;
   StartClient(std::to_string(server_port), client_callback, run_ec);

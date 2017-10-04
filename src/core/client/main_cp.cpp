@@ -17,33 +17,32 @@
 #include "core/network_protocol.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-#include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
 #include "services/user_services/copy_file_service.h"
 
-using NetworkProtocol = ssf::network::NetworkProtocol;
-using Client =
-    ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
-
-using Demux = Client::Demux;
-using BaseUserServicePtr = Client::BaseUserServicePtr;
+using Demux = ssf::Client::Demux;
+using CopyFileService = ssf::services::CopyFileService<Demux>;
 
 int main(int argc, char** argv) {
-  ssf::command_line::copy::CommandLine cmd;
-
   boost::system::error_code ec;
+
+  ssf::Client client;
+
+  client.Register<CopyFileService>();
 
   ssf::config::Config ssf_config;
   ssf_config.Init();
 
+  // CLI options
+  ssf::command_line::CopyCommandLine cmd;
   cmd.Parse(argc, argv, ec);
   if (ec.value() == ::error::operation_canceled) {
     return 0;
   } else if (ec) {
-    SSF_LOG(kLogError) << "ssfcp: wrong command line arguments";
+    SSF_LOG(kLogError) << "ssfcp: invalid command line arguments";
     return 1;
   }
-
+  // read file configuration file
   ssf_config.UpdateFromFile(cmd.config_file(), ec);
   if (ec) {
     SSF_LOG(kLogError) << "ssfcp: invalid config file format";
@@ -54,27 +53,27 @@ int main(int argc, char** argv) {
     // update command line with config file argv
     cmd.Parse(ssf_config.GetArgc(), ssf_config.GetArgv().data(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "ssfcp: wrong command line arguments";
+      SSF_LOG(kLogError) << "ssfcp: invalid command line arguments";
       return 1;
     }
   }
+
+  ssf_config.services().mutable_file_copy()->set_enabled(true);
 
   ssf_config.Log();
   ssf::log::Configure(cmd.log_level());
 
   // create and initialize copy user service
-  auto p_copy_service =
-      ssf::services::CopyFileService<Demux>::CreateServiceFromParams(
-          cmd.from_stdin(), cmd.from_local_to_remote(), cmd.input_pattern(),
-          cmd.output_pattern(), ec);
-
+  ssf::UserServiceParameters copy_params = {
+      {CopyFileService::GetParseName(),
+       {CopyFileService::CreateUserServiceParameters(
+           cmd.from_stdin(), cmd.from_local_to_remote(), cmd.input_pattern(),
+           cmd.output_pattern(), ec)}}};
   if (ec) {
-    SSF_LOG(kLogError) << "ssfcp: copy service could not be created";
+    SSF_LOG(kLogError)
+        << "ssfcp: copy file service parameters could not be generated";
     return 1;
   }
-
-  std::vector<BaseUserServicePtr> user_services;
-  user_services.push_back(p_copy_service);
 
   if (!cmd.host_set()) {
     SSF_LOG(kLogError) << "ssfcp: no remote host provided";
@@ -86,79 +85,48 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::promise<bool> closed;
-
   auto endpoint_query = ssf::GenerateNetworkQuery(
       cmd.host(), std::to_string(cmd.port()), ssf_config);
 
-  std::condition_variable wait_stop_cv;
-  std::mutex mutex;
-  bool stopped = false;
-
-  auto callback = [&wait_stop_cv, &mutex, &stopped](
-      ssf::services::initialisation::type type, BaseUserServicePtr,
-      const boost::system::error_code& ec) {
-    switch (type) {
-      case ssf::services::initialisation::NETWORK: {
-        SSF_LOG(kLogInfo) << "ssfcp: connected to remote server "
-                          << (!ec ? "OK" : "NOK");
-        break;
-      }
-      case ssf::services::initialisation::CLOSE: {
-        {
-          boost::lock_guard<std::mutex> lock(mutex);
-          stopped = true;
-        }
-        wait_stop_cv.notify_all();
-        return;
-      }
-      default:
-        break;
-    }
-    if (ec) {
-      {
-        boost::lock_guard<std::mutex> lock(mutex);
-        stopped = true;
-      }
-      wait_stop_cv.notify_all();
-    }
-  };
-
   // initialize and run client
-  Client client(user_services, ssf_config.services(), callback);
+  auto on_status = [](ssf::Status) {};
+  auto on_user_service_status =
+      [](ssf::Client::UserServicePtr, const boost::system::error_code&) {};
 
-  client.Run(endpoint_query, ec);
-
+  client.Init(endpoint_query, 1, 0, true, copy_params, ssf_config.services(),
+              on_status, on_user_service_status, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "ssfcp: error happened when running client : "
-                       << ec.message();
+    SSF_LOG(kLogError) << "ssfcp: cannot init client";
     return 1;
   }
 
   SSF_LOG(kLogInfo) << "ssfcp: connecting to <" << cmd.host() << ":"
                     << cmd.port() << ">";
 
+  SSF_LOG(kLogInfo) << "ssfcp: running (Ctrl + C to stop)";
+
+  // stop client on SIGINT or SIGTERM
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
-  signal.async_wait([&wait_stop_cv, &mutex, &stopped](
-      const boost::system::error_code& ec, int signum) {
+  signal.async_wait([&client](const boost::system::error_code& ec, int signum) {
     if (ec) {
       return;
     }
-    {
-      boost::lock_guard<std::mutex> lock(mutex);
-      stopped = true;
-    }
-    wait_stop_cv.notify_all();
+    boost::system::error_code stop_ec;
+    client.Stop(stop_ec);
   });
 
-  // wait end transfer
-  SSF_LOG(kLogInfo) << "ssfcp: wait end of file transfer";
-  std::unique_lock<std::mutex> lock(mutex);
-  wait_stop_cv.wait(lock, [&stopped] { return stopped; });
-  lock.unlock();
-  signal.cancel(ec);
+  client.Run(ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "ssfcp: error happened when running client: "
+                       << ec.message();
+    return 1;
+  }
 
-  client.Stop();
+  // blocks until signal or copy ends
+  client.WaitStop(ec);
+
+  SSF_LOG(kLogInfo) << "ssfcp: stop";
+  signal.cancel(ec);
 
   return 0;
 }

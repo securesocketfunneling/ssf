@@ -17,25 +17,23 @@
 
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-#include "services/initialisation.h"
 #include "services/user_services/port_forwarding.h"
 
 using NetworkProtocol = ssf::network::NetworkProtocol;
+using Client = ssf::Client;
+using Server =
+    ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
-TEST(BouncingTests, BouncingChain) {
-  using Client =
-      ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
-  using Server =
-      ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+using Demux = Client::Demux;
+using UserServicePtr = Client::UserServicePtr;
+using PortForwardingService = ssf::services::PortForwarding<Demux>;
 
-  using demux = Client::Demux;
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
-
+TEST(CircuitTests, Basics) {
   std::promise<bool> network_set;
   std::promise<bool> transport_set;
   std::promise<bool> service_set;
 
+  ssf::Client client;
   std::list<Server> servers;
   ssf::config::NodeList node_list;
 
@@ -69,58 +67,65 @@ TEST(BouncingTests, BouncingChain) {
     node_list.emplace_front("127.0.0.1", std::to_string(initial_server_port));
   }
 
-  std::vector<BaseUserServicePtr> client_options;
   boost::system::error_code client_option_ec;
-  auto p_service = ssf::services::PortForwarding<demux>::CreateServiceOptions(
-      "5454:127.0.0.1:5354", client_option_ec);
-  client_options.push_back(p_service);
-
-  std::string error_msg;
-
-  std::string remote_addr;
-  std::string remote_port;
+  ssf::UserServiceParameters service_params = {
+      {PortForwardingService::GetParseName(),
+       {PortForwardingService::CreateUserServiceParameters(
+           "5454:127.0.0.1:5354", client_option_ec)}}};
 
   auto first_node = node_list.front();
   node_list.pop_front();
 
-  auto callback = [&network_set, &transport_set, &service_set](
-      ssf::services::initialisation::type type,
-      BaseUserServicePtr p_user_service, const boost::system::error_code& ec) {
-    if (type == ssf::services::initialisation::NETWORK) {
-      network_set.set_value(!ec);
+  auto on_client_status =
+      [&network_set, &transport_set, &service_set](ssf::Status status) {
+        switch (status) {
+          case ssf::Status::kEndpointNotResolvable:
+          case ssf::Status::kServerUnreachable:
+            SSF_LOG(kLogCritical) << "Network initialization failed";
+            network_set.set_value(false);
+            transport_set.set_value(false);
+            service_set.set_value(false);
+            break;
+          case ssf::Status::kServerNotSupported:
+            SSF_LOG(kLogCritical) << "Transport initialization failed";
+            transport_set.set_value(false);
+            service_set.set_value(false);
+            break;
+          case ssf::Status::kConnected:
+            network_set.set_value(true);
+            break;
+          case ssf::Status::kDisconnected:
+            SSF_LOG(kLogInfo) << "client: disconnected";
+            break;
+          case ssf::Status::kRunning:
+            transport_set.set_value(true);
+            break;
+          default:
+            break;
+        }
+      };
 
-      EXPECT_EQ(ec.value(), 0) << "Error on network initialisation";
-      if (ec) {
-        service_set.set_value(false);
-        transport_set.set_value(false);
-      }
-
-      return;
+  auto on_client_user_service_status = [&service_set](
+      UserServicePtr p_user_service, const boost::system::error_code& ec) {
+    if (ec) {
+      SSF_LOG(kLogCritical) << "user_service[" << p_user_service->GetName()
+                            << "]: initialization failed";
     }
-
-    if (type == ssf::services::initialisation::TRANSPORT) {
-      EXPECT_EQ(ec.value(), 0) << "Error on network initialisation";
-      transport_set.set_value(!ec);
-      if (ec) {
-        service_set.set_value(false);
-      }
-
-      return;
-    }
-
-    if (type == ssf::services::initialisation::SERVICE) {
-      EXPECT_EQ(ec.value(), 0) << "Error on network initialisation";
+    if (p_user_service->GetName() == PortForwardingService::GetParseName()) {
       service_set.set_value(!ec);
-      return;
     }
   };
 
   auto client_endpoint_query = NetworkProtocol::GenerateClientQuery(
       first_node.addr(), first_node.port(), ssf_config, node_list);
+  client.Register<PortForwardingService>();
+  client.Init(client_endpoint_query, 1, 0, false, service_params,
+              ssf_config.services(), on_client_status,
+              on_client_user_service_status, client_ec);
+  ASSERT_EQ(client_ec.value(), 0) << "Could not initialized client";
 
-  Client client(client_options, ssf_config.services(), std::move(callback));
-  client.Run(client_endpoint_query, client_ec);
-  ASSERT_EQ(client_ec.value(), 0) << "Client could not run";
+  client.Run(client_ec);
+  ASSERT_EQ(client_ec.value(), 0) << "Could not run client";
 
   auto network_future = network_set.get_future();
   auto transport_future = transport_set.get_future();
@@ -134,7 +139,7 @@ TEST(BouncingTests, BouncingChain) {
   EXPECT_TRUE(transport_future.get()) << "Transport should be set";
   EXPECT_TRUE(service_future.get()) << "Service should be set";
 
-  client.Stop();
+  client.Stop(client_ec);
   for (auto& server : servers) {
     server.Stop();
   }

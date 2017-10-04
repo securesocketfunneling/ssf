@@ -10,25 +10,30 @@
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
+#include "core/command_line/user_service_option_factory.h"
+
 namespace ssf {
 namespace command_line {
 
-class BaseCommandLine {
+class Base {
  public:
   using OptionDescription = boost::program_options::options_description;
   using PosOptionDescription =
       boost::program_options::positional_options_description;
   using VariableMap = boost::program_options::variables_map;
-  using ParsedParameters = std::map<std::string, std::vector<std::string>>;
 
  public:
-  virtual ~BaseCommandLine() {}
+  virtual ~Base() {}
 
-  ParsedParameters Parse(int argc, char* argv[], boost::system::error_code& ec);
+  UserServiceParameters Parse(int argc, char* argv[],
+                              boost::system::error_code& ec);
 
-  ParsedParameters Parse(int argc, char* argv[],
-                         const OptionDescription& services,
-                         boost::system::error_code& ec);
+  UserServiceParameters Parse(
+      int argc, char* argv[],
+      const UserServiceOptionFactory& user_service_option_factory,
+      boost::system::error_code& ec);
 
   inline std::string host() const { return host_; }
 
@@ -43,7 +48,7 @@ class BaseCommandLine {
   inline bool port_set() const { return port_set_; }
 
  protected:
-  BaseCommandLine();
+  Base();
 
   // Populate CLI with basic options
   virtual void PopulateBasicOptions(OptionDescription& basic_opts);
@@ -55,7 +60,6 @@ class BaseCommandLine {
   virtual void PopulateCommandLine(OptionDescription& command_line);
   // Parse custom options
   virtual void ParseOptions(const VariableMap& value,
-                            ParsedParameters& parsed_params,
                             boost::system::error_code& ec);
   // Return usage description for help message
   virtual std::string GetUsageDesc() = 0;
@@ -71,9 +75,9 @@ class BaseCommandLine {
 
   void ParseBasicOptions(const VariableMap& vm, boost::system::error_code& ec);
 
-  ParsedParameters DoParse(const OptionDescription& services,
-                           const VariableMap& vm,
-                           boost::system::error_code& ec);
+  UserServiceParameters DoParse(
+      const UserServiceOptionFactory& user_service_option_factory,
+      const VariableMap& vm, boost::system::error_code& ec);
 
   void set_log_level(const std::string& level);
 

@@ -1,6 +1,8 @@
 #ifndef SSF_CORE_SERVER_SERVER_IPP_
 #define SSF_CORE_SERVER_SERVER_IPP_
 
+#include <functional>
+
 #include <ssf/log/log.h>
 
 #include "common/error/error.h"
@@ -27,8 +29,7 @@ namespace ssf {
 template <class N, template <class> class T>
 SSFServer<N, T>::SSFServer(const ssf::config::Services& services_config,
                            bool relay_only)
-    : T<typename N::socket>(
-          boost::bind(&SSFServer<N, T>::DoSSFStart, this, _1, _2)),
+    : T<typename N::socket>(),
       async_engine_(),
       network_acceptor_(async_engine_.get_io_service()),
       services_config_(services_config),
@@ -131,7 +132,9 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
 
   if (!ec) {
     if (!relay_only_) {
-      this->DoSSFInitiateReceive(p_socket);
+      this->DoSSFInitiateReceive(
+          p_socket, std::bind(&SSFServer::DoSSFStart, this,
+                              std::placeholders::_1, std::placeholders::_2));
       return;
     }
   }

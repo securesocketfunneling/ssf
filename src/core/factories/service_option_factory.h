@@ -32,12 +32,13 @@ class ServiceOptionFactory {
   using ServiceParserMap = std::map<std::string, ParserDescriptor>;
 
  public:
-  static bool RegisterUserServiceParser(const std::string& index,
-                                        const std::string& full_name,
-                                        const std::string& value_name,
-                                        const std::string& description,
-                                        ServiceParserType parser) {
-    boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
+  ServiceOptionFactory() {}
+
+  bool RegisterUserServiceParser(const std::string& index,
+                                 const std::string& full_name,
+                                 const std::string& value_name,
+                                 const std::string& description,
+                                 ServiceParserType parser) {
     if (service_options_.count(index)) {
       return false;
     } else {
@@ -46,8 +47,7 @@ class ServiceOptionFactory {
     }
   }
 
-  static bool UnregisterUserServiceParser(const std::string& index) {
-    boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
+  bool UnregisterUserServiceParser(const std::string& index) {
     auto it = service_options_.find(index);
 
     if (it != std::end(service_options_)) {
@@ -58,12 +58,11 @@ class ServiceOptionFactory {
     }
   }
 
-  static boost::program_options::options_description GetOptionDescriptions() {
+  boost::program_options::options_description GetOptionDescriptions() const {
     boost::program_options::options_description desc(
         "Supported service commands");
 
-    boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
-    for (auto& option : service_options_) {
+    for (const auto& option : service_options_) {
       desc.add_options()(
           option.second.fullname.c_str(),
           boost::program_options::value<std::vector<std::string>>()->value_name(
@@ -74,10 +73,9 @@ class ServiceOptionFactory {
     return desc;
   }
 
-  static std::shared_ptr<ssf::services::BaseUserService<Demux>>
-  ParseServiceLine(const std::string& option, const std::string& parameters,
-                   boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(service_options_mutex_);
+  std::shared_ptr<ssf::services::BaseUserService<Demux>> ParseServiceLine(
+      const std::string& option, const std::string& parameters,
+      boost::system::error_code& ec) const {
     auto it = service_options_.find(option);
 
     if (it != std::end(service_options_)) {
@@ -89,16 +87,8 @@ class ServiceOptionFactory {
   }
 
  private:
-  static boost::recursive_mutex service_options_mutex_;
-  static ServiceParserMap service_options_;
+  ServiceParserMap service_options_;
 };
-
-template <typename Demux>
-boost::recursive_mutex ServiceOptionFactory<Demux>::service_options_mutex_;
-
-template <typename Demux>
-typename ServiceOptionFactory<Demux>::ServiceParserMap
-    ServiceOptionFactory<Demux>::service_options_;
 
 }  // ssf
 

@@ -354,6 +354,8 @@ class basic_buffered_tls_socket {
         [this, handler](const boost::system::error_code& ec) mutable {
           if (!ec) {
             this->p_puller_->start_pulling();
+          } else {
+            SSF_LOG(kLogError) << "network[crypto]: TLS handshake failed";
           }
           handler(ec);
         };

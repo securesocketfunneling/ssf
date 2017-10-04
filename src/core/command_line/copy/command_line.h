@@ -7,13 +7,12 @@
 
 namespace ssf {
 namespace command_line {
-namespace copy {
 
-class CommandLine : public BaseCommandLine {
+class CopyCommandLine : public Base {
  public:
-  CommandLine();
+  CopyCommandLine();
 
-  ~CommandLine();
+  ~CopyCommandLine();
 
   bool from_stdin() const;
 
@@ -29,7 +28,7 @@ class CommandLine : public BaseCommandLine {
   void PopulatePositionalOptions(PosOptionDescription& desc) override;
   void PopulateCommandLine(OptionDescription& command_line) override;
   bool IsServerCli() override;
-  void ParseOptions(const VariableMap& value, ParsedParameters& parsed_params,
+  void ParseOptions(const VariableMap& vm,
                     boost::system::error_code& ec) override;
   std::string GetUsageDesc() override;
 
@@ -51,7 +50,6 @@ class CommandLine : public BaseCommandLine {
   bool from_local_to_remote_;
 };
 
-}  // copy
 }  // command_line
 }  // ssf
 

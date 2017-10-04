@@ -49,14 +49,29 @@ TEST_F(SSFFixtureTest, buggyConnectionTest) {
   StartTimer(std::chrono::seconds(10), timer_callback, timer_ec);
   ASSERT_EQ(0, timer_ec.value()) << "Could not start timer";
 
-  auto client_callback = [this](ssf::services::initialisation::type type,
-                                BaseUserServicePtr p_user_service,
-                                const boost::system::error_code& ec) {
-    if (type != ssf::services::initialisation::NETWORK) {
-      return;
+  auto client_callback = [this](ssf::Status status) {
+    switch (status) {
+      case ssf::Status::kEndpointNotResolvable:
+      case ssf::Status::kServerUnreachable:
+        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SendNotification(false);
+        break;
+      case ssf::Status::kServerNotSupported:
+        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SendNotification(false);
+        break;
+      case ssf::Status::kConnected:
+        SendNotification(true);
+        break;
+      case ssf::Status::kDisconnected:
+        SSF_LOG(kLogInfo) << "client: disconnected";
+        break;
+      case ssf::Status::kRunning:
+        SendNotification(false);
+        break;
+      default:
+        break;
     }
-    EXPECT_EQ(0, ec.value());
-    SendNotification(ec.value() == 0);
   };
 
   boost::asio::ip::tcp::socket buggy_client(get_io_service());

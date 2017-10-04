@@ -31,27 +31,47 @@ class Services {
   Services();
   Services(const Services& services);
 
-  inline const DatagramForwarderConfig datagram_forwarder() const {
+  const DatagramForwarderConfig& datagram_forwarder() const {
     return datagram_forwarder_;
   }
 
-  inline const DatagramListenerConfig datagram_listener() const {
+  DatagramForwarderConfig* mutable_datagram_forwarder() {
+    return &datagram_forwarder_;
+  }
+
+  const DatagramListenerConfig& datagram_listener() const {
     return datagram_listener_;
   }
 
-  inline const ShellConfig& process() const { return shell_; }
+  DatagramListenerConfig* mutable_datagram_listener() {
+    return &datagram_listener_;
+  }
 
-  inline const SocksConfig& socks() const { return socks_; }
+  const ShellConfig& process() const { return shell_; }
 
-  inline const FileCopyConfig& file_copy() const { return file_copy_; }
+  ShellConfig* mutable_process() { return &shell_; }
 
-  inline const StreamForwarderConfig& stream_forwarder() const {
+  const SocksConfig& socks() const { return socks_; }
+
+  SocksConfig* mutable_socks() { return &socks_; }
+
+  const FileCopyConfig& file_copy() const { return file_copy_; }
+
+  FileCopyConfig* mutable_file_copy() { return &file_copy_; }
+
+  const StreamForwarderConfig& stream_forwarder() const {
     return stream_forwarder_;
   }
 
-  inline const StreamListenerConfig& stream_listener() const {
+  StreamForwarderConfig* mutable_stream_forwarder() {
+    return &stream_forwarder_;
+  }
+
+  const StreamListenerConfig& stream_listener() const {
     return stream_listener_;
   }
+
+  StreamListenerConfig* mutable_stream_listener() { return &stream_listener_; }
 
   void Update(const PTree& pt);
 

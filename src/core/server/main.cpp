@@ -21,7 +21,7 @@ using Server =
     ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
 
 int main(int argc, char** argv) {
-  ssf::command_line::standard::CommandLine cmd(true);
+  ssf::command_line::StandardCommandLine cmd(true);
 
   ssf::config::Config ssf_config;
   ssf_config.Init();

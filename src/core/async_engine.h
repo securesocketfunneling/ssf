@@ -2,9 +2,10 @@
 #define SSF_CORE_ASYNC_ENGINE_H_
 
 #include <memory>
+#include <thread>
+#include <vector>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/thread.hpp>
 
 namespace ssf {
 
@@ -29,7 +30,7 @@ class AsyncEngine {
  private:
   boost::asio::io_service io_service_;
   WorkerPtr p_worker_;
-  boost::thread_group threads_;
+  std::vector<std::thread> threads_;
 };
 
 }  // ssf

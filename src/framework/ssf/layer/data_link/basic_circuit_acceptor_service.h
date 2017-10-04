@@ -5,6 +5,7 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <type_traits>
 #include <utility>
 
 #include <boost/asio/io_service.hpp>
@@ -311,8 +312,8 @@ class basic_CircuitAcceptor_service
       implementation_type& impl,
       boost::asio::basic_socket<Protocol1, SocketService>& peer,
       endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
-      typename std::enable_if<boost::thread_detail::is_convertible<
-          protocol_type, Protocol1>::value>::type* = 0) {
+      typename std::enable_if<
+          std::is_convertible<protocol_type, Protocol1>::value>::type* = 0) {
     auto& next_layer_local_endpoint =
         impl.p_local_endpoint->next_layer_endpoint();
     connection_queue* p_queue = nullptr;
@@ -354,7 +355,7 @@ class basic_CircuitAcceptor_service
       async_accept(implementation_type& impl,
                    boost::asio::basic_socket<Protocol1, SocketService>& peer,
                    endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
-                   typename std::enable_if<boost::thread_detail::is_convertible<
+                   typename std::enable_if<std::is_convertible<
                        protocol_type, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
@@ -487,6 +488,10 @@ class basic_CircuitAcceptor_service
     if (ec) {
       SSF_LOG(kLogDebug) << "network[data_link]: connection not initialized ("
                          << ec.message() << ")";
+      boost::system::error_code close_ec;
+      p_next_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                              close_ec);
+      p_next_socket->close(close_ec);
       return;
     }
 
@@ -531,6 +536,10 @@ class basic_CircuitAcceptor_service
     if (ec) {
       SSF_LOG(kLogDebug) << "network[data_link]: connection not valid ("
                          << ec.message() << ")";
+      boost::system::error_code close_ec;
+      p_next_socket->shutdown(boost::asio::socket_base::shutdown_both,
+                              close_ec);
+      p_next_socket->close(close_ec);
       return;
     }
 

@@ -4,9 +4,10 @@
 
 class RemoteProcessTest
     : public ProcessFixtureTest<ssf::services::RemoteProcess> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("9081", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9081"}}}}};
   }
 };
 
@@ -50,9 +51,10 @@ class RemoteProcessWildcardTest : public RemoteProcessTest {
                              << new_config;
   }
 
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9082", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9082"}}}}};
   }
 };
 

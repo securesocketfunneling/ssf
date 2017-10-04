@@ -15,22 +15,17 @@
 
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-#include "services/initialisation.h"
 #include "services/user_services/udp_port_forwarding.h"
 
 using NetworkProtocol = ssf::network::NetworkProtocol;
 
 class SSFClientServerTest : public ::testing::Test {
  public:
-  using Client =
-      ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+  using Client = ssf::Client;
   using Server =
       ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
-
-  using demux = Client::Demux;
-
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
+  using Demux = Client::Demux;
+  using UserServicePtr = Client::UserServicePtr;
 
  public:
   SSFClientServerTest() : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
@@ -44,13 +39,14 @@ class SSFClientServerTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
-    p_ssf_client_->Stop();
+    boost::system::error_code ec;
+    p_ssf_client_->Stop(ec);
     p_ssf_server_->Stop();
   }
 
   void StartServer(const std::string& server_port) {
     ssf::config::Config ssf_config;
-    
+
     ssf_config.Init();
 
     auto endpoint_query =
@@ -62,22 +58,29 @@ class SSFClientServerTest : public ::testing::Test {
   }
 
   void StartClient(const std::string& server_port) {
-    std::vector<BaseUserServicePtr> client_options;
+    boost::system::error_code ec;
 
     ssf::config::Config ssf_config;
-    
     ssf_config.Init();
 
-    auto endpoint_query = NetworkProtocol::GenerateClientQuery(
+    auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
         "127.0.0.1", server_port, ssf_config, {});
+    auto on_user_service_status = [](UserServicePtr p_user_service,
+                                     const boost::system::error_code& ec) {};
+    p_ssf_client_.reset(new Client());
+    p_ssf_client_->Init(endpoint_query, 1, 0, false, {}, ssf_config.services(),
+                        std::bind(&SSFClientServerTest::OnClientStatus, this,
+                                  std::placeholders::_1),
+                        on_user_service_status, ec);
+    if (ec) {
+      return;
+    }
 
-    p_ssf_client_.reset(
-        new Client(client_options, ssf_config.services(),
-                   boost::bind(&SSFClientServerTest::SSFClientCallback, this,
-                               _1, _2, _3)));
-
-    boost::system::error_code run_ec;
-    p_ssf_client_->Run(endpoint_query, run_ec);
+    p_ssf_client_->Run(ec);
+    if (ec) {
+      SSF_LOG(kLogError) << "Could not run client";
+      return;
+    }
   }
 
   bool Wait() {
@@ -90,22 +93,29 @@ class SSFClientServerTest : public ::testing::Test {
     return network_set_future.get() && transport_set_future.get();
   }
 
-  void SSFClientCallback(ssf::services::initialisation::type type,
-                         BaseUserServicePtr p_user_service,
-                         const boost::system::error_code& ec) {
-    if (type == ssf::services::initialisation::NETWORK) {
-      network_set_.set_value(!ec);
-      if (ec) {
+  void OnClientStatus(ssf::Status status) {
+    switch (status) {
+      case ssf::Status::kEndpointNotResolvable:
+      case ssf::Status::kServerUnreachable:
+        SSF_LOG(kLogCritical) << "Network initialization failed";
+        network_set_.set_value(false);
         transport_set_.set_value(false);
-      }
-
-      return;
-    }
-
-    if (type == ssf::services::initialisation::TRANSPORT) {
-      transport_set_.set_value(!ec);
-
-      return;
+        break;
+      case ssf::Status::kServerNotSupported:
+        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        transport_set_.set_value(false);
+        break;
+      case ssf::Status::kConnected:
+        network_set_.set_value(true);
+        break;
+      case ssf::Status::kDisconnected:
+        SSF_LOG(kLogInfo) << "client: disconnected";
+        break;
+      case ssf::Status::kRunning:
+        transport_set_.set_value(true);
+        break;
+      default:
+        break;
     }
   }
 

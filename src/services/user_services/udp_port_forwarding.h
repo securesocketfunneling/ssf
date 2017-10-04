@@ -17,8 +17,6 @@
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 
-#include "core/factories/service_option_factory.h"
-
 #include "common/boost/fiber/detail/fiber_id.hpp"
 
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
@@ -46,24 +44,53 @@ class UdpPortForwarding : public BaseUserService<Demux> {
            "from server";
   }
 
-  static std::shared_ptr<UdpPortForwarding> CreateServiceOptions(
-      std::string line, boost::system::error_code& ec) {
+  static UserServiceParameterBag CreateUserServiceParameters(
+      const std::string& line, boost::system::error_code& ec) {
     auto forward_options = OptionParser::ParseForwardOptions(line, ec);
 
     if (ec) {
+      SSF_LOG(kLogError) << "user_service " << GetParseName()
+                         << ": cannot parse " << line;
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
+    }
+
+    return {{"from_addr", forward_options.from.addr},
+            {"from_port", std::to_string(forward_options.from.port)},
+            {"to_addr", forward_options.to.addr},
+            {"to_port", std::to_string(forward_options.to.port)}};
+  }
+
+  static std::shared_ptr<UdpPortForwarding> CreateUserService(
+      const UserServiceParameterBag& parameters,
+      boost::system::error_code& ec) {
+    if (parameters.count("from_addr") == 0 ||
+        parameters.count("from_port") == 0 ||
+        parameters.count("to_addr") == 0 || parameters.count("to_port") == 0) {
+      SSF_LOG(kLogError) << "user_service " << GetParseName()
+                         << ": missing parameters";
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<UdpPortForwarding>(nullptr);
     }
 
-    return std::shared_ptr<UdpPortForwarding>(new UdpPortForwarding(
-        forward_options.from.addr, forward_options.from.port,
-        forward_options.to.addr, forward_options.to.port));
-  }
-
-  static void RegisterToServiceOptionFactory() {
-    ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
-        &UdpPortForwarding::CreateServiceOptions);
+    uint16_t from_port =
+        OptionParser::ParsePort(parameters.at("from_port"), ec);
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service " << GetParseName()
+                         << ": invalid local port: "
+                         << "(" << ec.message() << ")";
+      return std::shared_ptr<UdpPortForwarding>(nullptr);
+    }
+    uint16_t to_port = OptionParser::ParsePort(parameters.at("to_port"), ec);
+    if (ec) {
+      SSF_LOG(kLogError) << "user_service " << GetParseName()
+                         << ": invalid remote port: "
+                         << "(" << ec.message() << ")";
+      return std::shared_ptr<UdpPortForwarding>(nullptr);
+    }
+    return std::shared_ptr<UdpPortForwarding>(
+        new UdpPortForwarding(parameters.at("from_addr"), from_port,
+                              parameters.at("to_addr"), to_port));
   }
 
  public:

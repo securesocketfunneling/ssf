@@ -5,6 +5,7 @@
 #include <memory>
 #include <queue>
 #include <string>
+#include <type_traits>
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/basic_stream_socket.hpp>
@@ -583,8 +584,8 @@ class basic_CryptoStreamAcceptor_service
       implementation_type& impl,
       boost::asio::basic_socket<Protocol1, SocketService>& peer,
       endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
-      typename std::enable_if<boost::thread_detail::is_convertible<
-          protocol_type, Protocol1>::value>::type* = 0) {
+      typename std::enable_if<
+          std::is_convertible<protocol_type, Protocol1>::value>::type* = 0) {
     auto p_acceptor_context = impl.p_acceptor_context;
     auto& connection_queue = p_acceptor_context->connection_queue;
 
@@ -612,7 +613,7 @@ class basic_CryptoStreamAcceptor_service
       async_accept(implementation_type& impl,
                    boost::asio::basic_socket<Protocol1, SocketService>& peer,
                    endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
-                   typename std::enable_if<boost::thread_detail::is_convertible<
+                   typename std::enable_if<std::is_convertible<
                        protocol_type, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>

@@ -12,14 +12,14 @@
 
 #include <boost/system/error_code.hpp>
 #include <boost/asio/coroutine.hpp>
-#include <boost/asio.hpp>  // NOLINT
+#include <boost/asio.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include <ssf/network/manager.h>
 
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
-#include "services/initialisation.h"
 #include "services/base_service.h"
 
 #include "services/admin/requests/create_service_request.h"
@@ -41,8 +41,7 @@ class Admin : public BaseService<Demux> {
   using BaseUserServicePtr =
       typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
   using AdminCallbackType =
-      std::function<void(ssf::services::initialisation::type,
-                         BaseUserServicePtr, const boost::system::error_code&)>;
+      std::function<void(BaseUserServicePtr, const boost::system::error_code&)>;
 
  private:
   using LocalPortType = typename Demux::local_port_type;
@@ -79,7 +78,8 @@ class Admin : public BaseService<Demux> {
   }
 
   void set_server();
-  void set_client(std::vector<BaseUserServicePtr>, AdminCallbackType callback);
+  void SetClient(std::vector<BaseUserServicePtr> user_services,
+                 AdminCallbackType callback);
 
   template <typename Request, typename Handler>
   void Command(Request request, Handler handler) {
@@ -175,11 +175,10 @@ class Admin : public BaseService<Demux> {
     boost::asio::async_write(fiber_, command.const_buffers(), do_handler);
   }
 
-  void Notify(ssf::services::initialisation::type type,
-              BaseUserServicePtr p_user_service, boost::system::error_code ec) {
+  void Notify(BaseUserServicePtr p_user_service, boost::system::error_code ec) {
     if (callback_) {
-      this->get_io_service().post(boost::bind(callback_, std::move(type),
-                                              p_user_service, std::move(ec)));
+      this->get_io_service().post(
+          boost::bind(callback_, p_user_service, std::move(ec)));
     }
   }
 
@@ -210,7 +209,7 @@ class Admin : public BaseService<Demux> {
   uint32_t reserved_keep_alive_id_;
   uint32_t reserved_keep_alive_size_;
   std::string reserved_keep_alive_parameters_;
-  boost::asio::deadline_timer reserved_keep_alive_timer_;
+  boost::asio::steady_timer reserved_keep_alive_timer_;
 
   // List of user services
   std::vector<BaseUserServicePtr> user_services_;

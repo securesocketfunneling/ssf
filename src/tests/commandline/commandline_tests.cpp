@@ -8,7 +8,7 @@
 #include "core/command_line/copy/command_line.h"
 
 TEST(StandardCommandLineTests, ServerTest) {
-  ssf::command_line::standard::CommandLine cmd(true);
+  ssf::command_line::StandardCommandLine cmd(true);
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -44,7 +44,7 @@ TEST(StandardCommandLineTests, ServerTest) {
 }
 
 TEST(StandardCommandLineTests, ClientTest) {
-  ssf::command_line::standard::CommandLine cmd(false);
+  ssf::command_line::StandardCommandLine cmd(false);
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -80,7 +80,7 @@ TEST(StandardCommandLineTests, ClientTest) {
 }
 
 TEST(CopyCommandLineTests, FromStdinToServerTest) {
-  ssf::command_line::copy::CommandLine cmd;
+  ssf::command_line::CopyCommandLine cmd;
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -112,7 +112,7 @@ TEST(CopyCommandLineTests, FromStdinToServerTest) {
 }
 
 TEST(CopyCommandLineTests, ClientToServerTest) {
-  ssf::command_line::copy::CommandLine cmd;
+  ssf::command_line::CopyCommandLine cmd;
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -145,7 +145,7 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
 }
 
 TEST(CopyCommandLineTests, ServerToClientTest) {
-  ssf::command_line::copy::CommandLine cmd;
+  ssf::command_line::CopyCommandLine cmd;
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ(cmd.host(), "");

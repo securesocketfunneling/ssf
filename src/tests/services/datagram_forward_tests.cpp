@@ -4,9 +4,13 @@
 
 class UdpForwardTest
     : public DatagramFixtureTest<ssf::services::UdpPortForwarding> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("8484:127.0.0.1:8585", ec);
+    return {{ServiceTested::GetParseName(),
+             {{{"from_addr", ""},
+               {"from_port", "8484"},
+               {"to_addr", "127.0.0.1"},
+               {"to_port", "8585"}}}}};
   }
 };
 
@@ -51,13 +55,17 @@ class UdpForwardWildcardTest : public UdpForwardTest {
                              << new_config;
   }
 
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":8686:127.0.0.1:8787", ec);
+    return {{ServiceTested::GetParseName(),
+             {{{"from_addr", "*"},
+               {"from_port", "8686"},
+               {"to_addr", "127.0.0.1"},
+               {"to_port", "8787"}}}}};
   }
 };
 
-TEST_F(UdpForwardWildcardTest, transferOnesOverStream) {
+TEST_F(UdpForwardWildcardTest, transferOnesOverUdp) {
   ASSERT_TRUE(Wait());
 
   Run("8686", "8787");

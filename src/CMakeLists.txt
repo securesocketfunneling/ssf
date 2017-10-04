@@ -27,6 +27,7 @@ FILE(GLOB_RECURSE COMMON_NETWORK_FILES
 set(CORE_COMMAND_LINE_BASE_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/base.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/base.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/user_service_option_factory.h"
 )
 
 FILE(GLOB CORE_COMMAND_LINE_STANDARD_FILES
@@ -126,6 +127,10 @@ FILE(GLOB_RECURSE CLIENT_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/core/client/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/client/*.ipp")
 
+LIST(APPEND CLIENT_FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/client/client.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/client/client_helper.cpp")
+
 FILE(GLOB_RECURSE SERVER_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/core/server/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/server/*.ipp")
@@ -192,6 +197,18 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(framework)
 add_subdirectory(core)
 add_subdirectory(compat)
+
+add_target(lib_ssf_framework
+  TYPE
+    LIBRARY ${EXEC_FLAG} STATIC
+  FILES
+    ${SSF_SOURCES}
+  LINKS
+    ${Boost_LIBRARIES}
+    ${OpenSSL_LIBRARIES}
+    ${PLATFORM_SPECIFIC_LIB_DEP}
+    lib_ssf_network
+)
 
 if (BUILD_UNIT_TESTS)
   add_subdirectory(tests)

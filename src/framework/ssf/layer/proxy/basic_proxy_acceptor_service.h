@@ -5,6 +5,7 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <type_traits>
 #include <utility>
 
 #include <boost/asio/async_result.hpp>
@@ -174,7 +175,7 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
       implementation_type& impl,
       boost::asio::basic_socket<Protocol1, SocketService>& peer,
       endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
-      typename std::enable_if<boost::thread_detail::is_convertible<
+      typename std::enable_if<std::is_convertible<
           protocol_type, Protocol1>::value>::type* = 0) {    
     if (!impl.p_next_layer_acceptor) {
       ec.assign(ssf::error::bad_file_descriptor,
@@ -209,7 +210,7 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
       async_accept(implementation_type& impl,
                    boost::asio::basic_socket<Protocol1, SocketService>& peer,
                    endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
-                   typename std::enable_if<boost::thread_detail::is_convertible<
+                   typename std::enable_if<std::is_convertible<
                        protocol_type, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>

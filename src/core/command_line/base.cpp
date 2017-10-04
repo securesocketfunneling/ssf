@@ -1,3 +1,5 @@
+#include "core/command_line/base.h"
+
 #include <iostream>
 #include <stdexcept>
 
@@ -7,28 +9,29 @@
 
 #include "common/error/error.h"
 
-#include "core/command_line/base.h"
+#include "core/command_line/user_service_option_factory.h"
 
 #include "versions.h"
 
 namespace ssf {
 namespace command_line {
 
-BaseCommandLine::BaseCommandLine()
+Base::Base()
     : host_(""),
       port_(0),
       config_file_(""),
       log_level_(ssf::log::kLogInfo),
       port_set_(false) {}
 
-BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
-    int argc, char* argv[], boost::system::error_code& ec) {
-  OptionDescription services;
-  return Parse(argc, argv, services, ec);
+UserServiceParameters Base::Parse(int argc, char* argv[],
+                                  boost::system::error_code& ec) {
+  UserServiceOptionFactory user_service_option_factory;
+  return Parse(argc, argv, user_service_option_factory, ec);
 }
 
-BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
-    int argc, char* argv[], const OptionDescription& services,
+UserServiceParameters Base::Parse(
+    int argc, char* argv[],
+    const UserServiceOptionFactory& user_service_option_factory,
     boost::system::error_code& ec) {
   // Set executable name
   if (argc > 0) {
@@ -58,7 +61,7 @@ BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
     PosOptionDescription pos_opts;
     PopulatePositionalOptions(pos_opts);
 
-    cmd_line.add(services);
+    cmd_line.add(user_service_option_factory.GetOptions());
 
     VariableMap vm;
     boost::program_options::store(
@@ -75,31 +78,28 @@ BaseCommandLine::ParsedParameters BaseCommandLine::Parse(
 
     boost::program_options::notify(vm);
 
-    return DoParse(services, vm, ec);
+    return DoParse(user_service_option_factory, vm, ec);
   } catch (const std::exception& e) {
     SSF_LOG(kLogCritical) << "command line: parsing failed: " << e.what();
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-    return std::map<std::string, std::vector<std::string>>();
+    return {};
   }
 }
 
-void BaseCommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
+void Base::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
-void BaseCommandLine::PopulateLocalOptions(OptionDescription& local_opts) {}
+void Base::PopulateLocalOptions(OptionDescription& local_opts) {}
 
-void BaseCommandLine::PopulatePositionalOptions(
-    PosOptionDescription& pos_opts) {}
+void Base::PopulatePositionalOptions(PosOptionDescription& pos_opts) {}
 
-void BaseCommandLine::PopulateCommandLine(OptionDescription& command_line) {}
+void Base::PopulateCommandLine(OptionDescription& command_line) {}
 
-void BaseCommandLine::ParseOptions(const VariableMap& value,
-                                   ParsedParameters& parsed_params,
-                                   boost::system::error_code& ec) {}
+void Base::ParseOptions(const VariableMap& value,
+                        boost::system::error_code& ec) {}
 
-bool BaseCommandLine::IsServerCli() { return false; }
+bool Base::IsServerCli() { return false; }
 
-bool BaseCommandLine::DisplayHelp(const VariableMap& vm,
-                                  const OptionDescription& cli) {
+bool Base::DisplayHelp(const VariableMap& vm, const OptionDescription& cli) {
   if (!vm.count("help")) {
     return false;
   }
@@ -119,8 +119,8 @@ bool BaseCommandLine::DisplayHelp(const VariableMap& vm,
   return true;
 }
 
-void BaseCommandLine::ParseBasicOptions(const VariableMap& vm,
-                                        boost::system::error_code& ec) {
+void Base::ParseBasicOptions(const VariableMap& vm,
+                             boost::system::error_code& ec) {
   log_level_ = ssf::log::kLogInfo;
   port_ = 0;
   port_set_ = false;
@@ -148,25 +148,35 @@ void BaseCommandLine::ParseBasicOptions(const VariableMap& vm,
   }
 }
 
-BaseCommandLine::ParsedParameters BaseCommandLine::DoParse(
-    const OptionDescription& services, const VariableMap& vm,
-    boost::system::error_code& ec) {
-  ParsedParameters result;
+UserServiceParameters Base::DoParse(
+    const UserServiceOptionFactory& user_service_option_factory,
+    const VariableMap& vm, boost::system::error_code& ec) {
+  UserServiceParameters result;
 
   ParseBasicOptions(vm, ec);
   if (ec) {
     return {};
   }
 
-  ParseOptions(vm, result, ec);
+  ParseOptions(vm, ec);
   if (ec) {
     return {};
   }
 
   for (const auto& option : vm) {
-    if (services.find_nothrow(option.first, false) != nullptr) {
-      // Register service options
-      result[option.first] = option.second.as<std::vector<std::string>>();
+    if (!user_service_option_factory.HasService(option.first)) {
+      continue;
+    }
+
+    auto service_options = option.second.as<std::vector<std::string>>();
+    for (const auto& service_option : service_options) {
+      auto service_params =
+          user_service_option_factory.CreateUserServiceParameters(
+              option.first, service_option, ec);
+      if (ec) {
+        return {};
+      }
+      result[option.first].emplace_back(service_params);
     }
   }
 
@@ -175,7 +185,7 @@ BaseCommandLine::ParsedParameters BaseCommandLine::DoParse(
   return result;
 }
 
-void BaseCommandLine::InitBasicOptions(OptionDescription& basic_opts) {
+void Base::InitBasicOptions(OptionDescription& basic_opts) {
   // clang-format off
   basic_opts.add_options()
     ("help,h", "Produce help message");
@@ -192,7 +202,7 @@ void BaseCommandLine::InitBasicOptions(OptionDescription& basic_opts) {
   // clang-format on
 }
 
-void BaseCommandLine::InitLocalOptions(OptionDescription& local_opts) {
+void Base::InitLocalOptions(OptionDescription& local_opts) {
   // clang-format off
   local_opts.add_options()
     ("config,c",
@@ -217,7 +227,7 @@ void BaseCommandLine::InitLocalOptions(OptionDescription& local_opts) {
   // clang-format on
 }
 
-void BaseCommandLine::set_log_level(const std::string& level) {
+void Base::set_log_level(const std::string& level) {
   if (log_level_ == ssf::log::kLogNone) {
     // Quiet set
     return;
