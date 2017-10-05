@@ -23,8 +23,8 @@ DummyServer::DummyServer(const std::string& listening_addr,
 }
 
 void DummyServer::Run() {
-  for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads_.create_thread([&]() { io_service_.run(); });
+  for (uint8_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads_.emplace_back([&]() { io_service_.run(); });
   }
 
   boost::asio::ip::tcp::resolver r(io_service_);
@@ -55,15 +55,19 @@ void DummyServer::Stop() {
 
   p_worker_.reset();
 
-  threads_.join_all();
+  for (auto& thread : threads_) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
   io_service_.stop();
 }
 
 void DummyServer::DoAccept() {
   auto p_socket = std::make_shared<boost::asio::ip::tcp::socket>(io_service_);
   sockets_.insert(p_socket);
-  acceptor_.async_accept(*p_socket, boost::bind(&DummyServer::HandleAccept,
-                                                this, p_socket, _1));
+  acceptor_.async_accept(
+      *p_socket, boost::bind(&DummyServer::HandleAccept, this, p_socket, _1));
 }
 
 void DummyServer::HandleAccept(
@@ -71,10 +75,9 @@ void DummyServer::HandleAccept(
     const boost::system::error_code& ec) {
   if (!ec) {
     auto p_size = std::make_shared<std::size_t>(0);
-    boost::asio::async_read(*p_socket,
-                            boost::asio::buffer(p_size.get(), sizeof(*p_size)),
-                            boost::bind(&DummyServer::DoSendOnes, this,
-                                        p_socket, p_size, _1, _2));
+    boost::asio::async_read(
+        *p_socket, boost::asio::buffer(p_size.get(), sizeof(*p_size)),
+        boost::bind(&DummyServer::DoSendOnes, this, p_socket, p_size, _1, _2));
     DoAccept();
   } else {
     p_socket->close();
@@ -86,9 +89,9 @@ void DummyServer::DoSendOnes(
     std::shared_ptr<std::size_t> p_size, const boost::system::error_code& ec,
     size_t length) {
   if (!ec) {
-    p_socket->async_send(boost::asio::buffer(one_buffer_, *p_size),
-                         boost::bind(&DummyServer::HandleSend, this,
-                                     p_socket, p_size, _1, _2));
+    p_socket->async_send(
+        boost::asio::buffer(one_buffer_, *p_size),
+        boost::bind(&DummyServer::HandleSend, this, p_socket, p_size, _1, _2));
   }
 
   return;
@@ -112,7 +115,7 @@ void DummyServer::HandleSend(
 }
 
 DummyClient::DummyClient(const std::string& target_addr,
-                               const std::string& target_port, size_t size)
+                         const std::string& target_port, size_t size)
     : io_service_(),
       p_worker_(new boost::asio::io_service::work(io_service_)),
       socket_(io_service_),
@@ -121,7 +124,7 @@ DummyClient::DummyClient(const std::string& target_addr,
       size_(size) {}
 
 bool DummyClient::Run() {
-  t_ = boost::thread([&]() { io_service_.run(); });
+  t_ = std::thread([&]() { io_service_.run(); });
 
   boost::asio::ip::tcp::resolver r(io_service_);
   boost::asio::ip::tcp::resolver::query q(target_addr_, target_port_);
@@ -169,7 +172,9 @@ void DummyClient::Stop() {
 
   p_worker_.reset();
 
-  t_.join();
+  if (t_.joinable()) {
+    t_.join();
+  }
   io_service_.stop();
 }
 

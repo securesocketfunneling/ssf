@@ -1,21 +1,23 @@
-#include <vector>
-#include <functional>
 #include <array>
+#include <functional>
 #include <future>
 #include <list>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
 
 #include "common/config/config.h"
 
-#include "core/network_protocol.h"
 #include "core/client/client.h"
+#include "core/network_protocol.h"
 #include "core/server/server.h"
 
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
 #include "services/user_services/udp_port_forwarding.h"
+
+#include "tests/tls_config_helper.h"
 
 using NetworkProtocol = ssf::network::NetworkProtocol;
 
@@ -111,8 +113,10 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
 
   ssf::config::Config client_config;
   client_config.Init();
+  ssf::tests::SetClientTlsConfig(&client_config);
   ssf::config::Config server_config;
   server_config.Init();
+  ssf::tests::SetServerTlsConfig(&server_config);
   boost::system::error_code ec;
 
   const char* new_config = R"RAWSTRING(
@@ -172,8 +176,10 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
 
   ssf::config::Config client_config;
   client_config.Init();
+  ssf::tests::SetClientTlsConfig(&client_config);
   ssf::config::Config server_config;
   server_config.Init();
+  ssf::tests::SetServerTlsConfig(&server_config);
   boost::system::error_code ec;
   const char* new_client_config = R"RAWSTRING(
 {

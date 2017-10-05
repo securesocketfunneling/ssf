@@ -1,12 +1,16 @@
 enable_testing()
 
-include_directories(
-  ${OpenSSL_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS})
-
-include_directories(
-  ${GTEST_ROOT_DIR}/include
+add_target(tls_config_helper
+  TYPE LIBRARY ${EXEC_FLAG}
+  FILES
+    tls_config_helper.h
+    tls_config_helper.cpp
+  LINKS
+    lib_ssf_framework
+    test_certs
 )
+
+project_group("Unit Tests" tls_config_helper)
 
 add_subdirectory(commandline)
 add_subdirectory(config)

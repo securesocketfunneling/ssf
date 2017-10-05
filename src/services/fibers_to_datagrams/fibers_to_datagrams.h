@@ -10,14 +10,13 @@
 #include "common/boost/fiber/datagram_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
-#include "common/network/datagram_link.h"
-#include "common/network/datagram_link_operator.h"
-
 #include "services/base_service.h"
 
 #include "core/factories/service_factory.h"
 
 #include "services/admin/requests/create_service_request.h"
+#include "services/datagram/datagram_link.h"
+#include "services/datagram/datagram_link_operator.h"
 #include "services/fibers_to_datagrams/config.h"
 
 namespace ssf {

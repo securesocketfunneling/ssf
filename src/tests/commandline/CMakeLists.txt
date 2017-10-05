@@ -1,5 +1,3 @@
-set(commandline_tests_group_name "Unit Tests/CommandLine")
-
 # --- Command line tests
 
 add_target(commandline_tests
@@ -14,4 +12,4 @@ add_target(commandline_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${commandline_tests_group_name} commandline_tests)
+project_group("Unit Tests/CommandLine" commandline_tests)

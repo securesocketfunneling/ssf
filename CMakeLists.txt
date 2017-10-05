@@ -16,7 +16,7 @@ message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 # --- Options
 option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
-option(BUILD_FRAMEWORK_UNIT_TESTS "Build SSF framework unit tests" OFF)
+option(BUILD_NETWORK_UNIT_TESTS "Build SSF network layers unit tests" OFF)
 option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
 option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
 
@@ -78,6 +78,7 @@ add_subdirectory(certs)
 if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
   enable_testing()
   add_subdirectory(third_party/googletest/googletest)
+  project_group("Unit Tests" gtest gtest_main)
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
 # -- Images

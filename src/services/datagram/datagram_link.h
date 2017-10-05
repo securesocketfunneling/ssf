@@ -1,5 +1,5 @@
-#ifndef SSF_COMMON_NETWORK_DATAGRAM_LINK_H_
-#define SSF_COMMON_NETWORK_DATAGRAM_LINK_H_
+#ifndef SSF_SERVICES_DATAGRAM_DATAGRAM_LINK_H_
+#define SSF_SERVICES_DATAGRAM_DATAGRAM_LINK_H_
 
 #include <memory>
 
@@ -14,7 +14,7 @@
 
 #include <boost/asio/deadline_timer.hpp>
 
-#include "common/network/datagram_link_operator.h"
+#include "services/datagram/datagram_link_operator.h"
 
 namespace ssf {
 //-----------------------------------------------------------------------------
@@ -204,4 +204,4 @@ struct DatagramLink : public std::enable_shared_from_this<
 
 }  // ssf
 
-#endif  // SSF_COMMON_NETWORK_DATAGRAM_LINK_H_
+#endif  // SSF_SERVICES_DATAGRAM_DATAGRAM_LINK_H_

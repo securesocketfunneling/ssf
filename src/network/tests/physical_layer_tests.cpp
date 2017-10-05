@@ -76,7 +76,7 @@ TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
 //
 //  ssf::layer::ParameterStack acceptor_parameters;
 //  acceptor_parameters.push_back(
-//      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+//      tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
 //  acceptor_parameters.push_back(tcp_server_parameters);
 //
 //  ssf::layer::ParameterStack client_parameters;
@@ -89,7 +89,7 @@ TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
 //  client_error_tcp_parameters["port"] = "9001";
 //  ssf::layer::ParameterStack client_error_parameters;
 //  client_error_parameters.push_back(
-//      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+//      tests::virtual_network_helpers::GetClientTLSParametersAsBuffer());
 //  client_error_parameters.push_back(client_error_tcp_parameters);
 //
 //  ssf::layer::ParameterStack client_wrong_number_parameters;
@@ -116,10 +116,12 @@ TEST(PhysicalLayerTest, EmptyStreamProtocolStackOverTCPTest) {
 //  TestEndpointResolverError<TLSStackProtocol>(client_wrong_number_parameters);
 //
 //  PerfTestStreamProtocolHalfDuplex<TLSStackProtocol>(client_parameters,
-//                                                     acceptor_parameters, 200);
+//                                                     acceptor_parameters,
+//                                                     200);
 //
 //  PerfTestStreamProtocolFullDuplex<TLSStackProtocol>(client_parameters,
-//                                                     acceptor_parameters, 200);
+//                                                     acceptor_parameters,
+//                                                     200);
 //}
 
 TEST(PhysicalLayerTest, TLSLayerProtocolBufferStackOverTCPTest) {
@@ -132,7 +134,7 @@ TEST(PhysicalLayerTest, TLSLayerProtocolBufferStackOverTCPTest) {
 
   ssf::layer::ParameterStack client_parameters;
   client_parameters.push_back(
-      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+      tests::virtual_network_helpers::GetClientTLSParametersAsBuffer());
   client_parameters.push_back(tcp_client_parameters);
 
   ssf::layer::LayerParameters client_error_tcp_parameters;
@@ -140,7 +142,7 @@ TEST(PhysicalLayerTest, TLSLayerProtocolBufferStackOverTCPTest) {
   client_error_tcp_parameters["port"] = "9001";
   ssf::layer::ParameterStack client_error_parameters;
   client_error_parameters.push_back(
-      tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+      tests::virtual_network_helpers::GetClientTLSParametersAsBuffer());
   client_error_parameters.push_back(client_error_tcp_parameters);
 
   ssf::layer::ParameterStack client_wrong_number_parameters;

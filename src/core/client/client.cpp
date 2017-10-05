@@ -6,8 +6,8 @@
 
 #include "services/admin/admin.h"
 #include "services/admin/requests/create_service_request.h"
-#include "services/admin/requests/stop_service_request.h"
 #include "services/admin/requests/service_status.h"
+#include "services/admin/requests/stop_service_request.h"
 
 #include "services/copy_file/fiber_to_file/fiber_to_file.h"
 #include "services/copy_file/file_enquirer/file_enquirer.h"
@@ -202,7 +202,7 @@ void Client::RunSession(const boost::system::error_code& ec) {
 
 void Client::OnSessionStatus(Status status) {
   boost::system::error_code stop_ec;
-  
+
   on_status_(status);
 
   if (stopped_) {
@@ -212,16 +212,22 @@ void Client::OnSessionStatus(Status status) {
   switch (status) {
     case Status::kEndpointNotResolvable:
       SSF_LOG(kLogInfo) << "client: endpoint not resolvable";
-      session_->Stop(stop_ec);
+      if (session_) {
+        session_->Stop(stop_ec);
+      }
       break;
     case Status::kServerUnreachable:
       SSF_LOG(kLogInfo) << "client: server unreachable";
-      session_->Stop(stop_ec);
+      if (session_) {
+        session_->Stop(stop_ec);
+      }
       AsyncWaitReconnection();
       break;
     case Status::kServerNotSupported:
       SSF_LOG(kLogInfo) << "client: server not supported";
-      session_->Stop(stop_ec);
+      if (session_) {
+        session_->Stop(stop_ec);
+      }
       AsyncWaitReconnection();
       break;
     case Status::kConnected:
@@ -229,7 +235,9 @@ void Client::OnSessionStatus(Status status) {
       break;
     case Status::kDisconnected:
       SSF_LOG(kLogInfo) << "client: disconnected";
-      session_->Stop(stop_ec);
+      if (session_) {
+        session_->Stop(stop_ec);
+      }
       AsyncWaitReconnection();
       break;
     case Status::kRunning:

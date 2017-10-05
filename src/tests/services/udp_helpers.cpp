@@ -19,8 +19,8 @@ DummyServer::DummyServer(const std::string& listening_addr,
 }
 
 void DummyServer::Run() {
-  for (uint8_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads_.create_thread([&]() { io_service_.run(); });
+  for (uint8_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads_.emplace_back([&]() { io_service_.run(); });
   }
 
   boost::asio::ip::udp::resolver r(io_service_);
@@ -48,7 +48,12 @@ void DummyServer::Stop() {
 
   p_worker_.reset();
 
-  threads_.join_all();
+  for (auto& thread : threads_) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
+
   io_service_.stop();
 }
 
@@ -58,8 +63,9 @@ void DummyServer::DoReceive() {
 
   socket_.async_receive_from(
       boost::asio::buffer(&(*p_new_size_), sizeof((*p_new_size_))),
-      *p_send_endpoint_, boost::bind(&DummyServer::SizeReceivedHandler, this,
-                                     p_send_endpoint_, p_new_size_, _1, _2));
+      *p_send_endpoint_,
+      std::bind(&DummyServer::SizeReceivedHandler, this, p_send_endpoint_,
+                p_new_size_, std::placeholders::_1, std::placeholders::_2));
 }
 
 void DummyServer::SizeReceivedHandler(
@@ -68,11 +74,11 @@ void DummyServer::SizeReceivedHandler(
     size_t length) {
   if (!ec) {
     {
-      boost::recursive_mutex::scoped_lock lock(one_buffer_mutex_);
-      socket_.async_send_to(boost::asio::buffer(one_buffer_, *p_size),
-                            *p_endpoint,
-                            boost::bind(&DummyServer::OneBufferSentHandler,
-                                        this, p_endpoint, p_size, _1, _2));
+      std::unique_lock<std::recursive_mutex> lock(one_buffer_mutex_);
+      socket_.async_send_to(
+          boost::asio::buffer(one_buffer_, *p_size), *p_endpoint,
+          std::bind(&DummyServer::OneBufferSentHandler, this, p_endpoint,
+                    p_size, std::placeholders::_1, std::placeholders::_2));
     }
   }
 }
@@ -83,7 +89,7 @@ void DummyServer::OneBufferSentHandler(
     size_t length) {
   if (ec.value() == ::error::message_too_long) {
     {
-      boost::recursive_mutex::scoped_lock lock(one_buffer_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(one_buffer_mutex_);
       one_buffer_.resize(one_buffer_.size() / 2);
     }
     if (one_buffer_.size()) {
@@ -106,7 +112,7 @@ DummyClient::DummyClient(const std::string& target_addr,
       size_(size) {}
 
 bool DummyClient::Init() {
-  t_ = boost::thread([&]() { io_service_.run(); });
+  t_ = std::thread([&]() { io_service_.run(); });
 
   boost::asio::ip::udp::resolver r(io_service_);
   boost::asio::ip::udp::resolver::query q(target_addr_, target_port_);
@@ -164,7 +170,9 @@ void DummyClient::Stop() {
 
   p_worker_.reset();
 
-  t_.join();
+  if (t_.joinable()) {
+    t_.join();
+  }
   io_service_.stop();
 }
 

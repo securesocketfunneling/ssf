@@ -79,11 +79,11 @@ class CircuitTestFixture : public ::testing::Test {
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode({{"addr", "127.0.0.1"}, {"port", "8000"}});
     nodes.AddTopLayerToBackNode(
-        tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+        tests::virtual_network_helpers::GetClientTLSParametersAsBuffer());
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode({{"addr", "127.0.0.1"}, {"port", "8001"}});
     nodes.AddTopLayerToBackNode(
-        tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+        tests::virtual_network_helpers::GetClientTLSParametersAsBuffer());
 
     return nodes;
   }
@@ -93,7 +93,7 @@ class CircuitTestFixture : public ::testing::Test {
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode({{"addr", "127.0.0.1"}, {"port", "8000"}});
     nodes.AddTopLayerToBackNode(
-        tests::virtual_network_helpers::GetClientTLSParametersAsFile());
+        tests::virtual_network_helpers::GetClientTLSParametersAsBuffer());
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode({{"addr", "127.0.0.1"}, {"port", "8001"}});
     nodes.AddTopLayerToBackNode(
@@ -122,10 +122,10 @@ class CircuitTestFixture : public ::testing::Test {
     ssf::layer::ParameterStack hop1_next_layers_parameters;
     hop1_next_layers_parameters.push_front(hop1_physical_parameters);
     hop1_next_layers_parameters.push_front(
-        tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+        tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
 
     ssf::layer::ParameterStack default_parameters = {
-        {}, tests::virtual_network_helpers::GetServerTLSParametersAsFile(), {}};
+        {}, tests::virtual_network_helpers::GetServerTLSParametersAsBuffer(), {}};
 
     ssf::layer::ParameterStack hop1_parameters(
         ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(
@@ -144,7 +144,7 @@ class CircuitTestFixture : public ::testing::Test {
     ssf::layer::ParameterStack hop2_next_layers_parameters;
     hop2_next_layers_parameters.push_front(hop2_physical_parameters);
     hop2_next_layers_parameters.push_front(
-        tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+        tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
 
     ssf::layer::ParameterStack hop2_parameters(
         ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(

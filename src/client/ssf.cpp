@@ -1,6 +1,3 @@
-#include <condition_variable>
-#include <mutex>
-
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>

@@ -18,6 +18,8 @@
 #include "core/server/server.h"
 #include "services/user_services/parameters.h"
 
+#include "tests/tls_config_helper.h"
+
 template <template <typename> class TServiceTested>
 class ServiceFixtureTest : public ::testing::Test {
  public:
@@ -77,6 +79,7 @@ class ServiceFixtureTest : public ::testing::Test {
   bool StartServer(const std::string& host_addr, const std::string& host_port) {
     ssf::config::Config ssf_config;
     ssf_config.Init();
+    ssf::tests::SetServerTlsConfig(&ssf_config);
 
     SetServerConfig(ssf_config);
     auto endpoint_query =
@@ -100,6 +103,8 @@ class ServiceFixtureTest : public ::testing::Test {
 
     ssf::config::Config ssf_config;
     ssf_config.Init();
+    ssf::tests::SetClientTlsConfig(&ssf_config);
+
     SetClientConfig(ssf_config);
 
     auto endpoint_query = NetworkProtocol::GenerateClientQuery(

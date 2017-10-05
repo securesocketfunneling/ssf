@@ -17,6 +17,8 @@
 
 #include "services/user_services/udp_port_forwarding.h"
 
+#include "tests/tls_config_helper.h"
+
 using NetworkProtocol = ssf::network::NetworkProtocol;
 
 class SSFClientServerTest : public ::testing::Test {
@@ -48,6 +50,7 @@ class SSFClientServerTest : public ::testing::Test {
     ssf::config::Config ssf_config;
 
     ssf_config.Init();
+    ssf::tests::SetServerTlsConfig(&ssf_config);
 
     auto endpoint_query =
         NetworkProtocol::GenerateServerQuery("", server_port, ssf_config);
@@ -62,6 +65,7 @@ class SSFClientServerTest : public ::testing::Test {
 
     ssf::config::Config ssf_config;
     ssf_config.Init();
+    ssf::tests::SetClientTlsConfig(&ssf_config);
 
     auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
         "127.0.0.1", server_port, ssf_config, {});

@@ -1,5 +1,7 @@
 #include "tests/services/file_copy_fixture_test.h"
 
+#include "tests/tls_config_helper.h"
+
 FileCopyTestFixture::FileCopyTestFixture()
     : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
@@ -29,9 +31,10 @@ void FileCopyTestFixture::TearDown() {
 }
 
 void FileCopyTestFixture::StartServer(const std::string& server_port) {
+  boost::system::error_code ec;
   ssf::config::Config ssf_config;
   ssf_config.Init();
-  boost::system::error_code ec;
+  ssf::tests::SetServerTlsConfig(&ssf_config);
 
   const char* new_config = R"RAWSTRING(
 {
@@ -66,6 +69,7 @@ void FileCopyTestFixture::StartClient(const std::string& server_port) {
 
   ssf::config::Config ssf_config;
   ssf_config.Init();
+  ssf::tests::SetClientTlsConfig(&ssf_config);
 
   const char* new_config = R"RAWSTRING(
 {

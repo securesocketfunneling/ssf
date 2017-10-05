@@ -1,214 +1,236 @@
 # --- Project files declaration
+
 configure_file(versions.h.in versions.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-set(VERSIONS_FILES ${CMAKE_CURRENT_BINARY_DIR}/versions.h)
+set(SSF_FRAMEWORK_FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/versions.h
 
-FILE(GLOB_RECURSE COMMON_BOOST_FIBER_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/boost/fiber/*.hpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/boost/fiber/*.cpp")
+  # fibers
+  common/boost/fiber/basic_endpoint.hpp
+  common/boost/fiber/basic_fiber_demux.hpp
+  common/boost/fiber/basic_fiber_demux_service.hpp
+  common/boost/fiber/basic_fiber_demux_service.ipp
+  common/boost/fiber/datagram_fiber.hpp
+  common/boost/fiber/datagram_fiber_service.hpp
+  common/boost/fiber/detail/basic_fiber_demux_impl.hpp
+  common/boost/fiber/detail/basic_fiber_impl.hpp
+  common/boost/fiber/detail/fiber_buffer.hpp
+  common/boost/fiber/detail/fiber_header.hpp
+  common/boost/fiber/detail/fiber_id.hpp
+  common/boost/fiber/detail/io_fiber_accept_op.hpp
+  common/boost/fiber/detail/io_fiber_dgr_read_op.hpp
+  common/boost/fiber/detail/io_fiber_read_op.hpp
+  common/boost/fiber/detail/io_operation.hpp
+  common/boost/fiber/detail/io_ssl_read_op.hpp
+  common/boost/fiber/fiber_acceptor_service.hpp
+  common/boost/fiber/stream_fiber.hpp
+  common/boost/fiber/stream_fiber_service.hpp
 
-FILE(GLOB_RECURSE COMMON_CONFIG_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/config/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/config/*.cpp")
+  # config
+  common/config/circuit.cpp
+  common/config/circuit.h
+  common/config/config.cpp
+  common/config/config.h
+  common/config/proxy.cpp
+  common/config/proxy.h
+  common/config/services.cpp
+  common/config/services.h
+  common/config/tls.cpp
+  common/config/tls.h
 
-FILE(GLOB_RECURSE COMMON_ERROR_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/error/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/error/*.cpp")
+  # errors
+  common/error/error.cpp
+  common/error/error.h
 
-FILE(GLOB_RECURSE COMMON_LOG_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/log/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/log/*.cpp")
+  # log
+  common/log/log.cpp
+  common/log/log.h
 
-FILE(GLOB_RECURSE COMMON_NETWORK_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/network/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/common/network/*.cpp")
+  # async engine
+  core/async_engine.cpp
+  core/async_engine.h
 
-set(CORE_COMMAND_LINE_BASE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/base.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/base.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/user_service_option_factory.h"
+  # network
+  core/network_protocol.cpp
+  core/network_protocol.h
+
+  # ssf protocol
+  core/transport_virtual_layer_policies/init_packets/ssf_reply.cpp
+  core/transport_virtual_layer_policies/init_packets/ssf_reply.h
+  core/transport_virtual_layer_policies/init_packets/ssf_request.cpp
+  core/transport_virtual_layer_policies/init_packets/ssf_request.h
+  core/transport_virtual_layer_policies/transport_protocol_policy.h
+
+  # commandline
+  core/command_line/base.cpp
+  core/command_line/base.h
+  core/command_line/user_service_option_factory.h
+
+  # commandline/copy
+  core/command_line/copy/command_line.cpp
+  core/command_line/copy/command_line.h
+
+  # commandline/standard
+  core/command_line/standard/command_line.cpp
+  core/command_line/standard/command_line.h
+
+  # factories
+  core/factories/command_factory.h
+  core/factories/service_factory.h
+  core/factory_manager/service_factory_manager.h
+  core/service_manager/service_manager.h
+
+  # microservices
+  services/base_service.h
+  services/base_service_config.cpp
+  services/base_service_config.h
+
+  # microservices/admin
+  services/admin/admin.h
+  services/admin/admin.ipp
+  services/admin/admin_command.h
+  services/admin/requests/create_service_request.h
+  services/admin/requests/service_status.h
+  services/admin/requests/stop_service_request.h
+
+  # microservices/copy
+  services/copy_file/config.cpp
+  services/copy_file/config.h
+  services/copy_file/fiber_to_file/fiber_to_file.h
+  services/copy_file/fiber_to_file/fiber_to_ofstream_session.h
+  services/copy_file/filename_buffer.cpp
+  services/copy_file/filename_buffer.h
+  services/copy_file/filesystem/filesystem.cpp
+  services/copy_file/filesystem/filesystem.h
+  services/copy_file/file_enquirer/file_enquirer.h
+  services/copy_file/file_to_fiber/file_to_fiber.h
+  services/copy_file/file_to_fiber/istream_to_fiber_session.h
+  services/copy_file/packet/packet.cpp
+  services/copy_file/packet/packet.h
+
+  # microservices/datagram
+  services/datagram/datagram_link.h
+  services/datagram/datagram_link_operator.h
+
+  # microservices/datagram_to_fibers
+  services/datagrams_to_fibers/config.cpp
+  services/datagrams_to_fibers/config.h
+  services/datagrams_to_fibers/datagrams_to_fibers.h
+  services/datagrams_to_fibers/datagrams_to_fibers.ipp
+
+  # microservices/fibers_to_datagrams
+  services/fibers_to_datagrams/config.cpp
+  services/fibers_to_datagrams/config.h
+  services/fibers_to_datagrams/fibers_to_datagrams.h
+  services/fibers_to_datagrams/fibers_to_datagrams.ipp
+
+  # microservices/fibers_to_sockets
+  services/fibers_to_sockets/config.cpp
+  services/fibers_to_sockets/config.h
+  services/fibers_to_sockets/fibers_to_sockets.h
+  services/fibers_to_sockets/fibers_to_sockets.ipp
+  services/fibers_to_sockets/session.h
+
+  # microservices/process
+  services/process/config.cpp
+  services/process/config.h
+  services/process/server.h
+  services/process/server.ipp
+
+  # microservices/sockets_to_fibers
+  services/sockets_to_fibers/config.cpp
+  services/sockets_to_fibers/config.h
+  services/sockets_to_fibers/session.h
+  services/sockets_to_fibers/sockets_to_fibers.h
+  services/sockets_to_fibers/sockets_to_fibers.ipp
+
+  # microservices/socks
+  services/socks/config.cpp
+  services/socks/config.h
+  services/socks/socks_server.h
+  services/socks/socks_server.ipp
+  services/socks/socks_version.h
+  services/socks/v4/session.h
+  services/socks/v4/session.ipp
+  services/socks/v5/session.h
+  services/socks/v5/session.ipp
+
+  # services
+  services/user_services/base_user_service.h
+  services/user_services/copy_file_service.h
+  services/user_services/option_parser.cpp
+  services/user_services/option_parser.h
+  services/user_services/parameters.h
+  services/user_services/port_forwarding.h
+  services/user_services/process.h
+  services/user_services/remote_port_forwarding.h
+  services/user_services/remote_process.h
+  services/user_services/remote_socks.h
+  services/user_services/socks.h
+  services/user_services/udp_port_forwarding.h
+  services/user_services/udp_remote_port_forwarding.h
+  services/user_service_factory.h
+
+  # client
+  core/client/client.cpp
+  core/client/client.h
+  core/client/client_helper.cpp
+  core/client/client_helper.h
+  core/client/session.h
+  core/client/session.ipp
+  core/client/status.h
+
+  # server
+  core/server/server.h
+  core/server/server.ipp
 )
 
-FILE(GLOB CORE_COMMAND_LINE_STANDARD_FILES
-  ${CORE_COMMAND_LINE_BASE_FILES}
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/standard/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/standard/*.cpp")
-
-FILE(GLOB CORE_COMMAND_LINE_COPY_FILES
-  ${CORE_COMMAND_LINE_BASE_FILES}
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/copy/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/command_line/copy/*.cpp")
-
-SET(CORE_ASYNC_ENGINE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/async_engine.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/async_engine.cpp")
-
-SET(CORE_NETWORK_PROTOCOL_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/network_protocol.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/network_protocol.cpp")
-
-FILE(GLOB_RECURSE CORE_TRANSPORT_POLICIES_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/transport_virtual_layer_policies/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/transport_virtual_layer_policies/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/transport_virtual_layer_policies/*.ipp")
-
-FILE(GLOB_RECURSE CORE_FACTORIES_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/factories/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/factories/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/factories/*.ipp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/factory_manager/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/factory_manager/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/factory_manager/*.ipp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/service_manager/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/service_manager/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/service_manager/*.ipp")
-
-FILE(GLOB BASE_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/*.ipp")
-
-FILE(GLOB_RECURSE ADMIN_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/admin/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/admin/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/admin/*.ipp")
-
-FILE(GLOB_RECURSE DATAGRAMS_TO_FIBERS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/datagrams_to_fibers/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/datagrams_to_fibers/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/datagrams_to_fibers/*.ipp")
-
-FILE(GLOB_RECURSE FIBERS_TO_DATAGRAMS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_datagrams/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_datagrams/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_datagrams/*.ipp")
-
-FILE(GLOB_RECURSE SOCKETS_TO_FIBERS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/sockets_to_fibers/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/sockets_to_fibers/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/sockets_to_fibers/*.ipp")
-
-FILE(GLOB_RECURSE FIBERS_TO_SOCKETS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_sockets/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_sockets/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/fibers_to_sockets/*.ipp")
-
-FILE(GLOB_RECURSE SOCKS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/socks/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/socks/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/socks/*.ipp")
-
-FILE(GLOB COPY_FILE_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/fiber_to_file/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/fiber_to_file/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/file_to_fiber/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/file_to_fiber/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/file_enquirer/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/file_enquirer/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/packet/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/packet/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/filesystem/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/filesystem/*.cpp")
-
-FILE(GLOB_RECURSE PROCESS_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/process/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/process/*.ipp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/process/*.cpp")
-
-FILE(GLOB_RECURSE USER_SERVICE_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/services/user_services/*.ipp")
-
-FILE(GLOB_RECURSE CLIENT_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/client/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/client/*.ipp")
-
-LIST(APPEND CLIENT_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/client/client.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/client/client_helper.cpp")
-
-FILE(GLOB_RECURSE SERVER_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/server/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/server/*.ipp")
-
-# --- Include windows impl
+# windows impl
 if (WIN32)
-  # --- Filesystem globbing
-  FILE(GLOB_RECURSE COPY_FILE_SERVICE_WINDOWS_FILES
-      "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/filesystem/windows/*.h"
-      "${CMAKE_CURRENT_SOURCE_DIR}/services/copy_file/filesystem/windows/*.cpp")
+  list(APPEND SSF_FRAMEWORK_FILES
+    # microservices/copy
+    services/copy_file/filesystem/windows/win_filesystem.cpp
 
-  set(COPY_FILE_SERVICE_FILES
-      ${COPY_FILE_SERVICE_FILES}
-      ${COPY_FILE_SERVICE_WINDOWS_FILES})
+    # microservices/process
+    services/process/windows/session.h
+    services/process/windows/session.ipp
+  )
 endif (WIN32)
 
-# --- Include linux/unix impl
+# linux/unix impl
 if (UNIX)
-  # --- Filesystem globbing
-  FILE(GLOB_RECURSE COPY_FILE_SERVICE_LINUX_FILES
-      "services/copy_file/filesystem/linux/*.h"
-      "services/copy_file/filesystem/linux/*.cpp")
+  list(APPEND SSF_FRAMEWORK_FILES
+    # microservices/copy
+    services/copy_file/filesystem/linux/unix_filesystem.cpp
 
-  set(COPY_FILE_SERVICE_FILES
-      ${COPY_FILE_SERVICE_FILES}
-      ${COPY_FILE_SERVICE_LINUX_FILES})
+    # microservices/process
+    services/process/posix/session.h
+    services/process/posix/session.ipp
+  )
 endif (UNIX)
 
-# --- Set macro SSF service files
-set(SERVICES_FILES
-  ${BASE_SERVICE_FILES}
-  ${ADMIN_SERVICE_FILES}
-  ${DATAGRAMS_TO_FIBERS_SERVICE_FILES}
-  ${FIBERS_TO_DATAGRAMS_SERVICE_FILES}
-  ${SOCKETS_TO_FIBERS_SERVICE_FILES}
-  ${FIBERS_TO_SOCKETS_SERVICE_FILES}
-  ${SOCKS_SERVICE_FILES}
-  ${USER_SERVICE_FILES}
-  ${COPY_FILE_SERVICE_FILES}
-  ${PROCESS_SERVICE_FILES}
-)
-
-# --- Set macro SSF source files
-set(SSF_SOURCES
-  ${VERSIONS_FILES}
-  ${COMMON_BOOST_FIBER_FILES}
-  ${COMMON_CONFIG_FILES}
-  ${COMMON_ERROR_FILES}
-  ${COMMON_LOG_FILES}
-  ${CORE_ASYNC_ENGINE_FILES}
-  ${COMMON_NETWORK_FILES}
-  ${CORE_NETWORK_PROTOCOL_FILES}
-  ${CORE_TRANSPORT_POLICIES_FILES}
-  ${CORE_NETWORK_VIRTUAL_LAYER_POLICIES_FILES}
-  ${CORE_FACTORIES_FILES}
-  ${SERVICES_FILES}
-  ${CLIENT_FILES}
-  ${SERVER_FILES}
-)
-
-# --- Include source directory
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 add_subdirectory(network)
-add_subdirectory(core)
 add_subdirectory(compat)
 
 add_target(lib_ssf_framework
   TYPE
     LIBRARY ${EXEC_FLAG} STATIC
   FILES
-    ${SSF_SOURCES}
+    ${SSF_FRAMEWORK_FILES}
+  INCLUDE_DIRECTORIES PUBLIC
+    ${OPENSSL_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}
   LINKS
     ${Boost_LIBRARIES}
     ${OPENSSL_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
     lib_ssf_network
 )
+
+add_subdirectory(client)
+add_subdirectory(server)
 
 if (BUILD_UNIT_TESTS)
   add_subdirectory(tests)

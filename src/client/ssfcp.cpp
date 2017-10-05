@@ -1,6 +1,3 @@
-#include <condition_variable>
-#include <mutex>
-
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/system/error_code.hpp>
@@ -13,7 +10,6 @@
 #include "core/client/client.h"
 #include "core/client/client_helper.h"
 #include "core/command_line/copy/command_line.h"
-#include "core/factories/service_option_factory.h"
 #include "core/network_protocol.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 

@@ -1,5 +1,7 @@
 #include "tests/network/ssf_fixture_test.h"
 
+#include "tests/tls_config_helper.h"
+
 SSFFixtureTest::SSFFixtureTest() : success_(false), stopped_(false) {}
 
 void SSFFixtureTest::SetUp() {
@@ -25,6 +27,7 @@ void SSFFixtureTest::StartClient(const std::string& server_port,
   ssf::config::Config ssf_config;
 
   ssf_config.Init();
+  ssf::tests::SetClientTlsConfig(&ssf_config);
 
   auto endpoint_query = NetworkProtocol::GenerateClientQuery(
       "127.0.0.1", server_port, ssf_config, {});
@@ -59,6 +62,7 @@ void SSFFixtureTest::StartServer(const std::string& addr,
   ssf::config::Config ssf_config;
 
   ssf_config.Init();
+  ssf::tests::SetServerTlsConfig(&ssf_config);
 
   auto endpoint_query =
       NetworkProtocol::GenerateServerQuery(addr, server_port, ssf_config);

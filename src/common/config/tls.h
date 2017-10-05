@@ -37,10 +37,14 @@ class Tls {
   void Log() const;
 
   const TlsParam& ca_cert() const { return ca_cert_; }
+  TlsParam* mutable_ca_cert() { return &ca_cert_; }
   const TlsParam& cert() const { return cert_; }
+  TlsParam* mutable_cert() { return &cert_; }
   const TlsParam& key() const { return key_; }
+  TlsParam* mutable_key() { return &key_; }
   const std::string& key_password() const { return key_password_; }
   const TlsParam& dh() const { return dh_; }
+  TlsParam* mutable_dh() { return &dh_; }
   const std::string& cipher_alg() const { return cipher_alg_; }
 
  private:

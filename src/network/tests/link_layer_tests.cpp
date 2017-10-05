@@ -93,7 +93,7 @@ TEST(LinkLayerTest, SimpleTLSCircuitProtocolTest) {
   ssf::layer::ParameterStack acceptor_next_layers_parameters;
   acceptor_next_layers_parameters.push_front(tcp_server_parameters);
   acceptor_next_layers_parameters.push_front(
-      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+      tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
   ssf::layer::ParameterStack acceptor_parameters(
       ssf::layer::data_link::make_acceptor_parameter_stack(
           "server", acceptor_default_parameters,
@@ -104,7 +104,7 @@ TEST(LinkLayerTest, SimpleTLSCircuitProtocolTest) {
   nodes.PushFrontNode();
   nodes.AddTopLayerToFrontNode(tcp_client_parameters);
   nodes.AddTopLayerToFrontNode(
-      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+      tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
 
   ssf::layer::ParameterStack client_parameters(
       ssf::layer::data_link::
@@ -184,7 +184,7 @@ TEST_F(CircuitTestFixture, CircuitTLSTest) {
   ssf::layer::ParameterStack acceptor_next_layers_parameters;
   acceptor_next_layers_parameters.push_front(tcp_server_parameters);
   acceptor_next_layers_parameters.push_front(
-      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+      tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
   ssf::layer::ParameterStack acceptor_parameters(
       ssf::layer::data_link::make_acceptor_parameter_stack(
           "server", acceptor_default_parameters,
@@ -196,7 +196,7 @@ TEST_F(CircuitTestFixture, CircuitTLSTest) {
   nodes.PushBackNode();
   nodes.AddTopLayerToBackNode(tcp_client_parameters);
   nodes.AddTopLayerToBackNode(
-      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+      tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
 
   ssf::layer::ParameterStack client_parameters(
       ssf::layer::data_link::
@@ -234,7 +234,7 @@ TEST_F(CircuitTestFixture, CircuitDefaultTLSTest) {
   ssf::layer::ParameterStack acceptor_next_layers_parameters;
   acceptor_next_layers_parameters.push_front(tcp_server_parameters);
   acceptor_next_layers_parameters.push_front(
-      tests::virtual_network_helpers::GetServerTLSParametersAsFile());
+      tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
 
   ssf::layer::ParameterStack acceptor_parameters(
       ssf::layer::data_link::make_acceptor_parameter_stack(

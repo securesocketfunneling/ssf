@@ -1,13 +1,13 @@
 #ifndef TESTS_SERVICES_SOCKS_FIXTURE_TEST_H_
 #define TESTS_SERVICES_SOCKS_FIXTURE_TEST_H_
 
-#include <vector>
-#include <functional>
 #include <array>
+#include <functional>
 #include <list>
+#include <thread>
+#include <vector>
 
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
 
 #include "tests/services/service_fixture_test.h"
 #include "tests/services/socks_helpers.h"
@@ -43,16 +43,20 @@ class SocksFixtureTest : public ServiceFixtureTest<TServiceTested> {
     tests::tcp::DummyServer serv(server_addr, server_port);
     serv.Run();
 
-    boost::thread_group client_test_threads;
+    std::vector<std::thread> client_test_threads;
 
     for (std::size_t i = 0; i <= 5; ++i) {
       clients_finish.emplace_front();
       std::promise<bool>& client_finish = clients_finish.front();
-      client_test_threads.create_thread(boost::bind<void>(
-          download, 1024 * 1024 * i, boost::ref(client_finish)));
+      client_test_threads.emplace_back(std::bind<void>(
+          download, 1024 * 1024 * i, std::ref(client_finish)));
     }
 
-    client_test_threads.join_all();
+    for (auto& thread : client_test_threads) {
+      if (thread.joinable()) {
+        thread.join();
+      }
+    }
     for (auto& client_finish : clients_finish) {
       client_finish.get_future().wait();
     }

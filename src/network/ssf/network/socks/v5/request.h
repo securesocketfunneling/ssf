@@ -13,8 +13,6 @@
 
 #include <boost/system/error_code.hpp>
 
-#include "common/error/error.h"
-
 #include "ssf/network/socks/v5/types.h"
 
 namespace ssf {
