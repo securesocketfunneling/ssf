@@ -1,6 +1,7 @@
 #ifndef SSF_LAYER_INTERFACE_LAYER_BASIC_INTERFACE_SERVICE_H_
 #define SSF_LAYER_INTERFACE_LAYER_BASIC_INTERFACE_SERVICE_H_
 
+#include <functional>
 #include <memory>
 
 #include <boost/asio/async_result.hpp>
@@ -8,9 +9,7 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/socket_base.hpp>
 
-#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/error/error.h"
 #include "ssf/io/composed_op.h"
@@ -75,11 +74,10 @@ class basic_Interface_service
   /// register it as the interface name
   template <class ConnectHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ConnectHandler, void(boost::system::error_code))
-      async_connect(implementation_type& impl,
-                    endpoint_context_type interface_name,
-                    const typename raw_next_layer_protocol::endpoint&
-                        next_remote_endpoint,
-                    ConnectHandler&& handler) {
+  async_connect(
+      implementation_type& impl, endpoint_context_type interface_name,
+      const typename raw_next_layer_protocol::endpoint& next_remote_endpoint,
+      ConnectHandler&& handler) {
     boost::asio::detail::async_result_init<ConnectHandler,
                                            void(boost::system::error_code)>
         init(std::forward<ConnectHandler>(handler));
@@ -94,7 +92,7 @@ class basic_Interface_service
     }
 
     if (impl.p_next_socket->is_open()) {
-      this->get_io_service().post(boost::bind<void>(
+      this->get_io_service().post(std::bind(
           init.handler,
           boost::system::error_code(ssf::error::device_or_resource_busy,
                                     ssf::error::get_ssf_category())));
@@ -149,11 +147,10 @@ class basic_Interface_service
   /// register the first connection (next layer socket) as the interface name
   template <class AcceptHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(AcceptHandler, void(boost::system::error_code))
-      async_accept(
-          implementation_type& impl,
-          const endpoint_context_type& interface_name,
-          const typename raw_next_layer_protocol::endpoint& next_local_endpoint,
-          AcceptHandler&& handler) {
+  async_accept(
+      implementation_type& impl, const endpoint_context_type& interface_name,
+      const typename raw_next_layer_protocol::endpoint& next_local_endpoint,
+      AcceptHandler&& handler) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
         init(std::forward<AcceptHandler>(handler));
@@ -169,7 +166,7 @@ class basic_Interface_service
     }
 
     if (impl.p_next_socket->is_open()) {
-      this->get_io_service().post(boost::bind<void>(
+      this->get_io_service().post(std::bind(
           init.handler,
           boost::system::error_code(ssf::error::device_or_resource_busy,
                                     ssf::error::get_ssf_category())));
@@ -187,7 +184,7 @@ class basic_Interface_service
       impl.p_next_acceptor->bind(next_local_endpoint, ec);
 
       if (ec) {
-        this->get_io_service().post(boost::bind<void>(init.handler, ec));
+        this->get_io_service().post(std::bind(init.handler, ec));
         return init.result.get();
       }
 

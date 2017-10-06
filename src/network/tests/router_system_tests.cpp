@@ -2,12 +2,12 @@
 
 #include <cstdint>
 
+#include <functional>
 #include <future>
 #include <vector>
 
 #include <boost/asio/io_service.hpp>
 
-#include <boost/bind.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -44,8 +44,9 @@ TEST_F(RouterSystemTestFixture, FailImportRouters) {
   system_routers.Start();
 
   std::promise<bool> all_up;
-  auto all_routers_up =
-      [&all_up](const boost::system::error_code& ec) { all_up.set_value(!ec); };
+  auto all_routers_up = [&all_up](const boost::system::error_code& ec) {
+    all_up.set_value(!ec);
+  };
 
   ASSERT_EQ(0, system_routers.AsyncConfig(
                    system_multiple_interfaces_config_filename_,
@@ -54,16 +55,20 @@ TEST_F(RouterSystemTestFixture, FailImportRouters) {
   ASSERT_NE(0, ec.value()) << "Error when configuring routers : "
                            << ec.message();
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   ASSERT_FALSE(all_up.get_future().get()) << "All routers up";
 
   system_routers.Stop();
 
-  threads.join_all();
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 TEST_F(RouterSystemTestFixture, ImportRouters) {
@@ -76,8 +81,9 @@ TEST_F(RouterSystemTestFixture, ImportRouters) {
 
   std::promise<bool> all_up;
 
-  auto all_routers_up =
-      [&all_up](const boost::system::error_code& ec) { all_up.set_value(!ec); };
+  auto all_routers_up = [&all_up](const boost::system::error_code& ec) {
+    all_up.set_value(!ec);
+  };
 
   ASSERT_EQ(2, system_routers.AsyncConfig(
                    system_multiple_interfaces_config_filename_,
@@ -86,14 +92,18 @@ TEST_F(RouterSystemTestFixture, ImportRouters) {
   ASSERT_EQ(0, ec.value()) << "Error when configuring routers : "
                            << ec.message();
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   ASSERT_TRUE(all_up.get_future().get()) << "All routers not up";
 
   system_routers.Stop();
 
-  threads.join_all();
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }

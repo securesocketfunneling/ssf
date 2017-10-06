@@ -1,11 +1,11 @@
 #include <fstream>
+#include <regex>
 #include <sstream>
 #include <string>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/detail/config.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/regex.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
@@ -179,10 +179,10 @@ void Config::UpdateArguments(const PTree& pt) {
 
   argv_.push_back("ssf");
   // quoted arg or arg between space
-  boost::regex argv_regex("(\"[^\"]+\"|[^\\s\"]+)");
+  std::regex argv_regex("(\"[^\"]+\"|[^\\s\"]+)");
   auto argv_it =
-      boost::sregex_iterator(arguments.begin(), arguments.end(), argv_regex);
-  auto argv_end = boost::sregex_iterator();
+      std::sregex_iterator(arguments.begin(), arguments.end(), argv_regex);
+  auto argv_end = std::sregex_iterator();
   while (argv_it != argv_end) {
     auto argv = argv_it->str();
     // trim double quotes

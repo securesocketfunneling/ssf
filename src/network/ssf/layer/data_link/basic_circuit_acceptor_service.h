@@ -1,20 +1,19 @@
 #ifndef SSF_LAYER_DATA_LINK_BASIC_CIRCUIT_ACCEPTOR_SERVICE_H_
 #define SSF_LAYER_DATA_LINK_BASIC_CIRCUIT_ACCEPTOR_SERVICE_H_
 
+#include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <set>
 #include <type_traits>
 #include <utility>
 
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/detail/op_queue.hpp>
+#include <boost/asio/io_service.hpp>
 
-#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/error/error.h"
 
@@ -22,9 +21,9 @@
 #include "ssf/io/handler_helpers.h"
 
 #include "ssf/layer/basic_impl.h"
-#include "ssf/layer/parameters.h"
-#include "ssf/layer/data_link/helpers.h"
 #include "ssf/layer/data_link/circuit_op.h"
+#include "ssf/layer/data_link/helpers.h"
+#include "ssf/layer/parameters.h"
 
 #include "ssf/network/base_session.h"
 #include "ssf/network/manager.h"
@@ -69,7 +68,8 @@ class basic_CircuitAcceptor_service
   typedef std::pair<p_next_socket_type, p_endpoint_type> pending_connection;
   typedef std::queue<pending_connection> connection_queue;
   typedef boost::asio::detail::op_queue<
-      io::basic_pending_accept_operation<protocol_type>> op_queue;
+      io::basic_pending_accept_operation<protocol_type>>
+      op_queue;
 
  public:
   explicit basic_CircuitAcceptor_service(boost::asio::io_service& io_service)
@@ -145,7 +145,7 @@ class basic_CircuitAcceptor_service
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(bind_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(bind_mutex_);
 
       endpoint_type input_endpoint;
       for (const auto& pair : input_bindings_) {
@@ -153,7 +153,7 @@ class basic_CircuitAcceptor_service
           input_endpoint = pair.first;
 
           {
-            boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+            std::unique_lock<std::recursive_mutex> lock1(accept_mutex_);
             pending_connections_.erase(
                 impl.p_local_endpoint->next_layer_endpoint());
           }
@@ -235,7 +235,7 @@ class basic_CircuitAcceptor_service
   boost::system::error_code bind(implementation_type& impl,
                                  const endpoint_type& endpoint,
                                  boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(bind_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(bind_mutex_);
 
     auto is_forward = detail::is_endpoint_forwarding(endpoint);
 
@@ -256,7 +256,7 @@ class basic_CircuitAcceptor_service
           input_bindings_.emplace(std::make_pair(endpoint, &impl));
       binding_insertion = input_bind.second;
 
-      boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+      std::unique_lock<std::recursive_mutex> lock1(accept_mutex_);
       pending_connections_.emplace(
           std::make_pair(endpoint.next_layer_endpoint(), connection_queue()));
     }
@@ -292,7 +292,7 @@ class basic_CircuitAcceptor_service
   // Wait for new connections from next layer if not already listening
   boost::system::error_code listen(implementation_type& impl, int backlog,
                                    boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(bind_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(bind_mutex_);
     if (listening_.count(impl.p_next_layer_acceptor)) {
       return ec;
     }
@@ -319,7 +319,7 @@ class basic_CircuitAcceptor_service
     connection_queue* p_queue = nullptr;
 
     {
-      boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(accept_mutex_);
       auto queue_it = pending_connections_.find(next_layer_local_endpoint);
 
       if (queue_it == std::end(pending_connections_)) {
@@ -333,8 +333,8 @@ class basic_CircuitAcceptor_service
     // Waiting for new connections from next layer (p_queue is populated
     // asynchronously)
     while (true) {
-      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-      boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+      std::this_thread::sleep(std::chrono::milliseconds(100));
+      std::unique_lock<std::recursive_mutex> lock(accept_mutex_);
       if (p_queue->empty()) {
         continue;
       }
@@ -352,11 +352,12 @@ class basic_CircuitAcceptor_service
 
   template <typename Protocol1, typename SocketService, typename AcceptHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(AcceptHandler, void(boost::system::error_code))
-      async_accept(implementation_type& impl,
-                   boost::asio::basic_socket<Protocol1, SocketService>& peer,
-                   endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
-                   typename std::enable_if<std::is_convertible<
-                       protocol_type, Protocol1>::value>::type* = 0) {
+  async_accept(
+      implementation_type& impl,
+      boost::asio::basic_socket<Protocol1, SocketService>& peer,
+      endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
+      typename std::enable_if<
+          std::is_convertible<protocol_type, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
         init(std::forward<AcceptHandler>(handler));
@@ -385,7 +386,7 @@ class basic_CircuitAcceptor_service
     CircuitAcceptOp op_handler(peer_impl, p_peer_endpoint, init.handler);
 
     {
-      boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(accept_mutex_);
       // Create and save a new op_queue at
       // [impl.p_local_endpoint->next_layer_endpoint()] index
       // in pending_accepts
@@ -427,9 +428,9 @@ class basic_CircuitAcceptor_service
 
       p_next_layer_acceptor->async_accept(
           *p_next_layer_socket, *p_next_layer_endpoint,
-          boost::bind(&basic_CircuitAcceptor_service::accepted, this,
-                      p_next_layer_acceptor, p_next_layer_socket,
-                      p_next_layer_endpoint, _1));
+          std::bind(&basic_CircuitAcceptor_service::accepted, this,
+                    p_next_layer_acceptor, p_next_layer_socket,
+                    p_next_layer_endpoint, std::placeholders::_1));
     }
   }
 
@@ -448,8 +449,8 @@ class basic_CircuitAcceptor_service
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock2(bind_mutex_);
-      boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+      std::unique_lock<std::recursive_mutex> lock2(bind_mutex_);
+      std::unique_lock<std::recursive_mutex> lock1(accept_mutex_);
 
       auto next_local_endpoint_it =
           next_local_endpoints_.find(p_next_layer_acceptor);
@@ -473,10 +474,10 @@ class basic_CircuitAcceptor_service
       circuit_policy::AsyncInitConnection(
           *p_next_layer_socket, p_received_endpoint.get(),
           circuit_policy::server,
-          boost::bind(
+          std::bind(
               &basic_CircuitAcceptor_service::connection_initiated_handler,
               this, p_next_layer_socket, std::move(p_remote_endpoint),
-              p_received_endpoint, next_local_endpoint, _1));
+              p_received_endpoint, next_local_endpoint, std::placeholders::_1));
     }
   }
 
@@ -490,7 +491,7 @@ class basic_CircuitAcceptor_service
                          << ec.message() << ")";
       boost::system::error_code close_ec;
       p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
-                              close_ec);
+                                    close_ec);
       p_next_layer_socket->close(close_ec);
       return;
     }
@@ -510,17 +511,17 @@ class basic_CircuitAcceptor_service
     p_remote_endpoint->endpoint_context().id =
         p_remote_endpoint->endpoint_context().details;
 
-    boost::recursive_mutex::scoped_lock lock1(accept_mutex_);
+    std::unique_lock<std::recursive_mutex> lock1(accept_mutex_);
 
     // Connection is only accepted if there is a binding
     // of a non forward endpoint link to this next local endpoint
     if (pending_connections_.count(next_local_endpoint)) {
       circuit_policy::AsyncValidateConnection(
           *p_next_layer_socket, p_remote_endpoint.get(), ec.value(),
-          boost::bind(
+          std::bind(
               &basic_CircuitAcceptor_service::connection_validated_handler,
               this, std::move(next_local_endpoint), p_next_layer_socket,
-              p_remote_endpoint, _1));
+              p_remote_endpoint, std::placeholders::_1));
     } else {
       boost::system::error_code close_ec;
       p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
@@ -538,7 +539,7 @@ class basic_CircuitAcceptor_service
                          << ec.message() << ")";
       boost::system::error_code close_ec;
       p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
-                              close_ec);
+                                    close_ec);
       p_next_layer_socket->close(close_ec);
       return;
     }
@@ -557,9 +558,9 @@ class basic_CircuitAcceptor_service
 
     p_forward_socket->async_connect(
         *p_remote_endpoint,
-        boost::bind(&basic_CircuitAcceptor_service::connected_handler, this,
-                    p_remote_endpoint, std::move(p_next_socket),
-                    p_forward_socket, _1));
+        std::bind(&basic_CircuitAcceptor_service::connected_handler, this,
+                  p_remote_endpoint, std::move(p_next_socket), p_forward_socket,
+                  std::placeholders::_1));
   }
 
   void connected_handler(p_endpoint_type p_remote_endpoint,
@@ -584,9 +585,9 @@ class basic_CircuitAcceptor_service
 
     circuit_policy::AsyncValidateConnection(
         *p_next_socket, p_remote_endpoint.get(), ec.value(),
-        boost::bind(
-            &basic_CircuitAcceptor_service::connection_forwarded_handler, this,
-            p_next_socket, std::move(p_forward_socket), _1));
+        std::bind(&basic_CircuitAcceptor_service::connection_forwarded_handler,
+                  this, p_next_socket, std::move(p_forward_socket),
+                  std::placeholders::_1));
   }
 
   void connection_forwarded_handler(p_next_socket_type p_next_socket,
@@ -618,7 +619,7 @@ class basic_CircuitAcceptor_service
   /// Unqueue accept operation after accepting connection
   void do_connection_accept(const next_endpoint_type& next_local_endpoint,
                             pending_connection connection) {
-    boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(accept_mutex_);
 
     auto connection_queue_it = pending_connections_.find(next_local_endpoint);
 
@@ -660,7 +661,7 @@ class basic_CircuitAcceptor_service
   /// Execute accept handler after peer connection
   void connection_queue_handler(
       const boost::system::error_code& ec = boost::system::error_code()) {
-    boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(accept_mutex_);
 
     for (auto& connection_pair : pending_connections_) {
       if (!connection_pair.second.size()) {
@@ -694,16 +695,16 @@ class basic_CircuitAcceptor_service
         auto do_complete = [p_accept_op, ec]() { p_accept_op->complete(ec); };
         this->get_io_service().post(do_complete);
 
-        this->get_io_service().post(boost::bind(
-            &basic_CircuitAcceptor_service::connection_queue_handler, this,
-            ec));
+        this->get_io_service().post(
+            std::bind(&basic_CircuitAcceptor_service::connection_queue_handler,
+                      this, ec));
       }
     }
   }
 
   void clean_pending_accepts(const next_endpoint_type& next_layer_endpoint,
                              const boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(accept_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(accept_mutex_);
     auto accept_queue_it = pending_accepts_.find(next_layer_endpoint);
 
     if (accept_queue_it == pending_accepts_.end()) {
@@ -723,7 +724,7 @@ class basic_CircuitAcceptor_service
   void shutdown_service() { manager_.stop_all(); }
 
  private:
-  boost::recursive_mutex bind_mutex_;
+  std::recursive_mutex bind_mutex_;
   ParameterStack default_parameters_;
   std::map<next_endpoint_type, p_next_acceptor_type> next_acceptors_;
   std::map<p_next_acceptor_type, next_endpoint_type> next_local_endpoints_;
@@ -731,7 +732,7 @@ class basic_CircuitAcceptor_service
   std::map<endpoint_type, implementation_type*> forward_bindings_;
   std::set<p_next_acceptor_type> listening_;
 
-  boost::recursive_mutex accept_mutex_;
+  std::recursive_mutex accept_mutex_;
   std::map<next_endpoint_type, op_queue> pending_accepts_;
   std::map<next_endpoint_type, connection_queue> pending_connections_;
 

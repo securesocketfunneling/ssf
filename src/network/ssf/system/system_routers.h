@@ -11,7 +11,6 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/layer/network/basic_network_protocol.h"
 #include "ssf/layer/routing/basic_routed_protocol.h"
@@ -90,7 +89,7 @@ class SystemRouters {
   boost::asio::io_service& io_service_;
   ssf::system::SystemInterfaces system_interfaces_;
   std::map<std::string, std::shared_ptr<Router>> p_routers_;
-  boost::recursive_mutex mount_infos_mutex_;
+  std::recursive_mutex mount_infos_mutex_;
   std::map<interface_id, MountNetworkInfo> mount_infos_;
 };
 

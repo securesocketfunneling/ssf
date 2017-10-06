@@ -90,8 +90,9 @@ void FibersToSockets<Demux>::AsyncAcceptFibers() {
       this->get_io_service(), FiberEndpoint(this->get_demux(), 0));
 
   fiber_acceptor_.async_accept(
-      *new_connection, boost::bind(&FibersToSockets::FiberAcceptHandler,
-                                   this->SelfFromThis(), new_connection, _1));
+      *new_connection,
+      std::bind(&FibersToSockets::FiberAcceptHandler, this->SelfFromThis(),
+                new_connection, std::placeholders::_1));
 }
 
 template <typename Demux>
@@ -112,8 +113,8 @@ void FibersToSockets<Demux>::FiberAcceptHandler(
       std::make_shared<Tcp::socket>(this->get_io_service());
   socket->async_connect(
       remote_endpoint_,
-      boost::bind(&FibersToSockets::TcpSocketConnectHandler,
-                  this->SelfFromThis(), socket, fiber_connection, _1));
+      std::bind(&FibersToSockets::TcpSocketConnectHandler, this->SelfFromThis(),
+                socket, fiber_connection, std::placeholders::_1));
 }
 
 template <typename Demux>

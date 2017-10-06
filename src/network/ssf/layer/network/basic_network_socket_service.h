@@ -2,6 +2,7 @@
 #define SSF_LAYER_NETWORK_BASIC_NETWORK_SOCKET_SERVICE_H_
 
 #include <memory>
+#include <mutex>
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/bind_handler.hpp>
@@ -11,9 +12,9 @@
 
 #include <boost/system/error_code.hpp>
 
+#include "ssf/error/error.h"
 #include "ssf/io/composed_op.h"
 #include "ssf/io/handler_helpers.h"
-#include "ssf/error/error.h"
 
 #include "ssf/layer/basic_impl.h"
 #include "ssf/layer/protocol_attributes.h"
@@ -109,7 +110,7 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
     if (impl.p_local_endpoint) {
-      boost::recursive_mutex::scoped_lock lock(protocol_type::bind_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(protocol_type::bind_mutex_);
       protocol_type::network_to_interface_.erase(
           impl.p_local_endpoint->endpoint_context());
       protocol_type::interface_to_network_.erase(
@@ -163,7 +164,7 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
     const auto& local_endpoint_context = local_endpoint.endpoint_context();
     const auto& local_interface_endpoint = local_endpoint.next_layer_endpoint();
 
-    boost::recursive_mutex::scoped_lock lock1(protocol_type::bind_mutex_);
+    std::unique_lock<std::recursive_mutex> lock1(protocol_type::bind_mutex_);
     if (protocol_type::used_interface_endpoints_.count(
             local_interface_endpoint) ||
         protocol_type::bounds_.count(local_endpoint_context)) {
@@ -207,9 +208,8 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
 
   template <typename ConnectHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ConnectHandler, void(boost::system::error_code))
-      async_connect(implementation_type& impl,
-                    const endpoint_type& remote_endpoint,
-                    ConnectHandler&& handler) {
+  async_connect(implementation_type& impl, const endpoint_type& remote_endpoint,
+                ConnectHandler&& handler) {
     boost::asio::detail::async_result_init<
         ConnectHandler, void(const boost::system::error_code&)>
         init(std::forward<ConnectHandler>(handler));
@@ -230,9 +230,9 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_send(implementation_type& impl, const ConstBufferSequence& buffers,
-                 boost::asio::socket_base::message_flags flags,
-                 WriteHandler&& handler) {
+  async_send(implementation_type& impl, const ConstBufferSequence& buffers,
+             boost::asio::socket_base::message_flags flags,
+             WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
@@ -251,11 +251,10 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_send_to(implementation_type& impl,
-                    const ConstBufferSequence& buffers,
-                    const endpoint_type& destination,
-                    boost::asio::socket_base::message_flags flags,
-                    WriteHandler&& handler) {
+  async_send_to(implementation_type& impl, const ConstBufferSequence& buffers,
+                const endpoint_type& destination,
+                boost::asio::socket_base::message_flags flags,
+                WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
@@ -317,10 +316,9 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_receive(implementation_type& impl,
-                    const MutableBufferSequence& buffers,
-                    boost::asio::socket_base::message_flags flags,
-                    ReadHandler&& handler) {
+  async_receive(implementation_type& impl, const MutableBufferSequence& buffers,
+                boost::asio::socket_base::message_flags flags,
+                ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
@@ -340,11 +338,11 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_receive_from(implementation_type& impl,
-                         const MutableBufferSequence& buffers,
-                         endpoint_type& source,
-                         boost::asio::socket_base::message_flags flags,
-                         ReadHandler&& handler) {
+  async_receive_from(implementation_type& impl,
+                     const MutableBufferSequence& buffers,
+                     endpoint_type& source,
+                     boost::asio::socket_base::message_flags flags,
+                     ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
@@ -355,34 +353,34 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
     register_async_op();
     auto p_socket_cancelled = impl.p_socket_context->p_cancelled;
     auto p_alive = p_alive_;
-    auto user_handler =
-        [this, buffers, p_datagram, &source, p_alive, p_socket_cancelled, init](
-            const boost::system::error_code& ec, std::size_t length) {
-          if (!(*p_alive)) {
-            return;
+    auto user_handler = [this, buffers, p_datagram, &source, p_alive,
+                         p_socket_cancelled, init](
+        const boost::system::error_code& ec, std::size_t length) {
+      if (!(*p_alive)) {
+        return;
+      }
+      if (!(*p_socket_cancelled)) {
+        if (!ec) {
+          if (boost::asio::buffer_size(buffers) <
+              length - protocol_type::overhead) {
+            init.handler(
+                boost::system::error_code(ssf::error::message_size,
+                                          ssf::error::get_ssf_category()),
+                0);
+          } else {
+            source = typename protocol_type::endpoint(
+                p_datagram->header().id().left_id());
+            auto copied = boost::asio::buffer_copy(
+                buffers, p_datagram->payload().GetConstBuffers());
+            init.handler(ec, copied);
           }
-          if (!(*p_socket_cancelled)) {
-            if (!ec) {
-              if (boost::asio::buffer_size(buffers) <
-                  length - protocol_type::overhead) {
-                init.handler(
-                    boost::system::error_code(ssf::error::message_size,
-                                              ssf::error::get_ssf_category()),
-                    0);
-              } else {
-                source = typename protocol_type::endpoint(
-                    p_datagram->header().id().left_id());
-                auto copied = boost::asio::buffer_copy(
-                    buffers, p_datagram->payload().GetConstBuffers());
-                init.handler(ec, copied);
-              }
-            } else {
-              init.handler(ec, 0);
-            }
-          }
+        } else {
+          init.handler(ec, 0);
+        }
+      }
 
-          this->unregister_async_op();
-        };
+      this->unregister_async_op();
+    };
 
     AsyncReceiveDatagram(*impl.p_next_layer_socket, p_datagram.get(),
                          std::move(user_handler));
@@ -411,7 +409,7 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   }
 
   void register_async_op() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     if (usage_count_ == 0) {
       p_worker_ = std::unique_ptr<boost::asio::io_service::work>(
           new boost::asio::io_service::work(this->get_io_service()));
@@ -421,7 +419,7 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   }
 
   void unregister_async_op() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     --usage_count_;
     if (usage_count_ == 0) {
       p_worker_.reset();
@@ -432,7 +430,7 @@ class basic_NetworkSocket_service : public boost::asio::detail::service_base<
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
   uint64_t usage_count_;
   std::shared_ptr<bool> p_alive_;
-  boost::recursive_mutex mutex_;
+  std::recursive_mutex mutex_;
 };
 
 #include <boost/asio/detail/pop_options.hpp>

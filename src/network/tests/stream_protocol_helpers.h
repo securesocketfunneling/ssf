@@ -15,7 +15,7 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/socket_base.hpp>
-#include <boost/asio/spawn.hpp>
+//#include <boost/asio/spawn.hpp>
 #include <boost/asio/use_future.hpp>
 
 #include <boost/system/error_code.hpp>
@@ -144,11 +144,16 @@ void TCPPerfTestHalfDuplex(ssf::layer::ParameterStack client_parameters,
 
   p_bandwidth.reset();
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 template <class StreamProtocol>
@@ -302,11 +307,16 @@ void PerfTestStreamProtocolHalfDuplex(
 
   p_bandwidth1.reset();
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 template <class StreamProtocol>
@@ -553,9 +563,9 @@ void PerfTestStreamProtocolFullDuplex(
   acceptor.async_accept(socket2, accepted);
   socket1.async_connect(remote_endpoint, connected);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   std::unique_lock<std::mutex> lk(cv_mutex);
@@ -564,7 +574,11 @@ void PerfTestStreamProtocolFullDuplex(
 
   close_all();
 
-  threads.join_all();
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 /// Test a stream protocol
@@ -778,11 +792,16 @@ void TestStreamProtocol(
 
   socket1.async_connect(remote_endpoint, connected);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 template <class StreamProtocol>
@@ -829,10 +848,10 @@ void TestMultiConnectionsProtocol(
   ASSERT_EQ(0, acceptor_ec.value())
       << "Listen acceptor should not be in error: " << acceptor_ec.message();
 
-  boost::thread_group test_threads;
+  std::vector<std::thread> test_threads;
   uint32_t connections_count = 15;
   std::promise<bool> clients_init;
-  test_threads.create_thread(
+  test_threads.emplace_back(
       [connections_count, &clients_init, &client_sockets, &clients_connected,
        &remote_endpoint, &io_service]() {
         for (uint32_t i = 0; i < connections_count; ++i) {
@@ -852,8 +871,8 @@ void TestMultiConnectionsProtocol(
       });
 
   std::promise<bool> servers_init;
-  test_threads.create_thread([connections_count, &servers_init, &server_sockets,
-                              &servers_connected, &io_service, &acceptor]() {
+  test_threads.emplace_back([connections_count, &servers_init, &server_sockets,
+                             &servers_connected, &io_service, &acceptor]() {
     for (uint32_t i = 0; i < connections_count; ++i) {
       server_sockets.emplace_front(io_service);
       servers_connected.emplace_front();
@@ -868,8 +887,8 @@ void TestMultiConnectionsProtocol(
     servers_init.set_value(true);
   });
 
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    test_threads.create_thread([&io_service]() { io_service.run(); });
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    test_threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   clients_init.get_future().wait();
@@ -894,7 +913,12 @@ void TestMultiConnectionsProtocol(
   acceptor.close(close_acceptor_ec);
 
   p_worker.reset();
-  test_threads.join_all();
+
+  for (auto& thread : test_threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 /// Test a stream protocol future interface
@@ -995,106 +1019,116 @@ void TestStreamProtocolFuture(
     }
   };
 
-  boost::thread_group threads;
-  threads.create_thread(lambda2);
-  threads.create_thread(lambda1);
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  threads.emplace_back(lambda2);
+  threads.emplace_back(lambda1);
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 /// Test a stream protocol spawn interface
-template <class StreamProtocol>
-void TestStreamProtocolSpawn(
-    typename StreamProtocol::resolver::query client_parameters,
-    typename StreamProtocol::resolver::query acceptor_parameters) {
-  std::cout << "  * TestStreamProtocolSpawn" << std::endl;
-  typedef std::array<uint8_t, buffer_size> Buffer;
-  boost::asio::io_service io_service;
-  boost::system::error_code resolve_ec;
-
-  Buffer buffer1;
-  Buffer buffer2;
-  Buffer r_buffer1;
-  Buffer r_buffer2;
-  tests::virtual_network_helpers::ResetBuffer(&buffer1, 1, false);
-  tests::virtual_network_helpers::ResetBuffer(&buffer2, 2, false);
-  tests::virtual_network_helpers::ResetBuffer(&r_buffer1, 0);
-  tests::virtual_network_helpers::ResetBuffer(&r_buffer2, 0);
-
-  typename StreamProtocol::socket socket1(io_service);
-  typename StreamProtocol::socket socket2(io_service);
-  typename StreamProtocol::acceptor acceptor(io_service);
-  typename StreamProtocol::resolver resolver(io_service);
-
-  auto acceptor_endpoint_it = resolver.resolve(acceptor_parameters, resolve_ec);
-  ASSERT_EQ(0, resolve_ec.value())
-      << "Resolving acceptor endpoint should not be in error: "
-      << resolve_ec.message();
-
-  typename StreamProtocol::endpoint acceptor_endpoint(*acceptor_endpoint_it);
-
-  auto remote_endpoint_it = resolver.resolve(client_parameters, resolve_ec);
-  ASSERT_EQ(0, resolve_ec.value())
-      << "Resolving remote endpoint should not be in error: "
-      << resolve_ec.message();
-  typename StreamProtocol::endpoint remote_endpoint(*remote_endpoint_it);
-
-  boost::system::error_code ec;
-
-  acceptor.open();
-  acceptor.set_option(boost::asio::socket_base::reuse_address(true), ec);
-  acceptor.bind(acceptor_endpoint, ec);
-  ASSERT_EQ(0, ec.value()) << "Bind acceptor should not be in error: "
-                           << ec.message();
-  acceptor.listen(100, ec);
-  ASSERT_EQ(0, ec.value()) << "Listen acceptor should not be in error: "
-                           << ec.message();
-
-  auto close_all = [&]() {
-    boost::system::error_code close_ec;
-    acceptor.close(close_ec);
-    EXPECT_FALSE(acceptor.is_open());
-    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-    socket1.close(close_ec);
-    EXPECT_FALSE(socket1.is_open());
-    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-    socket2.close(close_ec);
-    EXPECT_FALSE(socket2.is_open());
-  };
-
-  auto lambda2 = [&](boost::asio::yield_context yield) {
-    try {
-      acceptor.async_accept(socket2, yield);
-      boost::asio::async_read(socket2, boost::asio::buffer(r_buffer2), yield);
-      boost::asio::async_write(socket2, boost::asio::buffer(buffer2), yield);
-    } catch (const std::exception& e) {
-      ADD_FAILURE() << e.what();
-      close_all();
-    }
-  };
-
-  auto lambda1 = [&](boost::asio::yield_context yield) {
-    try {
-      socket1.async_connect(remote_endpoint, yield);
-      boost::asio::async_write(socket1, boost::asio::buffer(buffer1), yield);
-      boost::asio::async_read(socket1, boost::asio::buffer(r_buffer1), yield);
-
-    } catch (const std::exception& e) {
-      ADD_FAILURE() << e.what();
-      close_all();
-    }
-  };
-
-  boost::thread_group threads;
-  boost::asio::spawn(io_service, lambda2);
-  boost::asio::spawn(io_service, lambda1);
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
-  }
-  threads.join_all();
-}
+//template <class StreamProtocol>
+//void TestStreamProtocolSpawn(
+//    typename StreamProtocol::resolver::query client_parameters,
+//    typename StreamProtocol::resolver::query acceptor_parameters) {
+//  std::cout << "  * TestStreamProtocolSpawn" << std::endl;
+//  typedef std::array<uint8_t, buffer_size> Buffer;
+//  boost::asio::io_service io_service;
+//  boost::system::error_code resolve_ec;
+//
+//  Buffer buffer1;
+//  Buffer buffer2;
+//  Buffer r_buffer1;
+//  Buffer r_buffer2;
+//  tests::virtual_network_helpers::ResetBuffer(&buffer1, 1, false);
+//  tests::virtual_network_helpers::ResetBuffer(&buffer2, 2, false);
+//  tests::virtual_network_helpers::ResetBuffer(&r_buffer1, 0);
+//  tests::virtual_network_helpers::ResetBuffer(&r_buffer2, 0);
+//
+//  typename StreamProtocol::socket socket1(io_service);
+//  typename StreamProtocol::socket socket2(io_service);
+//  typename StreamProtocol::acceptor acceptor(io_service);
+//  typename StreamProtocol::resolver resolver(io_service);
+//
+//  auto acceptor_endpoint_it = resolver.resolve(acceptor_parameters, resolve_ec);
+//  ASSERT_EQ(0, resolve_ec.value())
+//      << "Resolving acceptor endpoint should not be in error: "
+//      << resolve_ec.message();
+//
+//  typename StreamProtocol::endpoint acceptor_endpoint(*acceptor_endpoint_it);
+//
+//  auto remote_endpoint_it = resolver.resolve(client_parameters, resolve_ec);
+//  ASSERT_EQ(0, resolve_ec.value())
+//      << "Resolving remote endpoint should not be in error: "
+//      << resolve_ec.message();
+//  typename StreamProtocol::endpoint remote_endpoint(*remote_endpoint_it);
+//
+//  boost::system::error_code ec;
+//
+//  acceptor.open();
+//  acceptor.set_option(boost::asio::socket_base::reuse_address(true), ec);
+//  acceptor.bind(acceptor_endpoint, ec);
+//  ASSERT_EQ(0, ec.value()) << "Bind acceptor should not be in error: "
+//                           << ec.message();
+//  acceptor.listen(100, ec);
+//  ASSERT_EQ(0, ec.value()) << "Listen acceptor should not be in error: "
+//                           << ec.message();
+//
+//  auto close_all = [&]() {
+//    boost::system::error_code close_ec;
+//    acceptor.close(close_ec);
+//    EXPECT_FALSE(acceptor.is_open());
+//    socket1.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+//    socket1.close(close_ec);
+//    EXPECT_FALSE(socket1.is_open());
+//    socket2.shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+//    socket2.close(close_ec);
+//    EXPECT_FALSE(socket2.is_open());
+//  };
+//
+//  auto lambda2 = [&](boost::asio::yield_context yield) {
+//    try {
+//      acceptor.async_accept(socket2, yield);
+//      boost::asio::async_read(socket2, boost::asio::buffer(r_buffer2), yield);
+//      boost::asio::async_write(socket2, boost::asio::buffer(buffer2), yield);
+//    } catch (const std::exception& e) {
+//      ADD_FAILURE() << e.what();
+//      close_all();
+//    }
+//  };
+//
+//  auto lambda1 = [&](boost::asio::yield_context yield) {
+//    try {
+//      socket1.async_connect(remote_endpoint, yield);
+//      boost::asio::async_write(socket1, boost::asio::buffer(buffer1), yield);
+//      boost::asio::async_read(socket1, boost::asio::buffer(r_buffer1), yield);
+//
+//    } catch (const std::exception& e) {
+//      ADD_FAILURE() << e.what();
+//      close_all();
+//    }
+//  };
+//
+//  std::vector<std::thread> threads;
+//  boost::asio::spawn(io_service, lambda2);
+//  boost::asio::spawn(io_service, lambda1);
+//  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+//    threads.emplace_back([&io_service]() { io_service.run(); });
+//  }
+//
+//  for (auto& thread : threads) {
+//    if (thread.joinable()) {
+//      thread.join();
+//    }
+//  }
+//}
 
 /// Test a stream protocol synchronous interface
 template <class StreamProtocol>
@@ -1184,13 +1218,18 @@ void TestStreamProtocolSynchronous(
     }
   };
 
-  boost::thread_group threads;
-  threads.create_thread(lambda2);
-  threads.create_thread(lambda1);
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  threads.emplace_back(lambda2);
+  threads.emplace_back(lambda1);
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 /// Check connection failure to an endpoint not listening
@@ -1221,11 +1260,16 @@ void TestStreamErrorConnectionProtocol(
   socket_client_no_connection.async_connect(remote_no_connect_endpoint,
                                             connection_error_handler);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 /// Check endpoint resolving
@@ -1439,10 +1483,15 @@ void TestBindLocalClientStreamProtocol(
                            << ec.message();
   socket1.async_connect(remote_endpoint, connected);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 #endif  // SSF_TESTS_STREAM_PROTOCOL_HELPERS_H_

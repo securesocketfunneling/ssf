@@ -5,14 +5,13 @@
 #include <atomic>
 #include <chrono>
 #include <future>
+#include <functional>
 #include <set>
 
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/use_future.hpp>
-#include <boost/asio/spawn.hpp>
+//#include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
-
-#include <boost/thread.hpp>
 
 #include "ssf/layer/queue/async_queue.h"
 #include "ssf/layer/queue/send_queued_datagram_socket.h"
@@ -88,11 +87,16 @@ TEST(QueueTest, async_queue_limit_test) {
   queue.async_get(got);  // op queued because get_op limit not reached
   EXPECT_EQ(1, queue.size());
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 TEST(QueueTest, async_queue_clear_test) {
@@ -116,14 +120,18 @@ TEST(QueueTest, async_queue_clear_test) {
   queue.async_push(2, pushed);
   queue.async_push(3, pushed);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   queue.clear();
-
-  threads.join_all();
+  
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 
   EXPECT_EQ(3, queue.size());
   queue.clear();
@@ -150,15 +158,19 @@ TEST(QueueTest, async_queue_close_test) {
   queue.async_push(2, pushed);
   queue.async_push(3, pushed);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   queue.close(main_ec);
   EXPECT_EQ(0, main_ec.value());
 
-  threads.join_all();
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 
   EXPECT_EQ(0, queue.size());
   queue.clear();
@@ -212,18 +224,22 @@ TEST(QueueTest, async_queue_future_test) {
     }
   };
 
-  boost::thread_group threads;
-  threads.create_thread(getting_lambda);
+  std::vector<std::thread> threads;
+  threads.emplace_back(getting_lambda);
 
   for (uint8_t i = 0; i < nb_of_pushing_threads; ++i) {
-    threads.create_thread(pushing_lambda);
+    threads.emplace_back(pushing_lambda);
   }
 
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
-  threads.join_all();
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 
   queue.close(main_ec);
   EXPECT_EQ(0, main_ec.value());
@@ -273,12 +289,16 @@ TEST(QueueTest, async_queue_future_test) {
 //    boost::asio::spawn(io_service, pushing_lambda);
 //  }
 //
-//  boost::thread_group threads;
-//  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-//    threads.create_thread([&io_service]() { io_service.run(); });
+//  std::vector<std::thread> threads;
+//  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+//    threads.emplace_back([&io_service]() { io_service.run(); });
 //  }
 //
-//  threads.join_all();
+//  for (auto& thread : threads) {
+//    if (thread.joinable()) {
+//      thread.join();
+//    }
+//  }
 //
 //  queue.close(main_ec);
 //  EXPECT_EQ(0, main_ec.value());
@@ -287,7 +307,7 @@ TEST(QueueTest, async_queue_future_test) {
 //  queue.clear();
 //}
 
- TEST(QueueTest, send_queued_datagram_socket) {
+TEST(QueueTest, send_queued_datagram_socket) {
   static const uint32_t number_of_senders = 100;
   static const uint32_t number_of_sends = 1000;
 
@@ -368,16 +388,16 @@ TEST(QueueTest, async_queue_future_test) {
     }
   };
 
-  boost::thread_group threads;
+  std::vector<std::thread> threads;
 
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
-  threads.create_thread(boost::bind(receiver_lambda, ec, 0));
+  threads.emplace_back(std::bind(receiver_lambda, ec, 0));
 
   for (uint16_t i = 0; i < number_of_senders; ++i) {
-    threads.create_thread(sender_lambda);
+    threads.emplace_back(sender_lambda);
   }
 
   done.get_future().wait();
@@ -385,5 +405,10 @@ TEST(QueueTest, async_queue_future_test) {
   send_socket.close();
   receive_socket.close();
   p_worker.reset();
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }

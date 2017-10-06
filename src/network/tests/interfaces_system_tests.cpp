@@ -124,9 +124,9 @@ void TestInterface(bool should_fail, const std::string& connect_filename,
         connect_mounted.set_value(ec.value() == 0);
       });
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   bool connect_mounted_val = connect_mounted.get_future().get();
@@ -140,8 +140,12 @@ void TestInterface(bool should_fail, const std::string& connect_filename,
   }
 
   interfaces_collection.UmountAll();
-
-  threads.join_all();
+  
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 TEST_F(SystemTestFixture, SimpleTCPSpecificInterfaces) {
@@ -256,14 +260,19 @@ TEST_F(SystemTestFixture, ImportHeterogeneousInterfaces) {
   system_interfaces.AsyncMount(system_multiple_config_filename_,
                                interface_up_handler);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   EXPECT_TRUE(finished.get_future().get()) << "All interfaces not mounted";
   system_interfaces.Stop();
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 
   system_interfaces.UnregisterAllInterfacesCollection();
 }
@@ -337,15 +346,20 @@ TEST_F(SystemTestFixture, ImportHeterogeneousInterfaces) {
   system_interfaces.AsyncMount(system_reconnect_config_filename_,
                                interface_up_handler);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   ASSERT_TRUE(finished.get_future().get()) << "All interfaces not mounted";
 
   system_interfaces.Stop();
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 
   system_interfaces.UnregisterAllInterfacesCollection();
 }*/

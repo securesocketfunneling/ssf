@@ -6,7 +6,7 @@
 #include <thread>
 
 #include <boost/asio/connect.hpp>
-#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
@@ -58,7 +58,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
 
     boost::asio::io_service io_service;
     std::thread t([&]() { io_service.run(); });
-    boost::asio::deadline_timer timer(io_service);
+    boost::asio::steady_timer timer(io_service);
     boost::asio::ip::tcp::socket socket(io_service);
 
     boost::asio::ip::tcp::resolver r(io_service);
@@ -82,7 +82,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
     boost::asio::write(socket, boost::asio::buffer(command), ec);
     ASSERT_EQ(ec.value(), 0) << "Fail to write to socket";
 
-    timer.expires_from_now(boost::posix_time::seconds(1), ec);
+    timer.expires_from_now(std::chrono::seconds(1), ec);
     timer.wait(ec);
 
     std::cout << std::endl;

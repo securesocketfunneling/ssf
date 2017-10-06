@@ -2,6 +2,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -230,7 +231,7 @@ TEST_F(FiberTest, ConnectDisconnectFiberFromServer) {
       [this, &wait_closing_lambda](const boost::system::error_code& ec) {
         ASSERT_EQ(ec.value(), 0) << "Connect handler should not be in error";
 
-        io_service_client_.post(boost::bind<void>(wait_closing_lambda, ec));
+        io_service_client_.post(std::bind(wait_closing_lambda, ec));
       };
 
   boost::system::error_code acceptor_ec;
@@ -279,7 +280,7 @@ TEST_F(FiberTest, ConnectDisconnectFiberFromClient) {
       [this, &wait_closing_lambda](const boost::system::error_code& ec) {
         ASSERT_EQ(ec.value(), 0) << "Accept handler should not be in error";
 
-        io_service_client_.post(boost::bind<void>(wait_closing_lambda, ec));
+        io_service_client_.post(std::bind(wait_closing_lambda, ec));
       };
 
   auto connected_lambda = [this, &fib_client, &connect_closed](
@@ -332,8 +333,8 @@ TEST_F(FiberTest, MultipleConnectDisconnectFiber) {
 
   async_accept_h2 = [this, &async_accept_h1, &fib_acceptor]() {
     auto p_fiber = std::make_shared<fiber>(io_service_server_);
-    fib_acceptor.async_accept(*p_fiber,
-                              boost::bind(async_accept_h1, p_fiber, _1));
+    fib_acceptor.async_accept(
+        *p_fiber, std::bind(async_accept_h1, p_fiber, std::placeholders::_1));
   };
 
   async_accept_h1 = [this, &async_accept_h2, &number_of_accepted,
@@ -385,8 +386,9 @@ TEST_F(FiberTest, MultipleConnectDisconnectFiber) {
       boost::asio::fiber::stream_fiber<socket>::v1(), demux_client_, 1);
   for (std::size_t i = 0; i < number_of_connections; ++i) {
     auto p_fiber = std::make_shared<fiber>(io_service_client_);
-    p_fiber->async_connect(fib_client_endpoint,
-                           boost::bind<void>(async_connect_h1, p_fiber, _1));
+    p_fiber->async_connect(
+        fib_client_endpoint,
+        std::bind(async_connect_h1, p_fiber, std::placeholders::_1));
   }
 
   connected_all.get_future().wait();
@@ -436,7 +438,8 @@ TEST_F(FiberTest, ExchangePackets) {
 
     if (++server_received < packet_number) {
       boost::asio::async_write(fib_server, boost::asio::buffer(buffer_server),
-                               boost::bind<void>(async_send_h1, _1, _2));
+                               std::bind(async_send_h1, std::placeholders::_1,
+                                         std::placeholders::_2));
     } else {
       fib_server.close();
       server_closed.set_value(true);
@@ -447,7 +450,8 @@ TEST_F(FiberTest, ExchangePackets) {
     ASSERT_EQ(ec.value(), 0);
 
     boost::asio::async_read(fib_server, boost::asio::buffer(buffer_server),
-                            boost::bind<void>(async_receive_h1, _1, _2));
+                            std::bind(async_receive_h1, std::placeholders::_1,
+                                      std::placeholders::_2));
   };
 
   auto async_accept_h = [&, this](const boost::system::error_code& ec) {
@@ -460,7 +464,8 @@ TEST_F(FiberTest, ExchangePackets) {
     buffer_server[4] = '5';
 
     boost::asio::async_read(fib_server, boost::asio::buffer(buffer_server),
-                            boost::bind<void>(async_receive_h1, _1, _2));
+                            std::bind(async_receive_h1, std::placeholders::_1,
+                                      std::placeholders::_2));
   };
 
   std::function<void(const boost::system::error_code& ec, std::size_t)>
@@ -478,7 +483,8 @@ TEST_F(FiberTest, ExchangePackets) {
       buffer_client[4] = 'e';
 
       boost::asio::async_write(fib_client, boost::asio::buffer(buffer_client),
-                               boost::bind<void>(async_send_h2, _1, _2));
+                               std::bind(async_send_h2, std::placeholders::_1,
+                                         std::placeholders::_2));
     } else {
       fib_client.close();
       client_closed.set_value(true);
@@ -488,7 +494,8 @@ TEST_F(FiberTest, ExchangePackets) {
   async_send_h2 = [&, this](const boost::system::error_code& ec, std::size_t) {
     ASSERT_EQ(ec.value(), 0);
     boost::asio::async_read(fib_client, boost::asio::buffer(buffer_client),
-                            boost::bind<void>(async_receive_h2, _1, _2));
+                            std::bind(async_receive_h2, std::placeholders::_1,
+                                      std::placeholders::_2));
   };
 
   auto async_connect_h = [&, this](const boost::system::error_code& ec) {
@@ -499,8 +506,9 @@ TEST_F(FiberTest, ExchangePackets) {
     buffer_client[3] = 'd';
     buffer_client[4] = 'e';
 
-    boost::asio::async_write(fib_client, boost::asio::buffer(buffer_client),
-                             boost::bind<void>(async_send_h2, _1, _2));
+    boost::asio::async_write(
+        fib_client, boost::asio::buffer(buffer_client),
+        std::bind(async_send_h2, std::placeholders::_1, std::placeholders::_2));
   };
 
   boost::system::error_code acceptor_ec;
@@ -509,12 +517,13 @@ TEST_F(FiberTest, ExchangePackets) {
   fib_acceptor.open(server_endpoint.protocol(), acceptor_ec);
   fib_acceptor.bind(server_endpoint, acceptor_ec);
   fib_acceptor.listen(boost::asio::socket_base::max_connections, acceptor_ec);
-  fib_acceptor.async_accept(fib_server, boost::bind<void>(async_accept_h, _1));
+  fib_acceptor.async_accept(fib_server,
+                            std::bind(async_accept_h, std::placeholders::_1));
 
   fiber_endpoint client_endpoint(boost::asio::fiber::stream_fiber<socket>::v1(),
                                  demux_client_, 1);
   fib_client.async_connect(client_endpoint,
-                           boost::bind<void>(async_connect_h, _1));
+                           std::bind(async_connect_h, std::placeholders::_1));
 
   client_closed.get_future().wait();
   server_closed.get_future().wait();
@@ -551,7 +560,7 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
 
   std::list<TestConnection> test_connections;
 
-  boost::recursive_mutex server_received_mutex;
+  std::recursive_mutex server_received_mutex;
   int32_t server_received = 0;
 
   std::atomic<bool> finished(false);
@@ -568,7 +577,7 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
                          buffer_type& buffer_server) {
 
     if (ec) {
-      boost::recursive_mutex::scoped_lock lock_server_received(
+      std::unique_lock<std::recursive_mutex> lock_server_received(
           server_received_mutex);
       ASSERT_EQ(packet_number, server_received);
       return;
@@ -586,12 +595,12 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
     buffer_server[3] = '4';
     buffer_server[4] = '5';
 
-    boost::recursive_mutex::scoped_lock lock(server_received_mutex);
+    std::unique_lock<std::recursive_mutex> lock(server_received_mutex);
     if (++server_received < packet_number - 4) {
       boost::asio::async_write(
           fib, boost::asio::buffer(buffer_server),
-          boost::bind<void>(async_send_h1, _1, _2, boost::ref(closed),
-                            boost::ref(fib), boost::ref(buffer_server)));
+          std::bind(async_send_h1, std::placeholders::_1, std::placeholders::_2,
+                    std::ref(closed), std::ref(fib), std::ref(buffer_server)));
     } else if (server_received < packet_number) {
       fib.close();
       closed.set_value(true);
@@ -606,10 +615,10 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
                       std::promise<bool>& closed, fiber& fib,
                       buffer_type& buffer_server) {
     ASSERT_EQ(ec.value(), 0);
-    boost::asio::async_read(
-        fib, boost::asio::buffer(buffer_server),
-        boost::bind<void>(async_receive_h1, _1, _2, boost::ref(closed),
-                          boost::ref(fib), boost::ref(buffer_server)));
+    boost::asio::async_read(fib, boost::asio::buffer(buffer_server),
+                            std::bind(async_receive_h1, std::placeholders::_1,
+                                      std::placeholders::_2, std::ref(closed),
+                                      std::ref(fib), std::ref(buffer_server)));
   };
 
   auto async_accept_h = [&, this](const boost::system::error_code& ec,
@@ -623,10 +632,10 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
     buffer_server[3] = '4';
     buffer_server[4] = '5';
 
-    boost::asio::async_read(
-        fib, boost::asio::buffer(buffer_server),
-        boost::bind<void>(async_receive_h1, _1, _2, boost::ref(closed),
-                          boost::ref(fib), boost::ref(buffer_server)));
+    boost::asio::async_read(fib, boost::asio::buffer(buffer_server),
+                            std::bind(async_receive_h1, std::placeholders::_1,
+                                      std::placeholders::_2, std::ref(closed),
+                                      std::ref(fib), std::ref(buffer_server)));
   };
 
   std::function<void(const boost::system::error_code&, std::size_t,
@@ -653,8 +662,8 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
 
       boost::asio::async_write(
           fib, boost::asio::buffer(buffer_client),
-          boost::bind<void>(async_send_h2, _1, _2, boost::ref(closed),
-                            boost::ref(fib), boost::ref(buffer_client)));
+          std::bind(async_send_h2, std::placeholders::_1, std::placeholders::_2,
+                    std::ref(closed), std::ref(fib), std::ref(buffer_client)));
     } else {
       fib.close();
       closed.set_value(true);
@@ -665,10 +674,10 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
                       std::promise<bool>& closed, fiber& fib,
                       buffer_type& buffer_client) {
     EXPECT_EQ(ec.value(), 0);
-    boost::asio::async_read(
-        fib, boost::asio::buffer(buffer_client),
-        boost::bind<void>(async_receive_h2, _1, _2, boost::ref(closed),
-                          boost::ref(fib), boost::ref(buffer_client)));
+    boost::asio::async_read(fib, boost::asio::buffer(buffer_client),
+                            std::bind(async_receive_h2, std::placeholders::_1,
+                                      std::placeholders::_2, std::ref(closed),
+                                      std::ref(fib), std::ref(buffer_client)));
   };
 
   auto async_connect_h = [&](std::promise<bool>& closed, fiber& fib,
@@ -684,8 +693,8 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
 
     boost::asio::async_write(
         fib, boost::asio::buffer(buffer_client),
-        boost::bind<void>(async_send_h2, _1, _2, boost::ref(closed),
-                          boost::ref(fib), boost::ref(buffer_client)));
+        std::bind(async_send_h2, std::placeholders::_1, std::placeholders::_2,
+                  std::ref(closed), std::ref(fib), std::ref(buffer_client)));
   };
 
   boost::system::error_code acceptor_ec;
@@ -703,16 +712,16 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
     auto& test_connection = test_connections.front();
     fib_acceptor.async_accept(
         test_connection.fib_server,
-        boost::bind<void>(async_accept_h, _1,
-                          boost::ref(test_connection.server_closed),
-                          boost::ref(test_connection.fib_server),
-                          boost::ref(test_connection.buffer_server)));
+        std::bind(async_accept_h, std::placeholders::_1,
+                  std::ref(test_connection.server_closed),
+                  std::ref(test_connection.fib_server),
+                  std::ref(test_connection.buffer_server)));
     test_connection.fib_client.async_connect(
         client_endpoint,
-        boost::bind<void>(async_connect_h,
-                          boost::ref(test_connection.client_closed),
-                          boost::ref(test_connection.fib_client),
-                          boost::ref(test_connection.buffer_client), _1));
+        std::bind(async_connect_h, std::ref(test_connection.client_closed),
+                  std::ref(test_connection.fib_client),
+                  std::ref(test_connection.buffer_client),
+                  std::placeholders::_1));
   }
 
   for (auto& test_connection : test_connections) {
@@ -734,7 +743,7 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
   std::array<uint8_t, 5> buffer_client;
   std::array<uint8_t, 2> buffer_server;
 
-  boost::recursive_mutex received_mutex;
+  std::recursive_mutex received_mutex;
   uint8_t count = 0;
   size_t received = 0;
   size_t sent = 0;
@@ -748,7 +757,7 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
 
   auto void_handler_receive = [&](const boost::system::error_code& ec,
                                   size_t s) {
-    boost::recursive_mutex::scoped_lock lock(received_mutex);
+    std::unique_lock<std::recursive_mutex> lock(received_mutex);
     received += s;
     ++count;
 
@@ -761,14 +770,22 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
 
   auto async_accept_h1 = [&, this](const boost::system::error_code& ec) {
     ASSERT_EQ(ec.value(), 0);
-    boost::asio::async_read(fib_server, boost::asio::buffer(buffer_server),
-                            boost::bind<void>(void_handler_receive, _1, _2));
-    boost::asio::async_read(fib_server, boost::asio::buffer(buffer_server),
-                            boost::bind<void>(void_handler_receive, _1, _2));
-    boost::asio::async_read(fib_server, boost::asio::buffer(buffer_server),
-                            boost::bind<void>(void_handler_receive, _1, _2));
-    boost::asio::async_read(fib_server, boost::asio::buffer(buffer_server),
-                            boost::bind<void>(void_handler_receive, _1, _2));
+    boost::asio::async_read(
+        fib_server, boost::asio::buffer(buffer_server),
+        std::bind(void_handler_receive, std::placeholders::_1,
+                  std::placeholders::_2));
+    boost::asio::async_read(
+        fib_server, boost::asio::buffer(buffer_server),
+        std::bind(void_handler_receive, std::placeholders::_1,
+                  std::placeholders::_2));
+    boost::asio::async_read(
+        fib_server, boost::asio::buffer(buffer_server),
+        std::bind(void_handler_receive, std::placeholders::_1,
+                  std::placeholders::_2));
+    boost::asio::async_read(
+        fib_server, boost::asio::buffer(buffer_server),
+        std::bind(void_handler_receive, std::placeholders::_1,
+                  std::placeholders::_2));
   };
 
   auto void_handler_send = [&](const boost::system::error_code& ec, size_t s) {
@@ -792,7 +809,8 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
     buffer_client[4] = 'e';
 
     boost::asio::async_write(fib_client, boost::asio::buffer(buffer_client),
-                             boost::bind<void>(void_handler_send, _1, _2));
+                             std::bind(void_handler_send, std::placeholders::_1,
+                                       std::placeholders::_2));
   };
 
   boost::system::error_code acceptor_ec;
@@ -801,17 +819,18 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
   fib_acceptor.open(server_endpoint.protocol(), acceptor_ec);
   fib_acceptor.bind(server_endpoint, acceptor_ec);
   fib_acceptor.listen(boost::asio::socket_base::max_connections, acceptor_ec);
-  fib_acceptor.async_accept(fib_server, boost::bind<void>(async_accept_h1, _1));
+  fib_acceptor.async_accept(fib_server,
+                            std::bind(async_accept_h1, std::placeholders::_1));
 
   fiber_endpoint client_endpoint(boost::asio::fiber::stream_fiber<socket>::v1(),
                                  demux_client_, 1);
   fib_client.async_connect(client_endpoint,
-                           boost::bind<void>(async_connect_h1, _1));
+                           std::bind(async_connect_h1, std::placeholders::_1));
 
   client_closed.get_future().wait();
   server_closed.get_future().wait();
 
-  { boost::recursive_mutex::scoped_lock lock(received_mutex); }
+  { std::unique_lock<std::recursive_mutex> lock(received_mutex); }
 
   EXPECT_EQ(received, 5);
   EXPECT_EQ(sent, 5);
@@ -865,18 +884,18 @@ TEST_F(FiberTest, UDPfiber) {
     buffer_server[3] = 13;
     buffer_server[4] = 14;
 
-    dgr_f_server.async_send_to(boost::asio::buffer(buffer_server),
-                               endpoint_server_from,
-                               boost::bind<void>(sent_server, _1, _2));
+    dgr_f_server.async_send_to(
+        boost::asio::buffer(buffer_server), endpoint_server_from,
+        std::bind(sent_server, std::placeholders::_1, std::placeholders::_2));
   };
 
   dgr_f_server.open(endpoint_server_local_port.protocol(), ec);
   dgr_f_server.bind(endpoint_server_local_port, ec);
   ASSERT_EQ(ec.value(), 0);
 
-  dgr_f_server.async_receive_from(boost::asio::buffer(buffer_server),
-                                  endpoint_server_from,
-                                  boost::bind<void>(received_server, _1, _2));
+  dgr_f_server.async_receive_from(
+      boost::asio::buffer(buffer_server), endpoint_server_from,
+      std::bind(received_server, std::placeholders::_1, std::placeholders::_2));
 
   buffer_client[0] = 1;
   buffer_client[1] = 2;
@@ -908,14 +927,15 @@ TEST_F(FiberTest, UDPfiber) {
   auto sent_client = [&](const boost::system::error_code& sent_ec,
                          size_t length) {
     ASSERT_EQ(sent_ec.value(), 0) << "Sent handler should not be in error";
-    dgr_f_client.async_receive_from(boost::asio::buffer(buffer_client),
-                                    endpoint_client_new_remote_port,
-                                    boost::bind<void>(received_client, _1, _2));
+    dgr_f_client.async_receive_from(
+        boost::asio::buffer(buffer_client), endpoint_client_new_remote_port,
+        std::bind(received_client, std::placeholders::_1,
+                  std::placeholders::_2));
   };
 
-  dgr_f_client.async_send_to(boost::asio::buffer(buffer_client),
-                             endpoint_client_remote_port,
-                             boost::bind<void>(sent_client, _1, _2));
+  dgr_f_client.async_send_to(
+      boost::asio::buffer(buffer_client), endpoint_client_remote_port,
+      std::bind(sent_client, std::placeholders::_1, std::placeholders::_2));
 
   client_closed.get_future().wait();
   server_closed.get_future().wait();
@@ -967,8 +987,10 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
                              boost::asio::ssl::verify_fail_if_no_peer_cert);
 
   // Set the callback to verify the cetificate chains of the peer
-  ctx_client.set_verify_callback(boost::bind(verify_callback, _1, _2));
-  ctx_server.set_verify_callback(boost::bind(verify_callback, _1, _2));
+  ctx_client.set_verify_callback(
+      std::bind(verify_callback, std::placeholders::_1, std::placeholders::_2));
+  ctx_server.set_verify_callback(
+      std::bind(verify_callback, std::placeholders::_1, std::placeholders::_2));
 
   // Load the file containing the trusted certificate authorities
   ctx_client.add_certificate_authority(
@@ -1019,16 +1041,17 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
                              &sent](const boost::system::error_code& ec) {
     EXPECT_EQ(ec.value(), 0) << "Handshaked handler should not be in error";
     buffer_s = 10;
-    boost::asio::async_write(ssl_fiber_server,
-                             boost::asio::buffer(&buffer_s, sizeof(buffer_s)),
-                             boost::bind<void>(sent, _1, _2));
+    boost::asio::async_write(
+        ssl_fiber_server, boost::asio::buffer(&buffer_s, sizeof(buffer_s)),
+        std::bind(sent, std::placeholders::_1, std::placeholders::_2));
   };
 
   auto async_accept_s = [this, &ssl_fiber_server, &async_handshaked_s](
       const boost::system::error_code& ec) {
     EXPECT_EQ(ec.value(), 0) << "Accept handler should not be in error";
-    ssl_fiber_server.async_handshake(boost::asio::ssl::stream_base::server,
-                                     boost::bind<void>(async_handshaked_s, _1));
+    ssl_fiber_server.async_handshake(
+        boost::asio::ssl::stream_base::server,
+        std::bind(async_handshaked_s, std::placeholders::_1));
   };
 
   auto received = [this, &client_closed, &ssl_fiber_client, &buffer_c,
@@ -1045,16 +1068,17 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
   auto async_handshaked_c = [this, &ssl_fiber_client, &buffer_c,
                              &received](const boost::system::error_code& ec) {
     EXPECT_EQ(ec.value(), 0) << "Handshaked handler should not be in error";
-    boost::asio::async_read(ssl_fiber_client,
-                            boost::asio::buffer(&buffer_c, sizeof(buffer_c)),
-                            boost::bind<void>(received, _1, _2));
+    boost::asio::async_read(
+        ssl_fiber_client, boost::asio::buffer(&buffer_c, sizeof(buffer_c)),
+        std::bind(received, std::placeholders::_1, std::placeholders::_2));
   };
 
   auto async_connect_c = [this, &ssl_fiber_client, &async_handshaked_c](
       const boost::system::error_code& ec) {
     EXPECT_EQ(ec.value(), 0) << "Connect handler should not be in error";
-    ssl_fiber_client.async_handshake(boost::asio::ssl::stream_base::client,
-                                     boost::bind<void>(async_handshaked_c, _1));
+    ssl_fiber_client.async_handshake(
+        boost::asio::ssl::stream_base::client,
+        std::bind(async_handshaked_c, std::placeholders::_1));
   };
 
   boost::system::error_code acceptor_ec;
@@ -1064,12 +1088,12 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
   fib_acceptor.bind(server_endpoint, acceptor_ec);
   fib_acceptor.listen(boost::asio::socket_base::max_connections, acceptor_ec);
   fib_acceptor.async_accept(ssl_fiber_server.next_layer(),
-                            boost::bind<void>(async_accept_s, _1));
+                            std::bind(async_accept_s, std::placeholders::_1));
 
   fiber_endpoint client_endpoint(boost::asio::fiber::stream_fiber<socket>::v1(),
                                  demux_client_, 1);
   ssl_fiber_client.next_layer().async_connect(
-      client_endpoint, boost::bind<void>(async_connect_c, _1));
+      client_endpoint, std::bind(async_connect_c, std::placeholders::_1));
 
   client_closed.get_future().wait();
   server_closed.get_future().wait();

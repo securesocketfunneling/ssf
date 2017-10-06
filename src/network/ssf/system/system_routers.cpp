@@ -112,9 +112,10 @@ uint32_t SystemRouters::AsyncConfig(
         all_up_handler, ec));
   }
 
-  system_interfaces_.AsyncMount(interfaces_config_filepath,
-                                boost::bind(&SystemRouters::InterfaceUpHandler,
-                                            this, _1, _2, all_up_handler));
+  system_interfaces_.AsyncMount(
+      interfaces_config_filepath,
+      std::bind(&SystemRouters::InterfaceUpHandler, this, std::placeholders::_1,
+                std::placeholders::_2, all_up_handler));
 
   return static_cast<uint32_t>(added_routers.size());
 }
@@ -188,7 +189,8 @@ void SystemRouters::AddNetworksFromPropertyTree(const std::string& router_name,
     mount_info.router_name = router_name;
 
     {
-      boost::recursive_mutex::scoped_lock lock_mount_infos(mount_infos_mutex_);
+      std::unique_lock<std::recursive_mutex> lock_mount_infos(
+          mount_infos_mutex_);
       mount_infos_.emplace(interface_id, mount_info);
     }
   }
@@ -218,7 +220,7 @@ void SystemRouters::InterfaceUpHandler(
     const boost::system::error_code& ec,
     const SystemRouters::interface_id& interface_name,
     SystemRouters::AllRoutersUpHandler all_up_handler) {
-  boost::recursive_mutex::scoped_lock lock_mount_infos(mount_infos_mutex_);
+  std::unique_lock<std::recursive_mutex> lock_mount_infos(mount_infos_mutex_);
   auto mount_info_it = mount_infos_.find(interface_name);
   if (mount_info_it == mount_infos_.end()) {
     return;
@@ -266,7 +268,7 @@ void SystemRouters::InterfaceUpHandler(
 
 void SystemRouters::PostAllUpHandler(const boost::system::error_code& all_up_ec,
                                      AllRoutersUpHandler all_up_handler) {
-  boost::recursive_mutex::scoped_lock lock_mount_infos(mount_infos_mutex_);
+  std::unique_lock<std::recursive_mutex> lock_mount_infos(mount_infos_mutex_);
   if (mount_infos_.empty()) {
     io_service_.post(boost::asio::detail::binder1<AllRoutersUpHandler,
                                                   boost::system::error_code>(

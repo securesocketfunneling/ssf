@@ -3,9 +3,9 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/asio/ip/udp.hpp>
 
 namespace ssf {
@@ -39,7 +39,7 @@ class DatagramLinkOperator
   /// Function called when data is received from the right end socket
   bool Feed(RemoteEndpointRight received_from, boost::asio::const_buffer buffer,
             size_t length) {
-    boost::recursive_mutex::scoped_lock lock(links_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(links_mutex_);
 
     // If the endpoint is registered, transfer the data to its DataLink
     if (links_.count(received_from)) {
@@ -54,8 +54,8 @@ class DatagramLinkOperator
   void AddLink(LeftEndSocket left, RemoteEndpointRight right_endpoint,
                RemoteEndpointLeft left_endpoint,
                boost::asio::io_service& io_service) {
-    boost::recursive_mutex::scoped_lock lock(links_mutex_);
-    boost::recursive_mutex::scoped_lock lock2(endpoints_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(links_mutex_);
+    std::unique_lock<std::recursive_mutex> lock2(endpoints_mutex_);
 
     auto link = DatagramLinkSpec::Create(right_end_socket_, std::move(left),
                                          right_endpoint, left_endpoint,
@@ -69,8 +69,8 @@ class DatagramLinkOperator
   void Stop(DatagramLinkPtr link) {
     link->Stop();
 
-    boost::recursive_mutex::scoped_lock lock(links_mutex_);
-    boost::recursive_mutex::scoped_lock lock2(endpoints_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(links_mutex_);
+    std::unique_lock<std::recursive_mutex> lock2(endpoints_mutex_);
     if (endpoints_.count(link)) {
       links_.erase(endpoints_[link]);
       endpoints_.erase(link);
@@ -80,14 +80,14 @@ class DatagramLinkOperator
   /// Function to stop all DataLinks
   void StopAll() {
     {
-      boost::recursive_mutex::scoped_lock lock(links_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(links_mutex_);
       for (auto& link : links_) {
         link.second->Stop();
       }
       links_.clear();
     }
 
-    boost::recursive_mutex::scoped_lock lock2(endpoints_mutex_);
+    std::unique_lock<std::recursive_mutex> lock2(endpoints_mutex_);
     endpoints_.clear();
   }
 
@@ -95,9 +95,9 @@ class DatagramLinkOperator
   DatagramLinkOperator(RightEndSocket& right_end_socket)
       : right_end_socket_(right_end_socket) {}
 
-  boost::recursive_mutex endpoints_mutex_;
+  std::recursive_mutex endpoints_mutex_;
   std::map<DatagramLinkPtr, RemoteEndpointRight> endpoints_;
-  boost::recursive_mutex links_mutex_;
+  std::recursive_mutex links_mutex_;
   std::map<RemoteEndpointRight, DatagramLinkPtr> links_;
   RightEndSocket& right_end_socket_;
 };

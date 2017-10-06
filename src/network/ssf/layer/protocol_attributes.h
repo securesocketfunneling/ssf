@@ -1,9 +1,8 @@
 #ifndef SSF_LAYER_PROTOCOL_ATTRIBUTES_H_
 #define SSF_LAYER_PROTOCOL_ATTRIBUTES_H_
 
+#include <functional>
 #include <type_traits>
-
-#include <boost/bind.hpp>
 
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
@@ -48,8 +47,7 @@ void AsyncSendDatagram(
 
 template <class Socket, class Datagram, class Endpoint, class Handler>
 void AsyncReceiveDatagram(
-    Socket& socket, Datagram* p_datagram, Endpoint& source,
-    Handler handler,
+    Socket& socket, Datagram* p_datagram, Endpoint& source, Handler handler,
     typename std::enable_if<IsStream<Socket>::value, Socket>::type* = nullptr) {
   source = socket.remote_endpoint();
   AsyncReceiveDatagram(socket, p_datagram, std::move(handler));
@@ -57,65 +55,65 @@ void AsyncReceiveDatagram(
 
 template <class Socket, class Datagram, class Handler>
 void AsyncReceiveDatagram(
-    Socket& socket, Datagram* p_datagram,
-    const Handler& handler,
+    Socket& socket, Datagram* p_datagram, const Handler& handler,
     typename std::enable_if<IsStream<Socket>::value, Socket>::type* = nullptr) {
   auto footer_received_lambda = [p_datagram, handler](
       std::size_t total_length, const boost::system::error_code& ec,
       std::size_t length) { handler(ec, total_length + length); };
 
   auto payload_received_lambda = [&socket, p_datagram, footer_received_lambda](
-    std::size_t total_length, const boost::system::error_code& ec,
-    std::size_t length) {
+      std::size_t total_length, const boost::system::error_code& ec,
+      std::size_t length) {
     if (!ec) {
       boost::asio::async_read(
-        socket, p_datagram->footer().GetMutableBuffers(),
-        std::move(boost::bind<void>(std::move(footer_received_lambda),
-        total_length + length, _1, _2)));
+          socket, p_datagram->footer().GetMutableBuffers(),
+          std::move(std::bind<void>(
+              std::move(footer_received_lambda), total_length + length,
+              std::placeholders::_1, std::placeholders::_2)));
     } else {
       footer_received_lambda(total_length + length, ec, 0);
     }
   };
 
   auto header_received_lambda = [&socket, p_datagram, payload_received_lambda](
-    const boost::system::error_code& ec, std::size_t length) {
+      const boost::system::error_code& ec, std::size_t length) {
     if (!ec) {
       p_datagram->payload().SetSize(p_datagram->header().payload_length());
       boost::asio::async_read(
-        socket, p_datagram->payload().GetMutableBuffers(),
-        std::move(boost::bind<void>(std::move(payload_received_lambda),
-        length, _1, _2)));
+          socket, p_datagram->payload().GetMutableBuffers(),
+          std::move(std::bind(std::move(payload_received_lambda), length,
+                              std::placeholders::_1, std::placeholders::_2)));
     } else {
       payload_received_lambda(length, ec, 0);
     }
   };
 
   boost::asio::async_read(socket, p_datagram->header().GetMutableBuffers(),
-    std::move(header_received_lambda));
+                          std::move(header_received_lambda));
 }
 
 template <class Socket, class Datagram, class Endpoint, class Handler>
-void AsyncSendDatagram(
-    Socket& socket, const Datagram& datagram, const Endpoint& destination,
-    Handler handler,
-    typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* = nullptr) {
+void AsyncSendDatagram(Socket& socket, const Datagram& datagram,
+                       const Endpoint& destination, Handler handler,
+                       typename std::enable_if<IsDatagram<Socket>::value,
+                                               Socket>::type* = nullptr) {
   socket.async_send_to(datagram.GetConstBuffers(), destination,
                        std::move(handler));
 }
 
 template <class Socket, class Datagram, class Handler>
 void AsyncSendDatagram(
-  Socket& socket, const Datagram& datagram,
-  Handler handler,
-  typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* = nullptr) {
+    Socket& socket, const Datagram& datagram, Handler handler,
+    typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* =
+        nullptr) {
   socket.async_send(datagram.GetConstBuffers(), std::move(handler));
 }
 
 template <class Socket, class Datagram, class Endpoint, class Handler>
-void AsyncReceiveDatagram(
-    Socket& socket, Datagram* p_datagram, Endpoint& source,
-    const Handler& handler,
-    typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* = nullptr) {
+void AsyncReceiveDatagram(Socket& socket, Datagram* p_datagram,
+                          Endpoint& source, const Handler& handler,
+                          typename std::enable_if<IsDatagram<Socket>::value,
+                                                  Socket>::type* = nullptr) {
   auto p_buffer = std::make_shared<std::vector<uint8_t>>(
       Datagram::size + Socket::protocol_type::mtu);
 
@@ -124,7 +122,7 @@ void AsyncReceiveDatagram(
     if (!ec) {
       p_datagram->payload().SetSize(length - Datagram::size);
       boost::asio::buffer_copy(p_datagram->GetMutableBuffers(),
-        boost::asio::buffer(*p_buffer));
+                               boost::asio::buffer(*p_buffer));
       handler(ec, length);
     } else {
       handler(ec, 0);
@@ -137,18 +135,18 @@ void AsyncReceiveDatagram(
 
 template <class Socket, class Datagram, class Handler>
 void AsyncReceiveDatagram(
-    Socket& socket, Datagram* p_datagram,
-    const Handler& handler,
-    typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* = nullptr) {
+    Socket& socket, Datagram* p_datagram, const Handler& handler,
+    typename std::enable_if<IsDatagram<Socket>::value, Socket>::type* =
+        nullptr) {
   auto p_buffer = std::make_shared<std::vector<uint8_t>>(
-    Datagram::size + Socket::protocol_type::mtu);
+      Datagram::size + Socket::protocol_type::mtu);
 
   auto datagram_received_lambda = [p_buffer, p_datagram, handler](
       const boost::system::error_code& ec, std::size_t length) {
     if (!ec) {
       p_datagram->payload().SetSize(length - Datagram::size);
       boost::asio::buffer_copy(p_datagram->GetMutableBuffers(),
-        boost::asio::buffer(*p_buffer));
+                               boost::asio::buffer(*p_buffer));
       handler(ec, length);
     } else {
       handler(ec, 0);

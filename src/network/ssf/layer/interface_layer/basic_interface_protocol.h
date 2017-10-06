@@ -11,7 +11,6 @@
 #include <boost/asio/io_service.hpp>
 
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/layer/basic_endpoint.h"
 #include "ssf/layer/basic_impl.h"

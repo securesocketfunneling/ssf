@@ -15,6 +15,8 @@ add_target(ssfd
   PREFIX_SKIP
     ${project_SRC_DIR})
 
+copy_certs(ssfd)
+
 install(
   TARGETS ssfd
   RUNTIME

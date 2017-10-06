@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
       return;
     }
     {
-      boost::lock_guard<std::mutex> lock(mutex);
+      std::lock_guard<std::mutex> lock(mutex);
       stopped = true;
     }
     wait_stop_cv.notify_all();

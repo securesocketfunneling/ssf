@@ -3,8 +3,7 @@
 
 #include <map>
 #include <memory>
-
-#include <boost/thread/recursive_mutex.hpp>
+#include <mutex>
 
 namespace ssf {
 
@@ -20,14 +19,14 @@ class ServiceFactoryManager {
  public:
   static bool RegisterServiceFactory(Demux* index,
                                      ServiceFactoryPtr p_factory) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     auto inserted =
         service_factories_.insert(std::make_pair(index, std::move(p_factory)));
     return inserted.second;
   }
 
   static bool UnregisterServiceFactory(Demux* index) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto it = service_factories_.find(index);
 
@@ -42,7 +41,7 @@ class ServiceFactoryManager {
   }
 
   static ServiceFactoryPtr GetServiceFactory(Demux* index) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto it = service_factories_.find(index);
 
@@ -54,12 +53,12 @@ class ServiceFactoryManager {
   }
 
  private:
-  static boost::recursive_mutex mutex_;
+  static std::recursive_mutex mutex_;
   static ServiceFactoryMap service_factories_;
 };
 
 template <typename Demux>
-boost::recursive_mutex ServiceFactoryManager<Demux>::mutex_;
+std::recursive_mutex ServiceFactoryManager<Demux>::mutex_;
 
 template <typename Demux>
 typename ServiceFactoryManager<Demux>::ServiceFactoryMap

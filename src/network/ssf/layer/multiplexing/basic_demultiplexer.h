@@ -4,8 +4,7 @@
 #include <atomic>
 #include <map>
 #include <memory>
-
-#include <boost/thread/recursive_mutex.hpp>
+#include <mutex>
 
 #include "ssf/error/error.h"
 
@@ -14,9 +13,9 @@ namespace layer {
 namespace multiplexing {
 
 template <class Protocol, class CongestionPolicy>
-class basic_Demultiplexer : public std::enable_shared_from_this<
-          basic_Demultiplexer<Protocol, CongestionPolicy> >
-{
+class basic_Demultiplexer
+    : public std::enable_shared_from_this<
+          basic_Demultiplexer<Protocol, CongestionPolicy>> {
  private:
   typedef typename Protocol::next_layer_protocol::socket NextSocket;
   typedef std::shared_ptr<NextSocket> NextSocketPtr;
@@ -28,12 +27,13 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
   typedef typename Protocol::ReceiveDatagram ReceiveDatagram;
   typedef std::shared_ptr<ReceiveDatagram> ReceiveDatagramPtr;
   typedef std::shared_ptr<CongestionPolicy> CongestionPolicyPtr;
-  typedef std::pair<SocketContextPtr, CongestionPolicyPtr> ContextPtrCongestionPair;
+  typedef std::pair<SocketContextPtr, CongestionPolicyPtr>
+      ContextPtrCongestionPair;
 
  public:
   static std::shared_ptr<basic_Demultiplexer> Create(NextSocketPtr p_socket) {
     return std::shared_ptr<basic_Demultiplexer>(
-      new basic_Demultiplexer(p_socket));
+        new basic_Demultiplexer(p_socket));
   }
 
   void Start() {
@@ -44,9 +44,8 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
   void Stop() { reading_ = false; }
 
   bool Bind(SocketContextPtr p_socket_context) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
-    auto& local_multiplexed_map =
-        multiplexed_maps_[p_socket_context->local_id];
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
+    auto& local_multiplexed_map = multiplexed_maps_[p_socket_context->local_id];
 
     auto socket_context_inserted = local_multiplexed_map.emplace(
         p_socket_context->remote_id,
@@ -57,9 +56,8 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
   }
 
   bool Unbind(SocketContextPtr p_socket_context) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
-    auto& local_multiplexed_map =
-            multiplexed_maps_[p_socket_context->local_id];
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
+    auto& local_multiplexed_map = multiplexed_maps_[p_socket_context->local_id];
 
     local_multiplexed_map.erase(p_socket_context->remote_id);
 
@@ -71,18 +69,17 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
   }
 
   bool IsBound(SocketContextPtr p_socket_context) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto local_multiplexed_map_it =
-          multiplexed_maps_.find(p_socket_context->local_id);
+        multiplexed_maps_.find(p_socket_context->local_id);
 
     if (local_multiplexed_map_it == std::end(multiplexed_maps_)) {
       return false;
     }
 
     auto& local_multiplexed_map = local_multiplexed_map_it->second;
-    auto p_context_it =
-        local_multiplexed_map.find(p_socket_context->remote_id);
+    auto p_context_it = local_multiplexed_map.find(p_socket_context->remote_id);
 
     return (p_context_it != std::end(local_multiplexed_map)) &&
            (p_socket_context == p_context_it->second.first);
@@ -94,10 +91,7 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
 
  private:
   basic_Demultiplexer(NextSocketPtr p_socket)
-      : p_socket_(p_socket),
-        multiplexed_maps_(),
-        mutex_(),
-        reading_(false) {}
+      : p_socket_(p_socket), multiplexed_maps_(), mutex_(), reading_(false) {}
 
   /// Async read receive_datagram_type
   void AsyncReadHeader(NextEndpointPtr p_next_endpoint = nullptr,
@@ -116,10 +110,11 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
 
     p_datagram->payload().ResetSize();
 
-    AsyncReceiveDatagram(*p_socket_, p_datagram.get(), *p_next_endpoint,
-                         boost::bind(&basic_Demultiplexer::DispatchDatagram,
-                                     this->shared_from_this(), p_next_endpoint,
-                                     p_datagram, _1, _2));
+    AsyncReceiveDatagram(
+        *p_socket_, p_datagram.get(), *p_next_endpoint,
+        std::bind(&basic_Demultiplexer::DispatchDatagram,
+                  this->shared_from_this(), p_next_endpoint, p_datagram,
+                  std::placeholders::_1, std::placeholders::_2));
   }
 
   /// Dispatch the datagram through its corresponding queue
@@ -134,7 +129,7 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(mutex_);
+      std::unique_lock<std::recursive_mutex> lock(mutex_);
 
       auto& header = p_datagram->header();
       // Second half header represents the local id
@@ -163,8 +158,7 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
         p_congestion_policy = p_context_it->second.second;
       } else {
         // There is a socket which is bound on any remote id
-        auto p_bound_context_it =
-          local_multiplexed_map.find(EndpointContext());
+        auto p_bound_context_it = local_multiplexed_map.find(EndpointContext());
 
         if (p_bound_context_it != std::end(local_multiplexed_map)) {
           p_context = p_bound_context_it->second.first;
@@ -174,9 +168,8 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
 
       // Enqueue the datagram in the socket context queue. If none, drop it
       if (p_context) {
-
         {
-          boost::recursive_mutex::scoped_lock lock(p_context->mutex);
+          std::unique_lock<std::recursive_mutex> lock(p_context->mutex);
 
           auto& datagram_queue = p_context->datagram_queue;
           auto& payload = p_datagram->payload();
@@ -194,13 +187,13 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
     }
 
     // Continue reading datagram
-    AsyncReadHeader(std::move(p_next_endpoint),
-                    std::move(p_datagram));
+    AsyncReadHeader(std::move(p_next_endpoint), std::move(p_datagram));
   }
 
-  void HandleQueues(SocketContextPtr p_context,
+  void HandleQueues(
+      SocketContextPtr p_context,
       const boost::system::error_code& ec = boost::system::error_code()) {
-    boost::recursive_mutex::scoped_lock lock(p_context->mutex);
+    std::unique_lock<std::recursive_mutex> lock(p_context->mutex);
     auto& read_op_queue = p_context->read_op_queue;
     auto& datagram_queue = p_context->datagram_queue;
     auto& next_endpoint_queue = p_context->next_endpoint_queue;
@@ -260,14 +253,13 @@ class basic_Demultiplexer : public std::enable_shared_from_this<
   typedef typename Protocol::endpoint_context_type LocalEndpointContext;
   typedef typename Protocol::endpoint_context_type RemoteEndpointContext;
   typedef std::map<RemoteEndpointContext, ContextPtrCongestionPair>
-     LocalMultiplexedMaps;
-  typedef std::map<LocalEndpointContext, LocalMultiplexedMaps>
-     MultiplexedMaps;
+      LocalMultiplexedMaps;
+  typedef std::map<LocalEndpointContext, LocalMultiplexedMaps> MultiplexedMaps;
 
  private:
   NextSocketPtr p_socket_;
   MultiplexedMaps multiplexed_maps_;
-  boost::recursive_mutex mutex_;
+  std::recursive_mutex mutex_;
   std::atomic<bool> reading_;
 };
 

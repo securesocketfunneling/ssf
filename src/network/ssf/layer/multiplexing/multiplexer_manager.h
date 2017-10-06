@@ -2,8 +2,7 @@
 #define SSF_LAYER_MULTIPLEXING_MULTIPLEXER_MANAGER_H_
 
 #include <map>
-
-#include <boost/thread/recursive_mutex.hpp>
+#include <mutex>
 
 #include "ssf/layer/multiplexing/basic_multiplexer.h"
 
@@ -23,7 +22,7 @@ class MultiplexerManager {
   ~MultiplexerManager() {}
 
   bool Start(SocketPtr p_socket) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto inserted =
       multiplexers_.insert(std::make_pair(p_socket, Multiplexer::Create(p_socket)));
@@ -34,7 +33,7 @@ class MultiplexerManager {
   template <class Handler>
   bool Send(SocketPtr p_socket, Datagram datagram, const Endpoint& destination,
             Handler handler) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     // Get the multiplexer linked to the given socket and send datagram through it
     auto multiplexer_it = multiplexers_.find(p_socket);
 
@@ -47,7 +46,7 @@ class MultiplexerManager {
   }
 
   void Stop(SocketPtr p_socket) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto multiplexer_it = multiplexers_.find(p_socket);
 
@@ -58,7 +57,7 @@ class MultiplexerManager {
   }
 
   void Stop() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     for (auto& pair : multiplexers_) {
       pair.second->Stop();
@@ -68,7 +67,7 @@ class MultiplexerManager {
   }
 
  private:
-  boost::recursive_mutex mutex_;
+  std::recursive_mutex mutex_;
   std::map<SocketPtr, MultiplexerPtr> multiplexers_;
 };
 

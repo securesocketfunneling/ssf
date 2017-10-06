@@ -1,4 +1,7 @@
+#include <thread>
+
 #include <gtest/gtest.h>
+
 
 #include "tests/interface_protocol_helpers.h"
 #include "tests/interface_test_fixture.h"
@@ -17,9 +20,9 @@ TEST(InterfaceLayerTest, InterfaceSetup) {
   std::unique_ptr<boost::asio::io_service::work> p_work(
       new boost::asio::io_service::work(io_service));
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   ssf::layer::ParameterStack simple2_parameters;
@@ -33,7 +36,11 @@ TEST(InterfaceLayerTest, InterfaceSetup) {
       "int2");
 
   p_work.reset();
-  threads.join_all();
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 TEST_F(InterfaceTestFixture, Empty) {

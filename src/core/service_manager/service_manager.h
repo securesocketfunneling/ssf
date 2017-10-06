@@ -4,13 +4,13 @@
 #include <cstdint>
 
 #include <map>
+#include <mutex>
 #include <utility>
 #include <list>
 
 #include <ssf/network/manager.h>
 
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "services/base_service.h"
 
@@ -30,7 +30,7 @@ class ServiceManager
 
  public:
   uint32_t get_id(uint32_t service_type_id, Parameters parameters) {
-    boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(status_n_instance_list_mutex_);
 
     auto& instance_list = intance_lists_[service_type_id];
 
@@ -44,7 +44,7 @@ class ServiceManager
   }
 
   uint32_t find_error(uint32_t service_type_id, Parameters parameters) {
-    boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(status_n_instance_list_mutex_);
 
     auto& error_list = error_lists_[service_type_id];
 
@@ -82,7 +82,7 @@ class ServiceManager
   bool update_remote(uint32_t id, uint32_t service_type_id,
                      uint32_t error_code_value, Parameters parameters,
                      boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(status_n_instance_list_mutex_);
 
     if (!status_.count(id)) {
       add_remote(id, service_type_id, error_code_value, parameters);
@@ -94,7 +94,7 @@ class ServiceManager
 
   bool update_remote(uint32_t id, uint32_t error_code_value,
                      boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(status_n_instance_list_mutex_);
 
     if (!status_.count(id)) {
       return false;
@@ -113,7 +113,7 @@ class ServiceManager
  private:
   void add_remote(uint32_t id, uint32_t service_type_id,
                   uint32_t error_code_value, Parameters parameters) {
-    boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(status_n_instance_list_mutex_);
 
     if (id) {
       auto& instance_list = intance_lists_[service_type_id];
@@ -130,7 +130,7 @@ class ServiceManager
   }
 
   void remove_id_from_instances(uint32_t service_type_id, uint32_t id) {
-    boost::recursive_mutex::scoped_lock lock(status_n_instance_list_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(status_n_instance_list_mutex_);
 
     auto& instance_list = intance_lists_[service_type_id];
 
@@ -143,7 +143,7 @@ class ServiceManager
   }
 
  private:
-  boost::recursive_mutex status_n_instance_list_mutex_;
+  std::recursive_mutex status_n_instance_list_mutex_;
 
   IdToStatusMap status_;
   IdToServiceIdMap service_ids_;

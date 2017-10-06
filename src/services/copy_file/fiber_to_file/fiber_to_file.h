@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include <functional>
 #include <memory>
 
 #include <boost/system/error_code.hpp>
@@ -112,9 +113,10 @@ class FiberToFile : public BaseService<Demux> {
   }
 
   template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
+  auto Then(Handler handler, This me)
+      -> decltype(std::bind(handler, me->SelfFromThis(),
+                            std::placeholders::_1)) {
+    return std::bind(handler, me->SelfFromThis(), std::placeholders::_1);
   }
 
   std::shared_ptr<FiberToFile> SelfFromThis() {

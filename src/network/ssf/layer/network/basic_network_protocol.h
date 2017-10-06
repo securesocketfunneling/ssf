@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 
@@ -108,7 +109,7 @@ class basic_NetworkProtocol {
     return SendDatagram(dgr_header, payload, Footer());
   }
 
-  static boost::recursive_mutex bind_mutex_;
+  static std::recursive_mutex bind_mutex_;
   static std::set<next_endpoint_type> used_interface_endpoints_;
   static std::set<endpoint_context_type> bounds_;
   static std::map<endpoint_context_type, next_endpoint_type>
@@ -118,7 +119,7 @@ class basic_NetworkProtocol {
 };
 
 template <class NextLayer>
-boost::recursive_mutex basic_NetworkProtocol<NextLayer>::bind_mutex_;
+std::recursive_mutex basic_NetworkProtocol<NextLayer>::bind_mutex_;
 
 template <class NextLayer>
 std::set<typename basic_NetworkProtocol<NextLayer>::next_endpoint_type>

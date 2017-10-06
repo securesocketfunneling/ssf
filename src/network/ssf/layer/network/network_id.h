@@ -3,7 +3,6 @@
 
 #include <cstdint>
 
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/io_service.hpp>
 

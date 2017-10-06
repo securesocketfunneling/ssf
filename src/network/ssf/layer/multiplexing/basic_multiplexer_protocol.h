@@ -4,22 +4,23 @@
 #include <cstdint>
 
 #include <map>
-#include <set>
+#include <mutex>
 #include <queue>
+#include <set>
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/detail/op_queue.hpp>
 #include <boost/asio/basic_datagram_socket.hpp>
+#include <boost/asio/detail/op_queue.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include <boost/system/error_code.hpp>
 
 #include "ssf/io/read_op.h"
 
-#include "ssf/layer/basic_resolver.h"
 #include "ssf/layer/basic_endpoint.h"
+#include "ssf/layer/basic_resolver.h"
 
-#include "ssf/layer/protocol_attributes.h"
 #include "ssf/layer/parameters.h"
+#include "ssf/layer/protocol_attributes.h"
 
 #include "ssf/layer/datagram/basic_datagram.h"
 #include "ssf/layer/datagram/basic_header.h"
@@ -42,7 +43,8 @@ class basic_MultiplexedProtocol {
  public:
   typedef MultiplexID id_type;
   typedef basic_Header<EmptyComponent, typename id_type::FullID, EmptyComponent,
-                       uint0_t> Header;
+                       uint0_t>
+      Header;
   typedef EmptyComponent Footer;
 
   typedef BufferPayload<NextLayer::mtu - Header::size - Footer::size>
@@ -70,10 +72,11 @@ class basic_MultiplexedProtocol {
   typedef basic_VirtualLink_resolver<basic_MultiplexedProtocol> resolver;
   typedef boost::asio::basic_datagram_socket<
       basic_MultiplexedProtocol,
-      basic_MultiplexedSocket_service<basic_MultiplexedProtocol>> socket;
+      basic_MultiplexedSocket_service<basic_MultiplexedProtocol>>
+      socket;
 
   struct socket_context {
-    boost::recursive_mutex mutex;
+    std::recursive_mutex mutex;
 
     endpoint_context_type local_id;
     endpoint_context_type remote_id;
@@ -82,25 +85,25 @@ class basic_MultiplexedProtocol {
 
     std::queue<typename next_layer_protocol::endpoint> next_endpoint_queue;
 
-    boost::asio::detail::op_queue<io::basic_pending_read_operation<
-        basic_MultiplexedProtocol>> read_op_queue;
+    boost::asio::detail::op_queue<
+        io::basic_pending_read_operation<basic_MultiplexedProtocol>>
+        read_op_queue;
   };
 
-private:
+ private:
   using query = typename resolver::query;
 
  public:
-  static endpoint make_endpoint(
-      boost::asio::io_service& io_service,
-      typename query::const_iterator parameters_it, uint32_t id,
-      boost::system::error_code& ec) {
+  static endpoint make_endpoint(boost::asio::io_service& io_service,
+                                typename query::const_iterator parameters_it,
+                                uint32_t id, boost::system::error_code& ec) {
     auto context = id_type::MakeHalfID(io_service, *parameters_it, id);
     if (!id) {
       id = basic_MultiplexedProtocol::id;
     }
 
-    auto next_layer_endpoint = next_layer_protocol::make_endpoint(
-        io_service, ++parameters_it, id, ec);
+    auto next_layer_endpoint =
+        next_layer_protocol::make_endpoint(io_service, ++parameters_it, id, ec);
 
     return endpoint(context, next_layer_endpoint);
   }

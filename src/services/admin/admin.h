@@ -1,33 +1,32 @@
 #ifndef SSF_SERVICES_ADMIN_ADMIN_H_
 #define SSF_SERVICES_ADMIN_ADMIN_H_
 
-#include <vector>
-#include <string>
 #include <functional>
+#include <mutex>
+#include <string>
+#include <vector>
 
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
-#include <boost/thread/recursive_mutex.hpp>
-
-#include <boost/system/error_code.hpp>
-#include <boost/asio/coroutine.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/coroutine.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <boost/system/error_code.hpp>
 
 #include <ssf/network/manager.h>
 
-#include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/boost/fiber/stream_fiber.hpp"
 
 #include "services/base_service.h"
 
-#include "services/admin/requests/create_service_request.h"
 #include "services/admin/admin_command.h"
+#include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 
-#include "core/factory_manager/service_factory_manager.h"
 #include "core/factories/service_factory.h"
+#include "core/factory_manager/service_factory_manager.h"
 
 #include "services/user_services/base_user_service.h"
 
@@ -92,14 +91,14 @@ class Admin : public BaseService<Demux> {
         serial, request.command_id, (uint32_t)parameters_buff_to_send.size(),
         parameters_buff_to_send);
 
-    auto do_handler =
-        [p_command](const boost::system::error_code& ec, size_t length) {};
+    auto do_handler = [p_command](const boost::system::error_code& ec,
+                                  size_t length) {};
 
     async_SendCommand(*p_command, do_handler);
   }
 
   void InsertHandler(uint32_t serial, CommandHandler command_handler) {
-    boost::recursive_mutex::scoped_lock lock1(command_handlers_mutex_);
+    std::unique_lock<std::recursive_mutex> lock1(command_handlers_mutex_);
     command_handlers_[serial] = command_handler;
   }
 
@@ -107,19 +106,19 @@ class Admin : public BaseService<Demux> {
   void ExecuteAndRemoveCommandHandler(uint32_t serial) {
     if (command_handlers_.count(command_serial_received_)) {
       this->get_io_service().post(
-          boost::bind(command_handlers_[command_serial_received_],
+          std::bind(command_handlers_[command_serial_received_],
                       boost::system::error_code()));
       this->EraseHandler(command_serial_received_);
     }
   }
 
   void EraseHandler(uint32_t serial) {
-    boost::recursive_mutex::scoped_lock lock1(command_handlers_mutex_);
+    std::unique_lock<std::recursive_mutex> lock1(command_handlers_mutex_);
     command_handlers_.erase(serial);
   }
 
   uint32_t GetAvailableSerial() {
-    boost::recursive_mutex::scoped_lock lock1(command_handlers_mutex_);
+    std::unique_lock<std::recursive_mutex> lock1(command_handlers_mutex_);
 
     for (uint32_t serial = 3; serial < std::numeric_limits<uint32_t>::max();
          ++serial) {
@@ -178,7 +177,7 @@ class Admin : public BaseService<Demux> {
   void Notify(BaseUserServicePtr p_user_service, boost::system::error_code ec) {
     if (callback_) {
       this->get_io_service().post(
-          boost::bind(callback_, p_user_service, std::move(ec)));
+          std::bind(callback_, p_user_service, std::move(ec)));
     }
   }
 
@@ -218,7 +217,7 @@ class Admin : public BaseService<Demux> {
   uint8_t retries_;
 
   // Is stopped?
-  boost::recursive_mutex stopping_mutex_;
+  std::recursive_mutex stopping_mutex_;
   bool stopped_;
 
   // Initialize services
@@ -232,7 +231,7 @@ class Admin : public BaseService<Demux> {
   bool local_all_started_;
   boost::system::error_code init_ec_;
 
-  boost::recursive_mutex command_handlers_mutex_;
+  std::recursive_mutex command_handlers_mutex_;
   IdToCommandHandlerMap command_handlers_;
 
   AdminCallbackType callback_;

@@ -126,8 +126,9 @@ class DatagramsToFibers : public BaseService<Demux> {
     }
 
     p_factory->RegisterServiceCreator(
-        kFactoryId, boost::bind(&DatagramsToFibers::Create, _1, _2, _3,
-                                config.gateway_ports()));
+        kFactoryId, std::bind(&DatagramsToFibers::Create, std::placeholders::_1,
+                              std::placeholders::_2, std::placeholders::_3,
+                              config.gateway_ports()));
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(

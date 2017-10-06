@@ -7,8 +7,6 @@
 
 #include <boost/asio/io_service.hpp>
 
-#include <boost/thread.hpp>
-
 #include "tests/routing_test_fixture.h"
 
 #include "ssf/layer/parameters.h"

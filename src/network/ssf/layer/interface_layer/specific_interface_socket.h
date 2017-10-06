@@ -4,11 +4,10 @@
 #include <cstdint>
 
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include <boost/asio/detail/op_queue.hpp>
-
-#include <boost/thread.hpp>
 
 #include "ssf/layer/interface_layer/generic_interface_socket.h"
 #include "ssf/layer/interface_layer/interface_buffers.h"
@@ -64,7 +63,7 @@ class specific_interface_socket
 
   virtual boost::system::error_code cancel(boost::system::error_code& ec) {
     {
-      boost::recursive_mutex::scoped_lock lock(send_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(send_mutex_);
       while (!send_op_queue_.empty()) {
         auto op = std::move(send_op_queue_.front());
         send_op_queue_.pop();
@@ -78,7 +77,7 @@ class specific_interface_socket
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(receive_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(receive_mutex_);
 
       while (!receive_op_queue_.empty()) {
         auto op = std::move(receive_op_queue_.front());
@@ -96,7 +95,7 @@ class specific_interface_socket
   }
 
   virtual void close(boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock_closed_(closed_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_closed_(closed_mutex_);
     if (!closed_) {
       closed_ = true;
       p_internal_socket_->close(ec);
@@ -104,7 +103,7 @@ class specific_interface_socket
   }
 
   virtual void connect(boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock_closed_(closed_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_closed_(closed_mutex_);
     if (closed_) {
       closed_ = false;
     }
@@ -117,11 +116,11 @@ class specific_interface_socket
 
   virtual void async_receive(interface_mutable_buffers buffers,
                              ssf::layer::WrappedIOHandler handler) {
-    boost::recursive_mutex::scoped_lock lock(receive_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(receive_mutex_);
 
-    typedef io::pending_read_operation<interface_mutable_buffers,
-                                       ssf::layer::WrappedIOHandler,
-                                       protocol_type> op;
+    typedef io::pending_read_operation<
+        interface_mutable_buffers, ssf::layer::WrappedIOHandler, protocol_type>
+        op;
     typename op::ptr p = {
         boost::asio::detail::addressof(handler),
         boost_asio_handler_alloc_helpers::allocate(sizeof(op), handler), 0};
@@ -136,10 +135,11 @@ class specific_interface_socket
 
   virtual void async_send(interface_const_buffers buffers,
                           ssf::layer::WrappedIOHandler handler) {
-    boost::recursive_mutex::scoped_lock lock(send_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(send_mutex_);
 
     typedef io::pending_write_operation<interface_const_buffers,
-                                        ssf::layer::WrappedIOHandler> op;
+                                        ssf::layer::WrappedIOHandler>
+        op;
     typename op::ptr p = {
         boost::asio::detail::addressof(handler),
         boost_asio_handler_alloc_helpers::allocate(sizeof(op), handler), 0};
@@ -179,7 +179,7 @@ class specific_interface_socket
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(receive_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(receive_mutex_);
 
       if (!receive_op_queue_.empty()) {
         auto op = std::move(receive_op_queue_.front());
@@ -189,8 +189,9 @@ class specific_interface_socket
         auto copied = op->fill_buffer(internal_receive_datagram_, fill_ec);
 
         if (fill_ec) {
-          auto do_complete =
-              [op, fill_ec, copied]() { op->complete(fill_ec, copied); };
+          auto do_complete = [op, fill_ec, copied]() {
+            op->complete(fill_ec, copied);
+          };
           p_internal_socket_->get_io_service().post(std::move(do_complete));
         } else {
           // check copied == length - receive_datagram_type::size ??
@@ -201,7 +202,7 @@ class specific_interface_socket
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock_closed(closed_mutex_);
+      std::unique_lock<std::recursive_mutex> lock_closed(closed_mutex_);
       if (!closed_) {
         p_internal_socket_->get_io_service().dispatch(
             [this]() { this->do_async_receive(); });
@@ -218,7 +219,7 @@ class specific_interface_socket
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(send_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(send_mutex_);
 
       if (!send_op_queue_.empty()) {
         auto op = std::move(send_op_queue_.front());
@@ -232,7 +233,7 @@ class specific_interface_socket
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock_closed(closed_mutex_);
+      std::unique_lock<std::recursive_mutex> lock_closed(closed_mutex_);
       if (!closed_) {
         p_internal_socket_->get_io_service().dispatch(
             [this]() { this->do_async_send(); });
@@ -242,14 +243,14 @@ class specific_interface_socket
 
   void do_async_receive() {
     {
-      boost::recursive_mutex::scoped_lock lock_closed(closed_mutex_);
+      std::unique_lock<std::recursive_mutex> lock_closed(closed_mutex_);
       if (closed_) {
         return;
       }
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(receive_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(receive_mutex_);
 
       if (receive_op_queue_.empty()) {
         receive_pending_ = false;
@@ -269,14 +270,14 @@ class specific_interface_socket
 
   void do_async_send() {
     {
-      boost::recursive_mutex::scoped_lock lock_closed(closed_mutex_);
+      std::unique_lock<std::recursive_mutex> lock_closed(closed_mutex_);
       if (closed_) {
         return;
       }
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(send_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(send_mutex_);
 
       if (send_op_queue_.empty()) {
         send_pending_ = false;
@@ -307,8 +308,8 @@ class specific_interface_socket
       boost::asio::buffer_copy(boost::asio::buffer(send_buffer_), buffers);
     }
 
-    internal_send_datagram_ =
-        std::move(protocol_type::make_datagram(boost::asio::buffer(send_buffer_)));
+    internal_send_datagram_ = std::move(
+        protocol_type::make_datagram(boost::asio::buffer(send_buffer_)));
 
     auto self = this->shared_from_this();
     AsyncSendDatagram(
@@ -320,15 +321,15 @@ class specific_interface_socket
 
  private:
   p_internal_socket_type p_internal_socket_;
-  boost::recursive_mutex closed_mutex_;
+  std::recursive_mutex closed_mutex_;
   bool closed_;
 
-  boost::recursive_mutex receive_mutex_;
+  std::recursive_mutex receive_mutex_;
   bool receive_pending_;
   receive_datagram_type internal_receive_datagram_;
   receive_op_queue_type receive_op_queue_;
 
-  boost::recursive_mutex send_mutex_;
+  std::recursive_mutex send_mutex_;
   bool send_pending_;
   send_buffer_type send_buffer_;
   send_datagram_type internal_send_datagram_;

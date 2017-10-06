@@ -7,7 +7,6 @@
 
 #include <boost/program_options.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "common/error/error.h"
 #include "services/user_services/parameters.h"

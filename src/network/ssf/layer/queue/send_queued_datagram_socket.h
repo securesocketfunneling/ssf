@@ -11,8 +11,6 @@
 #include <boost/asio/detail/throw_error.hpp>
 #include <boost/asio/use_future.hpp>
 
-#include <boost/thread/recursive_mutex.hpp>
-
 #include "ssf/io/write_op.h"
 
 #include <boost/asio/detail/push_options.hpp>
@@ -133,7 +131,7 @@ class basic_send_queued_datagram_socket {
     p.p = new (p.v) op(buffers, init.handler);
 
     {
-      boost::recursive_mutex::scoped_lock lock(op_queue_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(op_queue_mutex_);
       ++op_queue_size_;
       op_queue_.push(p.p);
     }
@@ -196,7 +194,7 @@ class basic_send_queued_datagram_socket {
  private:
   void StartPopping() {
     {
-      boost::recursive_mutex::scoped_lock lock(popping_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(popping_mutex_);
       if (popping_) {
         return;
       }
@@ -208,7 +206,7 @@ class basic_send_queued_datagram_socket {
   }
 
   void Pop() {
-    boost::recursive_mutex::scoped_lock lock(op_queue_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(op_queue_mutex_);
 
     if (op_queue_.empty()) {
       popping_ = false;
@@ -232,10 +230,10 @@ class basic_send_queued_datagram_socket {
 
  private:
   DatagramSocket socket_;
-  boost::recursive_mutex op_queue_mutex_;
+  std::recursive_mutex op_queue_mutex_;
   OpQueue op_queue_;
   std::atomic<uint32_t> op_queue_size_;
-  boost::recursive_mutex popping_mutex_;
+  std::recursive_mutex popping_mutex_;
   bool popping_;
 };
 

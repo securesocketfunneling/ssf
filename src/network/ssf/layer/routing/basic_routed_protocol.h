@@ -1,9 +1,10 @@
 #ifndef SSF_LAYER_ROUTING_BASIC_ROUTED_PROTOCOL_H_
 #define SSF_LAYER_ROUTING_BASIC_ROUTED_PROTOCOL_H_
 
+#include <map>
+#include <mutex>
 #include <set>
 #include <string>
-#include <map>
 
 #include <boost/asio/basic_datagram_socket.hpp>
 #include <boost/asio/io_service.hpp>
@@ -13,8 +14,8 @@
 #include "ssf/error/error.h"
 #include "ssf/utils/map_helpers.h"
 
-#include "ssf/layer/basic_resolver.h"
 #include "ssf/layer/basic_endpoint.h"
+#include "ssf/layer/basic_resolver.h"
 
 #include "ssf/layer/datagram/basic_datagram.h"
 #include "ssf/layer/datagram/basic_header.h"
@@ -23,8 +24,8 @@
 
 #include "ssf/layer/protocol_attributes.h"
 
-#include "ssf/layer/routing/basic_router.h"
 #include "ssf/layer/routing/basic_routed_socket_service.h"
+#include "ssf/layer/routing/basic_router.h"
 
 namespace ssf {
 namespace layer {
@@ -162,7 +163,7 @@ class basic_RoutedProtocol {
 
   static void StartRouter(const std::string& router_name,
                           boost::asio::io_service& io_service) {
-    boost::mutex::scoped_lock lock_router(router_mutex_);
+    std::unique_lock<std::mutex> lock_router(router_mutex_);
     auto p_router_it = p_routers_.find(router_name);
     if (p_router_it == p_routers_.end()) {
       p_routers_.emplace(router_name,
@@ -172,7 +173,7 @@ class basic_RoutedProtocol {
 
   static void StopRouter(const std::string& router_name,
                          boost::system::error_code& ec) {
-    boost::mutex::scoped_lock lock_router(router_mutex_);
+    std::unique_lock<std::mutex> lock_router(router_mutex_);
     auto p_router_it = p_routers_.find(router_name);
     if (p_router_it != p_routers_.end()) {
       p_router_it->second->close(ec);
@@ -181,7 +182,7 @@ class basic_RoutedProtocol {
   }
 
   static void StopAllRouters() {
-    boost::mutex::scoped_lock lock_router(router_mutex_);
+    std::unique_lock<std::mutex> lock_router(router_mutex_);
     auto p_router_it = p_routers_.begin();
     auto end_router_it = p_routers_.end();
 
@@ -194,7 +195,7 @@ class basic_RoutedProtocol {
 
   static std::shared_ptr<router_type> get_router(
       const std::string& router_name) {
-    boost::mutex::scoped_lock lock_router(router_mutex_);
+    std::unique_lock<std::mutex> lock_router(router_mutex_);
     auto p_router_it = p_routers_.find(router_name);
     if (p_router_it != p_routers_.end()) {
       return p_router_it->second;
@@ -203,12 +204,12 @@ class basic_RoutedProtocol {
   }
 
  private:
-  static boost::mutex router_mutex_;
+  static std::mutex router_mutex_;
   static std::map<std::string, std::shared_ptr<router_type>> p_routers_;
 };
 
 template <class NextLayer>
-boost::mutex basic_RoutedProtocol<NextLayer>::router_mutex_;
+std::mutex basic_RoutedProtocol<NextLayer>::router_mutex_;
 
 template <class NextLayer>
 std::map<std::string,

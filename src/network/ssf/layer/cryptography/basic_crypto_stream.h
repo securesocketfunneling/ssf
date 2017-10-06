@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <string>
 #include <type_traits>
@@ -14,7 +15,6 @@
 #include <boost/asio/handler_type.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "ssf/io/handler_helpers.h"
@@ -76,7 +76,7 @@ class basic_CryptoStreamProtocol {
             basic_CryptoStreamProtocol<NextLayer, Crypto>>>;
     using connection_queue_type = std::queue<std::shared_ptr<socket>>;
 
-    boost::recursive_mutex accept_mutex;
+    std::recursive_mutex accept_mutex;
     bool listening;
     uint64_t max_connections_count;
     op_queue_type accept_queue;
@@ -518,7 +518,7 @@ class basic_CryptoStreamAcceptor_service
                                        ssf::error::get_ssf_category());
 
     {
-      boost::recursive_mutex::scoped_lock lock(
+      std::unique_lock<std::recursive_mutex> lock(
           impl.p_acceptor_context->accept_mutex);
       impl.p_acceptor_context->max_connections_count = 0;
       impl.p_acceptor_context->listening = false;
@@ -567,7 +567,7 @@ class basic_CryptoStreamAcceptor_service
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(
+      std::unique_lock<std::recursive_mutex> lock(
           impl.p_acceptor_context->accept_mutex);
       impl.p_acceptor_context->max_connections_count =
           static_cast<uint64_t>(backlog);
@@ -590,8 +590,8 @@ class basic_CryptoStreamAcceptor_service
     auto& connection_queue = p_acceptor_context->connection_queue;
 
     while (true) {
-      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-      boost::recursive_mutex::scoped_lock lock(
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::unique_lock<std::recursive_mutex> lock(
           p_acceptor_context->accept_mutex);
       if (connection_queue.empty()) {
         continue;
@@ -629,7 +629,7 @@ class basic_CryptoStreamAcceptor_service
     auto p_acceptor_context = impl.p_acceptor_context;
 
     {
-      boost::recursive_mutex::scoped_lock lock(
+      std::unique_lock<std::recursive_mutex> lock(
           p_acceptor_context->accept_mutex);
       auto& accept_queue = p_acceptor_context->accept_queue;
 
@@ -663,7 +663,7 @@ class basic_CryptoStreamAcceptor_service
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(
+      std::unique_lock<std::recursive_mutex> lock(
           p_acceptor_context->accept_mutex);
       if (!p_acceptor_context->listening) {
         return;
@@ -683,9 +683,9 @@ class basic_CryptoStreamAcceptor_service
     p_next_layer_acceptor->async_accept(
         peer_impl.p_next_layer_socket->next_layer(),
         peer_impl.p_remote_endpoint->next_layer_endpoint(),
-        boost::bind(&basic_CryptoStreamAcceptor_service::accepted, this,
-                    p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
-                    p_socket, _1));
+        std::bind(&basic_CryptoStreamAcceptor_service::accepted, this,
+                  p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
+                  p_socket, std::placeholders::_1));
   }
 
   void accepted(p_next_acceptor_type p_next_layer_acceptor,
@@ -714,8 +714,8 @@ class basic_CryptoStreamAcceptor_service
 
     peer_impl.p_next_layer_socket->async_handshake(
         CryptoProtocol::handshake_type::server,
-        boost::bind(&basic_CryptoStreamAcceptor_service::crypto_handshaked,
-                    this, p_acceptor_context, p_socket, _1));
+        std::bind(&basic_CryptoStreamAcceptor_service::crypto_handshaked, this,
+                  p_acceptor_context, p_socket, std::placeholders::_1));
   }
 
   void crypto_handshaked(p_acceptor_context_type p_acceptor_context,
@@ -729,7 +729,7 @@ class basic_CryptoStreamAcceptor_service
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(
+      std::unique_lock<std::recursive_mutex> lock(
           p_acceptor_context->accept_mutex);
       auto& connection_queue = p_acceptor_context->connection_queue;
       if (connection_queue.size() < p_acceptor_context->max_connections_count) {
@@ -749,7 +749,7 @@ class basic_CryptoStreamAcceptor_service
   void connection_queue_handler(
       p_acceptor_context_type p_acceptor_context,
       const boost::system::error_code& ec = boost::system::error_code()) {
-    boost::recursive_mutex::scoped_lock lock(p_acceptor_context->accept_mutex);
+    std::unique_lock<std::recursive_mutex> lock(p_acceptor_context->accept_mutex);
 
     auto& connection_queue = p_acceptor_context->connection_queue;
     auto& accept_queue = p_acceptor_context->accept_queue;
@@ -783,7 +783,7 @@ class basic_CryptoStreamAcceptor_service
       auto do_complete = [p_accept_op, ec]() { p_accept_op->complete(ec); };
       this->get_io_service().post(do_complete);
 
-      this->get_io_service().post(boost::bind(
+      this->get_io_service().post(std::bind(
           &basic_CryptoStreamAcceptor_service::connection_queue_handler, this,
           p_acceptor_context, ec));
     }
@@ -791,7 +791,7 @@ class basic_CryptoStreamAcceptor_service
 
   void clean_pending_accepts(p_acceptor_context_type p_acceptor_context,
                              const boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock(p_acceptor_context->accept_mutex);
+    std::unique_lock<std::recursive_mutex>(p_acceptor_context->accept_mutex);
     auto& accept_queue = p_acceptor_context->accept_queue;
 
     while (!accept_queue.empty()) {

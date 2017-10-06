@@ -2,22 +2,22 @@
 #define SSF_SERVICES_COPY_FILE_FILE_TO_FIBER_FILE_TO_FIBER_H_
 
 #ifdef WIN32
-#include <io.h>
 #include <fcntl.h>
+#include <io.h>
 #endif
 
 #include <cstdint>
 
+#include <functional>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <string>
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/asio/coroutine.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/regex.hpp>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include <ssf/log/log.h>
 
@@ -26,9 +26,9 @@
 #include "services/copy_file/file_to_fiber/istream_to_fiber_session.h"
 
 #include "services/copy_file/config.h"
+#include "services/copy_file/fiber_to_file/fiber_to_file.h"
 #include "services/copy_file/filename_buffer.h"
 #include "services/copy_file/filesystem/filesystem.h"
-#include "services/copy_file/fiber_to_file/fiber_to_file.h"
 
 namespace ssf {
 namespace services {
@@ -170,8 +170,9 @@ class FileToFiber : public BaseService<Demux> {
       auto p_fiber =
           std::make_shared<fiber>(this->get_demux().get_io_service());
       fiber_acceptor_.async_accept(
-          *p_fiber, boost::bind(&FileToFiber::AcceptFiberHandler,
-                                this->SelfFromThis(), _1, p_fiber));
+          *p_fiber,
+          std::bind(&FileToFiber::AcceptFiberHandler, this->SelfFromThis(),
+                    std::placeholders::_1, p_fiber));
     }
   }
 
@@ -197,26 +198,26 @@ class FileToFiber : public BaseService<Demux> {
       // read input pattern size from request
       yield boost::asio::async_read(
           *p_fiber, input_request_.GetFilenameSizeMutBuffers(),
-          boost::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                      p_fiber, _1, _2));
+          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
+                    p_fiber, std::placeholders::_1, std::placeholders::_2));
 
       // read input pattern from request
       yield boost::asio::async_read(
           *p_fiber, input_request_.GetFilenameMutBuffers(),
-          boost::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                      p_fiber, _1, _2));
+          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
+                    p_fiber, std::placeholders::_1, std::placeholders::_2));
 
       // read output pattern size from request
       yield boost::asio::async_read(
           *p_fiber, output_request_.GetFilenameSizeMutBuffers(),
-          boost::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                      p_fiber, _1, _2));
+          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
+                    p_fiber, std::placeholders::_1, std::placeholders::_2));
 
       // read output pattern from request
       yield boost::asio::async_read(
           *p_fiber, output_request_.GetFilenameMutBuffers(),
-          boost::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                      p_fiber, _1, _2));
+          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
+                    p_fiber, std::placeholders::_1, std::placeholders::_2));
 
       ProcessInputOutputPattern(input_request_.GetFilename(),
                                 output_request_.GetFilename());
@@ -232,8 +233,8 @@ class FileToFiber : public BaseService<Demux> {
       auto p_output_files_list = std::make_shared<FilesList>();
       p_output_files_list->push_back(output_pattern_);
       auto finish_callback =
-          boost::bind(&FileToFiber::FinishSentSession, this->SelfFromThis(), _1,
-                      p_output_files_list);
+          std::bind(&FileToFiber::FinishSentSession, this->SelfFromThis(),
+                    std::placeholders::_1, p_output_files_list);
       AsyncConnectFileFiberSession(true, "", output_pattern_, finish_callback);
     }
   }
@@ -254,15 +255,15 @@ class FileToFiber : public BaseService<Demux> {
 
     // If no file, callback finish handler
     if (input_output_files.empty()) {
-      this->get_io_service().post(boost::bind(&FileToFiber::FinishSentSession,
+      this->get_io_service().post(std::bind(&FileToFiber::FinishSentSession,
                                               this->SelfFromThis(), "",
                                               p_output_files_list));
       return;
     };
 
     auto finish_callback =
-        boost::bind(&FileToFiber::FinishSentSession, this->SelfFromThis(), _1,
-                    p_output_files_list);
+        std::bind(&FileToFiber::FinishSentSession, this->SelfFromThis(),
+                  std::placeholders::_1, p_output_files_list);
 
     // Start one session per input file
     for (auto& input_output_file_pair : input_output_files) {
@@ -291,9 +292,9 @@ class FileToFiber : public BaseService<Demux> {
                     Demux>::kServicePort);
 
     p_fiber->async_connect(
-        ep, boost::bind(&FileToFiber::StartDataForwarderSessionHandler,
-                        this->SelfFromThis(), _1, p_fiber, from_stdin,
-                        input_file, output_file, stop_handler));
+        ep, std::bind(&FileToFiber::StartDataForwarderSessionHandler,
+                      this->SelfFromThis(), std::placeholders::_1, p_fiber,
+                      from_stdin, input_file, output_file, stop_handler));
   }
 
   // Start the data forward session
@@ -336,7 +337,7 @@ class FileToFiber : public BaseService<Demux> {
   // demux service once the file list is empty
   void FinishSentSession(const std::string output_file,
                          FilesListPtr p_files_list) {
-    boost::mutex::scoped_lock lock_files_set(files_set_mutex_);
+    std::unique_lock<std::mutex> lock_files_set(files_set_mutex_);
     p_files_list->remove(output_file);
 
     if (p_files_list->empty()) {
@@ -359,9 +360,10 @@ class FileToFiber : public BaseService<Demux> {
   }
 
   template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
+  auto Then(Handler handler, This me)
+      -> decltype(std::bind(handler, me->SelfFromThis(),
+                            std::placeholders::_1)) {
+    return std::bind(handler, me->SelfFromThis(), std::placeholders::_1);
   }
 
   std::shared_ptr<FileToFiber> SelfFromThis() {
@@ -375,7 +377,7 @@ class FileToFiber : public BaseService<Demux> {
   std::string output_pattern_;
   SessionManager manager_;
   fiber_acceptor fiber_acceptor_;
-  boost::mutex files_set_mutex_;
+  std::mutex files_set_mutex_;
   // Coroutine variables
   boost::asio::coroutine coroutine_;
   FilenameBuffer input_request_;

@@ -4,9 +4,9 @@
 #include <cstdint>
 
 #include <map>
+#include <mutex>
 
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/error/error.h"
 
@@ -26,7 +26,7 @@ class basic_RoutingTable {
   boost::system::error_code AddRoute(
       prefix_type prefix, network_address_type network_endpoint_context,
       boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     SSF_LOG(kLogTrace) << " * Routing table : add route from " << prefix
                        << " to " << network_endpoint_context;
@@ -44,7 +44,7 @@ class basic_RoutingTable {
 
   boost::system::error_code RemoveRoute(const prefix_type& prefix,
                                         boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto erased = table_.erase(prefix);
 
@@ -60,7 +60,7 @@ class basic_RoutingTable {
   /// Resolve a network id and return the associated endpoint
   network_address_type Resolve(const prefix_type& prefix,
                                boost::system::error_code& ec) const {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto network_endpoint_context_it = table_.find(prefix);
 
@@ -75,7 +75,7 @@ class basic_RoutingTable {
 
   /// Clear the routing table
   boost::system::error_code Flush(boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     table_.clear();
 
@@ -84,7 +84,7 @@ class basic_RoutingTable {
   }
 
  private:
-  mutable boost::recursive_mutex mutex_;
+  mutable std::recursive_mutex mutex_;
   std::map<prefix_type, network_address_type> table_;
 };
 

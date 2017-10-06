@@ -13,7 +13,6 @@
 #include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread.hpp>
 
 #include "ssf/system/basic_interfaces_collection.h"
 #include "ssf/system/specific_interfaces_collection.h"
@@ -84,7 +83,7 @@ class SystemInterfaces {
  private:
   boost::asio::io_service& io_service_;
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
-  boost::recursive_mutex interfaces_collections_mutex_;
+  std::recursive_mutex interfaces_collections_mutex_;
   std::map<std::string, InterfacesCollectionPtr> interfaces_collection_map_;
   boost::asio::steady_timer remount_timer_;
 };

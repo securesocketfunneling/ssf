@@ -12,20 +12,23 @@
 #pragma once
 #endif  // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include <ctime>
+#include <functional>
+#include <limits>
+#include <mutex>
+
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/system/error_code.hpp>
-#include <ctime>
-#include <limits>
 
 #include <ssf/log/log.h>
 
-#include "common/error/error.h"
 #include "common/boost/fiber/detail/basic_fiber_demux_impl.hpp"
 #include "common/boost/fiber/detail/fiber_buffer.hpp"
 #include "common/boost/fiber/detail/fiber_header.hpp"
 #include "common/boost/fiber/detail/fiber_id.hpp"
+#include "common/error/error.h"
 
 namespace boost {
 namespace asio {
@@ -64,27 +67,27 @@ void basic_fiber_demux_service<S>::bind(implementation_type impl,
   fiber_id receiving_id = id.returning_id();
 
   {
-    boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
-    boost::recursive_mutex::scoped_lock lock2(impl->used_ports_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(impl->bound_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(impl->used_ports_mutex);
     SSF_LOG(kLogTrace) << "demux: try to bind " << fib_impl << " to "
-                             << id.local_port() << "," << id.remote_port()
-                             << " debug " << &id << "," << &fib_impl->id;
+                       << id.local_port() << "," << id.remote_port()
+                       << " debug " << &id << "," << &fib_impl->id;
     if (receiving_id.remote_port() && !impl->bound.count(receiving_id)) {
       SSF_LOG(kLogTrace) << "demux: bind OK";
       impl->bound[receiving_id] = fib_impl;
       impl->used_ports.insert(id.local_port());
 
       {
-        boost::recursive_mutex::scoped_lock lock_state(fib_impl->state_mutex);
+        std::unique_lock<std::recursive_mutex> lock_state(
+            fib_impl->state_mutex);
         fib_impl->closed = false;
       }
 
       ec.assign(::error::success, ::error::get_ssf_category());
     } else {
       SSF_LOG(kLogDebug) << "demux: bind NOK "
-                               << ::error::device_or_resource_busy;
-      ec.assign(::error::device_or_resource_busy,
-                ::error::get_ssf_category());
+                         << ::error::device_or_resource_busy;
+      ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
     }
   }
 }
@@ -97,7 +100,7 @@ bool basic_fiber_demux_service<S>::is_bound(implementation_type impl,
     return false;
   }
 
-  boost::recursive_mutex::scoped_lock lock(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock(impl->bound_mutex);
   return !!impl->bound.count(id.returning_id());
 }
 
@@ -109,10 +112,10 @@ void basic_fiber_demux_service<S>::unbind(implementation_type impl,
     return;
   }
 
-  boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
-  boost::recursive_mutex::scoped_lock lock2(impl->used_ports_mutex);
+  std::unique_lock<std::recursive_mutex> lock1(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock2(impl->used_ports_mutex);
   SSF_LOG(kLogTrace) << "demux: unbound " << id.local_port() << ","
-                           << id.remote_port();
+                     << id.remote_port();
 
   impl->bound.erase(id.returning_id());
   impl->used_ports.erase(id.local_port());
@@ -128,7 +131,7 @@ void basic_fiber_demux_service<S>::listen(implementation_type impl,
     return;
   }
 
-  boost::recursive_mutex::scoped_lock lock(impl->listening_mutex);
+  std::unique_lock<std::recursive_mutex> lock(impl->listening_mutex);
 
   if (!impl->listening.count(local_port) &&
       is_bound(impl, fiber_id(0, local_port))) {
@@ -138,8 +141,7 @@ void basic_fiber_demux_service<S>::listen(implementation_type impl,
 
     ec.assign(::error::success, ::error::get_ssf_category());
   } else if (impl->listening.count(local_port)) {
-    ec.assign(::error::device_or_resource_busy,
-              ::error::get_ssf_category());
+    ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
   } else {
     ec.assign(::error::protocol_error, ::error::get_ssf_category());
   }
@@ -153,7 +155,7 @@ bool basic_fiber_demux_service<S>::is_listening(implementation_type impl,
     return false;
   }
 
-  boost::recursive_mutex::scoped_lock lock(impl->listening_mutex);
+  std::unique_lock<std::recursive_mutex> lock(impl->listening_mutex);
   return !!impl->listening.count(local_port);
 }
 
@@ -161,13 +163,12 @@ template <typename S>
 void basic_fiber_demux_service<S>::stop_listening(implementation_type impl,
                                                   local_port_type local_port) {
   if (!impl) {
-    SSF_LOG(kLogDebug) << "demux: stop_listening NOK "
-                             << ::error::broken_pipe;
+    SSF_LOG(kLogDebug) << "demux: stop_listening NOK " << ::error::broken_pipe;
     return;
   }
 
-  boost::recursive_mutex::scoped_lock lock1(impl->listening_mutex);
-  boost::recursive_mutex::scoped_lock lock2(impl->used_ports_mutex);
+  std::unique_lock<std::recursive_mutex> lock1(impl->listening_mutex);
+  std::unique_lock<std::recursive_mutex> lock2(impl->used_ports_mutex);
   SSF_LOG(kLogDebug) << "demux: stopped listening on " << local_port;
 
   impl->listening.erase(local_port);
@@ -183,7 +184,7 @@ void basic_fiber_demux_service<S>::async_poll_packets(
   /////////////////// BEGIN HANDLER ///////////////////////////////
   auto dispatch_handler = [this, p_fiber_buff, impl](
       const boost::system::error_code& ec, std::size_t bytes_transferred) {
-    boost::recursive_mutex::scoped_lock lock(impl->closing_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl->closing_mutex);
     if (impl->closing) {
       return;
     }
@@ -193,15 +194,14 @@ void basic_fiber_demux_service<S>::async_poll_packets(
       this->async_poll_packets(impl);
     } else {
       SSF_LOG(kLogDebug) << "demux: error in dispatch handler " << ec.value()
-                               << ":" << ec.message() << " | "
-                               << " " << bytes_transferred
-                               << " bytes transferred";
+                         << ":" << ec.message() << " | "
+                         << " " << bytes_transferred << " bytes transferred";
       this->close(impl);
     }
   };
   //////////////////// END HANDLER ///////////////////////////////
 
-  boost::recursive_mutex::scoped_lock lock(impl->closing_mutex);
+  std::unique_lock<std::recursive_mutex> lock(impl->closing_mutex);
   if (!impl->closing) {
     async_read_fiber_buffer(impl->socket, *p_fiber_buff, dispatch_handler);
   }
@@ -210,26 +210,26 @@ void basic_fiber_demux_service<S>::async_poll_packets(
 template <typename S>
 void basic_fiber_demux_service<S>::async_push_packets(
     implementation_type impl) {
-  boost::recursive_mutex::scoped_lock lock(impl->send_mutex);
+  std::unique_lock<std::recursive_mutex> lock(impl->send_mutex);
   const auto& toSendPriority = impl->toSendPriority.front();
 
   std::function<void(const boost::system::error_code&, size_t)> handler = [=](
       const boost::system::error_code& ec, size_t transferred_bytes) {
-    boost::recursive_mutex::scoped_lock lock(impl->send_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl->send_mutex);
     impl->toSendPriority.pop();
     impl->socket.get_io_service().post(
-        boost::bind(toSendPriority.handler, ec, transferred_bytes));
+        std::bind(toSendPriority.handler, ec, transferred_bytes));
     if (!impl->toSendPriority.empty()) {
-      impl->socket.get_io_service().post(boost::bind(
+      impl->socket.get_io_service().post(std::bind(
           &basic_fiber_demux_service<S>::async_push_packets, this, impl));
     }
   };
 
-  boost::recursive_mutex::scoped_lock lock2(impl->closing_mutex);
+  std::unique_lock<std::recursive_mutex> lock2(impl->closing_mutex);
   if (!impl->closing) {
     boost::asio::async_write(impl->socket, toSendPriority.buffer, handler);
   } else {
-    impl->socket.get_io_service().post(boost::bind(
+    impl->socket.get_io_service().post(std::bind(
         handler, boost::system::error_code(::error::connection_aborted,
                                            ::error::get_ssf_category()),
         0));
@@ -244,9 +244,9 @@ void basic_fiber_demux_service<S>::dispatch_buffer(
   const auto flags = header.flags();
 
   SSF_LOG(kLogTrace) << "demux: dispatch " << uint32_t(header.version()) << " "
-                           << header.id().remote_port() << " "
-                           << header.id().local_port() << " " << uint32_t(flags)
-                           << " " << header.data_size();
+                     << header.id().remote_port() << " "
+                     << header.id().local_port() << " " << uint32_t(flags)
+                     << " " << header.data_size();
 
   switch (flags) {
     case kFlagPush:
@@ -275,7 +275,7 @@ void basic_fiber_demux_service<S>::handle_dgr(implementation_type impl,
   SSF_LOG(kLogDebug) << "demux: handle dgr";
   const auto& full_id = p_fiber_buff->header().id();
   const auto& half_id = fiber_id(p_fiber_buff->header().id().remote_port(), 0);
-  boost::recursive_mutex::scoped_lock lock(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock(impl->bound_mutex);
 
   if (impl->bound.count(full_id) != 0) {
     if (impl->bound[full_id]->accepts_dgr) {
@@ -299,7 +299,7 @@ void basic_fiber_demux_service<S>::handle_push(implementation_type impl,
                                                p_fiber_buffer p_fiber_buff) {
   SSF_LOG(kLogTrace) << "demux: handle push";
   const auto& header = p_fiber_buff->header();
-  boost::recursive_mutex::scoped_lock lock(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock(impl->bound_mutex);
 
   if (impl->bound.count(header.id()) != 0) {
     auto on_new_packet = impl->bound[header.id()]->access_receive_handler();
@@ -314,14 +314,14 @@ template <typename S>
 void basic_fiber_demux_service<S>::handle_ack(implementation_type impl,
                                               p_fiber_buffer p_fiber_buff) {
   const auto& header = p_fiber_buff->header();
-  boost::recursive_mutex::scoped_lock lock_bound(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock_bound(impl->bound_mutex);
   SSF_LOG(kLogTrace) << "demux: handle ack";
 
   if (impl->bound.count(header.id())) {
     auto p_fib_impl = impl->bound[header.id()];
     p_fib_impl->toggle_out();
 
-    boost::recursive_mutex::scoped_lock lock_state(p_fib_impl->state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(p_fib_impl->state_mutex);
 
     if (p_fib_impl->connecting) {
       p_fib_impl->set_connected();
@@ -340,13 +340,13 @@ void basic_fiber_demux_service<S>::handle_syn(implementation_type impl,
                                               p_fiber_buffer p_fiber_buff) {
   SSF_LOG(kLogTrace) << "demux: handle syn";
   const auto& header = p_fiber_buff->header();
-  boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
-  boost::recursive_mutex::scoped_lock lock2(impl->listening_mutex);
+  std::unique_lock<std::recursive_mutex> lock1(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock2(impl->listening_mutex);
 
   if (impl->listening.count(header.id().remote_port())) {
     auto on_new_fiber = impl->bound[fiber_id(header.id().remote_port())]
                             ->access_accept_handler();
-    io_service_.post(boost::bind(on_new_fiber, header.id().local_port()));
+    io_service_.post(std::bind(on_new_fiber, header.id().local_port()));
   } else {
     async_send_rst(impl, header.id().returning_id(),
                    std::function<void()>([]() {}));
@@ -359,18 +359,18 @@ void basic_fiber_demux_service<S>::handle_rst(implementation_type impl,
   SSF_LOG(kLogTrace) << "demux: handle rst";
   const auto& header = p_fiber_buff->header();
   auto returning_id = header.id().returning_id();
-  boost::recursive_mutex::scoped_lock lock_bound(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock_bound(impl->bound_mutex);
   if ((impl->bound).count(header.id())) {
     auto p_fib_impl = impl->bound[header.id()];
     auto on_close = p_fib_impl->access_close_handler();
 
-    boost::recursive_mutex::scoped_lock lock_state(p_fib_impl->state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(p_fib_impl->state_mutex);
 
     if (p_fib_impl->connecting || p_fib_impl->connected) {
       if (p_fib_impl->connecting) {
         auto on_connection = p_fib_impl->access_connect_handler();
         on_connection(boost::system::error_code(::error::connection_refused,
-          ::error::get_ssf_category()));
+                                                ::error::get_ssf_category()));
       } else {
         p_fib_impl->set_disconnected();
         auto rst_sent = [this, impl, returning_id, p_fib_impl]() {
@@ -393,17 +393,18 @@ void basic_fiber_demux_service<S>::async_send_push(implementation_type impl,
                                                    fiber_id id,
                                                    ConstBufferSequence& buffer,
                                                    Handler& handler) {
-  boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock1(impl->bound_mutex);
 
   if (impl->bound.count(id.returning_id())) {
     auto p_fiber_impl = impl->bound[id.returning_id()];
     if (p_fiber_impl->ready_out) {
       async_send(impl, id, kFlagPush, buffer, handler, p_fiber_impl->priority);
     } else {
-      auto p_timer = std::make_shared<boost::asio::deadline_timer>(io_service_);
-      p_timer->expires_from_now(boost::posix_time::milliseconds(10));
+      auto p_timer = std::make_shared<boost::asio::steady_timer>(io_service_);
+      p_timer->expires_from_now(std::chrono::milliseconds(10));
 
-      auto lambda = [handler, p_timer](const boost::system::error_code&) mutable {
+      auto lambda = [handler,
+                     p_timer](const boost::system::error_code&) mutable {
         handler(boost::system::error_code(), 0);
       };
 
@@ -423,7 +424,7 @@ void basic_fiber_demux_service<S>::async_send_dgr(implementation_type impl,
                                                   fiber_impl_type fib_impl,
                                                   ConstBufferSequence& buffer,
                                                   Handler& handler) {
-  boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock1(impl->bound_mutex);
 
   if (fib_impl->id.local_port() == 0) {
     fib_impl->id.set_local_port(get_available_local_port(impl));
@@ -431,7 +432,7 @@ void basic_fiber_demux_service<S>::async_send_dgr(implementation_type impl,
     bind(impl, fib_impl->id.local_port(), fib_impl, ec);
     if (ec) {
       SSF_LOG(kLogDebug) << "demux: error dgr " << ec.message() << ec.value();
-      io_service_.post(boost::bind(handler, ec, 0));
+      io_service_.post(std::bind(handler, ec, 0));
       return;
     }
   }
@@ -441,17 +442,18 @@ void basic_fiber_demux_service<S>::async_send_dgr(implementation_type impl,
       async_send(impl, fiber_id(remote_port, fib_impl->id.local_port()),
                  kFlagDatagram, buffer, handler, fib_impl->priority);
     } else {
-      auto p_timer = std::make_shared<boost::asio::deadline_timer>(io_service_);
-      p_timer->expires_from_now(boost::posix_time::milliseconds(10));
+      auto p_timer = std::make_shared<boost::asio::steady_timer>(io_service_);
+      p_timer->expires_from_now(std::chrono::milliseconds(10));
 
-      auto lambda = [handler, p_timer](const boost::system::error_code&) mutable {
+      auto lambda = [handler,
+                     p_timer](const boost::system::error_code&) mutable {
         handler(boost::system::error_code(), 0);
       };
 
       p_timer->async_wait(lambda);
     }
   } else {
-    io_service_.post(boost::bind(
+    io_service_.post(std::bind(
         handler, boost::system::error_code(::error::protocol_error,
                                            ::error::get_ssf_category()),
         0));
@@ -469,12 +471,14 @@ void basic_fiber_demux_service<S>::async_send_ack(implementation_type impl,
     bind(impl, fib_impl->id.local_port(), fib_impl, ec);
     fib_impl->set_connected();
     if (ec) {
-      SSF_LOG(kLogDebug) << "demux: error send ack " << ec.message() << ec.value();
+      SSF_LOG(kLogDebug) << "demux: error send ack " << ec.message()
+                         << ec.value();
       op->complete(ec, 0);
     } else {
       auto handler = [=](const boost::system::error_code& ec, std::size_t) {
         if (!!ec) {
-          SSF_LOG(kLogDebug) << "demux: error send ack handler " << ec.message();
+          SSF_LOG(kLogDebug) << "demux: error send ack handler "
+                             << ec.message();
         } else {
           SSF_LOG(kLogTrace) << "demux: ack sent";
         }
@@ -498,13 +502,13 @@ void basic_fiber_demux_service<S>::async_send_ack(implementation_type impl,
 template <typename S>
 void basic_fiber_demux_service<S>::async_send_syn(implementation_type impl,
                                                   fiber_id id) {
-  boost::recursive_mutex::scoped_lock lock_bound(impl->bound_mutex);
+  std::unique_lock<std::recursive_mutex> lock_bound(impl->bound_mutex);
   // Bind reverse the id in bound map so reverse it...
   if ((impl->bound).count(id.returning_id())) {
     auto p_fib_impl = impl->bound[id.returning_id()];
     SSF_LOG(kLogTrace) << "demux: async send syn";
 
-    boost::recursive_mutex::scoped_lock lock_state(p_fib_impl->state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(p_fib_impl->state_mutex);
 
     if (!p_fib_impl->connecting) {
       p_fib_impl->set_connecting();
@@ -527,16 +531,15 @@ template <typename S>
 template <typename Handler>
 void basic_fiber_demux_service<S>::async_send_rst(
     implementation_type impl, fiber_id id, const Handler& close_handler) {
-
   SSF_LOG(kLogTrace) << "demux: async send rst";
   auto handler = [this, id, close_handler](const boost::system::error_code& ec,
                                            std::size_t) {
     if (!!ec) {
-      SSF_LOG(kLogDebug) << "demux: async send rst error " << ec.value() << " : "
-                               << ec.message();
+      SSF_LOG(kLogDebug) << "demux: async send rst error " << ec.value()
+                         << " : " << ec.message();
     } else {
       SSF_LOG(kLogTrace) << "demux: rst sent " << id.local_port() << " "
-                               << id.remote_port();
+                         << id.remote_port();
     }
 
     this->get_io_service().dispatch(close_handler);
@@ -548,11 +551,11 @@ void basic_fiber_demux_service<S>::async_send_rst(
 }
 
 template <typename S>
-boost::asio::fiber::detail::fiber_id::local_port_type basic_fiber_demux_service<
-    S>::get_available_local_port(implementation_type impl) {
-  local_port_type new_port = (1 << 17) + 1024,
-                  rand_port = 0;
-  boost::recursive_mutex::scoped_lock lock1(impl->used_ports_mutex);
+boost::asio::fiber::detail::fiber_id::local_port_type
+basic_fiber_demux_service<S>::get_available_local_port(
+    implementation_type impl) {
+  local_port_type new_port = (1 << 17) + 1024, rand_port = 0;
+  std::unique_lock<std::recursive_mutex> lock1(impl->used_ports_mutex);
 
   boost::random::uniform_int_distribution<uint32_t> dist(
       new_port, std::numeric_limits<uint32_t>::max());
@@ -571,8 +574,7 @@ void basic_fiber_demux_service<S>::async_connect(
     implementation_type impl,
     boost::asio::fiber::detail::fiber_id::remote_port_type remote_port,
     fiber_impl_type fib_impl) {
-  SSF_LOG(kLogTrace) << "demux: async connect to remote port : "
-                           << remote_port;
+  SSF_LOG(kLogTrace) << "demux: async connect to remote port : " << remote_port;
 
   fib_impl->id.set_remote_port(remote_port);
 
@@ -598,9 +600,10 @@ void basic_fiber_demux_service<S>::async_send(
 
   if (buffers_size > impl->mtu) {
     if (flags & kFlagDatagram) {
-      io_service_.post(boost::bind<void>(
-        handler, boost::system::error_code(::error::message_too_long,
-                                           ::error::get_ssf_category()), 0));
+      io_service_.post(std::bind(
+          handler, boost::system::error_code(::error::message_too_long,
+                                             ::error::get_ssf_category()),
+          0));
       return;
     }
     buffers_size = impl->mtu;
@@ -616,17 +619,15 @@ void basic_fiber_demux_service<S>::async_send(
   auto raw_buffer_to_send = p_fiber_buffer->const_buffer(new_buffers);
 
   auto do_user_handler = [p_fiber_buffer, handler](
-      const boost::system::error_code& ec,
-      size_t
-          transferred_bytes) mutable { handler(ec,
-                                               transferred_bytes -
-                                                   fiber_header::pod_size()); };
+      const boost::system::error_code& ec, size_t transferred_bytes) mutable {
+    handler(ec, transferred_bytes - fiber_header::pod_size());
+  };
 
   detail::extended_raw_fiber_buffer toSend(raw_buffer_to_send, do_user_handler,
                                            priority);
 
   auto do_push_packets = [this, toSend, impl]() {
-    boost::recursive_mutex::scoped_lock lock(impl->send_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl->send_mutex);
     impl->toSendPriority.push(toSend);
 
     if (impl->toSendPriority.size() > 1) {
@@ -649,9 +650,9 @@ void basic_fiber_demux_service<S>::async_send(
 
 template <typename S>
 template <typename ConstBufferSequence>
-std::vector<boost::asio::const_buffer> basic_fiber_demux_service<
-    S>::get_partial_buffer_sequence(ConstBufferSequence buffers,
-                                    size_t length) {
+std::vector<boost::asio::const_buffer>
+basic_fiber_demux_service<S>::get_partial_buffer_sequence(
+    ConstBufferSequence buffers, size_t length) {
   std::vector<boost::asio::const_buffer> new_buffers;
 
   for (auto& buffer : buffers) {
@@ -674,7 +675,7 @@ std::vector<boost::asio::const_buffer> basic_fiber_demux_service<
 template <typename S>
 void basic_fiber_demux_service<S>::close_fiber(implementation_type impl,
                                                fiber_impl_type fib_impl) {
-  boost::recursive_mutex::scoped_lock lock_state(fib_impl->state_mutex);
+  std::unique_lock<std::recursive_mutex> lock_state(fib_impl->state_mutex);
   auto on_close = fib_impl->access_close_handler();
 
   if (fib_impl->id.remote_port() == 0) {
@@ -699,7 +700,7 @@ template <typename S>
 void basic_fiber_demux_service<S>::close_all_fibers(implementation_type impl) {
   std::map<fiber_id, fiber_impl_type> fibers;
   {
-    boost::recursive_mutex::scoped_lock lock1(impl->bound_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(impl->bound_mutex);
     fibers = impl->bound;
   }
 
@@ -711,7 +712,7 @@ void basic_fiber_demux_service<S>::close_all_fibers(implementation_type impl) {
 template <typename S>
 void basic_fiber_demux_service<S>::close(implementation_type impl) {
   if (impl) {
-    boost::recursive_mutex::scoped_lock lock(impl->closing_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl->closing_mutex);
     if (!impl->closing) {
       impl->closing = true;
       close_all_fibers(impl);

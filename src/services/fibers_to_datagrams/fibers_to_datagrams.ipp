@@ -69,8 +69,9 @@ template <typename Demux>
 void FibersToDatagrams<Demux>::AsyncReceiveDatagram() {
   fiber_.async_receive_from(
       boost::asio::buffer(working_buffer_), from_endpoint_,
-      boost::bind(&FibersToDatagrams::FiberDatagramReceiveHandler,
-                  this->SelfFromThis(), _1, _2));
+      std::bind(&FibersToDatagrams::FiberDatagramReceiveHandler,
+                this->SelfFromThis(), std::placeholders::_1,
+                std::placeholders::_2));
 }
 
 template <typename Demux>

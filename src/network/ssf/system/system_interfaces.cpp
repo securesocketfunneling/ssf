@@ -1,6 +1,8 @@
 #include <cstdint>
 
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include <boost/asio/io_service.hpp>
@@ -9,12 +11,11 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread.hpp>
 
 #include "ssf/error/error.h"
 
-#include "ssf/system/system_interfaces.h"
 #include "ssf/system/specific_interfaces_collection.h"
+#include "ssf/system/system_interfaces.h"
 
 namespace ssf {
 namespace system {
@@ -57,7 +58,7 @@ uint32_t SystemInterfaces::AsyncMount(const std::string& config_filepath,
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock_interfaces_collections(
+      std::unique_lock<std::recursive_mutex> lock_interfaces_collections(
           interfaces_collections_mutex_);
       auto interfaces_collection_it =
           interfaces_collection_map_.find(*optional_name);
@@ -75,7 +76,7 @@ uint32_t SystemInterfaces::AsyncMount(const std::string& config_filepath,
 }
 
 void SystemInterfaces::UmountAll() {
-  boost::recursive_mutex::scoped_lock lock_interfaces_collections(
+  std::unique_lock<std::recursive_mutex> lock_interfaces_collections(
       interfaces_collections_mutex_);
   for (auto& interfaces_collection_pair : interfaces_collection_map_) {
     interfaces_collection_pair.second->UmountAll();
@@ -122,8 +123,9 @@ boost::optional<std::string> SystemInterfaces::GetCollectionNameFromLayerStack(
 
 void SystemInterfaces::LaunchRemountTimer(int remount_delay) {
   remount_timer_.expires_from_now(std::chrono::seconds(remount_delay));
-  remount_timer_.async_wait(boost::bind(&SystemInterfaces::RemountTimerHandler,
-                                        this, _1, remount_delay));
+  remount_timer_.async_wait(std::bind(&SystemInterfaces::RemountTimerHandler,
+                                      this, std::placeholders::_1,
+                                      remount_delay));
 }
 
 void SystemInterfaces::RemountTimerHandler(const boost::system::error_code& ec,

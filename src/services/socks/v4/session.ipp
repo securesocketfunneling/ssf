@@ -1,9 +1,7 @@
 #ifndef SSF_SERVICES_SOCKS_V4_SESSION_IPP_
 #define SSF_SERVICES_SOCKS_V4_SESSION_IPP_
 
-#include <boost/bind.hpp>
-#include <boost/bind/protect.hpp>
-#include <boost/asio/spawn.hpp>
+#include <functional>
 
 #include <ssf/log/log.h>
 
@@ -46,9 +44,8 @@ void Session<Demux>::stop(boost::system::error_code&) {
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code&) {
   AsyncReadRequest(client_, &request_,
-                   boost::bind(&Session::HandleRequestDispatch, SelfFromThis(),
-                               boost::asio::placeholders::error,
-                               boost::asio::placeholders::bytes_transferred));
+                   std::bind(&Session::HandleRequestDispatch, SelfFromThis(),
+                             std::placeholders::_1, std::placeholders::_2));
 }
 
 template <typename Demux>
@@ -75,15 +72,14 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
-  auto connect_handler =
-      boost::bind(&Session::HandleApplicationServerConnect, SelfFromThis(),
-                  boost::asio::placeholders::error);
+  auto connect_handler = std::bind(&Session::HandleApplicationServerConnect,
+                                   SelfFromThis(), std::placeholders::_1);
 
   if (request_.Is4aVersion()) {
     // socks4a: address needs to be resolved
-    auto resolve_handler = boost::bind(
-        &Session::HandleResolveServerEndpoint, SelfFromThis(),
-        boost::asio::placeholders::error, boost::asio::placeholders::iterator);
+    auto resolve_handler =
+        std::bind(&Session::HandleResolveServerEndpoint, SelfFromThis(),
+                  std::placeholders::_1, std::placeholders::_2);
     boost::asio::ip::tcp::resolver::query query(
         request_.domain(), std::to_string(request_.port()));
     server_resolver_.async_resolve(query, resolve_handler);
@@ -101,9 +97,8 @@ void Session<Demux>::DoBindRequest() {
 template <typename Demux>
 void Session<Demux>::HandleResolveServerEndpoint(
     const boost::system::error_code& ec, Tcp::resolver::iterator ep_it) {
-  auto connect_handler =
-      boost::bind(&Session::HandleApplicationServerConnect, SelfFromThis(),
-                  boost::asio::placeholders::error);
+  auto connect_handler = std::bind(&Session::HandleApplicationServerConnect,
+                                   SelfFromThis(), std::placeholders::_1);
   if (ec) {
     connect_handler(ec);
     return;
@@ -145,11 +140,11 @@ void Session<Demux>::EstablishLink() {
   // Two half duplex links
   AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(server_),
                        boost::asio::buffer(*upstream_),
-                       boost::bind(&Session::HandleStop, self));
+                       std::bind(&Session::HandleStop, self));
 
   AsyncEstablishHDLink(ssf::ReadFrom(server_), ssf::WriteTo(client_),
                        boost::asio::buffer(*downstream_),
-                       boost::bind(&Session::HandleStop, self));
+                       std::bind(&Session::HandleStop, self));
 }
 
 }  // v4

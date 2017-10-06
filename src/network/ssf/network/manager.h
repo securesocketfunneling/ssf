@@ -7,7 +7,6 @@
 #include <set>
 #include <limits>
 
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "ssf/error/error.h"
@@ -37,7 +36,7 @@ class ItemManager : private boost::noncopyable {
 
   /// Stop an item
   void stop(ActionableItem item, boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(id_map_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
     do_stop(find_id_from_item(item), ec);
   }
 
@@ -52,7 +51,7 @@ class ItemManager : private boost::noncopyable {
  private:
   /// Find the unique ID of the given item
   instance_id_type find_id_from_item(ActionableItem item) {
-    boost::recursive_mutex::scoped_lock lock(id_map_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
 
     for (const auto& item_pair : id_map_) {
       if (item_pair.second == item) {
@@ -66,7 +65,7 @@ class ItemManager : private boost::noncopyable {
   /// Activate the item and return a unique ID
   instance_id_type do_start(ActionableItem item,
                             boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(id_map_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
 
     /// Get an available ID
     instance_id_type new_id = get_available_id();
@@ -89,7 +88,7 @@ class ItemManager : private boost::noncopyable {
 
   /// Stop the item associated to the given unique ID
   void do_stop(instance_id_type id, boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(id_map_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
 
     auto it = id_map_.find(id);
 
@@ -105,7 +104,7 @@ class ItemManager : private boost::noncopyable {
 
   /// Stop all items
   void do_stop_all() {
-    boost::recursive_mutex::scoped_lock lock(id_map_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
 
     boost::system::error_code ec;
     for (auto& item : id_map_) {
@@ -116,7 +115,7 @@ class ItemManager : private boost::noncopyable {
 
   /// Return the next available ID and 0 if no ID is available
   instance_id_type get_available_id() {
-    boost::recursive_mutex::scoped_lock lock(id_map_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
 
     for (instance_id_type i = 1; i < std::numeric_limits<uint32_t>::max();
          ++i) {
@@ -128,7 +127,7 @@ class ItemManager : private boost::noncopyable {
   }
 
  private:
-  boost::recursive_mutex id_map_mutex_;
+  std::recursive_mutex id_map_mutex_;
   std::map<instance_id_type, ActionableItem> id_map_;
 };
 

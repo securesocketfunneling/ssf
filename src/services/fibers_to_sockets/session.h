@@ -92,12 +92,12 @@ class Session : public ssf::BaseSession {
     AsyncEstablishHDLink(
         ReadFrom(inbound_), WriteTo(outbound_),
         boost::asio::buffer(inwardBuffer_),
-        boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+        std::bind(&Session::StopHandler, this->SelfFromThis(), std::placeholders::_1));
 
-    AsyncEstablishHDLink(
-        ReadFrom(outbound_), WriteTo(inbound_),
-        boost::asio::buffer(forwardBuffer_),
-        boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+    AsyncEstablishHDLink(ReadFrom(outbound_), WriteTo(inbound_),
+                         boost::asio::buffer(forwardBuffer_),
+                         std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                   std::placeholders::_1));
   }
 
   /// Stop forwarding

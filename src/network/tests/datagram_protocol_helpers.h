@@ -118,9 +118,9 @@ void TestDatagramProtocolPerfHalfDuplex(
                         sent_handler1);
   p_bandwidth1.reset();
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   s_finished1.get_future().wait();
@@ -128,8 +128,12 @@ void TestDatagramProtocolPerfHalfDuplex(
 
   socket1.close(ec);
   socket2.close(ec);
-
-  threads.join_all();
+  
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 /// Bind two sockets to the endpoints resolved by given parameters
@@ -292,9 +296,9 @@ void TestDatagramProtocolPerfFullDuplex(
                         sent_handler2);
   p_bandwidth2.reset();
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
 
   s_finished1.get_future().wait();
@@ -305,7 +309,11 @@ void TestDatagramProtocolPerfFullDuplex(
   socket1.close(ec);
   socket2.close(ec);
 
-  threads.join_all();
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 /// Connect socket1 to the endpoint defined by socket1_d_parameters
@@ -435,11 +443,16 @@ void TestConnectionDatagramProtocol(
 
   socket1.async_connect(socket1_d_endpoint, connected1);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 template <class DatagramProtocol>
@@ -551,11 +564,16 @@ void TestBindSendLocalDatagramProtocol(
   socket1.async_send(boost::asio::buffer(buffer1), sent_handler1);
   socket2.async_send(boost::asio::buffer(buffer2), sent_handler2);
 
-  boost::thread_group threads;
-  for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-    threads.create_thread([&io_service]() { io_service.run(); });
+  std::vector<std::thread> threads;
+  for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+    threads.emplace_back([&io_service]() { io_service.run(); });
   }
-  threads.join_all();
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 }
 
 #endif  // SSF_TESTS_DATAGRAM_PROTOCOL_HELPERS_H_

@@ -78,11 +78,11 @@ add_target(ssf_server_tests
 project_group("Unit Tests/Network" ssf_server_tests)
 
 # --- Circuit tests
-add_target("circuit_tests"
+add_target(circuit_tests
   TYPE
     executable ${EXEC_FLAG} TEST
   FILES
-    "circuit_tests.cpp"
+    circuit_tests.cpp
   LINKS
     lib_ssf_framework
     tls_config_helper

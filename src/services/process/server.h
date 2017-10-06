@@ -91,7 +91,8 @@ class Server : public BaseService<Demux> {
 
     p_factory->RegisterServiceCreator(
         kFactoryId,
-        boost::bind(&Server::Create, _1, _2, _3, config.path(), config.args()));
+        std::bind(&Server::Create, std::placeholders::_1, std::placeholders::_2,
+                  std::placeholders::_3, config.path(), config.args()));
   }
 
   // Function used to create service request

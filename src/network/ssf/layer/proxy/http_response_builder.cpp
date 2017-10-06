@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include <boost/bind.hpp>
+#include <functional>
 
 #include "ssf/layer/proxy/http_response_builder.h"
 
@@ -48,9 +48,7 @@ HttpResponseBuilder::HttpResponseBuilder()
       HTTP_PARSER_C_CALLBACK_NAME(OnMessageComplete);
 }
 
-const HttpResponse* HttpResponseBuilder::Get() const {
-  return &response_;
-}
+const HttpResponse* HttpResponseBuilder::Get() const { return &response_; }
 
 void HttpResponseBuilder::Reset() {
   parser_.data = this;

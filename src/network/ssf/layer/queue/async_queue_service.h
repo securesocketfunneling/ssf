@@ -4,20 +4,19 @@
 #include <cstdint>
 
 #include <atomic>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <type_traits>
 
 #include <boost/asio/detail/op_queue.hpp>
 #include <boost/asio/io_service.hpp>
 
-#include <boost/bind.hpp>
-#include <boost/thread/recursive_mutex.hpp>
-
 #include "ssf/error/error.h"
 
 #include "ssf/io/get_op.h"
-#include "ssf/io/push_op.h"
 #include "ssf/io/handler_helpers.h"
+#include "ssf/io/push_op.h"
 
 namespace ssf {
 namespace layer {
@@ -41,18 +40,20 @@ class basic_async_queue_service
     std::shared_ptr<std::atomic<bool>> p_valid;
     std::shared_ptr<std::atomic<bool>> p_open;
 
-    mutable std::unique_ptr<boost::recursive_mutex> p_container_mutex;
+    mutable std::unique_ptr<std::recursive_mutex> p_container_mutex;
     Container container;
 
-    mutable std::unique_ptr<boost::recursive_mutex> p_get_op_queue_mutex;
-    std::unique_ptr<boost::asio::detail::op_queue<
-        io::basic_pending_get_operation<T>>> p_get_op_queue;
+    mutable std::unique_ptr<std::recursive_mutex> p_get_op_queue_mutex;
+    std::unique_ptr<
+        boost::asio::detail::op_queue<io::basic_pending_get_operation<T>>>
+        p_get_op_queue;
     uint32_t get_op_queue_size;
     std::unique_ptr<boost::asio::io_service::work> p_get_work;
 
-    mutable std::unique_ptr<boost::recursive_mutex> p_push_op_queue_mutex;
-    std::unique_ptr<boost::asio::detail::op_queue<
-        io::basic_pending_push_operation<T>>> p_push_op_queue;
+    mutable std::unique_ptr<std::recursive_mutex> p_push_op_queue_mutex;
+    std::unique_ptr<
+        boost::asio::detail::op_queue<io::basic_pending_push_operation<T>>>
+        p_push_op_queue;
     uint32_t push_op_queue_size;
     std::unique_ptr<boost::asio::io_service::work> p_push_work;
   };
@@ -68,11 +69,11 @@ class basic_async_queue_service
     impl.p_valid = std::make_shared<std::atomic<bool>>(true);
     impl.p_open = std::make_shared<std::atomic<bool>>(true);
     impl.p_container_mutex =
-        std::unique_ptr<boost::recursive_mutex>(new boost::recursive_mutex());
+        std::unique_ptr<std::recursive_mutex>(new std::recursive_mutex());
     impl.p_get_op_queue_mutex =
-        std::unique_ptr<boost::recursive_mutex>(new boost::recursive_mutex());
+        std::unique_ptr<std::recursive_mutex>(new std::recursive_mutex());
     impl.p_push_op_queue_mutex =
-        std::unique_ptr<boost::recursive_mutex>(new boost::recursive_mutex());
+        std::unique_ptr<std::recursive_mutex>(new std::recursive_mutex());
     impl.p_get_op_queue = std::unique_ptr<
         boost::asio::detail::op_queue<io::basic_pending_get_operation<T>>>(
         new boost::asio::detail::op_queue<
@@ -90,13 +91,13 @@ class basic_async_queue_service
     *impl.p_open = false;
 
     {
-      boost::recursive_mutex::scoped_lock lock1(*impl.p_container_mutex);
+      std::unique_lock<std::recursive_mutex> lock1(*impl.p_container_mutex);
       while (!impl.container.empty()) {
         impl.container.pop();
       }
     }
     {
-      boost::recursive_mutex::scoped_lock lock2(*impl.p_push_op_queue_mutex);
+      std::unique_lock<std::recursive_mutex> lock2(*impl.p_push_op_queue_mutex);
       while (!impl.p_push_op_queue->empty()) {
         impl.p_push_op_queue->pop();
       }
@@ -105,7 +106,7 @@ class basic_async_queue_service
       impl.p_push_work.reset();
     }
     {
-      boost::recursive_mutex::scoped_lock lock3(*impl.p_get_op_queue_mutex);
+      std::unique_lock<std::recursive_mutex> lock3(*impl.p_get_op_queue_mutex);
       while (!impl.p_get_op_queue->empty()) {
         impl.p_get_op_queue->pop();
       }
@@ -131,7 +132,7 @@ class basic_async_queue_service
 
   boost::system::error_code push(implementation_type& impl, T element,
                                  boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(*impl.p_container_mutex);
+    std::unique_lock<std::recursive_mutex> lock(*impl.p_container_mutex);
 
     if (!*impl.p_open) {
       ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
@@ -147,8 +148,8 @@ class basic_async_queue_service
     impl.container.push(std::move(element));
 
     this->get_io_service().post(
-        boost::bind(&basic_async_queue_service::HandleGetQueues, this, &impl,
-                    impl.p_valid));
+        std::bind(&basic_async_queue_service::HandleGetQueues, this, &impl,
+                  impl.p_valid));
 
     ec.assign(ssf::error::success, ssf::error::get_ssf_category());
     return ec;
@@ -156,7 +157,7 @@ class basic_async_queue_service
 
   template <class Handler>
   BOOST_ASIO_INITFN_RESULT_TYPE(Handler, void(boost::system::error_code))
-      async_push(implementation_type& impl, T element, Handler&& handler) {
+  async_push(implementation_type& impl, T element, Handler&& handler) {
     boost::asio::detail::async_result_init<Handler,
                                            void(boost::system::error_code)>
         init(std::forward<Handler>(handler));
@@ -182,7 +183,8 @@ class basic_async_queue_service
     typedef io::pending_push_operation<
         typename ::boost::asio::handler_type<
             Handler, void(boost::system::error_code)>::type,
-        T> op;
+        T>
+        op;
     typename op::ptr p = {
         boost::asio::detail::addressof(init.handler),
         boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),
@@ -190,7 +192,7 @@ class basic_async_queue_service
     p.p = new (p.v) op(init.handler, std::move(element));
 
     {
-      boost::recursive_mutex::scoped_lock lock(*impl.p_push_op_queue_mutex);
+      std::unique_lock<std::recursive_mutex> lock(*impl.p_push_op_queue_mutex);
 
       impl.p_push_op_queue->push(p.p);
       ++(impl.push_op_queue_size);
@@ -203,14 +205,14 @@ class basic_async_queue_service
     p.v = p.p = 0;
 
     this->get_io_service().post(
-        boost::bind(&basic_async_queue_service::HandlePushQueues, this, &impl,
-                    impl.p_valid));
+        std::bind(&basic_async_queue_service::HandlePushQueues, this, &impl,
+                  impl.p_valid));
 
     return init.result.get();
   }
 
   T get(implementation_type& impl, boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(*impl.p_container_mutex);
+    std::unique_lock<std::recursive_mutex> lock(*impl.p_container_mutex);
 
     if (!*impl.p_open) {
       ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
@@ -226,8 +228,8 @@ class basic_async_queue_service
     impl.container.pop();
 
     this->get_io_service().post(
-        boost::bind(&basic_async_queue_service::HandlePushQueues, this, &impl,
-                    impl.p_valid));
+        std::bind(&basic_async_queue_service::HandlePushQueues, this, &impl,
+                  impl.p_valid));
 
     ec.assign(ssf::error::success, ssf::error::get_ssf_category());
     return element;
@@ -235,7 +237,7 @@ class basic_async_queue_service
 
   template <class Handler>
   BOOST_ASIO_INITFN_RESULT_TYPE(Handler, void(boost::system::error_code, T))
-      async_get(implementation_type& impl, Handler&& handler) {
+  async_get(implementation_type& impl, Handler&& handler) {
     boost::asio::detail::async_result_init<Handler,
                                            void(boost::system::error_code, T)>
         init(std::forward<Handler>(handler));
@@ -262,7 +264,8 @@ class basic_async_queue_service
     typedef io::pending_get_operation<
         typename ::boost::asio::handler_type<
             Handler, void(boost::system::error_code, T)>::type,
-        T> op;
+        T>
+        op;
     typename op::ptr p = {
         boost::asio::detail::addressof(init.handler),
         boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),
@@ -270,7 +273,7 @@ class basic_async_queue_service
     p.p = new (p.v) op(init.handler);
 
     {
-      boost::recursive_mutex::scoped_lock lock(*impl.p_get_op_queue_mutex);
+      std::unique_lock<std::recursive_mutex> lock(*impl.p_get_op_queue_mutex);
 
       impl.p_get_op_queue->push(p.p);
       ++(impl.get_op_queue_size);
@@ -283,24 +286,24 @@ class basic_async_queue_service
     p.v = p.p = 0;
 
     this->get_io_service().post(
-        boost::bind(&basic_async_queue_service::HandleGetQueues, this, &impl,
-                    impl.p_valid));
+        std::bind(&basic_async_queue_service::HandleGetQueues, this, &impl,
+                  impl.p_valid));
 
     return init.result.get();
   }
 
   bool empty(const implementation_type& impl) const {
-    boost::recursive_mutex::scoped_lock lock(*impl.p_container_mutex);
+    std::unique_lock<std::recursive_mutex> lock(*impl.p_container_mutex);
     return impl.container.empty();
   }
 
   std::size_t size(const implementation_type& impl) const {
-    boost::recursive_mutex::scoped_lock lock(*impl.p_container_mutex);
+    std::unique_lock<std::recursive_mutex> lock(*impl.p_container_mutex);
     return impl.container.size();
   }
 
   void clear(implementation_type& impl) {
-    boost::recursive_mutex::scoped_lock lock(*impl.p_container_mutex);
+    std::unique_lock<std::recursive_mutex> lock(*impl.p_container_mutex);
     while (!impl.container.empty()) {
       impl.container.pop();
     }
@@ -313,7 +316,7 @@ class basic_async_queue_service
     *impl.p_open = false;
 
     {
-      boost::recursive_mutex::scoped_lock lock1(*impl.p_get_op_queue_mutex);
+      std::unique_lock<std::recursive_mutex> lock1(*impl.p_get_op_queue_mutex);
       while (!impl.p_get_op_queue->empty()) {
         auto op = impl.p_get_op_queue->front();
         impl.p_get_op_queue->pop();
@@ -328,7 +331,7 @@ class basic_async_queue_service
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock1(*impl.p_push_op_queue_mutex);
+      std::unique_lock<std::recursive_mutex> lock1(*impl.p_push_op_queue_mutex);
       while (!impl.p_push_op_queue->empty()) {
         auto op = impl.p_push_op_queue->front();
         impl.p_push_op_queue->pop();
@@ -354,8 +357,9 @@ class basic_async_queue_service
       return;
     }
 
-    boost::recursive_mutex::scoped_lock lock1(*p_impl->p_container_mutex);
-    boost::recursive_mutex::scoped_lock lock2(*p_impl->p_push_op_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(*p_impl->p_container_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(
+        *p_impl->p_push_op_queue_mutex);
 
     if (!*p_impl->p_open) {
       return;
@@ -373,8 +377,9 @@ class basic_async_queue_service
     auto element = op->element();
     p_impl->container.push(std::move(element));
 
-    auto do_complete =
-        [op]() mutable { op->complete(boost::system::error_code()); };
+    auto do_complete = [op]() mutable {
+      op->complete(boost::system::error_code());
+    };
     this->get_io_service().post(do_complete);
 
     if (p_impl->p_push_op_queue->empty()) {
@@ -390,8 +395,8 @@ class basic_async_queue_service
       return;
     }
 
-    boost::recursive_mutex::scoped_lock lock1(*p_impl->p_container_mutex);
-    boost::recursive_mutex::scoped_lock lock2(*p_impl->p_get_op_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(*p_impl->p_container_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(*p_impl->p_get_op_queue_mutex);
 
     if (!*p_impl->p_open) {
       return;

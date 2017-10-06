@@ -2,8 +2,7 @@
 #define SSF_LAYER_MULTIPLEXING_DEMULTIPLEXER_MANAGER_H_
 
 #include <memory>
-
-#include <boost/thread/recursive_mutex.hpp>
+#include <mutex>
 
 #include "ssf/layer/multiplexing/basic_demultiplexer.h"
 
@@ -23,7 +22,7 @@ class DemultiplexerManager {
 
  public:
   bool Start(NextSocketPtr p_socket) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto inserted =
       demultiplexers_.insert(std::make_pair(p_socket, Demultiplexer::Create(p_socket)));
@@ -32,7 +31,7 @@ class DemultiplexerManager {
   }
 
   void Stop(NextSocketPtr p_socket) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     auto demultiplexer_it = demultiplexers_.find(p_socket);
 
@@ -43,7 +42,7 @@ class DemultiplexerManager {
   }
 
   void Stop() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     for (auto& pair : demultiplexers_) {
       pair.second->Stop();
@@ -53,7 +52,7 @@ class DemultiplexerManager {
   }
 
   bool Bind(NextSocketPtr p_socket, SocketContextPtr p_socket_context) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     // Get the demultiplexer linked to the given socket
     auto demultiplexer_it = demultiplexers_.find(p_socket);
 
@@ -65,7 +64,7 @@ class DemultiplexerManager {
   }
 
   bool Unbind(NextSocketPtr p_socket, SocketContextPtr p_socket_context) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     // Get the demultiplexer linked to the given socket
     auto demultiplexer_it = demultiplexers_.find(p_socket);
 
@@ -77,7 +76,7 @@ class DemultiplexerManager {
   }
 
   bool IsBound(NextSocketPtr p_socket, SocketContextPtr p_socket_context) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     // Get the demultiplexer linked to the given socket
     auto demultiplexer_it = demultiplexers_.find(p_socket);
 
@@ -89,7 +88,7 @@ class DemultiplexerManager {
   }
 
   void Read(NextSocketPtr p_socket, SocketContextPtr p_socket_context) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     // Get the demultiplexer linked to the given socket
     auto demultiplexer_it = demultiplexers_.find(p_socket);
 
@@ -101,7 +100,7 @@ class DemultiplexerManager {
   }
 
  private:
-  boost::recursive_mutex mutex_;
+  std::recursive_mutex mutex_;
   std::map<NextSocketPtr, DemultiplexerPtr> demultiplexers_;
 };
 

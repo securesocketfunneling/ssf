@@ -3,14 +3,14 @@
 
 #include <cstdint>
 
-#include <memory>
-#include <utility>
 #include <atomic>
-#include <vector>
+#include <functional>
+#include <memory>
+#include <mutex>
 #include <queue>
+#include <utility>
+#include <vector>
 
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/bind.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/write.hpp>
 
@@ -47,7 +47,7 @@ class basic_Multiplexer
       return false;
     }
 
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     if (!congestion_policy_.IsAddable(pending_datagrams_, datagram)) {
       // drop packet and notify handler
@@ -83,7 +83,7 @@ class basic_Multiplexer
 
   /// Get the first element of the datagram queue and async send it
   void StartPopping() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     if (pending_datagrams_.empty()) {
       popping_ = false;
@@ -95,19 +95,19 @@ class basic_Multiplexer
 
     AsyncSendDatagram(
         *p_socket_, datagram.first.second, datagram.first.first,
-        boost::bind(&basic_Multiplexer::DatagramSent, this->shared_from_this(), _1, _2));
+        std::bind(&basic_Multiplexer::DatagramSent, this->shared_from_this(),
+                  std::placeholders::_1, std::placeholders::_2));
   }
 
   /// Pop an element from the datagram queue
   void DatagramSent(const boost::system::error_code& ec, std::size_t length) {
     {
-      boost::recursive_mutex::scoped_lock lock(mutex_);
+      std::unique_lock<std::recursive_mutex> lock(mutex_);
       auto datagram = std::move(pending_datagrams_.front());
       pending_datagrams_.pop();
       auto p_handler = std::move(datagram.second);
-      p_socket_->get_io_service().post([p_handler, ec, length]() {
-        (*p_handler)(ec, length);
-      });
+      p_socket_->get_io_service().post(
+          [p_handler, ec, length]() { (*p_handler)(ec, length); });
     }
 
     if (!ec) {
@@ -122,7 +122,7 @@ class basic_Multiplexer
   std::atomic<bool> ready_;
   std::atomic<bool> popping_;
   SocketPtr p_socket_;
-  boost::recursive_mutex mutex_;
+  std::recursive_mutex mutex_;
   Queue pending_datagrams_;
   CongestionPolicy congestion_policy_;
 };

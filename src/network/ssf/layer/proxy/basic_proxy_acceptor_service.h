@@ -1,6 +1,7 @@
 #ifndef SSF_LAYER_PROXY_BASIC_PROXY_ACCEPTOR_SERVICE_H_
 #define SSF_LAYER_PROXY_BASIC_PROXY_ACCEPTOR_SERVICE_H_
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <queue>
@@ -9,18 +10,15 @@
 #include <utility>
 
 #include <boost/asio/async_result.hpp>
-#include <boost/asio/basic_stream_socket.hpp>
 #include <boost/asio/basic_socket_acceptor.hpp>
+#include <boost/asio/basic_stream_socket.hpp>
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/io_service.hpp>
 
-#include <boost/system/error_code.hpp>
 #include <boost/property_tree/ptree.hpp>
-
-#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/recursive_mutex.hpp>
+
+#include <boost/system/error_code.hpp>
 
 #include "ssf/error/error.h"
 
@@ -135,7 +133,7 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
   template <typename SettableSocketOption>
   boost::system::error_code set_option(implementation_type& impl,
                                        const SettableSocketOption& option,
-                                       boost::system::error_code& ec) { 
+                                       boost::system::error_code& ec) {
     if (!impl.p_next_layer_acceptor) {
       ec.assign(ssf::error::bad_file_descriptor,
                 ssf::error::get_ssf_category());
@@ -143,7 +141,6 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
     }
 
     return impl.p_next_layer_acceptor->set_option(option, ec);
-    
   }
 
   boost::system::error_code bind(implementation_type& impl,
@@ -160,7 +157,7 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
   }
 
   boost::system::error_code listen(implementation_type& impl, int backlog,
-                                   boost::system::error_code& ec) {    
+                                   boost::system::error_code& ec) {
     if (!impl.p_next_layer_acceptor) {
       ec.assign(ssf::error::bad_file_descriptor,
                 ssf::error::get_ssf_category());
@@ -175,8 +172,8 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
       implementation_type& impl,
       boost::asio::basic_socket<Protocol1, SocketService>& peer,
       endpoint_type* p_peer_endpoint, boost::system::error_code& ec,
-      typename std::enable_if<std::is_convertible<
-          protocol_type, Protocol1>::value>::type* = 0) {    
+      typename std::enable_if<
+          std::is_convertible<protocol_type, Protocol1>::value>::type* = 0) {
     if (!impl.p_next_layer_acceptor) {
       ec.assign(ssf::error::bad_file_descriptor,
                 ssf::error::get_ssf_category());
@@ -207,11 +204,12 @@ class basic_ProxyAcceptor_service : public boost::asio::detail::service_base<
 
   template <typename Protocol1, typename SocketService, typename AcceptHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(AcceptHandler, void(boost::system::error_code))
-      async_accept(implementation_type& impl,
-                   boost::asio::basic_socket<Protocol1, SocketService>& peer,
-                   endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
-                   typename std::enable_if<std::is_convertible<
-                       protocol_type, Protocol1>::value>::type* = 0) {
+  async_accept(
+      implementation_type& impl,
+      boost::asio::basic_socket<Protocol1, SocketService>& peer,
+      endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
+      typename std::enable_if<
+          std::is_convertible<protocol_type, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
         init(std::forward<AcceptHandler>(handler));

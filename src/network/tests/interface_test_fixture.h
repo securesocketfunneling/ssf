@@ -92,8 +92,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
 
     it_simple1.first->second.async_accept(
         "simple_lo1", simple1_local_endpoint,
-        boost::bind(&InterfaceTestFixture::InterfaceOnline, this, "simple_lo1",
-                    _1));
+        std::bind(&InterfaceTestFixture::InterfaceOnline, this, "simple_lo1",
+                    std::placeholders::_1));
 
     ssf::layer::LayerParameters simple2_connect_physical_parameters;
     simple2_connect_physical_parameters["addr"] = "127.0.0.1";
@@ -109,8 +109,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
         simple_interfaces_.emplace("simple_lo2", this->io_service_);
     it_simple2.first->second.async_connect(
         "simple_lo2", simple2_remote_endpoint,
-        boost::bind(&InterfaceTestFixture::InterfaceOnline, this, "simple_lo2",
-                    _1));
+        std::bind(&InterfaceTestFixture::InterfaceOnline, this, "simple_lo2",
+                  std::placeholders::_1));
 
     //---------------------- simple TLS interfaces --------------------------//
     SimpleTLSLinkProtocol::resolver simple_tls_resolver(this->io_service_);
@@ -136,8 +136,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
 
       it_simple_tls1.first->second.async_accept(
           "simple_tls_lo1", simple_tls1_local_endpoint,
-          boost::bind(&InterfaceTestFixture::InterfaceOnline, this,
-                      "simple_tls_lo1", _1));
+          std::bind(&InterfaceTestFixture::InterfaceOnline, this,
+                    "simple_tls_lo1", std::placeholders::_1));
     }
 
     boost::system::error_code tls2_ec;
@@ -162,8 +162,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
 
       it_simple_tls2.first->second.async_connect(
           "simple_tls_lo2", simple_tls2_remote_endpoint,
-          boost::bind(&InterfaceTestFixture::InterfaceOnline, this,
-                      "simple_tls_lo2", _1));
+          std::bind(&InterfaceTestFixture::InterfaceOnline, this,
+                    "simple_tls_lo2", std::placeholders::_1));
     }
 
     //------------------------- circuit interfaces --------------------------//
@@ -188,8 +188,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
 
     it_circuit1.first->second.async_accept(
         "circuit_lo1", circuit1_local_endpoint,
-        boost::bind(&InterfaceTestFixture::InterfaceOnline, this, "circuit_lo1",
-                    _1));
+        std::bind(&InterfaceTestFixture::InterfaceOnline, this, "circuit_lo1",
+                  std::placeholders::_1));
 
     ssf::layer::LayerParameters circuit2_client_physical_parameters;
     circuit2_client_physical_parameters["addr"] = "127.0.0.1";
@@ -211,8 +211,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
 
     it_circuit2.first->second.async_connect(
         "circuit_lo2", circuit2_local_endpoint,
-        boost::bind(&InterfaceTestFixture::InterfaceOnline, this, "circuit_lo2",
-                    _1));
+        std::bind(&InterfaceTestFixture::InterfaceOnline, this, "circuit_lo2",
+                  std::placeholders::_1));
 
     //----------------------- circuit TLS interfaces ------------------------//
     CircuitTLSLinkProtocol::resolver circuit_tls_resolver(this->io_service_);
@@ -246,8 +246,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
 
       it_circuit_tls1.first->second.async_accept(
           "circuit_tls_lo1", circuit_tls1_local_endpoint,
-          boost::bind(&InterfaceTestFixture::InterfaceOnline, this,
-                      "circuit_tls_lo1", _1));
+          std::bind(&InterfaceTestFixture::InterfaceOnline, this,
+                      "circuit_tls_lo1", std::placeholders::_1));
     }
 
     boost::system::error_code circuit_tls2_ec;
@@ -279,8 +279,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
 
       it_circuit_tls2.first->second.async_connect(
           "circuit_tls_lo2", circuit_tls2_local_endpoint,
-          boost::bind(&InterfaceTestFixture::InterfaceOnline, this,
-                      "circuit_tls_lo2", _1));
+          std::bind(&InterfaceTestFixture::InterfaceOnline, this,
+                      "circuit_tls_lo2", std::placeholders::_1));
     }
 
     Wait();

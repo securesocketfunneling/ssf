@@ -1,6 +1,6 @@
 function(bin2c varname input output)
   get_filename_component(output ${output} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  message("Generating C header file ${output} from binary file ${input}")
+  message("-- Generating C header file ${output} from binary file ${input}")
   file(READ ${input} _data_hex HEX)
 
   string(REGEX MATCH "([^/]+)$" _filename ${input})

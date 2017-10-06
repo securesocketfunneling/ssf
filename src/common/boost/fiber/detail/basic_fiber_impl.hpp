@@ -14,17 +14,18 @@
 
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <queue>
 
 #include <ssf/log/log.h>
 
-#include "common/error/error.h"
-#include "common/boost/fiber/detail/fiber_id.hpp"
-#include "common/boost/fiber/detail/fiber_header.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
-#include "common/boost/fiber/detail/io_fiber_read_op.hpp"
-#include "common/boost/fiber/detail/io_fiber_dgr_read_op.hpp"
+#include "common/boost/fiber/detail/fiber_header.hpp"
+#include "common/boost/fiber/detail/fiber_id.hpp"
 #include "common/boost/fiber/detail/io_fiber_accept_op.hpp"
+#include "common/boost/fiber/detail/io_fiber_dgr_read_op.hpp"
+#include "common/boost/fiber/detail/io_fiber_read_op.hpp"
+#include "common/error/error.h"
 
 namespace boost {
 namespace asio {
@@ -66,7 +67,8 @@ class basic_fiber_impl
 
   /// Type for an object storing the user accept request
   typedef boost::asio::fiber::detail::basic_pending_accept_operation<
-      StreamSocket> accept_op;
+      StreamSocket>
+      accept_op;
 
   /// Type for the fiber demultiplexer
   typedef boost::asio::fiber::basic_fiber_demux<StreamSocket> fiber_demux_type;
@@ -181,7 +183,7 @@ class basic_fiber_impl
   void init() {
     accept_handler = [this](remote_port_type remote_port) {
       {
-        boost::recursive_mutex::scoped_lock lock(this->port_queue_mutex);
+        std::unique_lock<std::recursive_mutex> lock(this->port_queue_mutex);
         this->port_queue.push(remote_port);
       }
       this->a_queues_handler();
@@ -197,31 +199,31 @@ class basic_fiber_impl
       this->connect_user_handler = [](const boost::system::error_code&) {};
     };
 
-    receive_handler =
-        [this](std::vector<uint8_t>&& data, std::size_t bytes_transfered) {
-          {
-            boost::recursive_mutex::scoped_lock lock(this->data_queue_mutex);
-            boost::asio::streambuf::mutable_buffers_type buffers =
-                this->data_queue.prepare(bytes_transfered);
+    receive_handler = [this](std::vector<uint8_t>&& data,
+                             std::size_t bytes_transfered) {
+      {
+        std::unique_lock<std::recursive_mutex> lock(this->data_queue_mutex);
+        boost::asio::streambuf::mutable_buffers_type buffers =
+            this->data_queue.prepare(bytes_transfered);
 
-            boost::asio::buffer_copy(buffers, boost::asio::buffer(data));
-            this->data_queue.commit(bytes_transfered);
-          }
-          this->r_queues_handler();
-        };
+        boost::asio::buffer_copy(buffers, boost::asio::buffer(data));
+        this->data_queue.commit(bytes_transfered);
+      }
+      this->r_queues_handler();
+    };
 
-    receive_dgr_handler =
-        [this](std::vector<uint8_t>&& data, remote_port_type remote_port,
-               std::size_t bytes_transfered) {
-          {
-            boost::recursive_mutex::scoped_lock lock1(this->data_queue_mutex);
-            boost::recursive_mutex::scoped_lock lock2(this->port_queue_mutex);
-            this->port_queue.push(remote_port);
-            data.resize(bytes_transfered);
-            this->dgr_data_queue_.push(data);
-          }
-          this->r_dgr_queues_handler();
-        };
+    receive_dgr_handler = [this](std::vector<uint8_t>&& data,
+                                 remote_port_type remote_port,
+                                 std::size_t bytes_transfered) {
+      {
+        std::unique_lock<std::recursive_mutex> lock1(this->data_queue_mutex);
+        std::unique_lock<std::recursive_mutex> lock2(this->port_queue_mutex);
+        this->port_queue.push(remote_port);
+        data.resize(bytes_transfered);
+        this->dgr_data_queue_.push(data);
+      }
+      this->r_dgr_queues_handler();
+    };
 
     close_handler = [this]() {
       SSF_LOG(kLogTrace) << "fiber impl: close handler "
@@ -321,8 +323,8 @@ class basic_fiber_impl
   */
   void a_queues_handler(
       boost::system::error_code ec = boost::system::error_code()) {
-    boost::recursive_mutex::scoped_lock lock1(accept_op_queue_mutex);
-    boost::recursive_mutex::scoped_lock lock2(port_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(accept_op_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(port_queue_mutex);
 
     if (!ec) {
       if (!accept_op_queue.empty() && !port_queue.empty()) {
@@ -339,7 +341,7 @@ class basic_fiber_impl
         SSF_LOG(kLogDebug) << "fiber impl: new connection from remote port: "
                            << remote_port;
 
-        p_fib_demux->get_io_service().dispatch(boost::bind(
+        p_fib_demux->get_io_service().dispatch(std::bind(
             &basic_fiber_impl::a_queues_handler, this->shared_from_this(), ec));
       }
     } else {
@@ -359,11 +361,11 @@ class basic_fiber_impl
   */
   void r_queues_handler(
       boost::system::error_code ec = boost::system::error_code()) {
-    boost::recursive_mutex::scoped_lock lock1(read_op_queue_mutex);
-    boost::recursive_mutex::scoped_lock lock2(data_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(read_op_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(data_queue_mutex);
 
     {
-      boost::recursive_mutex::scoped_lock lock(in_mutex);
+      std::unique_lock<std::recursive_mutex> lock(in_mutex);
       if (((data_queue.size() > 60 * 1024 * 1024) && ready_in) ||
           ((data_queue.size() < 40 * 1024 * 1024) && !ready_in)) {
         p_fib_demux->async_send_ack(this->shared_from_this(), nullptr);
@@ -380,11 +382,12 @@ class basic_fiber_impl
 
         size_t copied = op->fill_buffers(data_queue);
 
-        auto do_complete =
-            [=]() { op->complete(boost::system::error_code(), copied); };
+        auto do_complete = [=]() {
+          op->complete(boost::system::error_code(), copied);
+        };
         p_fib_demux->get_io_service().post(do_complete);
 
-        p_fib_demux->get_io_service().dispatch(boost::bind(
+        p_fib_demux->get_io_service().dispatch(std::bind(
             &basic_fiber_impl::r_queues_handler, this->shared_from_this(), ec));
       }
     } else {
@@ -403,9 +406,9 @@ class basic_fiber_impl
   */
   void r_dgr_queues_handler(
       boost::system::error_code ec = boost::system::error_code()) {
-    boost::recursive_mutex::scoped_lock lock1(read_op_queue_mutex);
-    boost::recursive_mutex::scoped_lock lock2(data_queue_mutex);
-    boost::recursive_mutex::scoped_lock lock3(port_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(read_op_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(data_queue_mutex);
+    std::unique_lock<std::recursive_mutex> lock3(port_queue_mutex);
     SSF_LOG(kLogTrace) << "fiber impl: queue empty: " << read_op_queue.empty()
                        << " | port queue empty : " << port_queue.empty()
                        << " | queue size " << data_queue.size()
@@ -427,12 +430,13 @@ class basic_fiber_impl
 
         op->set_remote_port(remote_port);
 
-        auto do_complete =
-            [=]() { op->complete(boost::system::error_code(), copied); };
+        auto do_complete = [=]() {
+          op->complete(boost::system::error_code(), copied);
+        };
         p_fib_demux->get_io_service().post(do_complete);
 
         p_fib_demux->get_io_service().dispatch(
-            boost::bind(&basic_fiber_impl::r_dgr_queues_handler,
+            std::bind(&basic_fiber_impl::r_dgr_queues_handler,
                         this->shared_from_this(), ec));
       }
     } else {
@@ -444,7 +448,7 @@ class basic_fiber_impl
         p_fib_demux->get_io_service().post(do_complete);
 
         p_fib_demux->get_io_service().dispatch(
-            boost::bind(&basic_fiber_impl::r_dgr_queues_handler,
+            std::bind(&basic_fiber_impl::r_dgr_queues_handler,
                         this->shared_from_this(), ec));
       }
     }
@@ -464,8 +468,8 @@ class basic_fiber_impl
 
   /// Make the fiber able to send and unable to receive
   void init_accept_in_out() {
-    boost::recursive_mutex::scoped_lock lock1(in_mutex);
-    boost::recursive_mutex::scoped_lock lock2(out_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(in_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(out_mutex);
 
     ready_in = false;
     ready_out = true;
@@ -473,8 +477,8 @@ class basic_fiber_impl
 
   /// Make the fiber able to send and receive
   void init_connect_in_out() {
-    boost::recursive_mutex::scoped_lock lock1(in_mutex);
-    boost::recursive_mutex::scoped_lock lock2(out_mutex);
+    std::unique_lock<std::recursive_mutex> lock1(in_mutex);
+    std::unique_lock<std::recursive_mutex> lock2(out_mutex);
 
     ready_in = true;
     ready_out = true;
@@ -482,29 +486,29 @@ class basic_fiber_impl
 
   /// Toggle the fiber ability to receive
   void toggle_in() {
-    boost::recursive_mutex::scoped_lock lock(in_mutex);
+    std::unique_lock<std::recursive_mutex> lock(in_mutex);
     ready_in = !ready_in;
   }
 
   /// Toggle the fiber ability to send
   void toggle_out() {
-    boost::recursive_mutex::scoped_lock lock(out_mutex);
+    std::unique_lock<std::recursive_mutex> lock(out_mutex);
     ready_out = !ready_out;
   }
 
   void set_opened() {
-    boost::recursive_mutex::scoped_lock lock_state(state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(state_mutex);
     closed = false;
   }
 
   void set_closed() {
-    boost::recursive_mutex::scoped_lock lock_state(state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(state_mutex);
     closed = true;
   }
 
   /// Set implementation in connecting state
   void set_connecting() {
-    boost::recursive_mutex::scoped_lock lock_state(state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(state_mutex);
     connecting = true;
     connected = false;
     disconnecting = false;
@@ -513,7 +517,7 @@ class basic_fiber_impl
 
   /// Set implementation in connected state
   void set_connected() {
-    boost::recursive_mutex::scoped_lock lock_state(state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(state_mutex);
     connecting = false;
     connected = true;
     closed = false;
@@ -523,7 +527,7 @@ class basic_fiber_impl
 
   /// Set implementation in disconnecting state
   void set_disconnecting() {
-    boost::recursive_mutex::scoped_lock lock_state(state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(state_mutex);
     connecting = false;
     connected = false;
     disconnecting = true;
@@ -532,7 +536,7 @@ class basic_fiber_impl
 
   /// Set implementation in disconnected state
   void set_disconnected() {
-    boost::recursive_mutex::scoped_lock lock_state(state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(state_mutex);
     connecting = false;
     connected = false;
     closed = true;
@@ -544,14 +548,14 @@ class basic_fiber_impl
 
   fiber_demux_type* p_fib_demux;
 
-  boost::recursive_mutex in_mutex;
-  boost::recursive_mutex out_mutex;
+  std::recursive_mutex in_mutex;
+  std::recursive_mutex out_mutex;
   bool ready_in;
   bool ready_out;
 
   uint8_t priority;
 
-  boost::recursive_mutex state_mutex;
+  std::recursive_mutex state_mutex;
   // States of the fiber
   bool closed;
   bool connecting;
@@ -559,17 +563,17 @@ class basic_fiber_impl
   bool disconnecting;
   bool disconnected;
 
-  boost::recursive_mutex read_op_queue_mutex;
+  std::recursive_mutex read_op_queue_mutex;
 
   /// Store the pending read requests
   read_op_queue_type read_op_queue;
 
-  boost::recursive_mutex read_dgr_op_queue_mutex;
+  std::recursive_mutex read_dgr_op_queue_mutex;
 
   /// Store the pending read requests for datagrams
   read_dgr_op_queue_type read_dgr_op_queue;
 
-  boost::recursive_mutex data_queue_mutex;
+  std::recursive_mutex data_queue_mutex;
 
   /// Store the received data
   data_queue_type data_queue;
@@ -577,12 +581,12 @@ class basic_fiber_impl
   /// Store the dgr received data
   dgr_data_queue_type dgr_data_queue_;
 
-  boost::recursive_mutex accept_op_queue_mutex;
+  std::recursive_mutex accept_op_queue_mutex;
 
   /// Store the pending accept operation
   accept_op_queue_type accept_op_queue;
 
-  boost::recursive_mutex port_queue_mutex;
+  std::recursive_mutex port_queue_mutex;
 
   /// Store the connecting remote port
   remote_port_queue_type port_queue;

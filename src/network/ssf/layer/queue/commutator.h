@@ -4,10 +4,9 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 
-#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/error/error.h"
 
@@ -52,7 +51,7 @@ class Commutator : public std::enable_shared_from_this<
   ~Commutator() {}
 
   bool RegisterInput(Identifier id, InputCallback input_callback) {
-    boost::recursive_mutex::scoped_lock lock(input_callbacks_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(input_callbacks_mutex_);
 
     auto active_item = make_active(std::move(input_callback));
     auto p_tagged_active_item = make_shared_tagged(id, std::move(active_item));
@@ -66,7 +65,7 @@ class Commutator : public std::enable_shared_from_this<
   }
 
   bool UnregisterInput(const Identifier& id) {
-    boost::recursive_mutex::scoped_lock lock(input_callbacks_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(input_callbacks_mutex_);
 
     auto p_tagged_active_item_it = input_callbacks_.find(id);
 
@@ -81,7 +80,7 @@ class Commutator : public std::enable_shared_from_this<
   }
 
   bool RegisterOutput(Identifier id, OutputCallback output_callback) {
-    boost::recursive_mutex::scoped_lock lock(output_callbacks_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(output_callbacks_mutex_);
 
     auto inserted = output_callbacks_.insert(
         std::make_pair(std::move(id), std::move(output_callback)));
@@ -90,7 +89,7 @@ class Commutator : public std::enable_shared_from_this<
   }
 
   bool UnregisterOutput(const Identifier& id) {
-    boost::recursive_mutex::scoped_lock lock(output_callbacks_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(output_callbacks_mutex_);
 
     auto p_output_it = output_callbacks_.find(id);
 
@@ -105,7 +104,7 @@ class Commutator : public std::enable_shared_from_this<
 
   boost::system::error_code close(boost::system::error_code& ec) {
     {
-      boost::recursive_mutex::scoped_lock lock(input_callbacks_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(input_callbacks_mutex_);
 
       for (auto& input_callback : input_callbacks_) {
         input_callback.second->item.Disactivate();
@@ -115,7 +114,7 @@ class Commutator : public std::enable_shared_from_this<
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(output_callbacks_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(output_callbacks_mutex_);
       output_callbacks_.clear();
     }
 
@@ -133,9 +132,9 @@ class Commutator : public std::enable_shared_from_this<
 
  private:
   void StartInputLoop(TaggedActiveInputCallbackPtr p_input_callback) {
-    p_input_callback->item.item()(boost::bind(&Commutator::InputReceived,
-                                              this->shared_from_this(),
-                                              p_input_callback, _1, _2));
+    p_input_callback->item.item()(std::bind(
+        &Commutator::InputReceived, this->shared_from_this(), p_input_callback,
+        std::placeholders::_1, std::placeholders::_2));
   }
 
   void InputReceived(TaggedActiveInputCallbackPtr p_input_callback,
@@ -149,9 +148,9 @@ class Commutator : public std::enable_shared_from_this<
       return;
     }
 
-    AsyncCommute(
-        p_input_callback->tag, std::move(element),
-        boost::bind(&Commutator::OutputSent, this->shared_from_this(), _1));
+    AsyncCommute(p_input_callback->tag, std::move(element),
+                 std::bind(&Commutator::OutputSent, this->shared_from_this(),
+                           std::placeholders::_1));
 
     StartInputLoop(std::move(p_input_callback));
   }
@@ -159,9 +158,8 @@ class Commutator : public std::enable_shared_from_this<
   void AsyncCommute(Identifier id, Element element, OutputHandler handler) {
     auto tagged_element = make_tagged(std::move(id), std::move(element));
 
-    io_service_.post(boost::bind(&Commutator::Select, this->shared_from_this(),
-                                 std::move(tagged_element),
-                                 std::move(handler)));
+    io_service_.post(std::bind(&Commutator::Select, this->shared_from_this(),
+                               std::move(tagged_element), std::move(handler)));
   }
 
   void Select(TaggedElement tagged_element, OutputHandler handler) {
@@ -176,7 +174,7 @@ class Commutator : public std::enable_shared_from_this<
   }
 
   void DoOutput(TaggedElement tagged_element, OutputHandler handler) {
-    boost::recursive_mutex::scoped_lock lock(output_callbacks_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(output_callbacks_mutex_);
 
     auto output_it = output_callbacks_.find(tagged_element.tag);
 
@@ -196,10 +194,10 @@ class Commutator : public std::enable_shared_from_this<
 
   const Selector& selector_;
 
-  boost::recursive_mutex input_callbacks_mutex_;
+  std::recursive_mutex input_callbacks_mutex_;
   InputCallbackMap input_callbacks_;
 
-  boost::recursive_mutex output_callbacks_mutex_;
+  std::recursive_mutex output_callbacks_mutex_;
   OutputCallbackMap output_callbacks_;
 };
 

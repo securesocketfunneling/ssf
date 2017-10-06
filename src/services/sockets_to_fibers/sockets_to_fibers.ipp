@@ -110,8 +110,8 @@ void SocketsToFibers<Demux>::AsyncAcceptSocket() {
 
   socket_acceptor_.async_accept(
       *socket_connection,
-      boost::bind(&SocketsToFibers::SocketAcceptHandler, this->SelfFromThis(),
-                  socket_connection, _1));
+      std::bind(&SocketsToFibers::SocketAcceptHandler, this->SelfFromThis(),
+                socket_connection, std::placeholders::_1));
 }
 
 template <typename Demux>
@@ -135,8 +135,8 @@ void SocketsToFibers<Demux>::SocketAcceptHandler(
   FiberEndpoint ep(this->get_demux(), remote_port_);
   fiber_connection->async_connect(
       ep,
-      boost::bind(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis(),
-                  fiber_connection, socket_connection, _1));
+      std::bind(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis(),
+                  fiber_connection, socket_connection, std::placeholders::_1));
 }
 
 template <typename Demux>

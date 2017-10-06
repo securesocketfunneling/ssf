@@ -9,7 +9,6 @@
 #include <boost/asio/io_service.hpp>
 
 #include <boost/system/error_code.hpp>
-#include <boost/thread.hpp>
 
 #include "ssf/layer/basic_impl.h"
 
@@ -125,7 +124,7 @@ class basic_RoutedSocket_service : public boost::asio::detail::service_base<
 
     impl.p_socket_context->p_receive_queue = nullptr;
 
-    boost::recursive_mutex::scoped_lock lock(bounds_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(bounds_mutex_);
     bounds_.erase(*(impl.p_local_endpoint));
 
     return ec;
@@ -159,7 +158,7 @@ class basic_RoutedSocket_service : public boost::asio::detail::service_base<
   boost::system::error_code bind(implementation_type& impl,
                                  const endpoint_type& local_endpoint,
                                  boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(bounds_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(bounds_mutex_);
 
     if (bounds_.count(local_endpoint)) {
       ec.assign(ssf::error::device_or_resource_busy,
@@ -392,7 +391,7 @@ class basic_RoutedSocket_service : public boost::asio::detail::service_base<
   }
 
   void register_async_op() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     if (usage_count_ == 0) {
       p_worker_ = std::unique_ptr<boost::asio::io_service::work>(
           new boost::asio::io_service::work(this->get_io_service()));
@@ -401,7 +400,7 @@ class basic_RoutedSocket_service : public boost::asio::detail::service_base<
   }
 
   void unregister_async_op() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     --usage_count_;
     if (usage_count_ == 0) {
       p_worker_.reset();
@@ -410,11 +409,11 @@ class basic_RoutedSocket_service : public boost::asio::detail::service_base<
 
  private:
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
-  boost::recursive_mutex mutex_;
+  std::recursive_mutex mutex_;
   uint64_t usage_count_;
   std::shared_ptr<bool> p_alive_;
 
-  boost::recursive_mutex bounds_mutex_;
+  std::recursive_mutex bounds_mutex_;
   std::set<endpoint_type> bounds_;
 };
 

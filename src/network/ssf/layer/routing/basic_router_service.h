@@ -1,17 +1,17 @@
 #ifndef SSF_LAYER_ROUTING_BASIC_ROUTER_SERVICE_H_
 #define SSF_LAYER_ROUTING_BASIC_ROUTER_SERVICE_H_
 
-#include <memory>
+#include <functional>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <queue>
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/handler_type.hpp>
 #include <boost/asio/io_service.hpp>
 
-#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/error/error.h"
 #include "ssf/io/composed_op.h"
@@ -20,8 +20,8 @@
 #include "ssf/layer/protocol_attributes.h"
 
 #include "ssf/layer/queue/async_queue.h"
-#include "ssf/layer/queue/send_queued_datagram_socket.h"
 #include "ssf/layer/queue/commutator.h"
+#include "ssf/layer/queue/send_queued_datagram_socket.h"
 
 #include "ssf/layer/routing/basic_routing_selector.h"
 
@@ -50,9 +50,11 @@ class basic_Router_service
   typedef RoutingSelector<network_address_type, Datagram, TRoutingTable>
       routing_selector_type;
   typedef queue::Commutator<network_address_type, Datagram,
-                            routing_selector_type> Commutator;
+                            routing_selector_type>
+      Commutator;
   typedef queue::CommutatorPtr<network_address_type, Datagram,
-                               routing_selector_type> CommutatorPtr;
+                               routing_selector_type>
+      CommutatorPtr;
 
   typedef typename next_layer_protocol::raw_socket next_socket_type;
   typedef queue::basic_send_queued_datagram_socket<next_socket_type>
@@ -69,7 +71,7 @@ class basic_Router_service
     std::shared_ptr<bool> p_valid;
     RoutingTable routing_table;
 
-    boost::recursive_mutex network_sockets_mutex;
+    std::recursive_mutex network_sockets_mutex;
     std::map<network_address_type, p_queued_send_socket_type> network_sockets;
     std::map<network_address_type, ReceiveQueue> receive_queues;
 
@@ -100,13 +102,13 @@ class basic_Router_service
     impl.p_commutator =
         Commutator::Create(this->get_io_service(), impl.selector);
 
-    auto receive_callback =
-        [this, &impl](typename Commutator::Element datagram,
-                      typename Commutator::OutputHandler handler) {
-          boost::system::error_code receive_ec;
-          this->Receive(impl, std::move(datagram), receive_ec);
-          handler(receive_ec);
-        };
+    auto receive_callback = [this, &impl](
+        typename Commutator::Element datagram,
+        typename Commutator::OutputHandler handler) {
+      boost::system::error_code receive_ec;
+      this->Receive(impl, std::move(datagram), receive_ec);
+      handler(receive_ec);
+    };
 
     /// Register local output (0) : final destination
     /// Populate local receive destination queue
@@ -114,10 +116,10 @@ class basic_Router_service
 
     impl.local_send_buffer.resize(next_layer_protocol::mtu);
 
-    auto send_callback =
-        [this, &impl](typename Commutator::InputHandler handler) {
-          this->AsyncSend(impl, std::move(handler));
-        };
+    auto send_callback = [this,
+                          &impl](typename Commutator::InputHandler handler) {
+      this->AsyncSend(impl, std::move(handler));
+    };
 
     /// Register local input : local send
     /// Get from send local queue
@@ -133,7 +135,7 @@ class basic_Router_service
     impl.p_send_queue.reset();
 
     {
-      boost::recursive_mutex::scoped_lock lock(impl.network_sockets_mutex);
+      std::unique_lock<std::recursive_mutex> lock(impl.network_sockets_mutex);
       boost::system::error_code close_ec;
 
       for (auto& p_sockets : impl.network_sockets) {
@@ -173,7 +175,7 @@ class basic_Router_service
         std::make_shared<queued_send_socket_type>(this->get_io_service());
     p_queued_send_socket->next_layer().bind(next_endpoint, ec);
 
-    boost::recursive_mutex::scoped_lock lock(impl.network_sockets_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl.network_sockets_mutex);
 
     SSF_LOG(kLogTrace)
         << " * Router: add network " << prefix << " bound to interface "
@@ -254,9 +256,9 @@ class basic_Router_service
 
   template <class Handler>
   BOOST_ASIO_INITFN_RESULT_TYPE(Handler, void(boost::system::error_code))
-      async_add_network(implementation_type& impl, const prefix_type& prefix,
-                        const next_endpoint_type& next_endpoint,
-                        Handler&& handler) {
+  async_add_network(implementation_type& impl, const prefix_type& prefix,
+                    const next_endpoint_type& next_endpoint,
+                    Handler&& handler) {
     boost::asio::detail::async_result_init<Handler,
                                            void(boost::system::error_code)>
         init(std::forward<Handler>(handler));
@@ -288,7 +290,7 @@ class basic_Router_service
 
     impl.routing_table.RemoveRoute(network_address, ec);
 
-    boost::recursive_mutex::scoped_lock lock(impl.network_sockets_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl.network_sockets_mutex);
 
     auto p_socket_it = impl.network_sockets.find(network_address);
 
@@ -314,7 +316,7 @@ class basic_Router_service
   ReceiveQueue* get_network_receive_queue(implementation_type& impl,
                                           prefix_type prefix,
                                           boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(impl.network_sockets_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl.network_sockets_mutex);
 
     auto queue_it = impl.receive_queues.find(prefix);
 
@@ -360,8 +362,8 @@ class basic_Router_service
   template <class Handler>
   BOOST_ASIO_INITFN_RESULT_TYPE(Handler, void(const boost::system::error_code&,
                                               const network_address_type&))
-      async_resolve(const implementation_type& impl, const prefix_type& prefix,
-                    Handler&& handler) {
+  async_resolve(const implementation_type& impl, const prefix_type& prefix,
+                Handler&& handler) {
     boost::asio::detail::async_result_init<
         Handler,
         void(const boost::system::error_code&, const network_address_type&)>
@@ -385,8 +387,8 @@ class basic_Router_service
   template <class Handler>
   BOOST_ASIO_INITFN_RESULT_TYPE(Handler, void(const boost::system::error_code&,
                                               std::size_t))
-      async_send(implementation_type& impl, const SendDatagram& datagram,
-                 Handler&& handler) {
+  async_send(implementation_type& impl, const SendDatagram& datagram,
+             Handler&& handler) {
     boost::asio::detail::async_result_init<
         Handler, void(const boost::system::error_code&, std::size_t)>
         init(std::forward<Handler>(handler));
@@ -400,14 +402,14 @@ class basic_Router_service
     auto copied = boost::asio::buffer_copy(copied_datagram.GetMutableBuffers(),
                                            datagram.GetConstBuffers());
 
-    auto push_handler =
-        [this, copied, init](const boost::system::error_code ec) {
-          if (ec) {
-            io::PostHandler(this->get_io_service(), init.handler, ec, 0);
-          } else {
-            io::PostHandler(this->get_io_service(), init.handler, ec, copied);
-          }
-        };
+    auto push_handler = [this, copied,
+                         init](const boost::system::error_code ec) {
+      if (ec) {
+        io::PostHandler(this->get_io_service(), init.handler, ec, 0);
+      } else {
+        io::PostHandler(this->get_io_service(), init.handler, ec, copied);
+      }
+    };
 
     impl.p_send_queue->async_push(std::move(copied_datagram), push_handler);
 
@@ -426,7 +428,7 @@ class basic_Router_service
     impl.p_commutator->close(ec);
     impl.routing_table.Flush(ec);
 
-    boost::recursive_mutex::scoped_lock lock(impl.network_sockets_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl.network_sockets_mutex);
     boost::system::error_code close_ec;
 
     for (auto& p_sockets : impl.network_sockets) {
@@ -455,7 +457,7 @@ class basic_Router_service
   boost::system::error_code Receive(implementation_type& impl,
                                     Datagram datagram,
                                     boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(impl.network_sockets_mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl.network_sockets_mutex);
 
     auto& destination = datagram.header().id().right_id();
 

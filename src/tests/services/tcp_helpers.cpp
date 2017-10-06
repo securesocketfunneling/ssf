@@ -1,3 +1,5 @@
+#include <functional>
+
 #include <boost/asio/connect.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
@@ -66,8 +68,8 @@ void DummyServer::Stop() {
 void DummyServer::DoAccept() {
   auto p_socket = std::make_shared<boost::asio::ip::tcp::socket>(io_service_);
   sockets_.insert(p_socket);
-  acceptor_.async_accept(
-      *p_socket, boost::bind(&DummyServer::HandleAccept, this, p_socket, _1));
+  acceptor_.async_accept(*p_socket, std::bind(&DummyServer::HandleAccept, this,
+                                              p_socket, std::placeholders::_1));
 }
 
 void DummyServer::HandleAccept(
@@ -77,7 +79,8 @@ void DummyServer::HandleAccept(
     auto p_size = std::make_shared<std::size_t>(0);
     boost::asio::async_read(
         *p_socket, boost::asio::buffer(p_size.get(), sizeof(*p_size)),
-        boost::bind(&DummyServer::DoSendOnes, this, p_socket, p_size, _1, _2));
+        std::bind(&DummyServer::DoSendOnes, this, p_socket, p_size,
+                  std::placeholders::_1, std::placeholders::_2));
     DoAccept();
   } else {
     p_socket->close();
@@ -91,7 +94,8 @@ void DummyServer::DoSendOnes(
   if (!ec) {
     p_socket->async_send(
         boost::asio::buffer(one_buffer_, *p_size),
-        boost::bind(&DummyServer::HandleSend, this, p_socket, p_size, _1, _2));
+        std::bind(&DummyServer::HandleSend, this, p_socket, p_size,
+                  std::placeholders::_1, std::placeholders::_2));
   }
 
   return;

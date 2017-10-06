@@ -3,7 +3,9 @@
 
 #include <cstdint>
 
+#include <functional>
 #include <memory>
+#include <mutex>
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/config.hpp>
@@ -14,9 +16,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/use_future.hpp>
 
-#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "ssf/layer/cryptography/tls/OpenSSL/helpers.h"
 
@@ -73,11 +73,11 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   /// Start receiving data
   void start_pulling() {
     {
-      boost::recursive_mutex::scoped_lock lock(pulling_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(pulling_mutex_);
       if (!pulling_) {
         pulling_ = true;
         SSF_LOG(kLogDebug) << "network[crypto]: pulling";
-        io_service_.post(boost::bind(&TLSStreamBufferer::async_pull_packets,
+        io_service_.post(std::bind(&TLSStreamBufferer::async_pull_packets,
                                      this->shared_from_this()));
       }
     }
@@ -106,25 +106,24 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
       p.p = new (p.v) op(buffers, init.handler);
 
       {
-        boost::recursive_mutex::scoped_lock lock(op_queue_mutex_);
+        std::unique_lock<std::recursive_mutex> lock(op_queue_mutex_);
         op_queue_.push(p.p);
       }
 
       p.v = p.p = 0;
 
-      io_service_.post(boost::bind(&TLSStreamBufferer::handle_data_n_ops,
+      io_service_.post(std::bind(&TLSStreamBufferer::handle_data_n_ops,
                                    this->shared_from_this()));
     } else {
-      io_service_.post(
-          boost::bind<void>(init.handler, boost::system::error_code(), 0));
+      io_service_.post(std::bind(init.handler, boost::system::error_code(), 0));
     }
 
     return init.result.get();
   }
 
   boost::system::error_code cancel(boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock1(data_queue_mutex_);
-    boost::recursive_mutex::scoped_lock lock2(op_queue_mutex_);
+    std::unique_lock<std::recursive_mutex> lock1(data_queue_mutex_);
+    std::unique_lock<std::recursive_mutex> lock2(op_queue_mutex_);
     data_queue_.consume(data_queue_.size());
     while (!op_queue_.empty()) {
       auto op = op_queue_.front();
@@ -155,14 +154,14 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   void handle_data_n_ops() {
     if (!status_) {
       {
-        boost::recursive_mutex::scoped_lock lock(pulling_mutex_);
+        std::unique_lock<std::recursive_mutex> lock(pulling_mutex_);
         if ((data_queue_.size() < lower_queue_size_bound) && !pulling_) {
           start_pulling();
         }
       }
 
-      boost::recursive_mutex::scoped_lock lock1(data_queue_mutex_);
-      boost::recursive_mutex::scoped_lock lock2(op_queue_mutex_);
+      std::unique_lock<std::recursive_mutex> lock1(data_queue_mutex_);
+      std::unique_lock<std::recursive_mutex> lock2(op_queue_mutex_);
       if (!op_queue_.empty() && data_queue_.size()) {
         auto op = op_queue_.front();
         op_queue_.pop();
@@ -173,12 +172,12 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
             [=]() { op->complete(boost::system::error_code(), copied); };
         io_service_.post(do_complete);
 
-        io_service_.dispatch(boost::bind(&TLSStreamBufferer::handle_data_n_ops,
-                                         this->shared_from_this()));
+        io_service_.dispatch(std::bind(&TLSStreamBufferer::handle_data_n_ops,
+                                       this->shared_from_this()));
       }
     } else {
-      boost::recursive_mutex::scoped_lock lock1(data_queue_mutex_);
-      boost::recursive_mutex::scoped_lock lock2(op_queue_mutex_);
+      std::unique_lock<std::recursive_mutex> lock1(data_queue_mutex_);
+      std::unique_lock<std::recursive_mutex> lock2(op_queue_mutex_);
       if (!op_queue_.empty()) {
         auto op = op_queue_.front();
         op_queue_.pop();
@@ -187,8 +186,8 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
             [op, this, self]() { op->complete(this->status_, 0); };
         io_service_.post(do_complete);
 
-        io_service_.dispatch(boost::bind(&TLSStreamBufferer::handle_data_n_ops,
-                                         this->shared_from_this()));
+        io_service_.dispatch(std::bind(&TLSStreamBufferer::handle_data_n_ops,
+                                       this->shared_from_this()));
       }
     }
   }
@@ -201,14 +200,14 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
                                 size_t length) {
       if (!ec) {
         {
-          boost::recursive_mutex::scoped_lock lock1(this->data_queue_mutex_);
+          std::unique_lock<std::recursive_mutex> lock1(this->data_queue_mutex_);
           this->data_queue_.commit(length);
         }
 
         if (!this->status_) {
           this->io_service_.dispatch(
-              boost::bind(&TLSStreamBufferer::async_pull_packets,
-                          this->shared_from_this()));
+              std::bind(&TLSStreamBufferer::async_pull_packets,
+                        this->shared_from_this()));
         }
       } else {
         if (ec.value() == boost::asio::error::operation_aborted) {
@@ -221,12 +220,12 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
         }
       }
 
-      this->io_service_.dispatch(boost::bind(
+      this->io_service_.dispatch(std::bind(
           &TLSStreamBufferer::handle_data_n_ops, this->shared_from_this()));
     };
 
     {
-      boost::recursive_mutex::scoped_lock lock(data_queue_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(data_queue_mutex_);
       boost::asio::streambuf::mutable_buffers_type bufs =
           data_queue_.prepare(receive_buffer_size);
 
@@ -257,14 +256,14 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   boost::system::error_code status_;
 
   /// Handle the data received
-  boost::recursive_mutex data_queue_mutex_;
+  std::recursive_mutex data_queue_mutex_;
   boost::asio::streambuf data_queue_;
 
   /// Handle pending user operations
-  boost::recursive_mutex op_queue_mutex_;
+  std::recursive_mutex op_queue_mutex_;
   op_queue_type op_queue_;
 
-  boost::recursive_mutex pulling_mutex_;
+  std::recursive_mutex pulling_mutex_;
   bool pulling_;
 };
 

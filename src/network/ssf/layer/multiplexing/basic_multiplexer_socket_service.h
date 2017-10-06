@@ -3,30 +3,30 @@
 
 #include <cstdint>
 
-#include <memory>
+#include <functional>
 #include <map>
-#include <set>
+#include <memory>
+#include <mutex>
 #include <queue>
+#include <set>
 
 #include <boost/system/error_code.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/detail/op_queue.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include "ssf/error/error.h"
-#include "ssf/io/read_op.h"
 #include "ssf/io/composed_op.h"
+#include "ssf/io/read_op.h"
 
 #include "ssf/layer/basic_impl.h"
 
 #include "ssf/layer/protocol_attributes.h"
 
-#include "ssf/layer/multiplexing/basic_multiplexer.h"
-#include "ssf/layer/multiplexing/multiplexer_manager.h"
 #include "ssf/layer/multiplexing/basic_demultiplexer.h"
+#include "ssf/layer/multiplexing/basic_multiplexer.h"
 #include "ssf/layer/multiplexing/demultiplexer_manager.h"
+#include "ssf/layer/multiplexing/multiplexer_manager.h"
 
 namespace ssf {
 namespace layer {
@@ -56,8 +56,8 @@ class basic_MultiplexedSocket_service
  private:
   typedef typename protocol_type::next_layer_protocol::socket next_socket_type;
   typedef std::shared_ptr<next_socket_type> p_next_socket_type;
-  typedef typename protocol_type::next_layer_protocol::endpoint
-      next_endpoint_type;
+  typedef
+      typename protocol_type::next_layer_protocol::endpoint next_endpoint_type;
   typedef std::shared_ptr<next_endpoint_type> p_next_endpoint_type;
   typedef typename protocol_type::endpoint_context_type endpoint_context_type;
   typedef typename protocol_type::socket_context socket_context_type;
@@ -128,7 +128,7 @@ class basic_MultiplexedSocket_service
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
     {
-      boost::recursive_mutex::scoped_lock lock(mutex_);
+      std::unique_lock<std::recursive_mutex> lock(mutex_);
 
       // Unbind context in demultiplexer
       demultiplexer_manager_.Unbind(impl.p_next_layer_socket,
@@ -185,7 +185,7 @@ class basic_MultiplexedSocket_service
       return 0;
     }
 
-    boost::recursive_mutex::scoped_lock lock(impl.p_socket_context->mutex);
+    std::unique_lock<std::recursive_mutex> lock(impl.p_socket_context->mutex);
     ec.assign(ssf::error::success, ssf::error::get_ssf_category());
     if (impl.p_socket_context->datagram_queue.empty()) {
       return 0;
@@ -197,7 +197,7 @@ class basic_MultiplexedSocket_service
   boost::system::error_code bind(implementation_type& impl,
                                  endpoint_type local_endpoint,
                                  boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     // Get the next layer socket which is linked to the next local endpoint
     auto pair_p_next_socket_it = next_endpoint_to_next_socket_.find(
@@ -247,7 +247,7 @@ class basic_MultiplexedSocket_service
   boost::system::error_code connect(implementation_type& impl,
                                     endpoint_type remote_endpoint,
                                     boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     if (!impl.p_socket_context) {
       impl.p_socket_context =
@@ -260,7 +260,7 @@ class basic_MultiplexedSocket_service
       impl.p_socket_context->remote_id = remote_endpoint.endpoint_context();
 
       auto local_endpoint = protocol_type::remote_to_local_endpoint(
-        remote_endpoint, local_endpoints_);
+          remote_endpoint, local_endpoints_);
 
       if (local_endpoint == endpoint_type()) {
         ec.assign(ssf::error::address_not_available,
@@ -271,8 +271,7 @@ class basic_MultiplexedSocket_service
       bind(impl, std::move(local_endpoint), ec);
     } else {
       if (!impl.p_remote_endpoint) {
-        impl.p_remote_endpoint =
-          std::make_shared<endpoint_type>();
+        impl.p_remote_endpoint = std::make_shared<endpoint_type>();
       }
 
       auto binding_changed = ChangeBinding(impl, remote_endpoint);
@@ -288,9 +287,8 @@ class basic_MultiplexedSocket_service
 
   template <typename ConnectHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ConnectHandler, void(boost::system::error_code))
-      async_connect(implementation_type& impl,
-                    const endpoint_type& remote_endpoint,
-                    ConnectHandler&& handler) {
+  async_connect(implementation_type& impl, const endpoint_type& remote_endpoint,
+                ConnectHandler&& handler) {
     boost::asio::detail::async_result_init<
         ConnectHandler, void(const boost::system::error_code&)>
         init(std::forward<ConnectHandler>(handler));
@@ -311,20 +309,21 @@ class basic_MultiplexedSocket_service
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_send(implementation_type& impl, const ConstBufferSequence& buffers,
-                 boost::asio::socket_base::message_flags flags,
-                 WriteHandler&& handler) {
+  async_send(implementation_type& impl, const ConstBufferSequence& buffers,
+             boost::asio::socket_base::message_flags flags,
+             WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
 
     if (!impl.p_remote_endpoint) {
-      this->get_io_service().post(boost::asio::detail::binder2<
-          decltype(init.handler), boost::system::error_code, std::size_t>(
-          init.handler,
-          boost::system::error_code(ssf::error::destination_address_required,
-                                    ssf::error::get_ssf_category()),
-          0));
+      this->get_io_service().post(
+          boost::asio::detail::binder2<decltype(init.handler),
+                                       boost::system::error_code, std::size_t>(
+              init.handler, boost::system::error_code(
+                                ssf::error::destination_address_required,
+                                ssf::error::get_ssf_category()),
+              0));
       return init.result.get();
     }
 
@@ -335,23 +334,23 @@ class basic_MultiplexedSocket_service
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_send_to(implementation_type& impl,
-                    const ConstBufferSequence& buffers,
-                    const endpoint_type& destination,
-                    boost::asio::socket_base::message_flags flags,
-                    WriteHandler&& handler) {
+  async_send_to(implementation_type& impl, const ConstBufferSequence& buffers,
+                const endpoint_type& destination,
+                boost::asio::socket_base::message_flags flags,
+                WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
 
     if (!impl.p_next_layer_socket || !impl.p_socket_context ||
         !impl.p_local_endpoint) {
-      this->get_io_service().post(boost::asio::detail::binder2<
-          decltype(init.handler), boost::system::error_code, std::size_t>(
-          init.handler,
-          boost::system::error_code(ssf::error::destination_address_required,
-                                    ssf::error::get_ssf_category()),
-          0));
+      this->get_io_service().post(
+          boost::asio::detail::binder2<decltype(init.handler),
+                                       boost::system::error_code, std::size_t>(
+              init.handler, boost::system::error_code(
+                                ssf::error::destination_address_required,
+                                ssf::error::get_ssf_category()),
+              0));
       return init.result.get();
     }
 
@@ -393,21 +392,21 @@ class basic_MultiplexedSocket_service
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_receive(implementation_type& impl,
-                    const MutableBufferSequence& buffers,
-                    boost::asio::socket_base::message_flags flags,
-                    ReadHandler&& handler) {
+  async_receive(implementation_type& impl, const MutableBufferSequence& buffers,
+                boost::asio::socket_base::message_flags flags,
+                ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
 
     if (!impl.p_remote_endpoint) {
-      this->get_io_service().post(boost::asio::detail::binder2<
-          decltype(init.handler), boost::system::error_code, std::size_t>(
-          init.handler,
-          boost::system::error_code(ssf::error::destination_address_required,
-                                    ssf::error::get_ssf_category()),
-          0));
+      this->get_io_service().post(
+          boost::asio::detail::binder2<decltype(init.handler),
+                                       boost::system::error_code, std::size_t>(
+              init.handler, boost::system::error_code(
+                                ssf::error::destination_address_required,
+                                ssf::error::get_ssf_category()),
+              0));
       return init.result.get();
     }
 
@@ -418,23 +417,24 @@ class basic_MultiplexedSocket_service
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_receive_from(implementation_type& impl,
-                         const MutableBufferSequence& buffers,
-                         endpoint_type& sender_endpoint,
-                         boost::asio::socket_base::message_flags flags,
-                         ReadHandler&& handler) {
+  async_receive_from(implementation_type& impl,
+                     const MutableBufferSequence& buffers,
+                     endpoint_type& sender_endpoint,
+                     boost::asio::socket_base::message_flags flags,
+                     ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
 
     if (!impl.p_next_layer_socket || !impl.p_socket_context ||
         !impl.p_local_endpoint) {
-      this->get_io_service().post(boost::asio::detail::binder2<
-          decltype(init.handler), boost::system::error_code, std::size_t>(
-          init.handler,
-          boost::system::error_code(ssf::error::destination_address_required,
-                                    ssf::error::get_ssf_category()),
-          0));
+      this->get_io_service().post(
+          boost::asio::detail::binder2<decltype(init.handler),
+                                       boost::system::error_code, std::size_t>(
+              init.handler, boost::system::error_code(
+                                ssf::error::destination_address_required,
+                                ssf::error::get_ssf_category()),
+              0));
       return init.result.get();
     }
 
@@ -451,11 +451,12 @@ class basic_MultiplexedSocket_service
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock(impl.p_socket_context->mutex);
+      std::unique_lock<std::recursive_mutex> lock(impl.p_socket_context->mutex);
       auto& op_queue = impl.p_socket_context->read_op_queue;
 
-      typedef io::pending_read_operation<
-          MutableBufferSequence, decltype(init.handler), protocol_type> op;
+      typedef io::pending_read_operation<MutableBufferSequence,
+                                         decltype(init.handler), protocol_type>
+          op;
       typename op::ptr p = {
           boost::asio::detail::addressof(init.handler),
           boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),
@@ -466,7 +467,8 @@ class basic_MultiplexedSocket_service
       p.v = p.p = 0;
     }
 
-    demultiplexer_manager_.Read(impl.p_next_layer_socket, impl.p_socket_context);
+    demultiplexer_manager_.Read(impl.p_next_layer_socket,
+                                impl.p_socket_context);
 
     return init.result.get();
   }
@@ -504,7 +506,7 @@ class basic_MultiplexedSocket_service
 
  private:
   bool ChangeBinding(implementation_type& impl, endpoint_type remote_endpoint) {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     if (!impl.p_socket_context || !impl.p_next_layer_socket ||
         !impl.p_local_endpoint || !impl.p_remote_endpoint) {
@@ -540,28 +542,30 @@ class basic_MultiplexedSocket_service
  private:
   typedef uint32_t usage_counter_type;
 
-  static boost::recursive_mutex mutex_;
+  static std::recursive_mutex mutex_;
   static std::map<next_endpoint_type,
-                  std::pair<p_next_socket_type, usage_counter_type >>
+                  std::pair<p_next_socket_type, usage_counter_type>>
       next_endpoint_to_next_socket_;
   static std::set<endpoint_type> local_endpoints_;
   static multiplexing::MultiplexerManager<
       p_next_socket_type, send_datagram_type, next_endpoint_type,
-      congestion_policy_type> multiplexer_manager_;
+      congestion_policy_type>
+      multiplexer_manager_;
 
-  static multiplexing::DemultiplexerManager<
-      protocol_type, congestion_policy_type> demultiplexer_manager_;
+  static multiplexing::DemultiplexerManager<protocol_type,
+                                            congestion_policy_type>
+      demultiplexer_manager_;
 };
 
 template <class Protocol>
-boost::recursive_mutex basic_MultiplexedSocket_service<Protocol>::mutex_;
+std::recursive_mutex basic_MultiplexedSocket_service<Protocol>::mutex_;
 
 template <class Protocol>
-std::map<typename basic_MultiplexedSocket_service<Protocol>::next_endpoint_type,
-         std::pair<typename basic_MultiplexedSocket_service<
-                       Protocol>::p_next_socket_type,
-                   typename basic_MultiplexedSocket_service<
-                       Protocol >::usage_counter_type> >
+std::map<
+    typename basic_MultiplexedSocket_service<Protocol>::next_endpoint_type,
+    std::pair<
+        typename basic_MultiplexedSocket_service<Protocol>::p_next_socket_type,
+        typename basic_MultiplexedSocket_service<Protocol>::usage_counter_type>>
     basic_MultiplexedSocket_service<Protocol>::next_endpoint_to_next_socket_;
 
 template <class Protocol>

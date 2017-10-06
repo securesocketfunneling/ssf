@@ -42,16 +42,18 @@ class TransportProtocolPolicy {
 
     boost::asio::async_write(
         *p_socket, p_ssf_request->const_buffer(),
-        boost::bind(&TransportProtocolPolicy<Socket>::DoSSFValidReceive, this,
-                    p_ssf_request, p_socket, callback, _1, _2));
+        std::bind(&TransportProtocolPolicy<Socket>::DoSSFValidReceive, this,
+                  p_ssf_request, p_socket, callback, std::placeholders::_1,
+                  std::placeholders::_2));
   }
 
   void DoSSFInitiateReceive(SocketPtr p_socket, TransportCb callback) {
     auto p_ssf_request = std::make_shared<SSFRequest>();
     boost::asio::async_read(
         *p_socket, p_ssf_request->buffer(),
-        boost::bind(&TransportProtocolPolicy<Socket>::DoSSFValid, this,
-                    p_ssf_request, p_socket, callback, _1, _2));
+        std::bind(&TransportProtocolPolicy<Socket>::DoSSFValid, this,
+                  p_ssf_request, p_socket, callback, std::placeholders::_1,
+                  std::placeholders::_2));
   }
 
   void DoSSFValid(SSFRequestPtr p_ssf_request, SocketPtr p_socket,
@@ -66,8 +68,9 @@ class TransportProtocolPolicy {
         auto p_ssf_reply = std::make_shared<SSFReply>(true);
         boost::asio::async_write(
             *p_socket, p_ssf_reply->const_buffer(),
-            boost::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
-                        this, p_ssf_reply, p_socket, callback, _1, _2));
+            std::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
+                      this, p_ssf_reply, p_socket, callback,
+                      std::placeholders::_1, std::placeholders::_2));
       } else {
         SSF_LOG(kLogError) << "transport: SSF version NOT supported "
                            << version;
@@ -91,8 +94,9 @@ class TransportProtocolPolicy {
 
       boost::asio::async_read(
           *p_socket, p_ssf_reply->buffer(),
-          boost::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
-                      this, p_ssf_reply, p_socket, callback, _1, _2));
+          std::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
+                    this, p_ssf_reply, p_socket, callback,
+                    std::placeholders::_1, std::placeholders::_2));
     } else {
       SSF_LOG(kLogError) << "transport: could NOT send the SSF request "
                          << ec.message();

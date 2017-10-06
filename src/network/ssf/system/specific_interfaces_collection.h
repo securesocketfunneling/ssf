@@ -2,6 +2,7 @@
 #define SSF_SYSTEM_SPECIFIC_INTERFACES_COLLECTION_H_
 
 #include <chrono>
+#include <mutex>
 #include <string>
 #include <unordered_set>
 
@@ -11,8 +12,8 @@
 #include <boost/system/error_code.hpp>
 
 #include "ssf/error/error.h"
-#include "ssf/layer/interface_layer/basic_interface_protocol.h"
 #include "ssf/layer/interface_layer/basic_interface.h"
+#include "ssf/layer/interface_layer/basic_interface_protocol.h"
 
 #include "ssf/log/log.h"
 
@@ -32,7 +33,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
   template <class NextLayer>
   using Interface =
       ssf::layer::interface_layer::basic_Interface<InterfaceProtocol,
-                                                        LayerStack>;
+                                                   LayerStack>;
 
   using MountCallback = BasicInterfacesCollection::MountCallback;
 
@@ -93,10 +94,10 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
     }
 
     {
-      boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+      std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
       if (interfaces_.find(interface_name) != interfaces_.end()) {
         io_service.post(boost::asio::detail::binder2<
-            MountCallback, boost::system::error_code, std::string>(
+                        MountCallback, boost::system::error_code, std::string>(
             mount_handler,
             boost::system::error_code(ssf::error::address_not_available,
                                       ssf::error::get_ssf_category()),
@@ -111,7 +112,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
   }
 
   virtual void RemountDownInterfaces() {
-    boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
     auto interface_up_it = interfaces_up_.begin();
 
     while (interface_up_it != interfaces_up_.end()) {
@@ -134,7 +135,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
   }
 
   virtual void Umount(const std::string& interface_name) {
-    boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
     auto interface_it = interfaces_.find(interface_name);
     if (interface_it != interfaces_.end()) {
       interfaces_.erase(interface_it);
@@ -144,7 +145,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
   }
 
   virtual void UmountAll() {
-    boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
     auto interface_it = interfaces_.begin();
     while (interface_it != interfaces_.end()) {
       interfaces_config_.erase(interface_it->first);
@@ -208,7 +209,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
 
   void InitializeInterface(const std::string& interface_name,
                            int ttl = DEFAULT_TTL, TimerPtr p_timer = nullptr) {
-    boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
     auto interface_it = interfaces_.find(interface_name);
     if (interface_it == interfaces_.end()) {
       return;
@@ -223,27 +224,27 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
     if (config.connect) {
       interface_it->second.async_connect(
           interface_name, config.endpoint,
-          boost::bind(&SpecificInterfacesCollection::MountConnectHandler, this,
-                      _1, interface_name, p_timer, ttl - 1));
+          std::bind(&SpecificInterfacesCollection::MountConnectHandler, this,
+                    _1, interface_name, p_timer, ttl - 1));
     } else {
       int timeout = config.ttl * config.delay;
       if (timeout > 0) {
         p_timer->expires_from_now(std::chrono::milliseconds(timeout));
         p_timer->async_wait(
-            boost::bind(&SpecificInterfacesCollection::MountAcceptTimeOut, this,
+            std::bind(&SpecificInterfacesCollection::MountAcceptTimeOut, this,
                         _1, p_timer, interface_name));
       }
       interface_it->second.async_accept(
           interface_name, config.endpoint,
-          boost::bind(&SpecificInterfacesCollection::MountAcceptHandler, this,
-                      _1, interface_name, p_timer));
+          std::bind(&SpecificInterfacesCollection::MountAcceptHandler, this, _1,
+                    interface_name, p_timer));
     }
   }
 
   void MountConnectHandler(const boost::system::error_code& ec,
                            std::string interface_name, TimerPtr p_timer,
                            int ttl) {
-    boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
     auto interface_it = interfaces_.find(interface_name);
     if (interface_it == interfaces_.end()) {
       return;
@@ -256,11 +257,13 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
       if (ttl <= 0) {
         // the interface was not connected previously, dead end
         if (interfaces_up_.find(interface_name) == interfaces_up_.end()) {
-          interface_it->second.get_io_service().post(boost::asio::detail::binder2<
-              MountCallback, boost::system::error_code, std::string>(
-              handler, boost::system::error_code(ssf::error::connection_aborted,
-                                                 ssf::error::get_ssf_category()),
-              interface_name));
+          interface_it->second.get_io_service().post(
+              boost::asio::detail::binder2<
+                  MountCallback, boost::system::error_code, std::string>(
+                  handler,
+                  boost::system::error_code(ssf::error::connection_aborted,
+                                            ssf::error::get_ssf_category()),
+                  interface_name));
           interfaces_.erase(interface_name);
           interfaces_config_.erase(interface_name);
         }
@@ -268,8 +271,8 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
       }
 
       p_timer->expires_from_now(std::chrono::milliseconds(config.delay));
-      p_timer->async_wait([this, interface_name, p_timer, ttl](
-          const boost::system::error_code& ec) {
+      p_timer->async_wait([this, interface_name, p_timer,
+                           ttl](const boost::system::error_code& ec) {
         this->InitializeInterface(interface_name, ttl, p_timer);
       });
 
@@ -289,7 +292,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
 
   void MountAcceptHandler(const boost::system::error_code& ec,
                           std::string interface_name, TimerPtr p_timer) {
-    boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+    std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
 
     p_timer->cancel();
 
@@ -304,11 +307,13 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
     if (ec) {
       // the interface was not accepted previously, dead end
       if (interfaces_up_.find(interface_name) == interfaces_up_.end()) {
-        interface_it->second.get_io_service().post(boost::asio::detail::binder2<
-            MountCallback, boost::system::error_code, std::string>(
-            handler, boost::system::error_code(ssf::error::connection_aborted,
-                                               ssf::error::get_ssf_category()),
-            interface_name));
+        interface_it->second.get_io_service().post(
+            boost::asio::detail::binder2<
+                MountCallback, boost::system::error_code, std::string>(
+                handler,
+                boost::system::error_code(ssf::error::connection_aborted,
+                                          ssf::error::get_ssf_category()),
+                interface_name));
         interfaces_.erase(interface_name);
         interfaces_config_.erase(interface_name);
       }
@@ -328,7 +333,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
   void MountAcceptTimeOut(const boost::system::error_code& ec, TimerPtr p_timer,
                           std::string interface_name) {
     if (!ec) {
-      boost::recursive_mutex::scoped_lock lock_interfaces(interfaces_mutex_);
+      std::unique_lock<std::recursive_mutex> lock_interfaces(interfaces_mutex_);
       auto interface_it = interfaces_.find(interface_name);
       if (interface_it == interfaces_.end()) {
         return;
@@ -339,7 +344,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
   }
 
  private:
-  boost::recursive_mutex interfaces_mutex_;
+  std::recursive_mutex interfaces_mutex_;
   std::map<std::string, Interface<LayerStack>> interfaces_;
   std::map<std::string, InterfaceConfig> interfaces_config_;
   std::unordered_set<std::string> interfaces_up_;

@@ -2,10 +2,11 @@
 #define SSF_LAYER_NETWORK_BASIC_NETWORK_RAW_SOCKET_SERVICE_H_
 
 #include <memory>
+#include <mutex>
 
-#include <boost/asio/detail/config.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/bind_handler.hpp>
+#include <boost/asio/detail/config.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/io_service.hpp>
 
@@ -110,7 +111,7 @@ class basic_NetworkRawSocket_service
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
     if (impl.p_local_endpoint) {
-      boost::recursive_mutex::scoped_lock lock(protocol_type::bind_mutex_);
+      std::unique_lock<std::recursive_mutex> lock(protocol_type::bind_mutex_);
       protocol_type::network_to_interface_.erase(
           impl.p_local_endpoint->endpoint_context());
       protocol_type::interface_to_network_.erase(
@@ -164,7 +165,7 @@ class basic_NetworkRawSocket_service
     const auto& local_endpoint_context = local_endpoint.endpoint_context();
     const auto& local_interface_endpoint = local_endpoint.next_layer_endpoint();
 
-    boost::recursive_mutex::scoped_lock lock1(protocol_type::bind_mutex_);
+    std::unique_lock<std::recursive_mutex> lock1(protocol_type::bind_mutex_);
     if (protocol_type::used_interface_endpoints_.count(
             local_interface_endpoint) ||
         protocol_type::bounds_.count(local_endpoint_context)) {
@@ -208,9 +209,8 @@ class basic_NetworkRawSocket_service
 
   template <typename ConnectHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ConnectHandler, void(boost::system::error_code))
-      async_connect(implementation_type& impl,
-                    const endpoint_type& remote_endpoint,
-                    ConnectHandler&& handler) {
+  async_connect(implementation_type& impl, const endpoint_type& remote_endpoint,
+                ConnectHandler&& handler) {
     boost::asio::detail::async_result_init<
         ConnectHandler, void(const boost::system::error_code&)>
         init(std::forward<ConnectHandler>(handler));
@@ -232,9 +232,9 @@ class basic_NetworkRawSocket_service
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_send(implementation_type& impl, const ConstBufferSequence& buffers,
-                 boost::asio::socket_base::message_flags flags,
-                 WriteHandler&& handler) {
+  async_send(implementation_type& impl, const ConstBufferSequence& buffers,
+             boost::asio::socket_base::message_flags flags,
+             WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
@@ -271,11 +271,10 @@ class basic_NetworkRawSocket_service
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_send_to(implementation_type& impl,
-                    const ConstBufferSequence& buffers,
-                    const endpoint_type& destination,
-                    boost::asio::socket_base::message_flags flags,
-                    WriteHandler&& handler) {
+  async_send_to(implementation_type& impl, const ConstBufferSequence& buffers,
+                const endpoint_type& destination,
+                boost::asio::socket_base::message_flags flags,
+                WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
@@ -294,10 +293,9 @@ class basic_NetworkRawSocket_service
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_receive(implementation_type& impl,
-                    const MutableBufferSequence& buffers,
-                    boost::asio::socket_base::message_flags flags,
-                    ReadHandler&& handler) {
+  async_receive(implementation_type& impl, const MutableBufferSequence& buffers,
+                boost::asio::socket_base::message_flags flags,
+                ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
@@ -335,11 +333,11 @@ class basic_NetworkRawSocket_service
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_receive_from(implementation_type& impl,
-                         const MutableBufferSequence& buffers,
-                         endpoint_type& source,
-                         boost::asio::socket_base::message_flags flags,
-                         ReadHandler&& handler) {
+  async_receive_from(implementation_type& impl,
+                     const MutableBufferSequence& buffers,
+                     endpoint_type& source,
+                     boost::asio::socket_base::message_flags flags,
+                     ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
@@ -374,15 +372,16 @@ class basic_NetworkRawSocket_service
   }
 
   void register_async_op() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     if (usage_count_ == 0) {
-      p_worker_.reset(new boost::asio::io_service::work(this->get_io_service()));
+      p_worker_.reset(
+          new boost::asio::io_service::work(this->get_io_service()));
     }
     ++usage_count_;
   }
 
   void unregister_async_op() {
-    boost::recursive_mutex::scoped_lock lock(mutex_);
+    std::unique_lock<std::recursive_mutex> lock(mutex_);
     --usage_count_;
     if (usage_count_ == 0) {
       p_worker_.reset();
@@ -393,7 +392,7 @@ class basic_NetworkRawSocket_service
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
   uint64_t usage_count_;
   std::shared_ptr<bool> p_alive_;
-  boost::recursive_mutex mutex_;
+  std::recursive_mutex mutex_;
 };
 
 #include <boost/asio/detail/pop_options.hpp>

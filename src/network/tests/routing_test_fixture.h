@@ -7,8 +7,6 @@
 
 #include <boost/asio/io_service.hpp>
 
-#include <boost/thread.hpp>
-
 #include "ssf/layer/parameters.h"
 
 #include "ssf/layer/network/basic_network_protocol.h"
@@ -170,8 +168,8 @@ class RoutingTestFixture : public InterfaceTestFixture {
     }
 
     //------------------------- run io_service --------------------------//
-    for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      threads_.create_thread([this]() { this->io_service_.run(); });
+    for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+      threads_.emplace_back([this]() { this->io_service_.run(); });
     }
 
     Wait();
@@ -201,7 +199,12 @@ class RoutingTestFixture : public InterfaceTestFixture {
     p_router2_->close(ec);
 
     p_work_.reset();
-    threads_.join_all();
+
+  for (auto& thread : threads_) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
 
     InterfaceTestFixture::TearDown();
   }
@@ -214,7 +217,7 @@ class RoutingTestFixture : public InterfaceTestFixture {
 
   NetworkProtocol::resolver resolver_;
 
-  boost::thread_group threads_;
+  std::vector<std::thread> threads_;
   std::unique_ptr<boost::asio::io_service::work> p_work_;
 
   std::shared_ptr<typename RoutedProtocol::router_type> p_router1_;

@@ -9,8 +9,6 @@
 
 #include <boost/asio/io_service.hpp>
 
-#include <boost/thread.hpp>
-
 #include "tests/virtual_network_helpers.h"
 
 #include "ssf/layer/parameters.h"
@@ -55,8 +53,8 @@ class CircuitTestFixture : public ::testing::Test {
     InitCircuitNodes();
     auto lambda = [this]() { this->io_service_.run(); };
 
-    for (uint16_t i = 1; i <= boost::thread::hardware_concurrency(); ++i) {
-      threads_.create_thread(lambda);
+    for (uint16_t i = 1; i <= std::thread::hardware_concurrency(); ++i) {
+      threads_.emplace_back(lambda);
     }
   }
 
@@ -71,7 +69,12 @@ class CircuitTestFixture : public ::testing::Test {
     }
     circuit_acceptors_.clear();
     p_work_.reset();
-    threads_.join_all();
+
+    for (auto& thread : threads_) {
+      if (thread.joinable()) {
+        thread.join();
+      }
+    }
   }
 
   ssf::layer::data_link::NodeParameterList GetClientTLSNodes() {
@@ -239,7 +242,7 @@ class CircuitTestFixture : public ::testing::Test {
   AcceptorsMap circuit_acceptors_;
   TLSResolver ssl_resolver_;
   Resolver resolver_;
-  boost::thread_group threads_;
+  std::vector<std::thread> threads_;
   std::unique_ptr<boost::asio::io_service::work> p_work_;
 };
 

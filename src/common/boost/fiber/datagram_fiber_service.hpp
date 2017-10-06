@@ -12,6 +12,8 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include <mutex>
+
 #include <boost/asio/detail/config.hpp>
 #include <cstddef>
 #include <boost/asio/async_result.hpp>
@@ -116,7 +118,7 @@ public:
   /// Determine whether the fiber is open.
   bool is_open(const implementation_type& impl) const
   {
-    boost::recursive_mutex::scoped_lock lock_state(impl->state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(impl->state_mutex);
     return !impl->closed;
   }
 
@@ -269,7 +271,7 @@ public:
       WriteHandler, void(boost::system::error_code, std::size_t)> init(
       BOOST_ASIO_MOVE_CAST(WriteHandler)(handler));
     {
-      boost::recursive_mutex::scoped_lock lock_state(impl->state_mutex);
+      std::unique_lock<std::recursive_mutex> lock_state(impl->state_mutex);
       if (impl->closed) 
       {
         impl->closed = false;
@@ -326,7 +328,7 @@ public:
       ReadHandler, void(boost::system::error_code, std::size_t)> init(
       BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
     {
-      boost::recursive_mutex::scoped_lock lock_state(impl->state_mutex);
+      std::unique_lock<std::recursive_mutex> lock_state(impl->state_mutex);
       if (impl->closed)
       {
         impl->closed = false;
@@ -366,7 +368,7 @@ public:
         p.p = new (p.v) op(buffers, init.handler);
 
         {
-          boost::recursive_mutex::scoped_lock lock(impl->read_dgr_op_queue_mutex);
+          std::unique_lock<std::recursive_mutex> lock(impl->read_dgr_op_queue_mutex);
           impl->read_dgr_op_queue.push(p.p);
         }
         p.v = p.p = 0;
@@ -391,7 +393,7 @@ public:
       ReadHandler, void(boost::system::error_code, std::size_t)> init(
       BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
     {
-      boost::recursive_mutex::scoped_lock lock_state(impl->state_mutex);
+      std::unique_lock<std::recursive_mutex> lock_state(impl->state_mutex);
       if (impl->closed)
       {
         impl->closed = false;
@@ -430,7 +432,7 @@ public:
         p.p = new (p.v) op(buffers, init.handler, &(sender_endpoint.port()));
 
         {
-          boost::recursive_mutex::scoped_lock lock(impl->read_dgr_op_queue_mutex);
+          std::unique_lock<std::recursive_mutex> lock(impl->read_dgr_op_queue_mutex);
           impl->read_dgr_op_queue.push(p.p);
         }
         p.v = p.p = 0;

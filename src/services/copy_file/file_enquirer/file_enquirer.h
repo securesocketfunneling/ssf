@@ -1,6 +1,8 @@
 #ifndef SSF_SERVICES_COPY_FILE_FILE_ENQUIRER_FILE_ENQUIRER_H_
 #define SSF_SERVICES_COPY_FILE_FILE_ENQUIRER_FILE_ENQUIRER_H_
 
+#include <functional>
+
 #include <boost/asio/write.hpp>
 
 #include <ssf/log/log.h>
@@ -96,31 +98,31 @@ class FileEnquirer : public BaseService<Demux> {
 
       yield fiber_.async_connect(
           remote_endpoint_,
-          boost::bind(&FileEnquirer::SendRequest, this->SelfFromThis(), _1, 0));
+          std::bind(&FileEnquirer::SendRequest, this->SelfFromThis(), std::placeholders::_1, 0));
 
       // write input pattern size from request
       yield boost::asio::async_write(
           fiber_, input_request_.GetFilenameSizeConstBuffers(),
-          boost::bind(&FileEnquirer::SendRequest, this->SelfFromThis(), _1,
-                      _2));
+          std::bind(&FileEnquirer::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // write input pattern from request
-      yield boost::asio::async_write(fiber_,
-                                     input_request_.GetFilenameConstBuffers(),
-                                     boost::bind(&FileEnquirer::SendRequest,
-                                                 this->SelfFromThis(), _1, _2));
+      yield boost::asio::async_write(
+          fiber_, input_request_.GetFilenameConstBuffers(),
+          std::bind(&FileEnquirer::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // write output pattern size from request
       yield boost::asio::async_write(
           fiber_, output_request_.GetFilenameSizeConstBuffers(),
-          boost::bind(&FileEnquirer::SendRequest, this->SelfFromThis(), _1,
-                      _2));
+          std::bind(&FileEnquirer::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // write output pattern from request
-      yield boost::asio::async_write(fiber_,
-                                     output_request_.GetFilenameConstBuffers(),
-                                     boost::bind(&FileEnquirer::SendRequest,
-                                                 this->SelfFromThis(), _1, _2));
+      yield boost::asio::async_write(
+          fiber_, output_request_.GetFilenameConstBuffers(),
+          std::bind(&FileEnquirer::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
     }
   }
 #include <boost/asio/unyield.hpp>

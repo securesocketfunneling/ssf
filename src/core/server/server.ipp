@@ -120,8 +120,8 @@ void SSFServer<N, T>::AsyncAcceptConnection() {
         std::make_shared<NetworkSocket>(async_engine_.get_io_service());
 
     network_acceptor_.async_accept(
-        *p_socket,
-        boost::bind(&SSFServer::NetworkToTransport, this, _1, p_socket));
+        *p_socket, std::bind(&SSFServer::NetworkToTransport, this,
+                             std::placeholders::_1, p_socket));
   }
 }
 
@@ -169,7 +169,7 @@ void SSFServer<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 template <class N, template <class> class T>
 void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
                                  boost::system::error_code& ec) {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
 
   // Register supported admin commands
   services::admin::CreateServiceRequest<Demux>::RegisterToCommandFactory();
@@ -226,7 +226,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 template <class N, template <class> class T>
 void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
                                ServiceManagerPtr<Demux> p_service_manager) {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG(kLogTrace) << "server: adding a new demux";
 
   p_fiber_demuxes_.insert(p_fiber_demux);
@@ -235,7 +235,7 @@ void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG(kLogTrace) << "server: removing a demux";
 
   p_fiber_demux->close();
@@ -256,7 +256,7 @@ void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveAllDemuxes() {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG(kLogTrace) << "server: removing all demuxes";
 
   for (auto& p_fiber_demux : p_fiber_demuxes_) {

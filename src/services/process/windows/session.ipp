@@ -153,17 +153,20 @@ void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   data_in_ = INVALID_HANDLE_VALUE;
 
   // pipe process stdout to socket output
-  AsyncEstablishHDLink(
-      ReadFrom(h_out_), WriteTo(client_), boost::asio::buffer(downstream_out_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(h_out_), WriteTo(client_),
+                       boost::asio::buffer(downstream_out_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
   // pipe process stderr to socket output
-  AsyncEstablishHDLink(
-      ReadFrom(h_err_), WriteTo(client_), boost::asio::buffer(downstream_err_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(h_err_), WriteTo(client_),
+                       boost::asio::buffer(downstream_err_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
   // pipe socket input to process stdin
-  AsyncEstablishHDLink(
-      ReadFrom(client_), WriteTo(h_in_), boost::asio::buffer(upstream_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(client_), WriteTo(h_in_),
+                       boost::asio::buffer(upstream_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
 }
 
 template <typename Demux>

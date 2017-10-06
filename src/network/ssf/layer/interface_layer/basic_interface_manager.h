@@ -3,9 +3,9 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 
 #include <boost/optional.hpp>
-#include <boost/thread/mutex.hpp>
 
 namespace ssf {
 namespace layer {
@@ -25,7 +25,7 @@ class basic_InterfaceManager {
   }
 
   boost::optional<SocketPtr> Find(const EndpointContext& endpoint) {
-    boost::mutex::scoped_lock lock_sockets(mutex_);
+    std::unique_lock<std::mutex> lock_sockets(mutex_);
     auto p_socket_it = available_sockets_.find(endpoint);
     if (p_socket_it != available_sockets_.end()) {
       return boost::optional<SocketPtr>(p_socket_it->second);
@@ -34,19 +34,19 @@ class basic_InterfaceManager {
   }
 
   bool Emplace(const EndpointContext& endpoint, SocketPtr p_socket) {
-    boost::mutex::scoped_lock lock_sockets(mutex_);
+    std::unique_lock<std::mutex> lock_sockets(mutex_);
     auto inserted = available_sockets_.emplace(endpoint, p_socket);
 
     return inserted.second;
   }
 
   bool Erase(const EndpointContext& endpoint) {
-    boost::mutex::scoped_lock lock_sockets(mutex_);
+    std::unique_lock<std::mutex> lock_sockets(mutex_);
     return 1 == available_sockets_.erase(endpoint);
   }
 
  private:
-  boost::mutex mutex_;
+  std::mutex mutex_;
   std::map<EndpointContext, SocketPtr> available_sockets_;
 };
 
