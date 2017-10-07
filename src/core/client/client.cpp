@@ -25,10 +25,10 @@ namespace ssf {
 
 Client::Client()
     : async_engine_(),
-      timer_(async_engine_.get_io_service()),
       connection_attempts_(1),
       max_connection_attempts_(1),
       reconnection_timeout_(0),
+      timer_(async_engine_.get_io_service()),
       stopped_(false) {}
 
 Client::~Client() {

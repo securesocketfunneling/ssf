@@ -47,9 +47,9 @@ class UserServiceFactory {
   }
 
   bool UnregisterUserService(const std::string& index) {
-    auto it = service_parsers_.find(index);
+    auto it = service_generators_.find(index);
 
-    if (it != std::end(service_parsers_)) {
+    if (it != std::end(service_generators_)) {
       service_generators_.erase(it);
       return true;
     } else {

@@ -23,11 +23,11 @@ TEST(StandardCommandLineTests, ServerTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical", "-S", "-R",
                              "-g", "127.0.0.1"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -59,11 +59,11 @@ TEST(StandardCommandLineTests, ClientTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical", "-S", "-g",
                              "127.0.0.1"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -91,11 +91,11 @@ TEST(CopyCommandLineTests, FromStdinToServerTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical", "-t",
                              "127.0.0.1@/tmp/test_out/output"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -123,11 +123,11 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical",
                              "/tmp/test_in", "127.0.0.1@/tmp/test_out"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -156,11 +156,11 @@ TEST(CopyCommandLineTests, ServerToClientTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical",
                              "127.0.0.1@/tmp/test_in", "/tmp/test_out"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(ec.value(), 0) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());

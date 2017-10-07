@@ -62,7 +62,7 @@ Session<N, T>::~Session() {
 template <class N, template <class> class T>
 void Session<N, T>::Start(const NetworkQuery& query,
                           boost::system::error_code& ec) {
-  auto self = shared_from_this();
+  auto self = this->shared_from_this();
 
   // create network socket
   p_socket_ = std::make_shared<NetworkSocket>(io_service_);
@@ -82,7 +82,7 @@ void Session<N, T>::Start(const NetworkQuery& query,
   // async connect to given endpoint
   p_socket_->async_connect(
       *endpoint_it, std::bind(&Session<N, T>::NetworkToTransport,
-                              shared_from_this(), std::placeholders::_1));
+                              this->shared_from_this(), std::placeholders::_1));
 }
 
 template <class N, template <class> class T>
@@ -109,9 +109,9 @@ void Session<N, T>::Stop(boost::system::error_code& ec) {
 
   // p_socket_.reset();
 
-  auto self = shared_from_this();
+  auto self = this->shared_from_this();
   if (status_ == Status::kConnected || status_ == Status::kRunning) {
-    io_service_.post(std::bind(&Session<N, T>::UpdateStatus, shared_from_this(),
+    io_service_.post(std::bind(&Session<N, T>::UpdateStatus, this->shared_from_this(),
                                Status::kDisconnected));
   }
 }
@@ -127,7 +127,7 @@ void Session<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
 
   UpdateStatus(Status::kConnected);
   this->DoSSFInitiate(p_socket_,
-                      std::bind(&Session::DoSSFStart, shared_from_this(),
+                      std::bind(&Session::DoSSFStart, this->shared_from_this(),
                                 std::placeholders::_1, std::placeholders::_2));
 }
 
@@ -160,7 +160,7 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   services::admin::StopServiceRequest<Demux>::RegisterToCommandFactory();
   services::admin::ServiceStatus<Demux>::RegisterToCommandFactory();
 
-  auto self = shared_from_this();
+  auto self = this->shared_from_this();
   auto close_demux_handler = [this, self]() { OnDemuxClose(); };
   fiber_demux_.fiberize(std::move(*p_socket), close_demux_handler);
 

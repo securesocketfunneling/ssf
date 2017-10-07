@@ -2,12 +2,12 @@
 
 #include "common/config/config.h"
 
-#include "ca_cert_def.h"
-#include "client_cert_def.h"
-#include "client_key_def.h"
-#include "server_cert_def.h"
-#include "server_dh_param_def.h"
-#include "server_key_def.h"
+#include "ca_cert.h"
+#include "client_cert.h"
+#include "client_key.h"
+#include "server_cert.h"
+#include "server_dh_param.h"
+#include "server_key.h"
 
 namespace ssf {
 namespace tests {

@@ -1,6 +1,7 @@
 #include <atomic>
 #include <functional>
 #include <future>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <thread>

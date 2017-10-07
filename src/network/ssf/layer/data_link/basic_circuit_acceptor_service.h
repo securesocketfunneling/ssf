@@ -7,6 +7,7 @@
 #include <mutex>
 #include <queue>
 #include <set>
+#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -333,7 +334,7 @@ class basic_CircuitAcceptor_service
     // Waiting for new connections from next layer (p_queue is populated
     // asynchronously)
     while (true) {
-      std::this_thread::sleep(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       std::unique_lock<std::recursive_mutex> lock(accept_mutex_);
       if (p_queue->empty()) {
         continue;
