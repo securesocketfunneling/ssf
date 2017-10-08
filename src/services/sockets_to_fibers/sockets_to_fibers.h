@@ -33,6 +33,8 @@ class SocketsToFibers : public BaseService<Demux> {
 
   using SocketsToFibersPtr = std::shared_ptr<SocketsToFibers>;
   using SessionManager = ItemManager<BaseSessionPtr>;
+
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using Fiber = typename ssf::BaseService<Demux>::fiber;
   using FiberPtr = std::shared_ptr<Fiber>;
@@ -122,7 +124,7 @@ class SocketsToFibers : public BaseService<Demux> {
 
     auto gateway_ports = config.gateway_ports();
     auto creator = [gateway_ports](boost::asio::io_service& io_service,
-                                   demux& fiber_demux,
+                                   Demux& fiber_demux,
                                    const Parameters& parameters) {
       return SocketsToFibers::Create(io_service, fiber_demux, parameters,
                                      gateway_ports);

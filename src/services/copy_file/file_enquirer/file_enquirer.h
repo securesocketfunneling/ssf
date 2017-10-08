@@ -50,7 +50,7 @@ class FileEnquirer : public BaseService<Demux> {
       // service factory is not enabled
       return;
     }
-    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
                       const Parameters& parameters) {
       return FileEnquirer::Create(io_service, fiber_demux, parameters);
     };

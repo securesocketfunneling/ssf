@@ -29,6 +29,7 @@ class FibersToDatagrams : public BaseService<Demux> {
   using LocalPortType = typename Demux::local_port_type;
   using RemotePortType = typename Demux::remote_port_type;
 
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using FiberDatagram = typename ssf::BaseService<Demux>::fiber_datagram;
   using FiberEndpoint = typename ssf::BaseService<Demux>::datagram_endpoint;
@@ -92,7 +93,7 @@ class FibersToDatagrams : public BaseService<Demux> {
       return;
     }
 
-    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
                       const Parameters& parameters) {
       return FibersToDatagrams::Create(io_service, fiber_demux, parameters);
     };

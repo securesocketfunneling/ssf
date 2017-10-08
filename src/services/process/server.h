@@ -39,9 +39,10 @@ class Server : public BaseService<Demux> {
 #endif  // defined(BOOST_ASIO_WINDOWS)
 
   using LocalPortType = typename Demux::local_port_type;
-
   using ServerPtr = std::shared_ptr<Server>;
   using SessionManager = ItemManager<BaseSessionPtr>;
+
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using Fiber = typename ssf::BaseService<Demux>::fiber;
   using FiberPtr = std::shared_ptr<Fiber>;
@@ -92,7 +93,7 @@ class Server : public BaseService<Demux> {
     auto bin_path = config.path();
     auto bin_args = config.args();
     auto creator = [bin_path, bin_args](boost::asio::io_service& io_service,
-                                        demux& fiber_demux,
+                                        Demux& fiber_demux,
                                         const Parameters& parameters) {
       return Server::Create(io_service, fiber_demux, parameters, bin_path,
                             bin_args);

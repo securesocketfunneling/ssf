@@ -30,6 +30,8 @@ class FibersToSockets : public BaseService<Demux> {
   using RemotePortType = typename Demux::remote_port_type;
   using FibersToSocketsPtr = std::shared_ptr<FibersToSockets>;
   using SessionManager = ItemManager<BaseSessionPtr>;
+
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using Fiber = typename ssf::BaseService<Demux>::fiber;
   using FiberPtr = std::shared_ptr<Fiber>;
@@ -87,7 +89,7 @@ class FibersToSockets : public BaseService<Demux> {
       return;
     }
 
-    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
                       const Parameters& parameters) {
       return FibersToSockets::Create(io_service, fiber_demux, parameters);
     };

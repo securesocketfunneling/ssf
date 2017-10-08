@@ -20,21 +20,20 @@ namespace ssf {
 template <typename Demux>
 class BaseService : public std::enable_shared_from_this<BaseService<Demux>> {
  public:
-  typedef std::shared_ptr<BaseService<Demux>> BaseServicePtr;
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
 
-  typedef typename Demux::socket_type socket_type;
-  typedef typename boost::asio::fiber::stream_fiber<socket_type>::socket fiber;
-  typedef typename boost::asio::fiber::datagram_fiber<socket_type>::socket
-      fiber_datagram;
-  typedef typename boost::asio::fiber::stream_fiber<socket_type>::acceptor
-      fiber_acceptor;
-  typedef
-      typename boost::asio::fiber::stream_fiber<socket_type>::endpoint endpoint;
-  typedef typename boost::asio::fiber::datagram_fiber<socket_type>::endpoint
-      datagram_endpoint;
-  typedef Demux demux;
+  using socket_type = typename Demux::socket_type;
+  using fiber = typename boost::asio::fiber::stream_fiber<socket_type>::socket;
+  using fiber_datagram =
+      typename boost::asio::fiber::datagram_fiber<socket_type>::socket;
+  using fiber_acceptor =
+      typename boost::asio::fiber::stream_fiber<socket_type>::acceptor;
+  using endpoint =
+      typename boost::asio::fiber::stream_fiber<socket_type>::endpoint;
+  using datagram_endpoint =
+      typename boost::asio::fiber::datagram_fiber<socket_type>::endpoint;
 
-  typedef std::map<std::string, std::string> Parameters;
+  using Parameters = std::map<std::string, std::string>;
 
  public:
   virtual ~BaseService() {}
@@ -54,14 +53,14 @@ class BaseService : public std::enable_shared_from_this<BaseService<Demux>> {
   * @param io_service the io_service used for all asynchronous operations
   * @param demux the demultiplexer used to send and receive data
   */
-  BaseService(boost::asio::io_service& io_service, demux& demux)
+  BaseService(boost::asio::io_service& io_service, Demux& demux)
       : io_service_(io_service), demux_(demux) {}
 
   /// Accessor for the io_service
   boost::asio::io_service& get_io_service() { return io_service_; }
 
   /// Accessor for the demultiplexer
-  demux& get_demux() { return demux_; }
+  Demux& get_demux() { return demux_; }
 
  private:
   BaseService(const BaseService&) = delete;
@@ -69,7 +68,7 @@ class BaseService : public std::enable_shared_from_this<BaseService<Demux>> {
 
  private:
   boost::asio::io_service& io_service_;
-  demux& demux_;
+  Demux& demux_;
   uint32_t local_id_;
 };
 

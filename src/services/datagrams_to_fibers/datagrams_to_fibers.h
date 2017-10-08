@@ -33,6 +33,7 @@ class DatagramsToFibers : public BaseService<Demux> {
   using LocalPortType = typename Demux::local_port_type;
   using RemotePortType = typename Demux::remote_port_type;
 
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using FiberDatagram = typename ssf::BaseService<Demux>::fiber_datagram;
   using FiberEndpoint = typename ssf::BaseService<Demux>::datagram_endpoint;

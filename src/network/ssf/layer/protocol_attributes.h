@@ -78,7 +78,7 @@ void AsyncReceiveDatagram(
   };
 
   auto header_received_lambda = [&socket, p_datagram, payload_received_lambda](
-      const boost::system::error_code& ec, std::size_t length) {
+      const boost::system::error_code& ec, std::size_t payload_length) {
     if (!ec) {
       auto on_payload_read = [payload_received_lambda, payload_length](
           const boost::system::error_code& ec, std::size_t length) {
@@ -88,7 +88,7 @@ void AsyncReceiveDatagram(
       boost::asio::async_read(socket, p_datagram->payload().GetMutableBuffers(),
                               on_payload_read);
     } else {
-      payload_received_lambda(length, ec, 0);
+      payload_received_lambda(payload_length, ec, 0);
     }
   };
 

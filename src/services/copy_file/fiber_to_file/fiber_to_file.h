@@ -27,7 +27,7 @@ class FiberToFile : public BaseService<Demux> {
   using SessionManager = ItemManager<BaseSessionPtr>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using fiber_port = typename Demux::local_port_type;
-  using demux = typename ssf::BaseService<Demux>::demux;
+
   using fiber = typename ssf::BaseService<Demux>::fiber;
   using endpoint = typename ssf::BaseService<Demux>::endpoint;
   using fiber_acceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
@@ -38,26 +38,26 @@ class FiberToFile : public BaseService<Demux> {
  public:
   // Factory method to create the service
   static FiberToFilePtr Create(boost::asio::io_service& io_service,
-                               demux& fiber_demux,
+                               Demux& fiber_demux,
                                const Parameters& parameters) {
     return FiberToFilePtr(new FiberToFile(io_service, fiber_demux));
   }
 
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
       // service factory is not enabled
       return;
     }
-    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
                       const Parameters& parameters) {
       return FiberToFile::Create(io_service, fiber_demux, parameters);
     };
     p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
-  static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest() {
-    ssf::services::admin::CreateServiceRequest<demux> create_req(kFactoryId);
+  static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest() {
+    ssf::services::admin::CreateServiceRequest<Demux> create_req(kFactoryId);
 
     return create_req;
   }
@@ -88,7 +88,7 @@ class FiberToFile : public BaseService<Demux> {
   uint32_t service_type_id() override { return kFactoryId; }
 
  private:
-  FiberToFile(boost::asio::io_service& io_service, demux& fiber_demux)
+  FiberToFile(boost::asio::io_service& io_service, Demux& fiber_demux)
       : BaseService<Demux>(io_service, fiber_demux),
         fiber_acceptor_(io_service),
         fiber_(io_service) {}
