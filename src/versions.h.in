@@ -13,7 +13,7 @@ enum Versions : uint8_t {
   minor = @SSF_VERSION_MINOR@,
   fix = @SSF_VERSION_FIX@,
   security = @SSF_VERSION_SECURITY@,
-  bounce = @SSF_VERSION_BOUNCE@,
+  circuit = @SSF_VERSION_CIRCUIT@,
   transport = @SSF_VERSION_TRANSPORT@
 };
 

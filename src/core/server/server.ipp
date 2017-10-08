@@ -1,6 +1,8 @@
 #ifndef SSF_CORE_SERVER_SERVER_IPP_
 #define SSF_CORE_SERVER_SERVER_IPP_
 
+#include <functional>
+
 #include <ssf/log/log.h>
 
 #include "common/error/error.h"
@@ -9,15 +11,15 @@
 
 #include "services/admin/admin.h"
 #include "services/admin/requests/create_service_request.h"
-#include "services/admin/requests/stop_service_request.h"
 #include "services/admin/requests/service_status.h"
+#include "services/admin/requests/stop_service_request.h"
 
 #include "services/base_service.h"
-#include "services/copy_file/file_to_fiber/file_to_fiber.h"
 #include "services/copy_file/fiber_to_file/fiber_to_file.h"
+#include "services/copy_file/file_to_fiber/file_to_fiber.h"
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
-#include "services/fibers_to_sockets/fibers_to_sockets.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
+#include "services/fibers_to_sockets/fibers_to_sockets.h"
 #include "services/process/server.h"
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/socks/socks_server.h"
@@ -27,8 +29,7 @@ namespace ssf {
 template <class N, template <class> class T>
 SSFServer<N, T>::SSFServer(const ssf::config::Services& services_config,
                            bool relay_only)
-    : T<typename N::socket>(
-          boost::bind(&SSFServer<N, T>::DoSSFStart, this, _1, _2)),
+    : T<typename N::socket>(),
       async_engine_(),
       network_acceptor_(async_engine_.get_io_service()),
       services_config_(services_config),
@@ -118,9 +119,10 @@ void SSFServer<N, T>::AsyncAcceptConnection() {
     NetworkSocketPtr p_socket =
         std::make_shared<NetworkSocket>(async_engine_.get_io_service());
 
-    network_acceptor_.async_accept(
-        *p_socket,
-        boost::bind(&SSFServer::NetworkToTransport, this, _1, p_socket));
+    auto on_accept = [this, p_socket](const boost::system::error_code& ec) {
+      NetworkToTransport(ec, p_socket);
+    };
+    network_acceptor_.async_accept(*p_socket, on_accept);
   }
 }
 
@@ -131,7 +133,9 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
 
   if (!ec) {
     if (!relay_only_) {
-      this->DoSSFInitiateReceive(p_socket);
+      this->DoSSFInitiateReceive(
+          p_socket, std::bind(&SSFServer::DoSSFStart, this,
+                              std::placeholders::_1, std::placeholders::_2));
       return;
     }
   }
@@ -166,17 +170,13 @@ void SSFServer<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 template <class N, template <class> class T>
 void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
                                  boost::system::error_code& ec) {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
-
-  // Register supported admin commands
-  services::admin::CreateServiceRequest<Demux>::RegisterToCommandFactory();
-  services::admin::StopServiceRequest<Demux>::RegisterToCommandFactory();
-  services::admin::ServiceStatus<Demux>::RegisterToCommandFactory();
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
 
   // Make a new fiber demux and fiberize
   auto p_fiber_demux = std::make_shared<Demux>(async_engine_.get_io_service());
-  auto close_demux_handler =
-      [this, p_fiber_demux]() { RemoveDemux(p_fiber_demux); };
+  auto close_demux_handler = [this, p_fiber_demux]() {
+    RemoveDemux(p_fiber_demux);
+  };
   p_fiber_demux->fiberize(std::move(*p_socket), close_demux_handler);
 
   // Make a new service manager
@@ -216,14 +216,35 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   auto p_admin_service = services::admin::Admin<Demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, empty_map);
-  p_admin_service->set_server();
+  if (!p_admin_service
+           ->template RegisterCommand<services::admin::CreateServiceRequest>()) {
+    SSF_LOG(kLogError) << "server: cannot register "
+                          "CreateServiceRequest into admin service";
+    ec.assign(::error::service_not_started, ::error::get_ssf_category());
+    return;
+  }
+  if (!p_admin_service
+           ->template RegisterCommand<services::admin::StopServiceRequest>()) {
+    SSF_LOG(kLogError) << "server: cannot register "
+                          "StopServiceRequest into admin service";
+    ec.assign(::error::service_not_started, ::error::get_ssf_category());
+    return;
+  }
+  if (!p_admin_service->template RegisterCommand<services::admin::ServiceStatus>()) {
+    SSF_LOG(kLogError) << "server: cannot register "
+                          "ServiceStatus into admin service";
+    ec.assign(::error::service_not_started, ::error::get_ssf_category());
+    return;
+  }
+
+  p_admin_service->SetAsServer();
   p_service_manager->start(p_admin_service, ec);
 }
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
                                ServiceManagerPtr<Demux> p_service_manager) {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG(kLogTrace) << "server: adding a new demux";
 
   p_fiber_demuxes_.insert(p_fiber_demux);
@@ -232,7 +253,7 @@ void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG(kLogTrace) << "server: removing a demux";
 
   p_fiber_demux->close();
@@ -253,7 +274,7 @@ void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveAllDemuxes() {
-  boost::recursive_mutex::scoped_lock lock(storage_mutex_);
+  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG(kLogTrace) << "server: removing all demuxes";
 
   for (auto& p_fiber_demux : p_fiber_demuxes_) {

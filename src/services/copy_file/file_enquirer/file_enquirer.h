@@ -1,6 +1,8 @@
 #ifndef SSF_SERVICES_COPY_FILE_FILE_ENQUIRER_FILE_ENQUIRER_H_
 #define SSF_SERVICES_COPY_FILE_FILE_ENQUIRER_FILE_ENQUIRER_H_
 
+#include <functional>
+
 #include <boost/asio/write.hpp>
 
 #include <ssf/log/log.h>
@@ -30,12 +32,13 @@ class FileEnquirer : public BaseService<Demux> {
   enum { kFactoryId = 9 };
 
   static FileEnquirerPtr Create(boost::asio::io_service& io_service,
-                                Demux& fiber_demux, Parameters parameters) {
+                                Demux& fiber_demux,
+                                const Parameters& parameters) {
     if (parameters.count("input_pattern") != 0 &&
         parameters.count("output_pattern") != 0) {
       return FileEnquirerPtr(new FileEnquirer(io_service, fiber_demux,
-                                              parameters["input_pattern"],
-                                              parameters["output_pattern"]));
+                                              parameters.at("input_pattern"),
+                                              parameters.at("output_pattern")));
     }
 
     return nullptr;
@@ -47,8 +50,11 @@ class FileEnquirer : public BaseService<Demux> {
       // service factory is not enabled
       return;
     }
-
-    p_factory->RegisterServiceCreator(kFactoryId, &FileEnquirer::Create);
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
+                      const Parameters& parameters) {
+      return FileEnquirer::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
@@ -62,7 +68,11 @@ class FileEnquirer : public BaseService<Demux> {
 
  public:
   void start(boost::system::error_code& ec) override {
-    SendRequest(boost::system::error_code(), 0);
+    auto self = this->shared_from_this();
+    auto on_fiber_connect = [this, self](const boost::system::error_code& ec) {
+      OnFiberConnect(ec);
+    };
+    fiber_.async_connect(remote_endpoint_, std::move(on_fiber_connect));
   }
 
   void stop(boost::system::error_code& ec) override { fiber_.close(ec); }
@@ -81,6 +91,19 @@ class FileEnquirer : public BaseService<Demux> {
                          ssf::services::copy_file::file_to_fiber::FileToFiber<
                              Demux>::kServicePort) {}
 
+  void OnFiberConnect(const boost::system::error_code& ec) {
+    if (ec) {
+      boost::system::error_code close_ec;
+      fiber_.close(close_ec);
+      return;
+    }
+
+    SSF_LOG(kLogDebug) << "microservice[file enquirer]: connect to remote "
+                          "fiber acceptor port "
+                       << remote_endpoint_.port();
+    SendRequest(ec, 0);
+  }
+
 #include <boost/asio/yield.hpp>
   // Connect to remote file to fiber service and send input and output pattern
   void SendRequest(const boost::system::error_code& ec, std::size_t length) {
@@ -91,36 +114,29 @@ class FileEnquirer : public BaseService<Demux> {
     }
 
     reenter(coroutine_) {
-      SSF_LOG(kLogDebug) << "microservice[file enquirer]: connect to remote "
-                            "fiber acceptor port " << remote_endpoint_.port();
-
-      yield fiber_.async_connect(
-          remote_endpoint_,
-          boost::bind(&FileEnquirer::SendRequest, this->SelfFromThis(), _1, 0));
-
       // write input pattern size from request
       yield boost::asio::async_write(
           fiber_, input_request_.GetFilenameSizeConstBuffers(),
-          boost::bind(&FileEnquirer::SendRequest, this->SelfFromThis(), _1,
-                      _2));
+          std::bind(&FileEnquirer<Demux>::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // write input pattern from request
-      yield boost::asio::async_write(fiber_,
-                                     input_request_.GetFilenameConstBuffers(),
-                                     boost::bind(&FileEnquirer::SendRequest,
-                                                 this->SelfFromThis(), _1, _2));
+      yield boost::asio::async_write(
+          fiber_, input_request_.GetFilenameConstBuffers(),
+          std::bind(&FileEnquirer<Demux>::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // write output pattern size from request
       yield boost::asio::async_write(
           fiber_, output_request_.GetFilenameSizeConstBuffers(),
-          boost::bind(&FileEnquirer::SendRequest, this->SelfFromThis(), _1,
-                      _2));
+          std::bind(&FileEnquirer<Demux>::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // write output pattern from request
-      yield boost::asio::async_write(fiber_,
-                                     output_request_.GetFilenameConstBuffers(),
-                                     boost::bind(&FileEnquirer::SendRequest,
-                                                 this->SelfFromThis(), _1, _2));
+      yield boost::asio::async_write(
+          fiber_, output_request_.GetFilenameConstBuffers(),
+          std::bind(&FileEnquirer<Demux>::SendRequest, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
     }
   }
 #include <boost/asio/unyield.hpp>

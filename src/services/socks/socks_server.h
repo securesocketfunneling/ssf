@@ -1,16 +1,16 @@
 #ifndef SSF_SERVICES_SOCKS_SOCKS_SERVER_H_
 #define SSF_SERVICES_SOCKS_SOCKS_SERVER_H_
 
-#include <string>
+#include <functional>
 #include <map>
+#include <string>
 
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
-#include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
+#include <ssf/network/manager.h>
 
 #include "services/base_service.h"
 
@@ -31,6 +31,8 @@ class SocksServer : public BaseService<Demux> {
 
   using SocksServerPtr = std::shared_ptr<SocksServer>;
   using SessionManager = ItemManager<BaseSessionPtr>;
+
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using Fiber = typename ssf::BaseService<Demux>::fiber;
   using FiberPtr = std::shared_ptr<Fiber>;
@@ -49,13 +51,14 @@ class SocksServer : public BaseService<Demux> {
 
   // Create a new instance of the service
   static SocksServerPtr Create(boost::asio::io_service& io_service,
-                               Demux& fiber_demux, Parameters parameters) {
+                               Demux& fiber_demux,
+                               const Parameters& parameters) {
     if (!parameters.count("local_port")) {
       return SocksServerPtr(nullptr);
     }
 
     try {
-      uint32_t local_port = std::stoul(parameters["local_port"]);
+      uint32_t local_port = std::stoul(parameters.at("local_port"));
       return SocksServerPtr(
           new SocksServer(io_service, fiber_demux, local_port));
     } catch (const std::exception&) {
@@ -73,7 +76,11 @@ class SocksServer : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(kFactoryId, &SocksServer::Create);
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
+                      const Parameters& parameters) {
+      return SocksServer::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   // Generate create service request

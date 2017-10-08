@@ -1,14 +1,17 @@
 #ifndef TESTS_SERVICES_UDP_HELPERS_H_
 #define TESTS_SERVICES_UDP_HELPERS_H_
 
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <set>
+#include <thread>
+#include <vector>
 
+#include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/read.hpp>
-#include <boost/thread.hpp>
 
 #include <ssf/log/log.h>
 
@@ -42,9 +45,9 @@ class DummyServer {
   std::string listening_addr_;
   std::string listening_port_;
   boost::asio::ip::udp::socket socket_;
-  boost::recursive_mutex one_buffer_mutex_;
+  std::recursive_mutex one_buffer_mutex_;
   std::vector<uint8_t> one_buffer_;
-  boost::thread_group threads_;
+  std::vector<std::thread> threads_;
 };
 
 class DummyClient {
@@ -68,7 +71,7 @@ class DummyClient {
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
   boost::asio::ip::udp::socket socket_;
   boost::asio::ip::udp::endpoint endpoint_;
-  boost::thread t_;
+  std::thread t_;
   std::string target_addr_;
   std::string target_port_;
   size_t size_;

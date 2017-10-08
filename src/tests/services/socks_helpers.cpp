@@ -30,7 +30,7 @@ SocksDummyClient::SocksDummyClient(const std::string& socks_server_addr,
       size_(size) {}
 
 bool SocksDummyClient::Init() {
-  t_ = boost::thread([&]() { io_service_.run(); });
+  t_ = std::thread([&]() { io_service_.run(); });
 
   boost::asio::ip::tcp::resolver r(io_service_);
   boost::asio::ip::tcp::resolver::query q(socks_server_addr_,
@@ -80,7 +80,9 @@ void SocksDummyClient::Stop() {
 
   p_worker_.reset();
 
-  t_.join();
+  if (t_.joinable()) {
+    t_.join();
+  }
   io_service_.stop();
 }
 

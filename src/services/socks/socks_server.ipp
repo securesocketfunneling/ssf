@@ -67,8 +67,9 @@ void SocksServer<Demux>::AsyncAcceptFiber() {
       this->get_io_service(), FiberEndpoint(this->get_demux(), 0));
 
   fiber_acceptor_.async_accept(
-      *new_connection, boost::bind(&SocksServer::FiberAcceptHandler,
-                                   this->SelfFromThis(), new_connection, _1));
+      *new_connection,
+      std::bind(&SocksServer<Demux>::FiberAcceptHandler, this->SelfFromThis(),
+                new_connection, std::placeholders::_1));
 }
 
 template <typename Demux>

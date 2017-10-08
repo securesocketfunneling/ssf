@@ -33,6 +33,8 @@ class SocketsToFibers : public BaseService<Demux> {
 
   using SocketsToFibersPtr = std::shared_ptr<SocketsToFibers>;
   using SessionManager = ItemManager<BaseSessionPtr>;
+
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using Fiber = typename ssf::BaseService<Demux>::fiber;
   using FiberPtr = std::shared_ptr<Fiber>;
@@ -67,7 +69,8 @@ class SocketsToFibers : public BaseService<Demux> {
   //    "remote_port": FIBER_PORT
   //  }
   static SocketsToFibersPtr Create(boost::asio::io_service& io_service,
-                                   Demux& fiber_demux, Parameters parameters,
+                                   Demux& fiber_demux,
+                                   const Parameters& parameters,
                                    bool gateway_ports) {
     if (!parameters.count("local_addr") || !parameters.count("local_port") ||
         !parameters.count("remote_port")) {
@@ -75,17 +78,17 @@ class SocketsToFibers : public BaseService<Demux> {
     }
 
     std::string local_addr("127.0.0.1");
-    if (parameters.count("local_addr") && !parameters["local_addr"].empty()) {
+    if (parameters.count("local_addr") && !parameters.at("local_addr").empty()) {
       if (gateway_ports) {
-        if (parameters["local_addr"] == "*") {
+        if (parameters.at("local_addr") == "*") {
           local_addr = "0.0.0.0";
         } else {
-          local_addr = parameters["local_addr"];
+          local_addr = parameters.at("local_addr");
         }
       } else {
         SSF_LOG(kLogWarning) << "microservice[stream_listener]: cannot listen "
                                 "on network interface <"
-                             << parameters["local_addr"]
+                             << parameters.at("local_addr")
                              << "> without gateway ports option";
       }
     }
@@ -93,8 +96,8 @@ class SocketsToFibers : public BaseService<Demux> {
     uint32_t local_port;
     uint32_t remote_port;
     try {
-      local_port = std::stoul(parameters["local_port"]);
-      remote_port = std::stoul(parameters["remote_port"]);
+      local_port = std::stoul(parameters.at("local_port"));
+      remote_port = std::stoul(parameters.at("remote_port"));
     } catch (const std::exception&) {
       SSF_LOG(kLogError)
           << "microservice[stream_listener]: cannot extract port parameters";
@@ -119,9 +122,14 @@ class SocketsToFibers : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(
-        kFactoryId, boost::bind(&SocketsToFibers::Create, _1, _2, _3,
-                                config.gateway_ports()));
+    auto gateway_ports = config.gateway_ports();
+    auto creator = [gateway_ports](boost::asio::io_service& io_service,
+                                   Demux& fiber_demux,
+                                   const Parameters& parameters) {
+      return SocketsToFibers::Create(io_service, fiber_demux, parameters,
+                                     gateway_ports);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(

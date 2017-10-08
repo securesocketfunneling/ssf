@@ -12,6 +12,8 @@
 #pragma once
 #endif  // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include <mutex>
+
 #include <boost/asio/basic_socket.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/error.hpp>
@@ -102,7 +104,7 @@ class fiber_acceptor_service
 
   /// Determine whether the acceptor is open.
   bool is_open(const implementation_type& impl) const {
-    boost::recursive_mutex::scoped_lock lock_state(impl->state_mutex);
+    std::unique_lock<std::recursive_mutex> lock_state(impl->state_mutex);
     return !impl->closed;
   }
 
@@ -166,9 +168,8 @@ class fiber_acceptor_service
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
         init(BOOST_ASIO_MOVE_CAST(AcceptHandler)(handler));
-
     {
-      boost::recursive_mutex::scoped_lock lock_state(impl->state_mutex);
+      std::unique_lock<std::recursive_mutex> lock_state(impl->state_mutex);
       if (impl->closed) {
         auto handler_to_post = [init]() mutable {
           init.handler(boost::system::error_code(::error::not_connected,
@@ -199,7 +200,7 @@ class fiber_acceptor_service
     p.p = new (p.v)
         op(peer.native_handle(), &(peer.native_handle()->id), init.handler);
     {
-      boost::recursive_mutex::scoped_lock lock(impl->accept_op_queue_mutex);
+      std::unique_lock<std::recursive_mutex> lock(impl->accept_op_queue_mutex);
       impl->accept_op_queue.push(p.p);
     }
     p.v = p.p = 0;

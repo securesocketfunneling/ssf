@@ -10,14 +10,13 @@
 #include "common/boost/fiber/datagram_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
-#include "common/network/datagram_link.h"
-#include "common/network/datagram_link_operator.h"
+#include "core/factories/service_factory.h"
 
 #include "services/base_service.h"
 
-#include "core/factories/service_factory.h"
-
 #include "services/admin/requests/create_service_request.h"
+#include "services/datagram/datagram_link.h"
+#include "services/datagram/datagram_link_operator.h"
 #include "services/datagrams_to_fibers/config.h"
 
 namespace ssf {
@@ -34,6 +33,7 @@ class DatagramsToFibers : public BaseService<Demux> {
   using LocalPortType = typename Demux::local_port_type;
   using RemotePortType = typename Demux::remote_port_type;
 
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using FiberDatagram = typename ssf::BaseService<Demux>::fiber_datagram;
   using FiberEndpoint = typename ssf::BaseService<Demux>::datagram_endpoint;
@@ -74,7 +74,8 @@ class DatagramsToFibers : public BaseService<Demux> {
   //    "remote_port": FIBER_PORT
   //  }
   static DatagramsToFibersPtr Create(boost::asio::io_service& io_service,
-                                     Demux& fiber_demux, Parameters parameters,
+                                     Demux& fiber_demux,
+                                     const Parameters& parameters,
                                      bool gateway_ports) {
     if (!parameters.count("local_addr") || !parameters.count("local_port") ||
         !parameters.count("remote_port")) {
@@ -82,17 +83,18 @@ class DatagramsToFibers : public BaseService<Demux> {
     }
 
     std::string local_addr("127.0.0.1");
-    if (parameters.count("local_addr") && !parameters["local_addr"].empty()) {
+    if (parameters.count("local_addr") &&
+        !parameters.at("local_addr").empty()) {
       if (gateway_ports) {
-        if (parameters["local_addr"] == "*") {
+        if (parameters.at("local_addr") == "*") {
           local_addr = "0.0.0.0";
         } else {
-          local_addr = parameters["local_addr"];
+          local_addr = parameters.at("local_addr");
         }
       } else {
         SSF_LOG(kLogWarning) << "microservice[datagram_listener]: cannot "
                                 "listen on network interface <"
-                             << parameters["local_addr"]
+                             << parameters.at("local_addr")
                              << "> without gateway ports option";
       }
     }
@@ -100,8 +102,8 @@ class DatagramsToFibers : public BaseService<Demux> {
     uint32_t local_port;
     uint32_t remote_port;
     try {
-      local_port = std::stoul(parameters["local_port"]);
-      remote_port = std::stoul(parameters["remote_port"]);
+      local_port = std::stoul(parameters.at("local_port"));
+      remote_port = std::stoul(parameters.at("remote_port"));
     } catch (const std::exception&) {
       SSF_LOG(kLogError)
           << "microservice[datagram_listener]: cannot extract port parameters";
@@ -126,9 +128,16 @@ class DatagramsToFibers : public BaseService<Demux> {
       return;
     }
 
+    bool gateway_ports = config.gateway_ports();
+    auto creator =
+        [gateway_ports](boost::asio::io_service& io_service, Demux& fiber_demux,
+                        const Parameters& parameters) {
+          return DatagramsToFibers::Create(io_service, fiber_demux, parameters,
+                                           gateway_ports);
+        };
     p_factory->RegisterServiceCreator(
-        kFactoryId, boost::bind(&DatagramsToFibers::Create, _1, _2, _3,
-                                config.gateway_ports()));
+        kFactoryId,
+        creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
@@ -153,13 +162,9 @@ class DatagramsToFibers : public BaseService<Demux> {
                     RemotePortType remote_port);
 
   void AsyncReceiveDatagram();
-  void SocketDatagramReceiveHandler(const boost::system::error_code& ec,
-                                    size_t length);
-
-  DatagramsToFibersPtr SelfFromThis() {
-    return std::static_pointer_cast<DatagramsToFibers>(
-        this->shared_from_this());
-  }
+  void OnSocketDatagramReceive(BaseServicePtr self,
+                               const boost::system::error_code& ec,
+                               size_t length);
 
  private:
   std::string local_addr_;

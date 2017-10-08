@@ -8,7 +8,7 @@
 #include "core/command_line/copy/command_line.h"
 
 TEST(StandardCommandLineTests, ServerTest) {
-  ssf::command_line::standard::CommandLine cmd(true);
+  ssf::command_line::StandardCommandLine cmd(true);
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -23,11 +23,11 @@ TEST(StandardCommandLineTests, ServerTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical", "-S", "-R",
                              "-g", "127.0.0.1"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -44,7 +44,7 @@ TEST(StandardCommandLineTests, ServerTest) {
 }
 
 TEST(StandardCommandLineTests, ClientTest) {
-  ssf::command_line::standard::CommandLine cmd(false);
+  ssf::command_line::StandardCommandLine cmd(false);
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -59,11 +59,11 @@ TEST(StandardCommandLineTests, ClientTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical", "-S", "-g",
                              "127.0.0.1"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -80,7 +80,7 @@ TEST(StandardCommandLineTests, ClientTest) {
 }
 
 TEST(CopyCommandLineTests, FromStdinToServerTest) {
-  ssf::command_line::copy::CommandLine cmd;
+  ssf::command_line::CopyCommandLine cmd;
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -91,11 +91,11 @@ TEST(CopyCommandLineTests, FromStdinToServerTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical", "-t",
                              "127.0.0.1@/tmp/test_out/output"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -112,7 +112,7 @@ TEST(CopyCommandLineTests, FromStdinToServerTest) {
 }
 
 TEST(CopyCommandLineTests, ClientToServerTest) {
-  ssf::command_line::copy::CommandLine cmd;
+  ssf::command_line::CopyCommandLine cmd;
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ("", cmd.host());
@@ -123,11 +123,11 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical",
                              "/tmp/test_in", "127.0.0.1@/tmp/test_out"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(0, ec.value()) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());
@@ -145,7 +145,7 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
 }
 
 TEST(CopyCommandLineTests, ServerToClientTest) {
-  ssf::command_line::copy::CommandLine cmd;
+  ssf::command_line::CopyCommandLine cmd;
 
   ASSERT_FALSE(cmd.host_set());
   ASSERT_EQ(cmd.host(), "");
@@ -156,11 +156,11 @@ TEST(CopyCommandLineTests, ServerToClientTest) {
 
   boost::system::error_code ec;
 
-  std::vector<char*> argv = {"test_exec", "-p", "8012", "-c",
+  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical",
                              "127.0.0.1@/tmp/test_in", "/tmp/test_out"};
 
-  cmd.Parse(static_cast<int>(argv.size()), argv.data(), ec);
+  cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
   ASSERT_EQ(ec.value(), 0) << "Parsing failed";
   ASSERT_TRUE(cmd.host_set());

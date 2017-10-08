@@ -13,24 +13,24 @@
 
 namespace ssf {
 namespace command_line {
-namespace copy {
 
 static const char kHostDirectorySeparator = '@';
 
-CommandLine::CommandLine() : BaseCommandLine(), from_stdin_(false) {}
+CopyCommandLine::CopyCommandLine() : Base(), from_stdin_(false) {}
 
-CommandLine::~CommandLine() {}
+CopyCommandLine::~CopyCommandLine() {}
 
-void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
+void CopyCommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
-void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {}
+void CopyCommandLine::PopulateLocalOptions(OptionDescription& local_opts) {}
 
-void CommandLine::PopulatePositionalOptions(PosOptionDescription& pos_opts) {
+void CopyCommandLine::PopulatePositionalOptions(
+    PosOptionDescription& pos_opts) {
   pos_opts.add("arg1", 1);
   pos_opts.add("arg2", 1);
 }
 
-void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
+void CopyCommandLine::PopulateCommandLine(OptionDescription& command_line) {
   // clang-format off
   boost::program_options::options_description copy_options("Copy options");
   copy_options.add_options()
@@ -41,30 +41,31 @@ void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
         boost::program_options::value<std::string>()
           ->value_name("[host@]/absolute/path/file"),
         "[host@]/absolute/path/file if host is present, " \
-        "the file will be copied from the remote host to local")
+        "the file will be copied from remote host to local")
     ("arg2",
         boost::program_options::value<std::string>()
           ->value_name("[host@]/absolute/path/file"),
         "[host@]/absolute/path/file if host is present, " \
-        "the file will be copied from local to host");
+        "the file will be copied from local to remote host");
   // clang-format on
 
   command_line.add(copy_options);
 }
 
-bool CommandLine::IsServerCli() { return false; }
+bool CopyCommandLine::IsServerCli() { return false; }
 
-bool CommandLine::from_stdin() const { return from_stdin_; }
+bool CopyCommandLine::from_stdin() const { return from_stdin_; }
 
-bool CommandLine::from_local_to_remote() const { return from_local_to_remote_; }
+bool CopyCommandLine::from_local_to_remote() const {
+  return from_local_to_remote_;
+}
 
-std::string CommandLine::input_pattern() const { return input_pattern_; }
+std::string CopyCommandLine::input_pattern() const { return input_pattern_; }
 
-std::string CommandLine::output_pattern() const { return output_pattern_; }
+std::string CopyCommandLine::output_pattern() const { return output_pattern_; }
 
-void CommandLine::ParseOptions(const VariableMap& vm,
-                               ParsedParameters& parsed_params,
-                               boost::system::error_code& ec) {
+void CopyCommandLine::ParseOptions(const VariableMap& vm,
+                                   boost::system::error_code& ec) {
   auto vm_end_it = vm.end();
   auto stdin_it = vm.find("stdin");
 
@@ -88,15 +89,15 @@ void CommandLine::ParseOptions(const VariableMap& vm,
   }
 }
 
-std::string CommandLine::GetUsageDesc() {
+std::string CopyCommandLine::GetUsageDesc() {
   std::stringstream ss_desc;
   ss_desc << exec_name_ << " [options] [host@]/absolute/path/file"
                            " [[host@]/absolute/path/file]";
   return ss_desc.str();
 }
 
-void CommandLine::ParseFirstArgument(const std::string& first_arg,
-                                     boost::system::error_code& parse_ec) {
+void CopyCommandLine::ParseFirstArgument(const std::string& first_arg,
+                                         boost::system::error_code& parse_ec) {
   if (from_stdin_) {
     // Expecting host:filepath syntax
     ExtractHostPattern(first_arg, &host_, &output_pattern_, parse_ec);
@@ -117,12 +118,12 @@ void CommandLine::ParseFirstArgument(const std::string& first_arg,
   }
 }
 
-void CommandLine::ParseSecondArgument(const std::string& second_arg,
-                                      boost::system::error_code& parse_ec) {
+void CopyCommandLine::ParseSecondArgument(const std::string& second_arg,
+                                          boost::system::error_code& parse_ec) {
   if (from_stdin_) {
     // No second arg should be provided with stdin option
     SSF_LOG(kLogError) << "command line: parsing failed: two args provided "
-                          "with stdin option, expecting one";
+                          "with stdin option, one expected";
     parse_ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
     return;
@@ -148,10 +149,10 @@ void CommandLine::ParseSecondArgument(const std::string& second_arg,
   }
 }
 
-void CommandLine::ExtractHostPattern(const std::string& string,
-                                     std::string* p_host,
-                                     std::string* p_pattern,
-                                     boost::system::error_code& ec) const {
+void CopyCommandLine::ExtractHostPattern(const std::string& string,
+                                         std::string* p_host,
+                                         std::string* p_pattern,
+                                         boost::system::error_code& ec) const {
   std::size_t found = string.find_first_of(kHostDirectorySeparator);
   if (found == std::string::npos || string.empty()) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
@@ -163,6 +164,5 @@ void CommandLine::ExtractHostPattern(const std::string& string,
   ec.assign(::error::success, ::error::get_ssf_category());
 }
 
-}  // copy
 }  // command_line
 }  // ssf

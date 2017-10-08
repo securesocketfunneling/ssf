@@ -3,9 +3,10 @@
 #include "tests/services/process_fixture_test.h"
 
 class ProcessTest : public ProcessFixtureTest<ssf::services::Process> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("9071", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9071"}}}}};
   }
 };
 
@@ -48,9 +49,10 @@ class ProcessWildcardTest : public ProcessTest {
                              << new_config;
   }
 
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9072", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9072"}}}}};
   }
 };
 

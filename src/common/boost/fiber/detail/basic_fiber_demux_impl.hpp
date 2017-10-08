@@ -12,9 +12,9 @@
 #pragma once
 #endif  // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-#include <boost/thread/recursive_mutex.hpp>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <queue>
 #include <set>
 
@@ -84,23 +84,23 @@ class basic_fiber_demux_impl : public std::enable_shared_from_this<
   void set_socket(StreamSocket s) { socket = std::move(s); }
 
   // Store the bound fibers
-  boost::recursive_mutex bound_mutex;
+  std::recursive_mutex bound_mutex;
   bind_map bound;
 
   /// Store the ports on which fibers are listening
-  boost::recursive_mutex listening_mutex;
+  std::recursive_mutex listening_mutex;
   listen_set listening;
 
   /// Store all currently used ports
-  boost::recursive_mutex used_ports_mutex;
+  std::recursive_mutex used_ports_mutex;
   in_use_port_set used_ports;
 
   StreamSocket socket;
 
-  boost::recursive_mutex closing_mutex;
+  std::recursive_mutex closing_mutex;
   bool closing;
 
-  boost::recursive_mutex send_mutex;
+  std::recursive_mutex send_mutex;
 
   /// maximum size of the payload of one packet
   size_t mtu;

@@ -1,82 +1,106 @@
 #ifndef SSF_CORE_CLIENT_CLIENT_H_
 #define SSF_CORE_CLIENT_CLIENT_H_
 
+#include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <future>
 #include <map>
+#include <mutex>
 #include <string>
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
-
-#include "common/boost/fiber/stream_fiber.hpp"
-#include "common/boost/fiber/basic_fiber_demux.hpp"
+#include <boost/asio/steady_timer.hpp>
 #include "common/config/config.h"
 
 #include "core/async_engine.h"
-#include "core/service_manager/service_manager.h"
+#include "core/network_protocol.h"
+#include "core/client/session.h"
+#include "core/client/status.h"
+#include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-#include "services/initialisation.h"
 #include "services/user_services/base_user_service.h"
+#include "services/user_service_factory.h"
+#include "services/user_services/parameters.h"
 
 namespace ssf {
-template <class NetworkProtocol,
-          template <class> class TransportVirtualLayerPolicy>
-class SSFClient
-    : public TransportVirtualLayerPolicy<typename NetworkProtocol::socket> {
+
+class Client {
  private:
-  using NetworkSocket = typename NetworkProtocol::socket;
-  using NetworkSocketPtr = std::shared_ptr<NetworkSocket>;
-  using NetworkEndpoint = typename NetworkProtocol::endpoint;
-  using NetworkResolver = typename NetworkProtocol::resolver;
-  using NetworkQuery = typename NetworkProtocol::resolver::query;
+  using ClientSession =
+      Session<network::NetworkProtocol::Protocol, TransportProtocolPolicy>;
+  using ClientSessionPtr = ClientSession::SessionPtr;
 
  public:
-  using Demux = boost::asio::fiber::basic_fiber_demux<NetworkSocket>;
-  using BaseUserServicePtr =
-      typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
-  using ClientCallback =
-      std::function<void(ssf::services::initialisation::type,
-                         BaseUserServicePtr, const boost::system::error_code&)>;
+  using NetworkSocket = ClientSession::NetworkSocket;
+  using NetworkQuery = ClientSession::NetworkQuery;
+  using Demux = ClientSession::Demux;
+
+  using UserServiceFactory = ssf::UserServiceFactory<Demux>;
+  using UserServicePtr = UserServiceFactory::UserServicePtr;
+  using UserServices = std::vector<UserServicePtr>;
+
+  using OnStatusCb = ClientSession::OnStatusCb;
+  using OnUserServiceStatusCb = ClientSession::OnUserServiceStatusCb;
 
  public:
-  SSFClient(std::vector<BaseUserServicePtr> user_services,
-            const ssf::config::Services& services_config,
-            ClientCallback callback);
+  Client();
 
-  ~SSFClient();
+  ~Client();
 
-  void Run(const NetworkQuery& query, boost::system::error_code& ec);
+  template <class UserService>
+  void Register() {
+    user_service_factory_.Register<UserService>();
+  }
 
-  void Stop();
+  void Init(const NetworkQuery& network_query, uint32_t max_connection_attempts,
+            uint32_t reconnection_timeout,
+            bool no_reconnection,
+            UserServiceParameters user_service_params,
+            const ssf::config::Services& user_services_config,
+            OnStatusCb on_status, OnUserServiceStatusCb on_user_service_status,
+            boost::system::error_code& ec);
+
+  // Run
+  void Run(boost::system::error_code& ec);
+
+  // Wait until max connection attempts reached or client is stopped
+  void WaitStop(boost::system::error_code& ec);
+
+  void Stop(boost::system::error_code& ec);
+
+  void Deinit();
 
   boost::asio::io_service& get_io_service();
 
  private:
-  void NetworkToTransport(const boost::system::error_code& ec);
-
-  void DoSSFStart(NetworkSocketPtr p_socket,
-                  const boost::system::error_code& ec);
-
-  void DoFiberize(NetworkSocketPtr p_socket, boost::system::error_code& ec);
-
-  void OnDemuxClose();
-
-  void Notify(ssf::services::initialisation::type type,
-              BaseUserServicePtr p_user_service, boost::system::error_code ec);
+  UserServices CreateUserServices(boost::system::error_code& ec);
+  void AsyncWaitReconnection();
+  void RunSession(const boost::system::error_code& ec);
+  void OnSessionStatus(Status status);
+  void OnUserServiceStatus(UserServicePtr user_service,
+                           const boost::system::error_code& ec);
 
  private:
   AsyncEngine async_engine_;
-  NetworkSocketPtr p_socket_;
-  ServiceManagerPtr<Demux> p_service_manager_;
-  Demux fiber_demux_;
-  std::vector<BaseUserServicePtr> user_services_;
-  ssf::config::Services services_config_;
-  ClientCallback callback_;
+  NetworkQuery network_query_;
+  UserServiceFactory user_service_factory_;
+  UserServiceParameters user_service_params_;
+  ssf::config::Services user_services_config_;
+  uint32_t connection_attempts_;
+  uint32_t max_connection_attempts_;
+  bool no_reconnection_;
+  std::chrono::seconds reconnection_timeout_;
+  OnStatusCb on_status_;
+  OnUserServiceStatusCb on_user_service_status_;
+  boost::asio::steady_timer timer_;
+  ClientSessionPtr session_;
+  std::condition_variable cv_wait_stop_;
+  std::mutex stop_mutex_;
+  bool stopped_;
 };
 
 }  // ssf
-
-#include "core/client/client.ipp"
 
 #endif  // SSF_CORE_CLIENT_CLIENT_H_

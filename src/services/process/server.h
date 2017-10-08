@@ -39,9 +39,10 @@ class Server : public BaseService<Demux> {
 #endif  // defined(BOOST_ASIO_WINDOWS)
 
   using LocalPortType = typename Demux::local_port_type;
-
   using ServerPtr = std::shared_ptr<Server>;
   using SessionManager = ItemManager<BaseSessionPtr>;
+
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using Fiber = typename ssf::BaseService<Demux>::fiber;
   using FiberPtr = std::shared_ptr<Fiber>;
@@ -61,7 +62,7 @@ class Server : public BaseService<Demux> {
  public:
   // Create a new instance of the service
   static ServerPtr Create(boost::asio::io_service& io_service,
-                          Demux& fiber_demux, Parameters parameters,
+                          Demux& fiber_demux, const Parameters& parameters,
                           const std::string& binary_path,
                           const std::string& binary_args) {
     if (!parameters.count("local_port") || binary_path.empty()) {
@@ -70,7 +71,7 @@ class Server : public BaseService<Demux> {
 
     uint32_t local_port;
     try {
-      local_port = std::stoul(parameters["local_port"]);
+      local_port = std::stoul(parameters.at("local_port"));
     } catch (const std::exception&) {
       SSF_LOG(kLogError)
           << "microservice[shell]: cannot extract port parameter";
@@ -89,9 +90,15 @@ class Server : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(
-        kFactoryId,
-        boost::bind(&Server::Create, _1, _2, _3, config.path(), config.args()));
+    auto bin_path = config.path();
+    auto bin_args = config.args();
+    auto creator = [bin_path, bin_args](boost::asio::io_service& io_service,
+                                        Demux& fiber_demux,
+                                        const Parameters& parameters) {
+      return Server::Create(io_service, fiber_demux, parameters, bin_path,
+                            bin_args);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   // Function used to create service request

@@ -42,26 +42,29 @@ class RemoteSocksWildcardTest : public RemoteSocksTest {
 class RemoteSocks4Test
     : public SocksFixtureTest<ssf::services::RemoteSocks,
                               tests::socks::Socks4DummyClient> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9151", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9151"}}}}};
   }
 };
 
 class RemoteSocks4aTest
     : public SocksFixtureTest<ssf::services::RemoteSocks,
                               tests::socks::Socks4DummyClient> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9153", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9153"}}}}};
   }
 };
 
 class RemoteSocks4WildcardTest
     : public RemoteSocksWildcardTest<RemoteSocks4Test> {
-  std::shared_ptr<typename RemoteSocks4Test::ServiceTested>
-  ServiceCreateServiceOptions(boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9155", ec);
+  ssf::UserServiceParameters CreateUserServiceParameters(
+      boost::system::error_code& ec) override {
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9155"}}}}};
   }
 };
 
@@ -83,26 +86,29 @@ TEST_F(RemoteSocks4WildcardTest, Socks4) {
 class RemoteSocks5Test
     : public SocksFixtureTest<ssf::services::RemoteSocks,
                               tests::socks::Socks5DummyClient> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9157", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9157"}}}}};
   }
 };
 
 class RemoteSocks5hTest
     : public SocksFixtureTest<ssf::services::RemoteSocks,
                               tests::socks::Socks5DummyClient> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9159", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9159"}}}}};
   }
 };
 
 class RemoteSocks5WildcardTest
     : public RemoteSocksWildcardTest<RemoteSocks5Test> {
-  std::shared_ptr<typename RemoteSocks4Test::ServiceTested>
-  ServiceCreateServiceOptions(boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9161", ec);
+  ssf::UserServiceParameters CreateUserServiceParameters(
+      boost::system::error_code& ec) override {
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9161"}}}}};
   }
 };
 

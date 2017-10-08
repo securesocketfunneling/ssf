@@ -3,11 +3,12 @@
 
 #include <array>
 #include <iostream>
+#include <thread>
 
 #include <boost/asio/connect.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/deadline_timer.hpp>
 
 #include <gtest/gtest.h>
 
@@ -56,8 +57,8 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
     ASSERT_TRUE(this->Wait());
 
     boost::asio::io_service io_service;
-    boost::thread t([&]() { io_service.run(); });
-    boost::asio::deadline_timer timer(io_service);
+    std::thread t([&]() { io_service.run(); });
+    boost::asio::steady_timer timer(io_service);
     boost::asio::ip::tcp::socket socket(io_service);
 
     boost::asio::ip::tcp::resolver r(io_service);
@@ -81,7 +82,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
     boost::asio::write(socket, boost::asio::buffer(command), ec);
     ASSERT_EQ(ec.value(), 0) << "Fail to write to socket";
 
-    timer.expires_from_now(boost::posix_time::seconds(1), ec);
+    timer.expires_from_now(std::chrono::seconds(1), ec);
     timer.wait(ec);
 
     std::cout << std::endl;
@@ -98,6 +99,10 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
     ASSERT_EQ(ec.value(), (uint32_t)0) << "Fail to read socket";
 
     socket.close();
+
+    if (t.joinable()) {
+      t.join();
+    }
   }
 };
 

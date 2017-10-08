@@ -1,4 +1,5 @@
-#include <stdint.h>
+#include <cstdint>
+#include <thread>
 
 #include "core/async_engine.h"
 
@@ -19,12 +20,12 @@ void AsyncEngine::Start() {
 
   SSF_LOG(kLogDebug) << "async engine: starting";
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
-  for (uint8_t i = 0; i < boost::thread::hardware_concurrency(); ++i) {
-    threads_.create_thread([this]() {
+  for (uint8_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
+    threads_.emplace_back([this]() {
       boost::system::error_code ec;
       io_service_.run(ec);
       if (ec) {
-        SSF_LOG(kLogError) << "async engine: when running io_service: "
+        SSF_LOG(kLogError) << "async engine: run io_service failed: "
                            << ec.message();
       }
     });
@@ -38,7 +39,11 @@ void AsyncEngine::Stop() {
 
   SSF_LOG(kLogDebug) << "async engine: stopping";
   p_worker_.reset(nullptr);
-  threads_.join_all();
+  for (auto& thread : threads_) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
   io_service_.stop();
   io_service_.reset();
 }

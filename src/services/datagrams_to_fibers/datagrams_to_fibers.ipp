@@ -100,13 +100,14 @@ void DatagramsToFibers<Demux>::AsyncReceiveDatagram() {
 
   socket_.async_receive_from(
       boost::asio::buffer(working_buffer_), from_endpoint_,
-      boost::bind(&DatagramsToFibers::SocketDatagramReceiveHandler,
-                  this->SelfFromThis(), _1, _2));
+      std::bind(&DatagramsToFibers::OnSocketDatagramReceive, this,
+                this->shared_from_this(), std::placeholders::_1,
+                std::placeholders::_2));
 }
 
 template <typename Demux>
-void DatagramsToFibers<Demux>::SocketDatagramReceiveHandler(
-    const boost::system::error_code& ec, size_t length) {
+void DatagramsToFibers<Demux>::OnSocketDatagramReceive(
+    BaseServicePtr self, const boost::system::error_code& ec, size_t length) {
   if (ec) {
     SSF_LOG(kLogDebug)
         << "microservice[datagram_listener]: error receiving datagram: "

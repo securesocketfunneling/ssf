@@ -7,17 +7,16 @@
 
 #include <boost/asio.hpp>
 
-#include "common/boost/fiber/datagram_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
-
-#include "common/network/datagram_link.h"
-#include "common/network/datagram_link_operator.h"
+#include "common/boost/fiber/datagram_fiber.hpp"
 
 #include "services/base_service.h"
 
 #include "core/factories/service_factory.h"
 
 #include "services/admin/requests/create_service_request.h"
+#include "services/datagram/datagram_link.h"
+#include "services/datagram/datagram_link_operator.h"
 #include "services/fibers_to_datagrams/config.h"
 
 namespace ssf {
@@ -30,6 +29,7 @@ class FibersToDatagrams : public BaseService<Demux> {
   using LocalPortType = typename Demux::local_port_type;
   using RemotePortType = typename Demux::remote_port_type;
 
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using Parameters = typename ssf::BaseService<Demux>::Parameters;
   using FiberDatagram = typename ssf::BaseService<Demux>::fiber_datagram;
   using FiberEndpoint = typename ssf::BaseService<Demux>::datagram_endpoint;
@@ -58,7 +58,7 @@ class FibersToDatagrams : public BaseService<Demux> {
  public:
   static FibersToDatagramsPtr Create(boost::asio::io_service& io_service,
                                      Demux& fiber_demux,
-                                     Parameters parameters) {
+                                     const Parameters& parameters) {
     if (!parameters.count("local_port") || !parameters.count("remote_ip") ||
         !parameters.count("remote_port")) {
       return FibersToDatagramsPtr(nullptr);
@@ -67,8 +67,8 @@ class FibersToDatagrams : public BaseService<Demux> {
     uint32_t local_port;
     uint32_t remote_port;
     try {
-      local_port = std::stoul(parameters["local_port"]);
-      remote_port = std::stoul(parameters["remote_port"]);
+      local_port = std::stoul(parameters.at("local_port"));
+      remote_port = std::stoul(parameters.at("remote_port"));
     } catch (const std::exception&) {
       SSF_LOG(kLogError) << "microservice[datagram_forwarder]: cannot extract "
                             "port parameters";
@@ -82,7 +82,7 @@ class FibersToDatagrams : public BaseService<Demux> {
     }
 
     return FibersToDatagramsPtr(new FibersToDatagrams(
-        io_service, fiber_demux, local_port, parameters["remote_ip"],
+        io_service, fiber_demux, local_port, parameters.at("remote_ip"),
         static_cast<RemotePortType>(remote_port)));
   }
 
@@ -93,7 +93,11 @@ class FibersToDatagrams : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(kFactoryId, &FibersToDatagrams::Create);
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
+                      const Parameters& parameters) {
+      return FibersToDatagrams::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
@@ -118,13 +122,9 @@ class FibersToDatagrams : public BaseService<Demux> {
                     RemotePortType remote_port);
 
   void AsyncReceiveDatagram();
-  void FiberDatagramReceiveHandler(const boost::system::error_code& ec,
-                                   size_t length);
-
-  FibersToDatagramsPtr SelfFromThis() {
-    return std::static_pointer_cast<FibersToDatagrams>(
-        this->shared_from_this());
-  }
+  void OnFiberDatagramReceive(BaseServicePtr self,
+                              const boost::system::error_code& ec,
+                              size_t length);
 
  private:
   RemotePortType remote_port_;

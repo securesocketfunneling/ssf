@@ -7,6 +7,8 @@
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/classic.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/error/error.h"
 
 #include "services/user_services/option_parser.h"
@@ -109,6 +111,28 @@ Endpoint OptionParser::ParseListeningOption(const std::string& option,
   ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
   return listening_option;
+}
+
+uint16_t OptionParser::ParsePort(const std::string& port,
+                                 boost::system::error_code& ec) {
+  try {
+    std::size_t pos = 0;
+    uint32_t res = std::stoul(port, &pos);
+    if (pos != port.size()) {
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return 0;
+    }
+    if (res < 1 || res > 65535) {
+      SSF_LOG(kLogError) << "invalid port: " << port << " not in [1 - 65355]";
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return 0;
+    }
+    return res;
+  } catch (...) {
+    SSF_LOG(kLogError) << "invalid port: " << port;
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return 0;
+  }
 }
 
 }  // services

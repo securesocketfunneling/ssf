@@ -1,5 +1,3 @@
-set(config_tests_group_name "Unit Tests/Config")
-
 file(GLOB_RECURSE CONFIG_TEST_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/config_files/*.json")
 
@@ -12,17 +10,12 @@ file(COPY ${CONFIG_TEST_FILES} DESTINATION config_files)
 add_target(load_config_tests
   TYPE
     executable ${EXEC_FLAG} TEST
+  FILES
+    "load_config_tests.cpp"
   LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
+    lib_ssf_framework
+    gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    load_config_tests.cpp
-    ${COMMON_CONFIG_FILES}
-    ${COMMON_ERROR_FILES}
-    ${SERVICES_FILES}
 )
-project_group(${config_tests_group_name} load_config_tests)
+project_group("Unit Tests/Config" load_config_tests)

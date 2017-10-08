@@ -3,12 +3,12 @@
 
 #include <memory>
 #include <set>
+#include <thread>
 
+#include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/read.hpp>
-#include <boost/thread.hpp>
 
 #include <ssf/log/log.h>
 
@@ -46,7 +46,7 @@ class DummyServer {
   size_t one_buffer_size_;
   std::array<uint8_t, 10240> one_buffer_;
   std::set<std::shared_ptr<boost::asio::ip::tcp::socket>> sockets_;
-  boost::thread_group threads_;
+  std::vector<std::thread> threads_;
 };
 
 class DummyClient {
@@ -64,7 +64,7 @@ class DummyClient {
   boost::asio::io_service io_service_;
   std::unique_ptr<boost::asio::io_service::work> p_worker_;
   boost::asio::ip::tcp::socket socket_;
-  boost::thread t_;
+  std::thread t_;
   std::string target_addr_;
   std::string target_port_;
   size_t size_;

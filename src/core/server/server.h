@@ -3,9 +3,9 @@
 
 #include <set>
 #include <map>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 
@@ -67,7 +67,7 @@ class SSFServer
   DemuxPtrSet p_fiber_demuxes_;
   ServiceManagerPtrMap p_service_managers_;
 
-  boost::recursive_mutex storage_mutex_;
+  std::recursive_mutex storage_mutex_;
 };
 
 }  // ssf

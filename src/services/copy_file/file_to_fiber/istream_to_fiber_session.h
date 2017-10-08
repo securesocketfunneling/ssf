@@ -112,14 +112,14 @@ class IstreamToFiberSession : public ssf::BaseSession {
       // async send output file name size
       yield boost::asio::async_write(
           output_socket_stream_, output_request_.GetFilenameSizeConstBuffers(),
-          boost::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
-                      _1, _2));
+          std::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // async send output file name
       yield boost::asio::async_write(
           output_socket_stream_, output_request_.GetFilenameConstBuffers(),
-          boost::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
-                      _1, _2));
+          std::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       while (input.good()) {
         packet_.set_type(Packet::kData);
@@ -128,8 +128,8 @@ class IstreamToFiberSession : public ssf::BaseSession {
 
         yield boost::asio::async_write(
             output_socket_stream_, packet_.GetConstBuf(),
-            boost::bind(&IstreamToFiberSession::ForwardData,
-                        this->SelfFromThis(), _1, _2));
+            std::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
+                      std::placeholders::_1, std::placeholders::_2));
       }
 
       if (input.eof()) {
@@ -142,13 +142,13 @@ class IstreamToFiberSession : public ssf::BaseSession {
 
       yield boost::asio::async_write(
           output_socket_stream_, packet_.GetConstBuf(),
-          boost::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
-                      _1, _2));
+          std::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       yield boost::asio::async_read(
           output_socket_stream_, packet_.GetTypeMutBuf(),
-          boost::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
-                      _1, _2));
+          std::bind(&IstreamToFiberSession::ForwardData, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT

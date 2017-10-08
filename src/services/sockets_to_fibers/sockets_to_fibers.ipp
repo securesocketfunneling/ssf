@@ -108,10 +108,12 @@ void SocketsToFibers<Demux>::AsyncAcceptSocket() {
   std::shared_ptr<Tcp::socket> socket_connection =
       std::make_shared<Tcp::socket>(this->get_io_service());
 
-  socket_acceptor_.async_accept(
-      *socket_connection,
-      boost::bind(&SocketsToFibers::SocketAcceptHandler, this->SelfFromThis(),
-                  socket_connection, _1));
+  auto self = this->shared_from_this();
+  auto on_accept = [this, self,
+                    socket_connection](const boost::system::error_code& ec) {
+    SocketAcceptHandler(socket_connection, ec);
+  };
+  socket_acceptor_.async_accept(*socket_connection, on_accept);
 }
 
 template <typename Demux>
@@ -133,10 +135,13 @@ void SocketsToFibers<Demux>::SocketAcceptHandler(
 
   FiberPtr fiber_connection = std::make_shared<Fiber>(this->get_io_service());
   FiberEndpoint ep(this->get_demux(), remote_port_);
-  fiber_connection->async_connect(
-      ep,
-      boost::bind(&SocketsToFibers::FiberConnectHandler, this->SelfFromThis(),
-                  fiber_connection, socket_connection, _1));
+
+  auto self = this->shared_from_this();
+  auto on_fiber_connect = [this, self, fiber_connection, socket_connection](
+      const boost::system::error_code& ec) {
+    FiberConnectHandler(fiber_connection, socket_connection, ec);
+  };
+  fiber_connection->async_connect(ep, on_fiber_connect);
 }
 
 template <typename Demux>

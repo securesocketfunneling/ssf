@@ -174,8 +174,8 @@ void Session<Demux>::StopHandler(const boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::StartSignalWait() {
-  signal_.async_wait(
-      boost::bind(&Session::SigchldHandler, this->SelfFromThis(), _1, _2));
+  signal_.async_wait(std::bind(&Session::SigchldHandler, this->SelfFromThis(),
+                               std::placeholders::_1, std::placeholders::_2));
 }
 
 template <typename Demux>
@@ -290,13 +290,15 @@ void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   }
 
   // pipe process stdout/stderr to socket output
-  AsyncEstablishHDLink(
-      ReadFrom(sd_), WriteTo(client_), boost::asio::buffer(downstream_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(sd_), WriteTo(client_),
+                       boost::asio::buffer(downstream_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
   // pipe socket input to process stdin
-  AsyncEstablishHDLink(
-      ReadFrom(client_), WriteTo(sd_), boost::asio::buffer(upstream_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(client_), WriteTo(sd_),
+                       boost::asio::buffer(upstream_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
 }
 
 }  // posix

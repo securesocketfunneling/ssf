@@ -5,6 +5,8 @@ project(${project_name})
 set(SSF_VERSION_MAJOR 2)
 set(SSF_VERSION_MINOR 2)
 set(SSF_VERSION_FIX 0)
+set(SSF_VERSION_CIRCUIT 2)
+set(SSF_VERSION_TRANSPORT 2)
 set(SSF_VERSION_BOUNCE 2)
 set(SSF_VERSION_TRANSPORT 1)
 
@@ -16,7 +18,7 @@ message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 # --- Options
 option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
-option(BUILD_FRAMEWORK_UNIT_TESTS "Build SSF framework unit tests" OFF)
+option(BUILD_NETWORK_UNIT_TESTS "Build SSF network layers unit tests" OFF)
 option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
 option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
 
@@ -43,22 +45,19 @@ set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED
              COMPONENTS system
-                        serialization
                         program_options
                         date_time
                         filesystem
                         regex
-                        thread
                         chrono
-                        context
-                        coroutine)
+                        thread)
 
 # --- OpenSSL components
 set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 find_package(OpenSSL REQUIRED)
 if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
   include(CheckFunctionExists)
-  CHECK_FUNCTION_EXISTS("snprintf" HAVE_SNPRINTF)
+  CHECK_FUNCTION_EXISTS("_snprintf" HAVE_SNPRINTF)
   if(NOT HAVE_SNPRINTF)
     list(APPEND OPENSSL_LIBRARIES legacy_stdio_definitions.lib)
   endif(NOT HAVE_SNPRINTF)
@@ -70,6 +69,7 @@ endif()
 
 # --- http-parser components
 add_subdirectory(third_party/http-parser)
+add_subdirectory(third_party/msgpack)
 
 # --- Test certs
 add_subdirectory(certs)
@@ -78,6 +78,7 @@ add_subdirectory(certs)
 if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
   enable_testing()
   add_subdirectory(third_party/googletest/googletest)
+  project_group("Unit Tests" gtest gtest_main)
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
 # -- Images

@@ -29,7 +29,8 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
   fiber_acceptor_.bind(ep, ec);
   if (ec) {
     SSF_LOG(kLogError) << "microservice[stream_forwarder]: cannot bind fiber "
-                          "acceptor to fiber port " << local_port_;
+                          "acceptor to fiber port "
+                       << local_port_;
     return;
   }
 
@@ -47,16 +48,17 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
   Tcp::resolver::iterator iterator(resolver.resolve(query, ec));
   if (ec) {
     SSF_LOG(kLogError) << "microservice[stream_forwarder]: cannot resolve "
-                          "remote TCP endpoint <" << ip_ << ":" << remote_port_
-                       << ">";
+                          "remote TCP endpoint <"
+                       << ip_ << ":" << remote_port_ << ">";
     return;
   }
 
   remote_endpoint_ = *iterator;
 
   SSF_LOG(kLogInfo) << "microservice[stream_forwarder]: start "
-                       "forwarding stream fiber from fiber port " << local_port_
-                    << " to TCP <" << ip_ << ":" << remote_port_ << ">";
+                       "forwarding stream fiber from fiber port "
+                    << local_port_ << " to TCP <" << ip_ << ":" << remote_port_
+                    << ">";
 
   this->AsyncAcceptFibers();
 }
@@ -86,12 +88,14 @@ void FibersToSockets<Demux>::AsyncAcceptFibers() {
   SSF_LOG(kLogTrace)
       << "microservice[stream_forwarder]: accept new fiber connections";
 
+  auto self = this->shared_from_this();
   FiberPtr new_connection = std::make_shared<Fiber>(
       this->get_io_service(), FiberEndpoint(this->get_demux(), 0));
-
-  fiber_acceptor_.async_accept(
-      *new_connection, boost::bind(&FibersToSockets::FiberAcceptHandler,
-                                   this->SelfFromThis(), new_connection, _1));
+  auto on_fiber_accept = [this, self,
+                          new_connection](const boost::system::error_code& ec) {
+    FiberAcceptHandler(new_connection, ec);
+  };
+  fiber_acceptor_.async_accept(*new_connection, std::move(on_fiber_accept));
 }
 
 template <typename Demux>
@@ -112,8 +116,8 @@ void FibersToSockets<Demux>::FiberAcceptHandler(
       std::make_shared<Tcp::socket>(this->get_io_service());
   socket->async_connect(
       remote_endpoint_,
-      boost::bind(&FibersToSockets::TcpSocketConnectHandler,
-                  this->SelfFromThis(), socket, fiber_connection, _1));
+      std::bind(&FibersToSockets::TcpSocketConnectHandler, this->SelfFromThis(),
+                socket, fiber_connection, std::placeholders::_1));
 }
 
 template <typename Demux>

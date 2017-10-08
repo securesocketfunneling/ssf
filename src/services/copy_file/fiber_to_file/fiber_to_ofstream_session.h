@@ -1,6 +1,7 @@
 #ifndef SRC_SERVICES_COPY_FILE_FIBER_TO_FILE_FIBER_TO_OSTREAM_SESSION_H_
 #define SRC_SERVICES_COPY_FILE_FIBER_TO_FILE_FIBER_TO_OSTREAM_SESSION_H_
 
+#include <functional>
 #include <memory>
 
 #include <boost/asio/coroutine.hpp>
@@ -11,8 +12,8 @@
 
 #include <ssf/log/log.h>
 #include <ssf/network/base_session.h>  // NOLINT
-#include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
+#include <ssf/network/manager.h>
 
 #include "services/copy_file/filename_buffer.h"
 #include "services/copy_file/packet/packet.h"
@@ -84,14 +85,14 @@ class FiberToOstreamSession : public ssf::BaseSession {
       // read filename_size from request
       yield boost::asio::async_read(
           input_socket_stream_, request_.GetFilenameSizeMutBuffers(),
-          boost::bind(&FiberToOstreamSession::ForwardData, this->SelfFromThis(),
-                      _1, _2));
+          std::bind(&FiberToOstreamSession::ForwardData, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       // read filename from request
       yield boost::asio::async_read(
           input_socket_stream_, request_.GetFilenameMutBuffers(),
-          boost::bind(&FiberToOstreamSession::ForwardData, this->SelfFromThis(),
-                      _1, _2));
+          std::bind(&FiberToOstreamSession::ForwardData, this->SelfFromThis(),
+                    std::placeholders::_1, std::placeholders::_2));
 
       SSF_LOG(kLogInfo)
           << "session[fiber to file]: start receiving data and writing in file "
@@ -112,27 +113,30 @@ class FiberToOstreamSession : public ssf::BaseSession {
         // Read type packet
         yield boost::asio::async_read(
             input_socket_stream_, packet_.GetTypeMutBuf(),
-            boost::bind(&FiberToOstreamSession::ForwardData,
-                        this->SelfFromThis(), _1, _2));
+            std::bind(&FiberToOstreamSession::ForwardData, this->SelfFromThis(),
+                      std::placeholders::_1, std::placeholders::_2));
 
         if (packet_.IsDataPacket()) {
           // Read size packet
           yield boost::asio::async_read(
               input_socket_stream_, packet_.GetSizeMutBuf(),
-              boost::bind(&FiberToOstreamSession::ForwardData,
-                          this->SelfFromThis(), _1, _2));
+              std::bind(&FiberToOstreamSession::ForwardData,
+                        this->SelfFromThis(), std::placeholders::_1,
+                        std::placeholders::_2));
           // Read binary data
           yield boost::asio::async_read(
               input_socket_stream_, packet_.GetPayloadMutBuf(),
-              boost::bind(&FiberToOstreamSession::ForwardData,
-                          this->SelfFromThis(), _1, _2));
+              std::bind(&FiberToOstreamSession::ForwardData,
+                        this->SelfFromThis(), std::placeholders::_1,
+                        std::placeholders::_2));
           // Write in input file
           output_stream_.write(packet_.buffer().data(), packet_.size());
         } else {
           yield boost::asio::async_read(
               input_socket_stream_, packet_.GetSignalMutBuf(),
-              boost::bind(&FiberToOstreamSession::ForwardData,
-                          this->SelfFromThis(), _1, _2));
+              std::bind(&FiberToOstreamSession::ForwardData,
+                        this->SelfFromThis(), std::placeholders::_1,
+                        std::placeholders::_2));
 
           // Close file handler
           output_stream_.close();

@@ -3,23 +3,22 @@
 
 #include <cstdint>
 
-#include <map>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <string>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/map.hpp>
 #include <boost/system/error_code.hpp>
+
+#include <msgpack.hpp>
 
 #include <ssf/log/log.h>
 
-#include "core/factories/command_factory.h"
 #include "core/factories/service_factory.h"
 
 #include "core/factory_manager/service_factory_manager.h"
 
+#include "services/admin/command_factory.h"
 #include "services/admin/requests/service_status.h"
 
 namespace ssf {
@@ -41,22 +40,34 @@ class CreateServiceRequest {
 
   enum { command_id = 1, reply_id = 2 };
 
-  static void RegisterToCommandFactory() {
-    CommandFactory<Demux>::RegisterOnReceiveCommand(
+  static bool RegisterOnReceiveCommand(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterOnReceiveCommand(
         command_id, &CreateServiceRequest::OnReceive);
-    CommandFactory<Demux>::RegisterOnReplyCommand(
-        command_id, &CreateServiceRequest::OnReply);
-    CommandFactory<Demux>::RegisterReplyCommandIndex(command_id, reply_id);
   }
 
-  static std::string OnReceive(boost::archive::text_iarchive& ar,
+  static bool RegisterOnReplyCommand(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterOnReplyCommand(command_id,
+                                               &CreateServiceRequest::OnReply);
+  }
+
+  static bool RegisterReplyCommandIndex(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterReplyCommandIndex(command_id, reply_id);
+  }
+
+  static std::string OnReceive(const std::string& serialized_request,
                                Demux* p_demux, boost::system::error_code& ec) {
     CreateServiceRequest<Demux> request;
 
     try {
-      ar >> request;
+      auto obj_handle =
+          msgpack::unpack(serialized_request.data(), serialized_request.size());
+      auto obj = obj_handle.get();
+      obj.convert(request);
     } catch (const std::exception&) {
-      return std::string();
+      SSF_LOG(kLogWarning) << "service[admin]: create service[on "
+                              "receive]: cannot extract request";
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
     }
 
     auto p_service_factory =
@@ -65,7 +76,7 @@ class CreateServiceRequest {
     auto id = p_service_factory->CreateRunNewService(request.service_id(),
                                                      request.parameters(), ec);
 
-    SSF_LOG(kLogDebug) << "service[admin]: create service request: "
+    SSF_LOG(kLogDebug) << "service[admin]: create service: "
                        << "service unique id " << id << " - error_code "
                        << ec.value();
 
@@ -78,18 +89,26 @@ class CreateServiceRequest {
     return result;
   }
 
-  static std::string OnReply(boost::archive::text_iarchive& ar, Demux* p_demux,
+  static std::string OnReply(const std::string& serialized_request,
+                             Demux* p_demux,
                              const boost::system::error_code& ec,
                              std::string serialized_result) {
+    if (ec) {
+      SSF_LOG(kLogWarning) << "service[admin]: create service[on reply]: ec";
+      return {};
+    }
+
     CreateServiceRequest<Demux> request;
 
     try {
-      ar >> request;
+      auto obj_handle =
+          msgpack::unpack(serialized_request.data(), serialized_request.size());
+      auto obj = obj_handle.get();
+      obj.convert(request);
     } catch (const std::exception&) {
-      // TODO: ec?
-      SSF_LOG(kLogWarning)
-          << "service[admin]: create service request: extract request failed";
-      return std::string();
+      SSF_LOG(kLogWarning) << "service[admin]: create service[on "
+                              "reply]: cannot extract request";
+      return {};
     }
 
     uint32_t id;
@@ -98,8 +117,8 @@ class CreateServiceRequest {
     } catch (const std::exception&) {
       // TODO: ec?
       SSF_LOG(kLogWarning)
-          << "service[admin]: stop service request: extract reply id failed";
-      return std::string();
+          << "service[admin]: create service request: extract reply id failed";
+      return {};
     }
 
     ServiceStatus<Demux> reply(id, request.service_id(), ec.value(),
@@ -110,10 +129,7 @@ class CreateServiceRequest {
 
   std::string OnSending() const {
     std::ostringstream ostrs;
-    boost::archive::text_oarchive ar(ostrs);
-
-    ar << *this;
-
+    msgpack::pack(ostrs, *this);
     return ostrs.str();
   }
 
@@ -125,14 +141,9 @@ class CreateServiceRequest {
     parameters_[key] = value;
   }
 
- private:
-  friend class boost::serialization::access;
-
-  template <typename Archive>
-  void serialize(Archive& ar, const unsigned int version) {
-    ar& service_id_;
-    ar& BOOST_SERIALIZATION_NVP(parameters_);
-  }
+ public:
+  // add msgpack function definitions
+  MSGPACK_DEFINE(service_id_, parameters_)
 
  private:
   uint32_t service_id_;
