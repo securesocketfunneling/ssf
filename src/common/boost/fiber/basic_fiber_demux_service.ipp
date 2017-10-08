@@ -211,14 +211,14 @@ template <typename S>
 void basic_fiber_demux_service<S>::async_push_packets(
     implementation_type impl) {
   std::unique_lock<std::recursive_mutex> lock(impl->send_mutex);
-  const auto& toSendPriority = impl->toSendPriority.front();
+  const auto& to_send_priority = impl->toSendPriority.front();
 
-  std::function<void(const boost::system::error_code&, size_t)> handler = [=](
+  auto handler = [this, impl, to_send_priority](
       const boost::system::error_code& ec, size_t transferred_bytes) {
     std::unique_lock<std::recursive_mutex> lock(impl->send_mutex);
     impl->toSendPriority.pop();
     impl->socket.get_io_service().post(
-        std::bind(toSendPriority.handler, ec, transferred_bytes));
+        std::bind(to_send_priority.handler, ec, transferred_bytes));
     if (!impl->toSendPriority.empty()) {
       impl->socket.get_io_service().post(std::bind(
           &basic_fiber_demux_service<S>::async_push_packets, this, impl));
@@ -227,7 +227,7 @@ void basic_fiber_demux_service<S>::async_push_packets(
 
   std::unique_lock<std::recursive_mutex> lock2(impl->closing_mutex);
   if (!impl->closing) {
-    boost::asio::async_write(impl->socket, toSendPriority.buffer, handler);
+    boost::asio::async_write(impl->socket, to_send_priority.buffer, handler);
   } else {
     impl->socket.get_io_service().post(std::bind(
         handler, boost::system::error_code(::error::connection_aborted,
@@ -305,8 +305,7 @@ void basic_fiber_demux_service<S>::handle_push(implementation_type impl,
     auto on_new_packet = impl->bound[header.id()]->access_receive_handler();
     on_new_packet(p_fiber_buff->take_data(), p_fiber_buff->data_size());
   } else {
-    async_send_rst(impl, header.id().returning_id(),
-                   std::function<void()>([]() {}));
+    async_send_rst(impl, header.id().returning_id(), []() {});
   }
 }
 
@@ -330,8 +329,7 @@ void basic_fiber_demux_service<S>::handle_ack(implementation_type impl,
                                        ::error::get_ssf_category()));
     }
   } else {
-    async_send_rst(impl, header.id().returning_id(),
-                   std::function<void()>([]() {}));
+    async_send_rst(impl, header.id().returning_id(), []() {});
   }
 }
 
@@ -348,8 +346,7 @@ void basic_fiber_demux_service<S>::handle_syn(implementation_type impl,
                             ->access_accept_handler();
     io_service_.post(std::bind(on_new_fiber, header.id().local_port()));
   } else {
-    async_send_rst(impl, header.id().returning_id(),
-                   std::function<void()>([]() {}));
+    async_send_rst(impl, header.id().returning_id(), []() {});
   }
 }
 

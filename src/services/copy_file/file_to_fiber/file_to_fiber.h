@@ -60,7 +60,8 @@ class FileToFiber : public BaseService<Demux> {
  public:
   // Factory method to create the service
   static FileToFiberPtr Create(boost::asio::io_service& io_service,
-                               demux& fiber_demux, Parameters parameters) {
+                               demux& fiber_demux,
+                               const Parameters& parameters) {
     if (parameters.count("accept") != 0) {
       return FileToFiberPtr(new FileToFiber(io_service, fiber_demux));
     }
@@ -69,8 +70,8 @@ class FileToFiber : public BaseService<Demux> {
         parameters.count("input_pattern") != 0 &&
         parameters.count("output_pattern") != 0) {
       return FileToFiberPtr(new FileToFiber(
-          io_service, fiber_demux, parameters["from_stdin"] == "true",
-          parameters["input_pattern"], parameters["output_pattern"]));
+          io_service, fiber_demux, parameters.at("from_stdin") == "true",
+          parameters.at("input_pattern"), parameters.at("output_pattern")));
     }
 
     return nullptr;
@@ -83,7 +84,11 @@ class FileToFiber : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(kFactoryId, &FileToFiber::Create);
+    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+                      const Parameters& parameters) {
+      return FileToFiber::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
@@ -166,22 +171,23 @@ class FileToFiber : public BaseService<Demux> {
   // Start accepting new fiber (remote files to local)
   // Input and output patterns will be given through the fiber
   void StartAccept() {
-    if (fiber_acceptor_.is_open()) {
-      auto p_fiber =
-          std::make_shared<fiber>(this->get_demux().get_io_service());
-      fiber_acceptor_.async_accept(
-          *p_fiber,
-          std::bind(&FileToFiber::AcceptFiberHandler, this->SelfFromThis(),
-                    std::placeholders::_1, p_fiber));
+    if (!fiber_acceptor_.is_open()) {
+      return;
     }
+
+    auto self = this->shared_from_this();
+    auto p_fiber = std::make_shared<fiber>(this->get_demux().get_io_service());
+    auto on_fiber_accept = [this, self, p_fiber](
+        const boost::system::error_code& ec) { OnFiberAccept(p_fiber, ec); };
+    fiber_acceptor_.async_accept(*p_fiber, std::move(on_fiber_accept));
   }
 
-  void AcceptFiberHandler(const boost::system::error_code& ec,
-                          FiberPtr p_fiber) {
-    if (!ec) {
-      StartAccept();
-      ConfigureSessions(p_fiber, boost::system::error_code(), 0);
+  void OnFiberAccept(FiberPtr p_fiber, const boost::system::error_code& ec) {
+    if (ec) {
+      return;
     }
+    StartAccept();
+    ConfigureSessions(p_fiber, boost::system::error_code(), 0);
   }
 
 #include <boost/asio/yield.hpp>
@@ -194,30 +200,39 @@ class FileToFiber : public BaseService<Demux> {
       p_fiber->close(close_ec);
       return;
     }
+    auto self = this->shared_from_this();
     reenter(coroutine_) {
       // read input pattern size from request
       yield boost::asio::async_read(
           *p_fiber, input_request_.GetFilenameSizeMutBuffers(),
-          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                    p_fiber, std::placeholders::_1, std::placeholders::_2));
+          [this, self, p_fiber](const boost::system::error_code& ec,
+                                std::size_t length) {
+            ConfigureSessions(p_fiber, ec, length);
+          });
 
       // read input pattern from request
       yield boost::asio::async_read(
           *p_fiber, input_request_.GetFilenameMutBuffers(),
-          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                    p_fiber, std::placeholders::_1, std::placeholders::_2));
+          [this, self, p_fiber](const boost::system::error_code& ec,
+                                std::size_t length) {
+            ConfigureSessions(p_fiber, ec, length);
+          });
 
       // read output pattern size from request
       yield boost::asio::async_read(
           *p_fiber, output_request_.GetFilenameSizeMutBuffers(),
-          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                    p_fiber, std::placeholders::_1, std::placeholders::_2));
+          [this, self, p_fiber](const boost::system::error_code& ec,
+                                std::size_t length) {
+            ConfigureSessions(p_fiber, ec, length);
+          });
 
       // read output pattern from request
       yield boost::asio::async_read(
           *p_fiber, output_request_.GetFilenameMutBuffers(),
-          std::bind(&FileToFiber::ConfigureSessions, this->SelfFromThis(),
-                    p_fiber, std::placeholders::_1, std::placeholders::_2));
+          [this, self, p_fiber](const boost::system::error_code& ec,
+                                std::size_t length) {
+            ConfigureSessions(p_fiber, ec, length);
+          });
 
       ProcessInputOutputPattern(input_request_.GetFilename(),
                                 output_request_.GetFilename());
@@ -232,9 +247,12 @@ class FileToFiber : public BaseService<Demux> {
     } else {
       auto p_output_files_list = std::make_shared<FilesList>();
       p_output_files_list->push_back(output_pattern_);
+
+      auto self = this->shared_from_this();
       auto finish_callback =
-          std::bind(&FileToFiber::FinishSentSession, this->SelfFromThis(),
-                    std::placeholders::_1, p_output_files_list);
+          [this, self, p_output_files_list](const std::string& output_file) {
+            FinishSentSession(output_file, p_output_files_list);
+          };
       AsyncConnectFileFiberSession(true, "", output_pattern_, finish_callback);
     }
   }
@@ -253,17 +271,20 @@ class FileToFiber : public BaseService<Demux> {
       p_output_files_list->push_back(input_output_file_pair.second);
     }
 
+    auto self = this->shared_from_this();
     // If no file, callback finish handler
     if (input_output_files.empty()) {
-      this->get_io_service().post(std::bind(&FileToFiber::FinishSentSession,
-                                              this->SelfFromThis(), "",
-                                              p_output_files_list));
+      auto on_session_end = [this, self, p_output_files_list]() {
+        FinishSentSession("", p_output_files_list);
+      };
+      this->get_io_service().post(on_session_end);
       return;
     };
 
     auto finish_callback =
-        std::bind(&FileToFiber::FinishSentSession, this->SelfFromThis(),
-                  std::placeholders::_1, p_output_files_list);
+        [this, self, p_output_files_list](const std::string& output_file) {
+          FinishSentSession(output_file, p_output_files_list);
+        };
 
     // Start one session per input file
     for (auto& input_output_file_pair : input_output_files) {
@@ -290,11 +311,14 @@ class FileToFiber : public BaseService<Demux> {
     endpoint ep(this->get_demux(),
                 ssf::services::copy_file::fiber_to_file::FiberToFile<
                     Demux>::kServicePort);
-
-    p_fiber->async_connect(
-        ep, std::bind(&FileToFiber::StartDataForwarderSessionHandler,
-                      this->SelfFromThis(), std::placeholders::_1, p_fiber,
-                      from_stdin, input_file, output_file, stop_handler));
+    auto self = this->shared_from_this();
+    auto on_fiber_connect =
+        [this, self, p_fiber, from_stdin, input_file, output_file,
+         stop_handler](const boost::system::error_code& ec) {
+          StartDataForwarderSessionHandler(ec, p_fiber, from_stdin, input_file,
+                                           output_file, stop_handler);
+        };
+    p_fiber->async_connect(ep, std::move(on_fiber_connect));
   }
 
   // Start the data forward session
@@ -357,13 +381,6 @@ class FileToFiber : public BaseService<Demux> {
       (*p_input_output_files)[input_file] =
           output_pattern + Filesystem::GetFilename(input_file);
     }
-  }
-
-  template <typename Handler, typename This>
-  auto Then(Handler handler, This me)
-      -> decltype(std::bind(handler, me->SelfFromThis(),
-                            std::placeholders::_1)) {
-    return std::bind(handler, me->SelfFromThis(), std::placeholders::_1);
   }
 
   std::shared_ptr<FileToFiber> SelfFromThis() {

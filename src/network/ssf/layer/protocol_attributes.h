@@ -65,11 +65,13 @@ void AsyncReceiveDatagram(
       std::size_t total_length, const boost::system::error_code& ec,
       std::size_t length) {
     if (!ec) {
-      boost::asio::async_read(
-          socket, p_datagram->footer().GetMutableBuffers(),
-          std::move(std::bind<void>(
-              std::move(footer_received_lambda), total_length + length,
-              std::placeholders::_1, std::placeholders::_2)));
+      std::size_t total_read = total_length + length;
+      auto on_read = [footer_received_lambda, total_read](
+          const boost::system::error_code& ec, std::size_t length) {
+        footer_received_lambda(total_read, ec, length);
+      };
+      boost::asio::async_read(socket, p_datagram->footer().GetMutableBuffers(),
+                              on_read);
     } else {
       footer_received_lambda(total_length + length, ec, 0);
     }
@@ -78,11 +80,13 @@ void AsyncReceiveDatagram(
   auto header_received_lambda = [&socket, p_datagram, payload_received_lambda](
       const boost::system::error_code& ec, std::size_t length) {
     if (!ec) {
+      auto on_payload_read = [payload_received_lambda, payload_length](
+          const boost::system::error_code& ec, std::size_t length) {
+        payload_received_lambda(payload_length, ec, length);
+      };
       p_datagram->payload().SetSize(p_datagram->header().payload_length());
-      boost::asio::async_read(
-          socket, p_datagram->payload().GetMutableBuffers(),
-          std::move(std::bind(std::move(payload_received_lambda), length,
-                              std::placeholders::_1, std::placeholders::_2)));
+      boost::asio::async_read(socket, p_datagram->payload().GetMutableBuffers(),
+                              on_payload_read);
     } else {
       payload_received_lambda(length, ec, 0);
     }

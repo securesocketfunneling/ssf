@@ -27,7 +27,7 @@ class ServiceFactory
   using Parameters = std::map<std::string, std::string>;
   using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
   using ServiceCreator = std::function<BaseServicePtr(boost::asio::io_service&,
-                                                      Demux&, Parameters)>;
+                                                      Demux&, const Parameters&)>;
   using ServiceCreatorMap = std::map<uint32_t, ServiceCreator>;
   using ServiceManagerPtr = std::shared_ptr<ServiceManager<Demux>>;
 

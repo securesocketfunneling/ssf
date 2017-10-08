@@ -2,6 +2,7 @@
 #define SSF_NETWORK_SESSION_FORWARDER_H
 
 #include <array>
+#include <functional>
 #include <memory>
 
 #include <boost/system/error_code.hpp>
@@ -11,8 +12,8 @@
 #include <ssf/log/log.h>
 
 #include "ssf/network/base_session.h"  // NOLINT
-#include "ssf/network/socket_link.h"
 #include "ssf/network/manager.h"
+#include "ssf/network/socket_link.h"
 
 namespace ssf {
 
@@ -71,12 +72,6 @@ class SessionForwarder : public ssf::BaseSession {
   * @param handler A member function with one argument.
   */
 
-  /// It is needed to cast the shared pointer from shared_from_this because it
-  /// is the base class which inherit from enable_shared_from_this
-  std::shared_ptr<SessionForwarder> SelfFromThis() {
-    return std::static_pointer_cast<SessionForwarder>(this->shared_from_this());
-  }
-
  private:
   /// The constructor is made private to ensure users only use create()
   SessionForwarder(SessionManager* manager, InwardStream inbound,
@@ -91,20 +86,20 @@ class SessionForwarder : public ssf::BaseSession {
     AsyncEstablishHDLink(
         ReadFrom(inbound_), WriteTo(outbound_),
         boost::asio::buffer(inwardBuffer_),
-        std::bind(&SessionForwarder::StopHandler, this->SelfFromThis(),
-                  std::placeholders::_1));
+        std::bind(&SessionForwarder::OnStop, this,
+                  this->shared_from_this(), std::placeholders::_1));
 
     AsyncEstablishHDLink(
         ReadFrom(outbound_), WriteTo(inbound_),
         boost::asio::buffer(forwardBuffer_),
-        std::bind(&SessionForwarder::StopHandler, this->SelfFromThis(),
-                  std::placeholders::_1));
+        std::bind(&SessionForwarder::OnStop, this,
+                  this->shared_from_this(), std::placeholders::_1));
   }
 
   /// Stop forwarding
-  void StopHandler(const boost::system::error_code& ec) {
+  void OnStop(BaseSessionPtr self, const boost::system::error_code& ec) {
     boost::system::error_code e;
-    manager_->stop(this->SelfFromThis(), e);
+    manager_->stop(this->shared_from_this(), e);
   }
 
  private:

@@ -32,8 +32,11 @@ class UserServiceFactory {
 
   template <class UserService>
   bool Register() {
-    return RegisterUserService(UserService::GetParseName(),
-                               &UserService::CreateUserService);
+    auto creator = [](const UserServiceParameterBag& parameters,
+                      boost::system::error_code& ec) {
+      return UserService::CreateUserService(parameters, ec);
+    };
+    return RegisterUserService(UserService::GetParseName(), creator);
   }
 
   bool RegisterUserService(const std::string& index,

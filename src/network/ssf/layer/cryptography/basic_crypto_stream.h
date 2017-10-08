@@ -680,12 +680,15 @@ class basic_CryptoStreamAcceptor_service
     peer_impl.p_remote_endpoint =
         std::make_shared<endpoint_type>(p_local_endpoint->endpoint_context());
 
+    auto on_accept =
+        [this, p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
+         p_socket](const boost::system::error_code& ec) {
+          accepted(p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
+                   p_socket, ec);
+    };
     p_next_layer_acceptor->async_accept(
         peer_impl.p_next_layer_socket->next_layer(),
-        peer_impl.p_remote_endpoint->next_layer_endpoint(),
-        std::bind(&basic_CryptoStreamAcceptor_service::accepted, this,
-                  p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
-                  p_socket, std::placeholders::_1));
+        peer_impl.p_remote_endpoint->next_layer_endpoint(), on_accept);
   }
 
   void accepted(p_next_acceptor_type p_next_layer_acceptor,
@@ -712,10 +715,12 @@ class basic_CryptoStreamAcceptor_service
         peer_impl.p_next_layer_socket->next_layer().local_endpoint();
     peer_impl.p_local_endpoint->set();
 
+    auto on_handshake = [this, p_acceptor_context,
+                         p_socket](const boost::system::error_code& ec) {
+      crypto_handshaked(p_acceptor_context, p_socket, ec);
+    };
     peer_impl.p_next_layer_socket->async_handshake(
-        CryptoProtocol::handshake_type::server,
-        std::bind(&basic_CryptoStreamAcceptor_service::crypto_handshaked, this,
-                  p_acceptor_context, p_socket, std::placeholders::_1));
+        CryptoProtocol::handshake_type::server, on_handshake);
   }
 
   void crypto_handshaked(p_acceptor_context_type p_acceptor_context,
@@ -783,9 +788,10 @@ class basic_CryptoStreamAcceptor_service
       auto do_complete = [p_accept_op, ec]() { p_accept_op->complete(ec); };
       this->get_io_service().post(do_complete);
 
-      this->get_io_service().post(std::bind(
-          &basic_CryptoStreamAcceptor_service::connection_queue_handler, this,
-          p_acceptor_context, ec));
+      auto on_connection_queue = [this, p_acceptor_context, ec]() {
+        connection_queue_handler(p_acceptor_context, ec);
+      };
+      this->get_io_service().post(on_connection_queue);
     }
   }
 

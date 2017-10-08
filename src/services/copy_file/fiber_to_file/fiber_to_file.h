@@ -38,7 +38,8 @@ class FiberToFile : public BaseService<Demux> {
  public:
   // Factory method to create the service
   static FiberToFilePtr Create(boost::asio::io_service& io_service,
-                               demux& fiber_demux, Parameters parameters) {
+                               demux& fiber_demux,
+                               const Parameters& parameters) {
     return FiberToFilePtr(new FiberToFile(io_service, fiber_demux));
   }
 
@@ -48,8 +49,11 @@ class FiberToFile : public BaseService<Demux> {
       // service factory is not enabled
       return;
     }
-
-    p_factory->RegisterServiceCreator(kFactoryId, &FiberToFile::Create);
+    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+                      const Parameters& parameters) {
+      return FiberToFile::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest() {
@@ -90,11 +94,15 @@ class FiberToFile : public BaseService<Demux> {
         fiber_(io_service) {}
 
   void StartAccept() {
-    if (fiber_acceptor_.is_open()) {
-      fiber_acceptor_.async_accept(
-          fiber_, Then(&FiberToFile::StartDataForwarderSessionHandler,
-                       this->SelfFromThis()));
+    if (!fiber_acceptor_.is_open()) {
+      return;
     }
+
+    auto self = this->shared_from_this();
+    auto on_fiber_accept = [this, self](const boost::system::error_code& ec) {
+      StartDataForwarderSessionHandler(ec);
+    };
+    fiber_acceptor_.async_accept(fiber_, std::move(on_fiber_accept));
   }
 
   // Create a session to transmit files for the new connection
@@ -110,13 +118,6 @@ class FiberToFile : public BaseService<Demux> {
     boost::system::error_code start_ec;
     manager_.start(p_session, start_ec);
     StartAccept();
-  }
-
-  template <typename Handler, typename This>
-  auto Then(Handler handler, This me)
-      -> decltype(std::bind(handler, me->SelfFromThis(),
-                            std::placeholders::_1)) {
-    return std::bind(handler, me->SelfFromThis(), std::placeholders::_1);
   }
 
   std::shared_ptr<FiberToFile> SelfFromThis() {

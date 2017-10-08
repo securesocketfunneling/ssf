@@ -5,12 +5,12 @@
 
 #include <boost/asio.hpp>
 
-#include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/boost/fiber/stream_fiber.hpp"
 
-#include <ssf/network/socket_link.h>
-#include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
+#include <ssf/network/manager.h>
+#include <ssf/network/socket_link.h>
 
 #include "services/base_service.h"
 
@@ -51,7 +51,8 @@ class FibersToSockets : public BaseService<Demux> {
 
  public:
   static FibersToSocketsPtr Create(boost::asio::io_service& io_service,
-                                   Demux& fiber_demux, Parameters parameters) {
+                                   Demux& fiber_demux,
+                                   const Parameters& parameters) {
     if (!parameters.count("local_port") || !parameters.count("remote_ip") ||
         !parameters.count("remote_port")) {
       return FibersToSocketsPtr(nullptr);
@@ -60,8 +61,8 @@ class FibersToSockets : public BaseService<Demux> {
     uint32_t local_port;
     uint32_t remote_port;
     try {
-      local_port = std::stoul(parameters["local_port"]);
-      remote_port = std::stoul(parameters["remote_port"]);
+      local_port = std::stoul(parameters.at("local_port"));
+      remote_port = std::stoul(parameters.at("remote_port"));
     } catch (const std::exception&) {
       SSF_LOG(kLogError) << "microservice[stream_forwarder]: cannot extract "
                             "port parameters";
@@ -75,7 +76,7 @@ class FibersToSockets : public BaseService<Demux> {
     }
 
     return FibersToSocketsPtr(new FibersToSockets(
-        io_service, fiber_demux, local_port, parameters["remote_ip"],
+        io_service, fiber_demux, local_port, parameters.at("remote_ip"),
         static_cast<RemotePortType>(remote_port)));
   }
 
@@ -86,7 +87,11 @@ class FibersToSockets : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(kFactoryId, &FibersToSockets::Create);
+    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+                      const Parameters& parameters) {
+      return FibersToSockets::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(

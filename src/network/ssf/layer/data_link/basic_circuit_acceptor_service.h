@@ -427,11 +427,14 @@ class basic_CircuitAcceptor_service
             typename protocol_type::next_layer_protocol::endpoint>();
       }
 
-      p_next_layer_acceptor->async_accept(
-          *p_next_layer_socket, *p_next_layer_endpoint,
-          std::bind(&basic_CircuitAcceptor_service::accepted, this,
-                    p_next_layer_acceptor, p_next_layer_socket,
-                    p_next_layer_endpoint, std::placeholders::_1));
+      auto on_accept =
+          [this, p_next_layer_acceptor, p_next_layer_socket,
+           p_next_layer_endpoint](const boost::system::error_code& ec) {
+            accepted(p_next_layer_acceptor, p_next_layer_socket,
+                     p_next_layer_endpoint, ec);
+          };
+      p_next_layer_acceptor->async_accept(*p_next_layer_socket,
+                                          *p_next_layer_endpoint, on_accept);
     }
   }
 
@@ -472,13 +475,16 @@ class basic_CircuitAcceptor_service
       p_received_endpoint->endpoint_context().default_parameters =
           serialize_parameter_stack(default_parameters_);
 
+      auto on_init_connection =
+          [this, p_next_layer_socket, p_remote_endpoint, p_received_endpoint,
+           next_local_endpoint](const boost::system::error_code& ec) {
+            connection_initiated_handler(p_next_layer_socket, p_remote_endpoint,
+                                         p_received_endpoint,
+                                         next_local_endpoint, ec);
+          };
       circuit_policy::AsyncInitConnection(
           *p_next_layer_socket, p_received_endpoint.get(),
-          circuit_policy::server,
-          std::bind(
-              &basic_CircuitAcceptor_service::connection_initiated_handler,
-              this, p_next_layer_socket, std::move(p_remote_endpoint),
-              p_received_endpoint, next_local_endpoint, std::placeholders::_1));
+          circuit_policy::server, on_init_connection);
     }
   }
 
@@ -517,12 +523,15 @@ class basic_CircuitAcceptor_service
     // Connection is only accepted if there is a binding
     // of a non forward endpoint link to this next local endpoint
     if (pending_connections_.count(next_local_endpoint)) {
+      auto on_connection_validated = [this, next_local_endpoint,
+                                      p_next_layer_socket, p_remote_endpoint](
+          const boost::system::error_code& ec) {
+        connection_validated_handler(next_local_endpoint, p_next_layer_socket,
+                                     p_remote_endpoint, ec);
+      };
       circuit_policy::AsyncValidateConnection(
           *p_next_layer_socket, p_remote_endpoint.get(), ec.value(),
-          std::bind(
-              &basic_CircuitAcceptor_service::connection_validated_handler,
-              this, std::move(next_local_endpoint), p_next_layer_socket,
-              p_remote_endpoint, std::placeholders::_1));
+          on_connection_validated);
     } else {
       boost::system::error_code close_ec;
       p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
@@ -557,11 +566,12 @@ class basic_CircuitAcceptor_service
     auto p_forward_socket =
         std::make_shared<socket_type>(this->get_io_service());
 
-    p_forward_socket->async_connect(
-        *p_remote_endpoint,
-        std::bind(&basic_CircuitAcceptor_service::connected_handler, this,
-                  p_remote_endpoint, std::move(p_next_socket), p_forward_socket,
-                  std::placeholders::_1));
+    auto on_connect = [this, p_remote_endpoint, p_next_socket,
+                       p_forward_socket](const boost::system::error_code& ec) {
+      connected_handler(p_remote_endpoint, std::move(p_next_socket),
+                        p_forward_socket, ec);
+    };
+    p_forward_socket->async_connect(*p_remote_endpoint, on_connect);
   }
 
   void connected_handler(p_endpoint_type p_remote_endpoint,
@@ -584,11 +594,13 @@ class basic_CircuitAcceptor_service
       return;
     }
 
-    circuit_policy::AsyncValidateConnection(
-        *p_next_socket, p_remote_endpoint.get(), ec.value(),
-        std::bind(&basic_CircuitAcceptor_service::connection_forwarded_handler,
-                  this, p_next_socket, std::move(p_forward_socket),
-                  std::placeholders::_1));
+    auto on_connection_forwarded = [this, p_next_socket, p_forward_socket](
+        const boost::system::error_code& ec) {
+      connection_forwarded_handler(p_next_socket, p_forward_socket, ec);
+    };
+    circuit_policy::AsyncValidateConnection(*p_next_socket,
+                                            p_remote_endpoint.get(), ec.value(),
+                                            on_connection_forwarded);
   }
 
   void connection_forwarded_handler(p_next_socket_type p_next_socket,
@@ -696,9 +708,10 @@ class basic_CircuitAcceptor_service
         auto do_complete = [p_accept_op, ec]() { p_accept_op->complete(ec); };
         this->get_io_service().post(do_complete);
 
-        this->get_io_service().post(
-            std::bind(&basic_CircuitAcceptor_service::connection_queue_handler,
-                      this, ec));
+        auto on_connection_queue = [this, ec]() {
+          connection_queue_handler(ec);
+        };
+        this->get_io_service().post(on_connection_queue);
       }
     }
   }

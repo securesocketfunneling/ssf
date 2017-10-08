@@ -168,7 +168,6 @@ class fiber_acceptor_service
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
         init(BOOST_ASIO_MOVE_CAST(AcceptHandler)(handler));
-
     {
       std::unique_lock<std::recursive_mutex> lock_state(impl->state_mutex);
       if (impl->closed) {

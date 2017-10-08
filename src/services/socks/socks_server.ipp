@@ -68,7 +68,7 @@ void SocksServer<Demux>::AsyncAcceptFiber() {
 
   fiber_acceptor_.async_accept(
       *new_connection,
-      std::bind(&SocksServer::FiberAcceptHandler, this->SelfFromThis(),
+      std::bind(&SocksServer<Demux>::FiberAcceptHandler, this->SelfFromThis(),
                 new_connection, std::placeholders::_1));
 }
 

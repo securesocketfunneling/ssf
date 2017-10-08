@@ -61,7 +61,7 @@ class Server : public BaseService<Demux> {
  public:
   // Create a new instance of the service
   static ServerPtr Create(boost::asio::io_service& io_service,
-                          Demux& fiber_demux, Parameters parameters,
+                          Demux& fiber_demux, const Parameters& parameters,
                           const std::string& binary_path,
                           const std::string& binary_args) {
     if (!parameters.count("local_port") || binary_path.empty()) {
@@ -70,7 +70,7 @@ class Server : public BaseService<Demux> {
 
     uint32_t local_port;
     try {
-      local_port = std::stoul(parameters["local_port"]);
+      local_port = std::stoul(parameters.at("local_port"));
     } catch (const std::exception&) {
       SSF_LOG(kLogError)
           << "microservice[shell]: cannot extract port parameter";
@@ -89,10 +89,15 @@ class Server : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(
-        kFactoryId,
-        std::bind(&Server::Create, std::placeholders::_1, std::placeholders::_2,
-                  std::placeholders::_3, config.path(), config.args()));
+    auto bin_path = config.path();
+    auto bin_args = config.args();
+    auto creator = [bin_path, bin_args](boost::asio::io_service& io_service,
+                                        demux& fiber_demux,
+                                        const Parameters& parameters) {
+      return Server::Create(io_service, fiber_demux, parameters, bin_path,
+                            bin_args);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   // Function used to create service request

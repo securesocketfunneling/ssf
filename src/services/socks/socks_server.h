@@ -49,13 +49,14 @@ class SocksServer : public BaseService<Demux> {
 
   // Create a new instance of the service
   static SocksServerPtr Create(boost::asio::io_service& io_service,
-                               Demux& fiber_demux, Parameters parameters) {
+                               Demux& fiber_demux,
+                               const Parameters& parameters) {
     if (!parameters.count("local_port")) {
       return SocksServerPtr(nullptr);
     }
 
     try {
-      uint32_t local_port = std::stoul(parameters["local_port"]);
+      uint32_t local_port = std::stoul(parameters.at("local_port"));
       return SocksServerPtr(
           new SocksServer(io_service, fiber_demux, local_port));
     } catch (const std::exception&) {
@@ -73,7 +74,11 @@ class SocksServer : public BaseService<Demux> {
       return;
     }
 
-    p_factory->RegisterServiceCreator(kFactoryId, &SocksServer::Create);
+    auto creator = [](boost::asio::io_service& io_service, demux& fiber_demux,
+                      const Parameters& parameters) {
+      return SocksServer::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   // Generate create service request

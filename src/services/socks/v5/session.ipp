@@ -126,8 +126,9 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
-  auto connect_handler = std::bind(&Session::HandleApplicationServerConnect,
-                                   SelfFromThis(), std::placeholders::_1);
+  auto connect_handler =
+      std::bind(&Session<Demux>::HandleApplicationServerConnect, SelfFromThis(),
+                std::placeholders::_1);
 
   boost::system::error_code ec;
   uint16_t port = request_.port();
@@ -147,7 +148,7 @@ void Session<Demux>::DoConnectRequest() {
     }
     case static_cast<uint8_t>(AddressType::kDNS): {
       auto resolve_handler =
-          std::bind(&Session::HandleResolveServerEndpoint, SelfFromThis(),
+          std::bind(&Session<Demux>::HandleResolveServerEndpoint, SelfFromThis(),
                     std::placeholders::_1, std::placeholders::_2);
 
       boost::asio::ip::tcp::resolver::query query(
@@ -191,8 +192,9 @@ void Session<Demux>::DoErrorCommand(CommandStatus err_status) {
 template <typename Demux>
 void Session<Demux>::HandleResolveServerEndpoint(
     const boost::system::error_code& ec, Tcp::resolver::iterator ep_it) {
-  auto connect_handler = std::bind(&Session::HandleApplicationServerConnect,
-                                   SelfFromThis(), std::placeholders::_1);
+  auto connect_handler =
+      std::bind(&Session<Demux>::HandleApplicationServerConnect, SelfFromThis(),
+                std::placeholders::_1);
   if (ec) {
     connect_handler(ec);
     return;
@@ -264,11 +266,11 @@ void Session<Demux>::EstablishLink() {
 
   AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(server_),
                        boost::asio::buffer(*upstream_),
-                       std::bind(&Session::HandleStop, self));
+                       std::bind(&Session<Demux>::HandleStop, self));
 
   AsyncEstablishHDLink(ssf::ReadFrom(server_), ssf::WriteTo(client_),
                        boost::asio::buffer(*downstream_),
-                       std::bind(&Session::HandleStop, self));
+                       std::bind(&Session<Demux>::HandleStop, self));
 }
 }  // v5
 }  // socks

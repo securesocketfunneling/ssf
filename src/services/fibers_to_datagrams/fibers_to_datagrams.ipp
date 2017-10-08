@@ -27,7 +27,8 @@ void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
   fiber_.bind(FiberEndpoint(this->get_demux(), local_port_), ec);
   if (ec) {
     SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: cannot bind "
-                         "datagram fiber to port " << local_port_;
+                         "datagram fiber to port "
+                      << local_port_;
     return;
   }
 
@@ -37,16 +38,17 @@ void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
   Udp::resolver::iterator iterator(resolver.resolve(query, ec));
   if (ec) {
     SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: cannot resolve "
-                         "remote UDP endpoint <" << ip_ << ":" << remote_port_
-                      << ">";
+                         "remote UDP endpoint <"
+                      << ip_ << ":" << remote_port_ << ">";
     return;
   }
 
   to_endpoint_ = *iterator;
 
   SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: forward "
-                       "fiber datagrams from fiber port " << local_port_
-                    << " to <" << ip_ << ":" << remote_port_ << ">";
+                       "fiber datagrams from fiber port "
+                    << local_port_ << " to <" << ip_ << ":" << remote_port_
+                    << ">";
 
   this->AsyncReceiveDatagram();
 }
@@ -69,14 +71,14 @@ template <typename Demux>
 void FibersToDatagrams<Demux>::AsyncReceiveDatagram() {
   fiber_.async_receive_from(
       boost::asio::buffer(working_buffer_), from_endpoint_,
-      std::bind(&FibersToDatagrams::FiberDatagramReceiveHandler,
-                this->SelfFromThis(), std::placeholders::_1,
+      std::bind(&FibersToDatagrams::OnFiberDatagramReceive, this,
+                this->shared_from_this(), std::placeholders::_1,
                 std::placeholders::_2));
 }
 
 template <typename Demux>
-void FibersToDatagrams<Demux>::FiberDatagramReceiveHandler(
-    const boost::system::error_code& ec, size_t length) {
+void FibersToDatagrams<Demux>::OnFiberDatagramReceive(
+    BaseServicePtr self, const boost::system::error_code& ec, size_t length) {
   if (ec) {
     SSF_LOG(kLogDebug)
         << "microservice[datagram_forwarder]: error receiving datagram: "

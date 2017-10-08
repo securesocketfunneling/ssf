@@ -151,7 +151,7 @@ void Client::AsyncWaitReconnection() {
                     << "s before reconnection";
   timer_.expires_from_now(reconnection_timeout_);
   timer_.async_wait(
-      std::bind(&Client::RunSession, this, std::placeholders::_1));
+      [this](const boost::system::error_code& ec) { RunSession(ec); });
 }
 
 void Client::RunSession(const boost::system::error_code& ec) {
@@ -177,12 +177,12 @@ void Client::RunSession(const boost::system::error_code& ec) {
     return;
   }
 
-  auto on_session_status =
-      std::bind(&Client::OnSessionStatus, this, std::placeholders::_1);
+  auto on_session_status = [this](Status status) { OnSessionStatus(status); };
 
-  auto on_user_service_status =
-      std::bind(&Client::OnUserServiceStatus, this, std::placeholders::_1,
-                std::placeholders::_2);
+  auto on_user_service_status = [this](UserServicePtr user_service,
+                                       const boost::system::error_code& ec) {
+    OnUserServiceStatus(user_service, ec);
+  };
 
   session_ = ClientSession::Create(
       async_engine_.get_io_service(), user_services, user_services_config_,
