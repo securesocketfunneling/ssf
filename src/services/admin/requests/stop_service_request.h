@@ -132,8 +132,8 @@ class StopServiceRequest {
   uint32_t unique_id() { return unique_id_; }
 
  public:
-  // create msgpack definition
-  MSGPACK_DEFINE(unique_id_);
+  // add msgpack function definitions
+  MSGPACK_DEFINE(unique_id_)
 
  private:
   uint32_t unique_id_;

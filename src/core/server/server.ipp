@@ -217,20 +217,20 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   auto p_admin_service = services::admin::Admin<Demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, empty_map);
   if (!p_admin_service
-           ->RegisterCommand<services::admin::CreateServiceRequest>()) {
+           ->template RegisterCommand<services::admin::CreateServiceRequest>()) {
     SSF_LOG(kLogError) << "server: cannot register "
                           "CreateServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
   if (!p_admin_service
-           ->RegisterCommand<services::admin::StopServiceRequest>()) {
+           ->template RegisterCommand<services::admin::StopServiceRequest>()) {
     SSF_LOG(kLogError) << "server: cannot register "
                           "StopServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
-  if (!p_admin_service->RegisterCommand<services::admin::ServiceStatus>()) {
+  if (!p_admin_service->template RegisterCommand<services::admin::ServiceStatus>()) {
     SSF_LOG(kLogError) << "server: cannot register "
                           "ServiceStatus into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());

@@ -144,13 +144,13 @@ class TransportProtocolPolicy {
   }
 
   bool IsSupportedVersion(uint32_t input_version) {
-    uint8_t circuit = (input_version & 0x000000FF);
+    // uint8_t circuit = (input_version & 0x000000FF);
     input_version = input_version >> 8;
 
     uint8_t transport = (input_version & 0x000000FF);
     input_version = input_version >> 8;
 
-    uint8_t minor = (input_version & 0x000000FF);
+    // uint8_t minor = (input_version & 0x000000FF);
     input_version = input_version >> 8;
 
     uint8_t major = (input_version & 0x000000FF);

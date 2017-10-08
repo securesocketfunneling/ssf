@@ -142,8 +142,8 @@ class CreateServiceRequest {
   }
 
  public:
-  // create msgpack definition
-  MSGPACK_DEFINE(service_id_, parameters_);
+  // add msgpack function definitions
+  MSGPACK_DEFINE(service_id_, parameters_)
 
  private:
   uint32_t service_id_;

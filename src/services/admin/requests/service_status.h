@@ -120,8 +120,8 @@ class ServiceStatus {
   }
 
  public:
-  // create msgpack definition
-  MSGPACK_DEFINE(id_, service_id_, error_code_value_, parameters_);
+  // add msgpack function definitions
+  MSGPACK_DEFINE(id_, service_id_, error_code_value_, parameters_)
 
  private:
   uint32_t id_;

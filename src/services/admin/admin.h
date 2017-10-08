@@ -78,9 +78,9 @@ class Admin : public BaseService<Demux> {
     p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
-  template <template <class> class Command>
+  template <template<class> class Command>
   bool RegisterCommand() {
-    return cmd_factory_.Register<Command<Demux>>();
+    return cmd_factory_.template Register<Command<Demux>>();
   }
 
   void SetAsServer();

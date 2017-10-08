@@ -205,20 +205,20 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   // Register supported admin microservice commands
   if (!p_admin_service
-           ->RegisterCommand<services::admin::CreateServiceRequest>()) {
+           ->template RegisterCommand<services::admin::CreateServiceRequest>()) {
     SSF_LOG(kLogError) << "client session: cannot register "
                           "CreateServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
   if (!p_admin_service
-           ->RegisterCommand<services::admin::StopServiceRequest>()) {
+           ->template RegisterCommand<services::admin::StopServiceRequest>()) {
     SSF_LOG(kLogError) << "client session: cannot register "
                           "StopServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
-  if (!p_admin_service->RegisterCommand<services::admin::ServiceStatus>()) {
+  if (!p_admin_service->template RegisterCommand<services::admin::ServiceStatus>()) {
     SSF_LOG(kLogError) << "client session: cannot register "
                           "ServiceStatus into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
