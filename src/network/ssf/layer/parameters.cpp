@@ -1,10 +1,7 @@
 #include "ssf/layer/parameters.h"
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+#include <msgpack.hpp>
 
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/map.hpp>
 
 namespace ssf {
 namespace layer {
@@ -12,9 +9,8 @@ namespace layer {
 std::string serialize_parameter_stack(
     const ParameterStack &stack) {
   std::ostringstream ostrs;
-  boost::archive::text_oarchive ar(ostrs);
 
-  ar << stack;
+  msgpack::pack(ostrs, stack);
 
   return ostrs.str();
 }
@@ -22,13 +18,10 @@ std::string serialize_parameter_stack(
 ParameterStack unserialize_parameter_stack(
     const std::string& serialized_stack) {
   try {
-    std::istringstream istrs(serialized_stack);
-    boost::archive::text_iarchive ar(istrs);
-    ParameterStack deserialized;
+    auto obj_handle = msgpack::unpack(serialized_stack.data(), serialized_stack.size());
+    auto obj = obj_handle.get();
 
-    ar >> deserialized;
-
-    return deserialized;
+    return obj.as<ParameterStack>();
   } catch (const std::exception &) {
     return ParameterStack();
   }

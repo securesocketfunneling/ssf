@@ -5,6 +5,8 @@ project(${project_name})
 set(SSF_VERSION_MAJOR 2)
 set(SSF_VERSION_MINOR 2)
 set(SSF_VERSION_FIX 0)
+set(SSF_VERSION_CIRCUIT 2)
+set(SSF_VERSION_TRANSPORT 2)
 set(SSF_VERSION_BOUNCE 2)
 set(SSF_VERSION_TRANSPORT 1)
 
@@ -43,7 +45,6 @@ set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED
              COMPONENTS system
-                        serialization
                         program_options
                         date_time
                         filesystem
@@ -68,6 +69,7 @@ endif()
 
 # --- http-parser components
 add_subdirectory(third_party/http-parser)
+add_subdirectory(third_party/msgpack)
 
 # --- Test certs
 add_subdirectory(certs)

@@ -76,7 +76,6 @@ set(SSF_FRAMEWORK_FILES
   core/command_line/standard/command_line.h
 
   # factories
-  core/factories/command_factory.h
   core/factories/service_factory.h
   core/factory_manager/service_factory_manager.h
   core/service_manager/service_manager.h
@@ -90,6 +89,7 @@ set(SSF_FRAMEWORK_FILES
   services/admin/admin.h
   services/admin/admin.ipp
   services/admin/admin_command.h
+  services/admin/command_factory.h
   services/admin/requests/create_service_request.h
   services/admin/requests/service_status.h
   services/admin/requests/stop_service_request.h

@@ -3,21 +3,20 @@
 
 #include <cstdint>
 
-#include <map>
 #include <fstream>
+#include <map>
 #include <string>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/map.hpp>
 #include <boost/system/error_code.hpp>
+
+#include <msgpack.hpp>
 
 #include <ssf/log/log.h>
 
-#include "core/factories/command_factory.h"
 #include "core/factories/service_factory.h"
 
 #include "core/factory_manager/service_factory_manager.h"
+#include "services/admin/command_factory.h"
 
 namespace ssf {
 namespace services {
@@ -40,22 +39,34 @@ class ServiceStatus {
 
   enum { command_id = 2, reply_id = 2 };
 
-  static void RegisterToCommandFactory() {
-    CommandFactory<Demux>::RegisterOnReceiveCommand(command_id,
-                                                    &ServiceStatus::OnReceive);
-    CommandFactory<Demux>::RegisterOnReplyCommand(command_id,
-                                                  &ServiceStatus::OnReply);
-    CommandFactory<Demux>::RegisterReplyCommandIndex(command_id, reply_id);
+  static bool RegisterOnReceiveCommand(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterOnReceiveCommand(command_id,
+                                                 &ServiceStatus::OnReceive);
   }
 
-  static std::string OnReceive(boost::archive::text_iarchive& ar,
+  static bool RegisterOnReplyCommand(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterOnReplyCommand(command_id,
+                                               &ServiceStatus::OnReply);
+  }
+
+  static bool RegisterReplyCommandIndex(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterReplyCommandIndex(command_id, reply_id);
+  }
+
+  static std::string OnReceive(const std::string& serialized_request,
                                Demux* p_demux, boost::system::error_code& ec) {
     ServiceStatus<Demux> status;
 
     try {
-      ar >> status;
+      auto obj_handle =
+          msgpack::unpack(serialized_request.data(), serialized_request.size());
+      auto obj = obj_handle.get();
+      obj.convert(status);
     } catch (const std::exception&) {
-      return std::string();
+      SSF_LOG(kLogWarning) << "service[admin]: service status[on receive]: "
+                              "cannot extract request";
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
     }
 
     auto p_service_factory =
@@ -75,21 +86,24 @@ class ServiceStatus {
                        << status.service_id() << " - error_code "
                        << status.error_code_value();
 
-    return std::string();
+    return {};
   }
 
-  static std::string OnReply(boost::archive::text_iarchive& ar, Demux* p_demux,
+  static std::string OnReply(const std::string& serialized_request,
+                             Demux* p_demux,
                              const boost::system::error_code& ec,
                              std::string serialized_result) {
-    return std::string();
+    if (ec) {
+      SSF_LOG(kLogWarning) << "service[admin]: service status[on reply]: ec";
+      return {};
+    }
+
+    return {};
   }
 
   std::string OnSending() const {
     std::ostringstream ostrs;
-    boost::archive::text_oarchive ar(ostrs);
-
-    ar << *this;
-
+    msgpack::pack(ostrs, *this);
     return ostrs.str();
   }
 
@@ -105,16 +119,9 @@ class ServiceStatus {
     parameters_[key] = value;
   }
 
- private:
-  friend class boost::serialization::access;
-
-  template <typename Archive>
-  void serialize(Archive& ar, const unsigned int version) {
-    ar& id_;
-    ar& service_id_;
-    ar& error_code_value_;
-    ar& BOOST_SERIALIZATION_NVP(parameters_);
-  }
+ public:
+  // create msgpack definition
+  MSGPACK_DEFINE(id_, service_id_, error_code_value_, parameters_);
 
  private:
   uint32_t id_;

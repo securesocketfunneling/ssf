@@ -9,7 +9,6 @@
 #include <ssf/log/log.h>
 
 #include "common/error/error.h"
-#include "core/factories/command_factory.h"
 
 namespace ssf {
 namespace services {
@@ -19,7 +18,7 @@ template <typename Demux>
 Admin<Demux>::Admin(boost::asio::io_service& io_service, Demux& fiber_demux)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
       admin_version_(1),
-      is_server_(0),
+      is_server_(false),
       fiber_acceptor_(io_service),
       fiber_(io_service),
       reserved_keep_alive_id_(0),
@@ -32,16 +31,17 @@ Admin<Demux>::Admin(boost::asio::io_service& io_service, Demux& fiber_demux)
       callback_() {}
 
 template <typename Demux>
-void Admin<Demux>::set_server() {
-  is_server_ = 1;
+void Admin<Demux>::SetAsServer() {
+  is_server_ = true;
   FiberEndpoint ep(this->get_demux(), kServicePort);
   fiber_acceptor_.bind(ep, init_ec_);
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, init_ec_);
 }
 
 template <typename Demux>
-void Admin<Demux>::SetClient(std::vector<BaseUserServicePtr> user_services,
-                             AdminCallbackType callback) {
+void Admin<Demux>::SetAsClient(std::vector<BaseUserServicePtr> user_services,
+                               AdminCallbackType callback) {
+  is_server_ = false;
   user_services_ = std::move(user_services);
   callback_ = std::move(callback);
 }
@@ -76,13 +76,15 @@ uint32_t Admin<Demux>::service_type_id() {
 
 template <typename Demux>
 void Admin<Demux>::AsyncAccept() {
-  fiber_acceptor_.async_accept(
-      fiber_, std::bind(&Admin::FiberAcceptHandler, this->SelfFromThis(),
-                        std::placeholders::_1));
+  auto self = this->shared_from_this();
+  auto on_fiber_accept = [this, self](const boost::system::error_code& ec) {
+    OnFiberAccept(ec);
+  };
+  fiber_acceptor_.async_accept(fiber_, std::move(on_fiber_accept));
 }
 
 template <typename Demux>
-void Admin<Demux>::FiberAcceptHandler(const boost::system::error_code& ec) {
+void Admin<Demux>::OnFiberAccept(const boost::system::error_code& ec) {
   if (!fiber_acceptor_.is_open()) {
     return;
   }
@@ -99,13 +101,16 @@ void Admin<Demux>::FiberAcceptHandler(const boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::AsyncConnect() {
-  fiber_.async_connect(FiberEndpoint(this->get_demux(), kServicePort),
-                       std::bind(&Admin::FiberConnectHandler,
-                                 this->SelfFromThis(), std::placeholders::_1));
+  auto self = this->shared_from_this();
+  FiberEndpoint ep(this->get_demux(), kServicePort);
+  auto on_fiber_connect = [this, self](const boost::system::error_code& ec) {
+    OnFiberConnect(ec);
+  };
+  fiber_.async_connect(ep, std::move(on_fiber_connect));
 }
 
 template <typename Demux>
-void Admin<Demux>::FiberConnectHandler(const boost::system::error_code& ec) {
+void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
   if (!fiber_.is_open() || ec) {
     SSF_LOG(kLogError) << "service[admin]: no new connection: " << ec.message()
                        << " " << ec.value();
@@ -141,6 +146,8 @@ void Admin<Demux>::InitializeRemoteServices(
     return;
   }
 
+  auto self = this->shared_from_this();
+
   reenter(coroutine_) {
     // For each user service
     for (i_ = 0; i_ < user_services_.size(); ++i_) {
@@ -153,8 +160,9 @@ void Admin<Demux>::InitializeRemoteServices(
         // Start remove service and yield until server response comes back
         yield StartRemoteService(
             create_request_vector_[j_],
-            std::bind(&Admin::InitializeRemoteServices, this->SelfFromThis(),
-                      std::placeholders::_1));
+            [this, self](const boost::system::error_code& ec) {
+              InitializeRemoteServices(ec);
+            });
       }
 
       // At this point, all remote services have responded with their statuses
@@ -178,8 +186,9 @@ void Admin<Demux>::InitializeRemoteServices(
           // Send a service stop request
           yield StopRemoteService(
               stop_request_vector_[j_],
-              std::bind(&Admin::InitializeRemoteServices, this->SelfFromThis(),
-                        std::placeholders::_1));
+              [this, self](const boost::system::error_code& ec) {
+                InitializeRemoteServices(ec);
+              });
         }
         // Try next user service
         continue;
@@ -206,8 +215,9 @@ void Admin<Demux>::InitializeRemoteServices(
           // Send a service stop request
           yield StopRemoteService(
               stop_request_vector_[j_],
-              std::bind(&Admin::InitializeRemoteServices, this->SelfFromThis(),
-                        std::placeholders::_1));
+              [this, self](const boost::system::error_code& ec) {
+                InitializeRemoteServices(ec);
+              });
         }
         // Stop local services
         user_services_[i_]->StopLocalServices(this->get_demux());
@@ -226,15 +236,17 @@ void Admin<Demux>::InitializeRemoteServices(
 template <typename Demux>
 void Admin<Demux>::ListenForCommand() {
   status_ = 101;
-  this->get_io_service().post(std::bind(&Admin::DoAdmin, this->SelfFromThis(),
-                                          boost::system::error_code(), 0));
+  auto self = SelfFromThis();
+  auto do_admin = [this, self]() { DoAdmin(boost::system::error_code(), 0); };
+  this->get_io_service().post(do_admin);
 }
 
 template <typename Demux>
 void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
   if (ec) {
-    this->get_io_service().post(
-        std::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+    auto self = this->shared_from_this();
+    auto shutdown_services = [this, self]() { ShutdownServices(); };
+    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -257,7 +269,7 @@ void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
 
     default:
       /*get_io_service().post(std::bind(&Admin::DoAdmin,
-                                          SelfFromThis(),
+                                          this, this->shared_from_this(),
                                           boost::system::error_code(),
                                           0));*/
       break;
@@ -276,9 +288,12 @@ void Admin<Demux>::ReceiveInstructionHeader() {
                            sizeof(command_size_received_))}};
 
   // receive the command header
-  boost::asio::async_read(
-      fiber_, buff, std::bind(&Admin::DoAdmin, SelfFromThis(),
-                              std::placeholders::_1, std::placeholders::_2));
+  auto self = this->shared_from_this();
+  auto on_fiber_read = [this, self](const boost::system::error_code& ec,
+                                    std::size_t length) {
+    DoAdmin(ec, length);
+  };
+  boost::asio::async_read(fiber_, buff, std::move(on_fiber_read));
 }
 
 template <typename Demux>
@@ -289,25 +304,24 @@ void Admin<Demux>::ReceiveInstructionParameters() {
   parameters_buff_received_.resize(command_size_received_);
 
   // Receive the command parameters
-  boost::asio::async_read(
-      fiber_, boost::asio::buffer(parameters_buff_received_),
-      std::bind(&Admin::DoAdmin, this->SelfFromThis(), std::placeholders::_1,
-                std::placeholders::_2));
+  auto self = this->shared_from_this();
+  auto on_fiber_read = [this, self](const boost::system::error_code& ec,
+                                    std::size_t length) {
+    DoAdmin(ec, length);
+  };
+  boost::asio::async_read(fiber_,
+                          boost::asio::buffer(parameters_buff_received_),
+                          std::move(on_fiber_read));
 }
 
 /// Execute the command received and send back the result
 template <typename Demux>
 void Admin<Demux>::ProcessInstructionId() {
   // Get the right function to execute the command
-  using CommandExecuterType =
-      typename ssf::CommandFactory<Demux>::CommandExecuterType;
-  CommandExecuterType* p_executer =
-      ssf::CommandFactory<Demux>::GetExecuter(command_id_received_);
+  auto p_executer = cmd_factory_.GetExecuter(command_id_received_);
 
   const std::string serialized(&parameters_buff_received_[0],
                                parameters_buff_received_.size());
-  std::istringstream istrs(serialized);
-  boost::archive::text_iarchive ar(istrs);
 
   Demux& d = this->get_demux();
 
@@ -315,32 +329,25 @@ void Admin<Demux>::ProcessInstructionId() {
   if (p_executer) {
     // Execute and get the result
     boost::system::error_code ec;
-    std::string serialized_result = (*p_executer)(ar, &d, ec);
+    std::string serialized_result = (*p_executer)(serialized, &d, ec);
 
     // Get the right function to reply
-    using CommandReplierType =
-        typename ssf::CommandFactory<Demux>::CommandReplierType;
-    CommandReplierType* p_replier =
-        ssf::CommandFactory<Demux>::GetReplier(command_id_received_);
-
-    std::istringstream istrs2(serialized);
-    boost::archive::text_iarchive ar2(istrs2);
+    auto p_replier = cmd_factory_.GetReplier(command_id_received_);
 
     // Get the reply
-    std::string reply = (*p_replier)(ar2, &d, ec, serialized_result);
+    std::string reply = (*p_replier)(serialized, &d, ec, serialized_result);
 
     // If there is something to send back
     if (reply.size() > 0) {
       uint32_t* p_reply_command_index =
-          ssf::CommandFactory<Demux>::GetReplyCommandIndex(
-              command_id_received_);
+          cmd_factory_.GetReplyCommandIndex(command_id_received_);
 
       // reply with command serial received (command handler execution)
       auto p_command = std::make_shared<AdminCommand>(
           command_serial_received_, *p_reply_command_index,
           (uint32_t)reply.size(), reply);
 
-      this->async_SendCommand(
+      this->AsyncSendCommand(
           *p_command, [p_command](const boost::system::error_code&, size_t) {});
     }
   }
@@ -367,11 +374,11 @@ void Admin<Demux>::StopRemoteService(
 }
 
 template <typename Demux>
-void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
-  auto self = this->SelfFromThis();
+void Admin<Demux>::OnSendKeepAlive(const boost::system::error_code& ec) {
   if (ec) {
-    this->get_io_service().post(
-        std::bind(&Admin<Demux>::ShutdownServices, self));
+    auto self = this->shared_from_this();
+    auto shutdown_services = [this, self]() { ShutdownServices(); };
+    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -379,27 +386,31 @@ void Admin<Demux>::SendKeepAlive(const boost::system::error_code& ec) {
       0, reserved_keep_alive_id_, reserved_keep_alive_size_,
       reserved_keep_alive_parameters_);
 
-  auto do_handler =
-      [self, p_command](const boost::system::error_code& ec, size_t length) {
-        self->PostKeepAlive(ec, length);
-      };
+  auto self = this->shared_from_this();
+  auto on_command_sent = [this, self, p_command](
+      const boost::system::error_code& ec, size_t length) {
+    this->PostKeepAlive(ec, length);
+  };
 
-  this->async_SendCommand(*p_command, do_handler);
+  this->AsyncSendCommand(*p_command, on_command_sent);
 }
 
 template <typename Demux>
 void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
                                  size_t length) {
+  auto self = this->shared_from_this();
   if (ec) {
-    this->get_io_service().post(
-        std::bind(&Admin<Demux>::ShutdownServices, SelfFromThis()));
+    auto shutdown_services = [this, self]() { ShutdownServices(); };
+    this->get_io_service().post(shutdown_services);
     return;
   }
 
   reserved_keep_alive_timer_.expires_from_now(
       std::chrono::seconds(kKeepAliveInterval));
-  reserved_keep_alive_timer_.async_wait(
-      std::bind(&Admin::SendKeepAlive, SelfFromThis(), std::placeholders::_1));
+  auto on_timeout = [this, self](const boost::system::error_code& ec) {
+    OnSendKeepAlive(ec);
+  };
+  reserved_keep_alive_timer_.async_wait(on_timeout);
 }
 
 template <typename Demux>

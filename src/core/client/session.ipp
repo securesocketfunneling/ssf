@@ -7,8 +7,8 @@
 
 #include "services/admin/admin.h"
 #include "services/admin/requests/create_service_request.h"
-#include "services/admin/requests/stop_service_request.h"
 #include "services/admin/requests/service_status.h"
+#include "services/admin/requests/stop_service_request.h"
 
 #include "services/copy_file/fiber_to_file/fiber_to_file.h"
 #include "services/copy_file/file_enquirer/file_enquirer.h"
@@ -62,8 +62,6 @@ Session<N, T>::~Session() {
 template <class N, template <class> class T>
 void Session<N, T>::Start(const NetworkQuery& query,
                           boost::system::error_code& ec) {
-  auto self = this->shared_from_this();
-
   // create network socket
   p_socket_ = std::make_shared<NetworkSocket>(io_service_);
 
@@ -111,8 +109,10 @@ void Session<N, T>::Stop(boost::system::error_code& ec) {
 
   auto self = this->shared_from_this();
   if (status_ == Status::kConnected || status_ == Status::kRunning) {
-    io_service_.post(std::bind(&Session<N, T>::UpdateStatus, this->shared_from_this(),
-                               Status::kDisconnected));
+    auto update_status = [this, self]() {
+      UpdateStatus(Status::kDisconnected);
+    };
+    io_service_.post(update_status);
   }
 }
 
@@ -126,9 +126,12 @@ void Session<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
   }
 
   UpdateStatus(Status::kConnected);
-  this->DoSSFInitiate(p_socket_,
-                      std::bind(&Session::DoSSFStart, this->shared_from_this(),
-                                std::placeholders::_1, std::placeholders::_2));
+  auto self = this->shared_from_this();
+  auto on_ssf_initiate = [this, self](NetworkSocketPtr p_socket,
+                                      const boost::system::error_code& ec) {
+    DoSSFStart(p_socket, ec);
+  };
+  this->DoSSFInitiate(p_socket_, on_ssf_initiate);
 }
 
 template <class N, template <class> class T>
@@ -155,11 +158,6 @@ void Session<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 template <class N, template <class> class T>
 void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
                                boost::system::error_code& ec) {
-  // Register supported admin commands
-  services::admin::CreateServiceRequest<Demux>::RegisterToCommandFactory();
-  services::admin::StopServiceRequest<Demux>::RegisterToCommandFactory();
-  services::admin::ServiceStatus<Demux>::RegisterToCommandFactory();
-
   auto self = this->shared_from_this();
   auto close_demux_handler = [this, self]() { OnDemuxClose(); };
   fiber_demux_.fiberize(std::move(*p_socket), close_demux_handler);
@@ -195,8 +193,7 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   services::process::Server<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
-  // Start the admin micro service
-
+  // Create admin microservice
   auto on_user_service_status = [this, self](
       BaseUserServicePtr p_service, const boost::system::error_code& ec) {
     on_user_service_status_(p_service, ec);
@@ -204,7 +201,31 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   auto p_admin_service =
       services::admin::Admin<Demux>::Create(io_service_, fiber_demux_, {});
-  p_admin_service->SetClient(user_services_, on_user_service_status);
+  p_admin_service->SetAsClient(user_services_, on_user_service_status);
+
+  // Register supported admin microservice commands
+  if (!p_admin_service
+           ->RegisterCommand<services::admin::CreateServiceRequest>()) {
+    SSF_LOG(kLogError) << "client session: cannot register "
+                          "CreateServiceRequest into admin service";
+    ec.assign(::error::service_not_started, ::error::get_ssf_category());
+    return;
+  }
+  if (!p_admin_service
+           ->RegisterCommand<services::admin::StopServiceRequest>()) {
+    SSF_LOG(kLogError) << "client session: cannot register "
+                          "StopServiceRequest into admin service";
+    ec.assign(::error::service_not_started, ::error::get_ssf_category());
+    return;
+  }
+  if (!p_admin_service->RegisterCommand<services::admin::ServiceStatus>()) {
+    SSF_LOG(kLogError) << "client session: cannot register "
+                          "ServiceStatus into admin service";
+    ec.assign(::error::service_not_started, ::error::get_ssf_category());
+    return;
+  }
+
+  // Start admin microservice
   p_service_manager_->start(p_admin_service, ec);
 
   UpdateStatus(Status::kRunning);

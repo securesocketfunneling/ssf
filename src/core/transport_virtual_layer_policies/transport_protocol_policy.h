@@ -8,7 +8,6 @@
 
 #include <ssf/log/log.h>
 
-#include <boost/archive/basic_archive.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
@@ -40,89 +39,93 @@ class TransportProtocolPolicy {
     uint32_t version = GetVersion();
     auto p_ssf_request = std::make_shared<SSFRequest>(version);
 
-    boost::asio::async_write(
-        *p_socket, p_ssf_request->const_buffer(),
-        std::bind(&TransportProtocolPolicy<Socket>::DoSSFValidReceive, this,
-                  p_ssf_request, p_socket, callback, std::placeholders::_1,
-                  std::placeholders::_2));
+    auto on_write = [this, p_ssf_request, p_socket, callback](
+        const boost::system::error_code& ec, size_t length) {
+      DoSSFValidReceive(p_ssf_request, p_socket, callback, ec, length);
+    };
+    boost::asio::async_write(*p_socket, p_ssf_request->const_buffer(),
+                             on_write);
   }
 
   void DoSSFInitiateReceive(SocketPtr p_socket, TransportCb callback) {
     auto p_ssf_request = std::make_shared<SSFRequest>();
-    boost::asio::async_read(
-        *p_socket, p_ssf_request->buffer(),
-        std::bind(&TransportProtocolPolicy<Socket>::DoSSFValid, this,
-                  p_ssf_request, p_socket, callback, std::placeholders::_1,
-                  std::placeholders::_2));
+
+    auto on_read = [this, p_ssf_request, p_socket, callback](
+        const boost::system::error_code& ec, size_t length) {
+      DoSSFValid(p_ssf_request, p_socket, callback, ec, length);
+    };
+    boost::asio::async_read(*p_socket, p_ssf_request->buffer(), on_read);
   }
 
   void DoSSFValid(SSFRequestPtr p_ssf_request, SocketPtr p_socket,
                   TransportCb callback, const boost::system::error_code& ec,
                   size_t length) {
-    if (!ec) {
-      uint32_t version = p_ssf_request->version();
-
-      SSF_LOG(kLogTrace) << "transport: SSF version read: " << version;
-
-      if (IsSupportedVersion(version)) {
-        auto p_ssf_reply = std::make_shared<SSFReply>(true);
-        boost::asio::async_write(
-            *p_socket, p_ssf_reply->const_buffer(),
-            std::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
-                      this, p_ssf_reply, p_socket, callback,
-                      std::placeholders::_1, std::placeholders::_2));
-      } else {
-        SSF_LOG(kLogError) << "transport: SSF version NOT supported "
-                           << version;
-        boost::system::error_code result_ec(::error::wrong_protocol_type,
-                                            ::error::get_ssf_category());
-        callback(p_socket, result_ec);
-      }
-    } else {
+    if (ec) {
       SSF_LOG(kLogError) << "transport: SSF version NOT read " << ec.message();
       callback(p_socket, ec);
+      return;
     }
+
+    uint32_t version = p_ssf_request->version();
+
+    SSF_LOG(kLogTrace) << "transport: SSF version read: " << version;
+
+    if (!IsSupportedVersion(version)) {
+      SSF_LOG(kLogError) << "transport: SSF version NOT supported " << version;
+      boost::system::error_code result_ec(::error::wrong_protocol_type,
+                                          ::error::get_ssf_category());
+      callback(p_socket, result_ec);
+      return;
+    }
+
+    auto p_ssf_reply = std::make_shared<SSFReply>(true);
+    auto on_write = [this, p_ssf_reply, p_socket, callback](
+        const boost::system::error_code& ec, size_t length) {
+      DoSSFProtocolFinished(p_ssf_reply, p_socket, callback, ec, length);
+    };
+    boost::asio::async_write(*p_socket, p_ssf_reply->const_buffer(), on_write);
   }
 
   void DoSSFValidReceive(SSFRequestPtr p_ssf_request, SocketPtr p_socket,
                          TransportCb callback,
                          const boost::system::error_code& ec, size_t length) {
-    if (!ec) {
-      SSF_LOG(kLogDebug) << "transport: SSF request sent";
-
-      auto p_ssf_reply = std::make_shared<SSFReply>();
-
-      boost::asio::async_read(
-          *p_socket, p_ssf_reply->buffer(),
-          std::bind(&TransportProtocolPolicy<Socket>::DoSSFProtocolFinished,
-                    this, p_ssf_reply, p_socket, callback,
-                    std::placeholders::_1, std::placeholders::_2));
-    } else {
+    if (ec) {
       SSF_LOG(kLogError) << "transport: could NOT send the SSF request "
                          << ec.message();
       callback(p_socket, ec);
+      return;
     }
+
+    SSF_LOG(kLogDebug) << "transport: SSF request sent";
+
+    auto p_ssf_reply = std::make_shared<SSFReply>();
+
+    auto on_read = [this, p_ssf_reply, p_socket, callback](
+        const boost::system::error_code& ec, size_t length) {
+      DoSSFProtocolFinished(p_ssf_reply, p_socket, callback, ec, length);
+    };
+    boost::asio::async_read(*p_socket, p_ssf_reply->buffer(), on_read);
   }
 
   void DoSSFProtocolFinished(SSFReplyPtr p_ssf_reply, SocketPtr p_socket,
                              TransportCb callback,
                              const boost::system::error_code& ec,
                              size_t length) {
-    if (!ec) {
-      if (p_ssf_reply->result()) {
-        SSF_LOG(kLogDebug) << "transport: SSF reply OK";
-        callback(p_socket, ec);
-      } else {
-        boost::system::error_code result_ec(::error::wrong_protocol_type,
-                                            ::error::get_ssf_category());
-        SSF_LOG(kLogError) << "transport: SSF reply NOT ok " << ec.message();
-        callback(p_socket, result_ec);
-      }
-    } else {
+    if (ec) {
       SSF_LOG(kLogError) << "transport: could NOT read SSF reply "
                          << ec.message();
       callback(p_socket, ec);
+      return;
     }
+    if (!p_ssf_reply->result()) {
+      boost::system::error_code result_ec(::error::wrong_protocol_type,
+                                          ::error::get_ssf_category());
+      SSF_LOG(kLogError) << "transport: SSF reply NOT ok " << ec.message();
+      callback(p_socket, result_ec);
+      return;
+    }
+    SSF_LOG(kLogDebug) << "transport: SSF reply OK";
+    callback(p_socket, ec);
   }
 
   uint32_t GetVersion() {
@@ -135,14 +138,13 @@ class TransportProtocolPolicy {
     version |= versions::transport;
     version = version << 8;
 
-    version |= uint8_t(boost::archive::BOOST_ARCHIVE_VERSION());
+    version |= versions::circuit;
 
     return version;
   }
 
   bool IsSupportedVersion(uint32_t input_version) {
-    boost::archive::library_version_type serialization(input_version &
-                                                       0x000000FF);
+    uint8_t circuit = (input_version & 0x000000FF);
     input_version = input_version >> 8;
 
     uint8_t transport = (input_version & 0x000000FF);
@@ -153,9 +155,7 @@ class TransportProtocolPolicy {
 
     uint8_t major = (input_version & 0x000000FF);
 
-    return (major == versions::major) && (minor == versions::minor) &&
-           (transport == versions::transport) &&
-           (serialization == boost::archive::BOOST_ARCHIVE_VERSION());
+    return (major == versions::major) && (transport == versions::transport);
   }
 };
 

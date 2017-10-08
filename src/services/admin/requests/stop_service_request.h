@@ -3,23 +3,22 @@
 
 #include <cstdint>
 
-#include <map>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <string>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/map.hpp>
 #include <boost/system/error_code.hpp>
+
+#include <msgpack.hpp>
 
 #include <ssf/log/log.h>
 
-#include "core/factories/command_factory.h"
 #include "core/factories/service_factory.h"
 
 #include "core/factory_manager/service_factory_manager.h"
 
+#include "services/admin/command_factory.h"
 #include "services/admin/requests/service_status.h"
 
 namespace ssf {
@@ -38,22 +37,34 @@ class StopServiceRequest {
 
   enum { command_id = 3, reply_id = 2 };
 
-  static void RegisterToCommandFactory() {
-    CommandFactory<Demux>::RegisterOnReceiveCommand(
+  static bool RegisterOnReceiveCommand(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterOnReceiveCommand(
         command_id, &StopServiceRequest::OnReceive);
-    CommandFactory<Demux>::RegisterOnReplyCommand(command_id,
-                                                  &StopServiceRequest::OnReply);
-    CommandFactory<Demux>::RegisterReplyCommandIndex(command_id, reply_id);
   }
 
-  static std::string OnReceive(boost::archive::text_iarchive& ar,
+  static bool RegisterOnReplyCommand(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterOnReplyCommand(command_id,
+                                               &StopServiceRequest::OnReply);
+  }
+
+  static bool RegisterReplyCommandIndex(CommandFactory<Demux>* cmd_factory) {
+    return cmd_factory->RegisterReplyCommandIndex(command_id, reply_id);
+  }
+
+  static std::string OnReceive(const std::string& serialized_request,
                                Demux* p_demux, boost::system::error_code& ec) {
     StopServiceRequest<Demux> request;
 
     try {
-      ar >> request;
+      auto obj_handle =
+          msgpack::unpack(serialized_request.data(), serialized_request.size());
+      auto obj = obj_handle.get();
+      obj.convert(request);
     } catch (const std::exception&) {
-      return std::string();
+      SSF_LOG(kLogWarning)
+          << "service[admin]: stop service[on receive]: cannot extract request";
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
     }
 
     auto p_service_factory =
@@ -76,18 +87,27 @@ class StopServiceRequest {
     return result;
   }
 
-  static std::string OnReply(boost::archive::text_iarchive& ar, Demux* p_demux,
+  static std::string OnReply(const std::string& serialized_request,
+                             Demux* p_demux,
                              const boost::system::error_code& ec,
                              std::string serialized_result) {
+    if (ec) {
+      SSF_LOG(kLogWarning) << "service[admin]: stop service[on reply]: ec";
+      return {};
+    }
+
     StopServiceRequest<Demux> request;
 
     try {
-      ar >> request;
+      auto obj_handle =
+          msgpack::unpack(serialized_request.data(), serialized_request.size());
+      auto obj = obj_handle.get();
+      obj.convert(request);
     } catch (const std::exception&) {
       // TODO: ec?
       SSF_LOG(kLogWarning)
-          << "service[admin]: stop service request: extract request failed";
-      return std::string();
+          << "service[admin]: stop service[on reply]: cannot extract request";
+      return {};
     }
 
     uint32_t id;
@@ -105,22 +125,15 @@ class StopServiceRequest {
 
   std::string OnSending() const {
     std::ostringstream ostrs;
-    boost::archive::text_oarchive ar(ostrs);
-
-    ar << *this;
-
+    msgpack::pack(ostrs, *this);
     return ostrs.str();
   }
 
   uint32_t unique_id() { return unique_id_; }
 
- private:
-  friend class boost::serialization::access;
-
-  template <typename Archive>
-  void serialize(Archive& ar, const unsigned int version) {
-    ar& unique_id_;
-  }
+ public:
+  // create msgpack definition
+  MSGPACK_DEFINE(unique_id_);
 
  private:
   uint32_t unique_id_;

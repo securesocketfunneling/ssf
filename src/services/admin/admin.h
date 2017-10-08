@@ -6,9 +6,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 #include <boost/asio.hpp>
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -22,6 +19,7 @@
 #include "services/base_service.h"
 
 #include "services/admin/admin_command.h"
+#include "services/admin/command_factory.h"
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 
@@ -58,7 +56,7 @@ class Admin : public BaseService<Demux> {
 
  public:
   static AdminPtr Create(boost::asio::io_service& io_service,
-                         Demux& fiber_demux, Parameters parameters) {
+                         Demux& fiber_demux, const Parameters& parameters) {
     return AdminPtr(new Admin(io_service, fiber_demux));
   }
 
@@ -73,12 +71,21 @@ class Admin : public BaseService<Demux> {
 
   static void RegisterToServiceFactory(
       std::shared_ptr<ServiceFactory<Demux>> p_factory) {
-    p_factory->RegisterServiceCreator(kFactoryId, &Admin::Create);
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
+                      const Parameters& parameters) {
+      return Admin::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
-  void set_server();
-  void SetClient(std::vector<BaseUserServicePtr> user_services,
-                 AdminCallbackType callback);
+  template <template <class> class Command>
+  bool RegisterCommand() {
+    return cmd_factory_.Register<Command<Demux>>();
+  }
+
+  void SetAsServer();
+  void SetAsClient(std::vector<BaseUserServicePtr> user_services,
+                   AdminCallbackType callback);
 
   template <typename Request, typename Handler>
   void Command(Request request, Handler handler) {
@@ -94,7 +101,7 @@ class Admin : public BaseService<Demux> {
     auto do_handler = [p_command](const boost::system::error_code& ec,
                                   size_t length) {};
 
-    async_SendCommand(*p_command, do_handler);
+    AsyncSendCommand(*p_command, do_handler);
   }
 
   void InsertHandler(uint32_t serial, CommandHandler command_handler) {
@@ -105,9 +112,10 @@ class Admin : public BaseService<Demux> {
   // execute handler bound to the command serial id if exists
   void ExecuteAndRemoveCommandHandler(uint32_t serial) {
     if (command_handlers_.count(command_serial_received_)) {
+      auto self = this->shared_from_this();
+      auto command_handler = command_handlers_[command_serial_received_];
       this->get_io_service().post(
-          std::bind(command_handlers_[command_serial_received_],
-                      boost::system::error_code()));
+          [self, command_handler]() { command_handler({}); });
       this->EraseHandler(command_serial_received_);
     }
   }
@@ -141,10 +149,10 @@ class Admin : public BaseService<Demux> {
   Admin(boost::asio::io_service& io_service, Demux& fiber_demux);
 
   void AsyncAccept();
-  void FiberAcceptHandler(const boost::system::error_code& ec);
+  void OnFiberAccept(const boost::system::error_code& ec);
 
   void AsyncConnect();
-  void FiberConnectHandler(const boost::system::error_code& ec);
+  void OnFiberConnect(const boost::system::error_code& ec);
 
   void HandleStop();
 
@@ -160,24 +168,27 @@ class Admin : public BaseService<Demux> {
       const boost::system::error_code& ec = boost::system::error_code(),
       size_t length = 0);
   void PostKeepAlive(const boost::system::error_code& ec, size_t length);
-  void SendKeepAlive(const boost::system::error_code& ec);
+  void OnSendKeepAlive(const boost::system::error_code& ec);
   void ReceiveInstructionHeader();
   void ReceiveInstructionParameters();
   void ProcessInstructionId();
   void ShutdownServices();
 
   template <typename Handler>
-  void async_SendCommand(const AdminCommand& command, Handler handler) {
+  void AsyncSendCommand(const AdminCommand& command, Handler handler) {
     auto do_handler = [handler](const boost::system::error_code& ec,
                                 size_t length) { handler(ec, length); };
 
     boost::asio::async_write(fiber_, command.const_buffers(), do_handler);
   }
 
-  void Notify(BaseUserServicePtr p_user_service, boost::system::error_code ec) {
+  void Notify(BaseUserServicePtr p_user_service,
+              const boost::system::error_code& ec) {
     if (callback_) {
-      this->get_io_service().post(
-          std::bind(callback_, p_user_service, std::move(ec)));
+      auto self = this->shared_from_this();
+      this->get_io_service().post([this, self, p_user_service, ec]() {
+        callback_(p_user_service, ec);
+      });
     }
   }
 
@@ -235,6 +246,8 @@ class Admin : public BaseService<Demux> {
   IdToCommandHandlerMap command_handlers_;
 
   AdminCallbackType callback_;
+
+  CommandFactory<Demux> cmd_factory_;
 };
 
 }  // admin

@@ -1,9 +1,5 @@
 #include "ssf/layer/cryptography/tls/OpenSSL/helpers.h"
 
-#include <boost/archive/text_iarchive.hpp>
-
-#include <boost/serialization/vector.hpp>
-
 #include "ssf/error/error.h"
 #include "ssf/log/log.h"
 #include "ssf/utils/cleaner.h"
