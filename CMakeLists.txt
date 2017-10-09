@@ -17,10 +17,13 @@ message("** SSF_VERSION: ${SSF_VERSION}")
 message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 # --- Options
+include(CMakeDependentOption)
 option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
 option(BUILD_NETWORK_UNIT_TESTS "Build SSF network layers unit tests" OFF)
 option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
 option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
+CMAKE_DEPENDENT_OPTION(USE_STATIC_RUNTIME "Link statically against the C++ runtime libraries"
+                       ON "USE_STATIC_LIBS" OFF)
 
 # --- Set client/server security
 if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
@@ -39,7 +42,9 @@ include(HelpersIdeTarget)
 
 # --- Include platform specific settings
 if(UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+  if(USE_STATIC_RUNTIME)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+  endif(USE_STATIC_RUNTIME)
   if(${CMAKE_SIZEOF_VOID_P} EQUAL "8")
     list(APPEND PLATFORM_SPECIFIC_LIB_DEP linux_libc_funcs_version_downgrade)
   endif()
@@ -47,11 +52,13 @@ if(UNIX)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 endif(UNIX)
 if(MSVC)
-  set(EXEC_FLAG "RUNTIME_STATIC")
-  foreach(fl CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELASE
-             CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE)
-    string(REPLACE "/MD" "/MT" ${fl} "${${fl}}")
-  endforeach()
+  if(USE_STATIC_RUNTIME)
+    set(EXEC_FLAG "RUNTIME_STATIC")
+    foreach(fl CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+               CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE)
+      string(REPLACE "/MD" "/MT" ${fl} "${${fl}}")
+    endforeach()
+  endif(USE_STATIC_RUNTIME)
   add_definitions(-D_WIN32_WINNT=0x0501)
   # Increase the number of sections that an object file can contain
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
@@ -64,6 +71,7 @@ endif(MSVC)
 
 # --- Boost components
 set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+set(Boost_USE_STATIC_RUNTIME ${USE_STATIC_RUNTIME})
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED
              COMPONENTS system
@@ -76,7 +84,7 @@ find_package(Boost REQUIRED
 
 # --- OpenSSL components
 set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
-set(OPENSSL_MSVC_STATIC_RC TRUE)
+set(OPENSSL_MSVC_STATIC_RT ${USE_STATIC_RUNTIME})
 find_package(OpenSSL REQUIRED)
 if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
   include(CheckFunctionExists)
