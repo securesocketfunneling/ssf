@@ -24,6 +24,7 @@ option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "
 option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
 CMAKE_DEPENDENT_OPTION(USE_STATIC_RUNTIME "Link statically against the C++ runtime libraries"
                        ON "USE_STATIC_LIBS" OFF)
+option(DISABLE_RTTI "Disable C++ Runtime Type Information" OFF)
 
 # --- Set client/server security
 if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
@@ -45,6 +46,9 @@ if(UNIX)
   if(USE_STATIC_RUNTIME)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
   endif(USE_STATIC_RUNTIME)
+  if(DISABLE_RTTI)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+  endif(DISABLE_RTTI)
   if(${CMAKE_SIZEOF_VOID_P} EQUAL "8")
     list(APPEND PLATFORM_SPECIFIC_LIB_DEP memcpy)
   endif()
@@ -59,6 +63,9 @@ if(MSVC)
       string(REPLACE "/MD" "/MT" ${fl} "${${fl}}")
     endforeach()
   endif(USE_STATIC_RUNTIME)
+  if(DISABLE_RTTI)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+  endif(DISABLE_RTTI)
   add_definitions(-D_WIN32_WINNT=0x0501)
   # Increase the number of sections that an object file can contain
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
