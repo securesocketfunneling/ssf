@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-set(project_name "SSF")
-project(${project_name})
+project("SSF")
 set(CMAKE_CXX_STANDARD 11)
 
 set(SSF_VERSION_MAJOR 2)
