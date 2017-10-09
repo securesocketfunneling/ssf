@@ -1,4 +1,4 @@
-add_target("lib_http_parser"
+add_target(http_parser
   TYPE library ${EXEC_FLAG} STATIC
   FILES
     http-parser/http_parser.h
@@ -8,4 +8,4 @@ add_target("lib_http_parser"
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
 
-project_group("Third party" lib_http_parser)
+project_group("Third party" http_parser)

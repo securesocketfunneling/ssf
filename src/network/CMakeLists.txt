@@ -209,7 +209,7 @@ if (UNIX)
     ssf/layer/proxy/unix/gssapi_auth_impl.h)
 endif (UNIX)
 
-add_target("lib_ssf_network"
+add_target(ssf_network
   TYPE
     library ${EXEC_FLAG} STATIC
   FILES
@@ -219,7 +219,7 @@ add_target("lib_ssf_network"
     ${Boost_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
     ${PLATFORM_LIB}
-    lib_http_parser
+    http_parser
     lib_msgpack_c
   INCLUDE_DIRECTORIES PUBLIC
     ${OPENSSL_INCLUDE_DIR}

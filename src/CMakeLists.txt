@@ -213,7 +213,7 @@ endif (UNIX)
 add_subdirectory(network)
 add_subdirectory(compat)
 
-add_target(lib_ssf_framework
+add_target(ssf_framework
   TYPE
     LIBRARY ${EXEC_FLAG} STATIC
   FILES
@@ -226,7 +226,7 @@ add_target(lib_ssf_framework
     ${Boost_LIBRARIES}
     ${OPENSSL_LIBRARIES}
     ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
+    ssf_network
 )
 
 add_subdirectory(client)

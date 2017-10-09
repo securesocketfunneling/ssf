@@ -29,7 +29,7 @@ add_target(option_parser_tests
   FILES
     "option_parser_tests.cpp"
   LINKS
-    lib_ssf_framework
+    ssf_framework
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -46,7 +46,7 @@ add_target(socks_tests
     ${SOCKS_HELPERS_FILES}
     ${TCP_HELPERS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -64,7 +64,7 @@ add_target(remote_socks_tests
     ${SOCKS_HELPERS_FILES}
     ${TCP_HELPERS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -81,7 +81,7 @@ add_target(stream_forward_tests
     ${SERVICE_TESTS_FILES}
     ${TCP_HELPERS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -98,7 +98,7 @@ add_target(remote_stream_forward_tests
     ${SERVICE_TESTS_FILES}
     ${TCP_HELPERS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -115,7 +115,7 @@ add_target(datagram_forward_tests
     ${SERVICE_TESTS_FILES}
     ${UDP_HELPERS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -132,7 +132,7 @@ add_target(remote_datagram_forward_tests
     ${SERVICE_TESTS_FILES}
     ${UDP_HELPERS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -156,7 +156,7 @@ add_target(file_copy_from_client_tests
     "file_copy_fixture_test.h"
     "file_copy_fixture_test.cpp"
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -172,7 +172,7 @@ add_target(process_tests
     "process_tests.cpp"
     ${SERVICE_TESTS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src
@@ -188,7 +188,7 @@ add_target(remote_process_tests
     "remote_process_tests.cpp"
     ${SERVICE_TESTS_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
     gtest
   PREFIX_SKIP     .*/src

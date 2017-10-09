@@ -6,7 +6,7 @@ add_target(tls_config_helper
     tls_config_helper.h
     tls_config_helper.cpp
   LINKS
-    lib_ssf_framework
+    ssf_framework
     test_certs
 )
 

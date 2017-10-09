@@ -13,7 +13,7 @@ add_target(load_config_tests
   FILES
     "load_config_tests.cpp"
   LINKS
-    lib_ssf_framework
+    ssf_framework
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"

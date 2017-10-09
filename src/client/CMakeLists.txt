@@ -8,7 +8,7 @@ add_target("ssf"
     ssf.cpp
     ${ICON_RC}
   LINKS
-    lib_ssf_framework
+    ssf_framework
 )
 copy_certs(ssf)
 
@@ -20,7 +20,7 @@ add_target(ssfcp
     ssfcp.cpp
     ${ICON_RC}
   LINKS
-    lib_ssf_framework
+    ssf_framework
 )
 copy_certs(ssfcp)
 

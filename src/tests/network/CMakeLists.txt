@@ -12,7 +12,7 @@ add_target(fiber_asio_tests
   FILES
     fiber_asio_tests.cpp
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -26,7 +26,7 @@ add_target(ssf_client_server_tests
   FILES
     ssf_client_server_tests.cpp
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -40,7 +40,7 @@ add_target(ssf_client_server_cipher_suites_tests
   FILES
     ssf_client_server_cipher_suites_tests.cpp
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -55,7 +55,7 @@ add_target(ssf_client_tests
     ssf_client_tests.cpp
     ${ssf_fixture_test_file}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -70,7 +70,7 @@ add_target(ssf_server_tests
     ssf_server_tests.cpp
     ${ssf_fixture_test_file}
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -84,7 +84,7 @@ add_target(circuit_tests
   FILES
     circuit_tests.cpp
   LINKS
-    lib_ssf_framework
+    ssf_framework
     tls_config_helper
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"

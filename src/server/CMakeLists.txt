@@ -11,7 +11,7 @@ add_target(ssfd
     ssfd.cpp
     ${ICON_RC}
   LINKS
-    lib_ssf_framework
+    ssf_framework
   PREFIX_SKIP
     ${project_SRC_DIR})
 

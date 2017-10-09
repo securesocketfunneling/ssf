@@ -8,7 +8,7 @@ add_target(commandline_tests
     ${CORE_COMMAND_LINE_STANDARD_FILES}
     ${CORE_COMMAND_LINE_COPY_FILES}
   LINKS
-    lib_ssf_framework
+    ssf_framework
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )

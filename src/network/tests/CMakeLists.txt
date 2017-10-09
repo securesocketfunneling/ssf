@@ -20,7 +20,7 @@ add_target(log_tests
   FILES
     log_tests.cpp
   LINKS
-    lib_ssf_network
+    ssf_network
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -34,7 +34,7 @@ add_target(queue_tests
   FILES
     queue_tests.cpp
   LINKS
-    lib_ssf_network
+    ssf_network
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -49,7 +49,7 @@ add_target(physical_layer_tests
     physical_layer_tests.cpp
     ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
   LINKS
-    lib_ssf_network
+    ssf_network
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -64,7 +64,7 @@ add_target(proxy_layer_tests
     proxy_layer_tests.cpp
     ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
   LINKS
-    lib_ssf_network
+    ssf_network
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -77,7 +77,7 @@ add_target(proxy_auth_strategies_tests
   FILES
     proxy_auth_strategies_tests.cpp
   LINKS
-    lib_ssf_network
+    ssf_network
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -92,7 +92,7 @@ add_target(link_layer_tests
     link_layer_tests.cpp
     ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
   LINKS
-    lib_ssf_network
+    ssf_network
     gtest
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -107,7 +107,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #    interface_layer_tests.cpp
 #    ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
 #  LINKS
-#    lib_ssf_network
+#    ssf_network
 #    gtest
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -122,7 +122,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #    routing_layer_tests.cpp
 #    ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
 #  LINKS
-#    lib_ssf_network
+#    ssf_network
 #    gtest
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -137,7 +137,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #    "transport_layer_tests.cpp"
 #    ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
 #  LINKS
-#    lib_ssf_network
+#    ssf_network
 #    gtest
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -152,7 +152,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #    interfaces_system_tests.cpp
 #    ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
 #  LINKS
-#    lib_ssf_network
+#    ssf_network
 #    gtest
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
@@ -167,7 +167,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #    router_system_tests.cpp
 #    ${SSF_NETWORK_LAYER_TEST_FIXTURES_FILES}
 #  LINKS
-#    lib_ssf_network
+#    ssf_network
 #    gtest
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
