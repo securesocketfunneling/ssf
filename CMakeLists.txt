@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 set(project_name "SSF")
 project(${project_name})
+set(CMAKE_CXX_STANDARD 11)
 
 set(SSF_VERSION_MAJOR 2)
 set(SSF_VERSION_MINOR 2)
@@ -38,7 +39,29 @@ add_subdirectory(cmake)
 include(HelpersIdeTarget)
 
 # --- Include platform specific settings
-include(Platform)
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+  if(${CMAKE_SIZEOF_VOID_P} EQUAL "8")
+    list(APPEND PLATFORM_SPECIFIC_LIB_DEP linux_libc_funcs_version_downgrade)
+  endif()
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+endif(UNIX)
+if(MSVC)
+  set(EXEC_FLAG "RUNTIME_STATIC")
+  foreach(fl CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELASE
+             CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE)
+    string(REPLACE "/MD" "/MT" ${fl} "${${fl}}")
+  endforeach()
+  add_definitions(-D_WIN32_WINNT=0x0501)
+  # Increase the number of sections that an object file can contain
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+  # Disable warning: 'identifier': decorated name length exceeded, name was truncated
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4503")
+  # Disable warning C4996: security advice
+  add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif(MSVC)
 
 # --- Boost components
 set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
@@ -54,6 +77,7 @@ find_package(Boost REQUIRED
 
 # --- OpenSSL components
 set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+set(OPENSSL_MSVC_STATIC_RC TRUE)
 find_package(OpenSSL REQUIRED)
 if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
   include(CheckFunctionExists)

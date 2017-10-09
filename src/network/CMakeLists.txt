@@ -195,7 +195,7 @@ set(SSF_NETWORK_FILES
 
 if (WIN32)
   # windows impl
-  list(APPEND PLATFORM_LIB "Secur32.lib")
+  list(APPEND PLATFORM_LIB Secur32.lib)
   list(APPEND SSF_NETWORK_FILES
     # layer/proxy
     ssf/layer/proxy/windows/sspi_auth_impl.cpp
@@ -203,6 +203,7 @@ if (WIN32)
 endif (WIN32)
 if (UNIX)
   # linux/unix impl
+  list(APPEND PLATFORM_LIB dl)
   list(APPEND SSF_NETWORK_FILES
     # layer/proxy
     ssf/layer/proxy/unix/gssapi_auth_impl.cpp
