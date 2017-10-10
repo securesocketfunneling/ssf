@@ -10,10 +10,6 @@ set(SSF_VERSION_TRANSPORT 2)
 
 set(SSF_VERSION "${SSF_VERSION_MAJOR}.${SSF_VERSION_MINOR}.${SSF_VERSION_FIX}")
 
-message("** SSF_VERSION: ${SSF_VERSION}")
-
-message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-
 # --- Options
 include(CMakeDependentOption)
 option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
@@ -126,3 +122,13 @@ add_subdirectory(img)
 
 # --- Add sources
 add_subdirectory(src)
+
+# --- Print summary
+message(STATUS "Build configuration:")
+message(STATUS "  Version: ${SSF_VERSION}")
+message(STATUS "  Unit Tests: ${BUILD_UNIT_TESTS}")
+message(STATUS "  Network Unit Tests: ${BUILD_NETWORK_UNIT_TESTS}")
+message(STATUS "  TLS Disabled: ${DISABLE_TLS}")
+message(STATUS "  Static Libraries: ${USE_STATIC_LIBS} (Boost: ${Boost_USE_STATIC_LIBS}, OpenSSL: ${OPENSSL_USE_STATIC_LIBS})")
+message(STATUS "  Static Runtime: ${USE_STATIC_RUNTIME} (Boost: ${Boost_USE_STATIC_RUNTIME}, OpenSSL: ${OPENSSL_MSVC_STATIC_RT})")
+message(STATUS "  RTTI disabled: ${DISABLE_RTTI}")
