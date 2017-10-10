@@ -221,7 +221,7 @@ add_target(ssf_network
     ${PLATFORM_SPECIFIC_LIB_DEP}
     ${PLATFORM_LIB}
     http_parser
-    lib_msgpack_c
+    msgpack_c
   INCLUDE_DIRECTORIES PUBLIC
     ${OPENSSL_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
