@@ -113,7 +113,17 @@ add_subdirectory(certs)
 # --- Unit tests
 if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
   enable_testing()
-  add_subdirectory(third_party/googletest/googletest)
+  add_library(gtest STATIC EXCLUDE_FROM_ALL third_party/googletest/googletest/src/gtest-all.cc)
+  add_library(gtest_main STATIC EXCLUDE_FROM_ALL third_party/googletest/googletest/src/gtest_main.cc)
+  target_link_libraries(gtest_main gtest)
+  target_include_directories(gtest
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest/include
+  )
+  target_include_directories(gtest_main
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest/include
+  )
   project_group("Unit Tests" gtest gtest_main)
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
