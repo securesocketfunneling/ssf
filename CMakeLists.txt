@@ -77,7 +77,12 @@ if(MSVC)
 endif(MSVC)
 
 # --- Boost components
-set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+# Force linking boost statically on Visual Studio
+if (MSVC)
+  set(Boost_USE_STATIC_LIBS ON)
+else()
+  set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+endif()
 set(Boost_USE_STATIC_RUNTIME ${USE_STATIC_RUNTIME})
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED
