@@ -219,12 +219,10 @@ add_target(ssf_framework
   FILES
     ${SSF_FRAMEWORK_FILES}
   INCLUDE_DIRECTORIES PUBLIC
-    ${OPENSSL_INCLUDE_DIR}
-    ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
   LINKS
-    ${Boost_LIBRARIES}
-    ${OPENSSL_LIBRARIES}
+    boost
+    ssl
     ${PLATFORM_SPECIFIC_LIB_DEP}
     ssf_network
 )

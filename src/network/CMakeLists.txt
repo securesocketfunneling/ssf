@@ -216,15 +216,13 @@ add_target(ssf_network
   FILES
     ${SSF_NETWORK_FILES}
   LINKS
-    ${OPENSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
+    boost
+    ssl
     ${PLATFORM_SPECIFIC_LIB_DEP}
     ${PLATFORM_LIB}
     http_parser
     msgpack_c
   INCLUDE_DIRECTORIES PUBLIC
-    ${OPENSSL_INCLUDE_DIR}
-    ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
   PREFIX_SKIP     .*/src

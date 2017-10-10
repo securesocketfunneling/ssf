@@ -88,20 +88,29 @@ find_package(Boost REQUIRED
                         regex
                         chrono
                         thread)
+add_library(boost INTERFACE)
+target_include_directories(boost INTERFACE ${Boost_INCLUDE_DIRS})
+target_link_libraries(boost INTERFACE ${Boost_LIBRARIES})
+if (DISABLE_RTTI)
+  target_compile_definitions(boost INTERFACE BOOST_NO_RTTI BOOST_NO_TYPEID)
+endif(DISABLE_RTTI)
 
 # --- OpenSSL components
 set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 set(OPENSSL_MSVC_STATIC_RT ${USE_STATIC_RUNTIME})
 find_package(OpenSSL REQUIRED)
+add_library(ssl INTERFACE)
+target_include_directories(ssl INTERFACE ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(ssl INTERFACE ${OPENSSL_LIBRARIES})
 if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
   include(CheckFunctionExists)
   CHECK_FUNCTION_EXISTS("_snprintf" HAVE_SNPRINTF)
   if(NOT HAVE_SNPRINTF)
-    list(APPEND OPENSSL_LIBRARIES legacy_stdio_definitions.lib)
+    target_link_libraries(ssl INTERFACE legacy_stdio_definitions.lib)
   endif(NOT HAVE_SNPRINTF)
   CHECK_FUNCTION_EXISTS("__iob_func" HAVE_IOB_FUNC)
   if(NOT HAVE_IOB_FUNC)
-    list(APPEND OPENSSL_LIBRARIES iob_func)
+    target_link_libraries(ssl INTERFACE iob_func)
   endif(NOT HAVE_IOB_FUNC)
 endif()
 
