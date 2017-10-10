@@ -227,6 +227,12 @@ add_target(ssf_framework
     ssf_network
 )
 
+if(DISABLE_TLS)
+  target_compile_definitions(ssf_framework PUBLIC TCP_ONLY_LINK)
+else()
+  target_compile_definitions(ssf_framework PUBLIC TLS_OVER_TCP_LINK)
+endif()
+
 add_subdirectory(client)
 add_subdirectory(server)
 

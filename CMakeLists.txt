@@ -20,22 +20,11 @@ message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 include(CMakeDependentOption)
 option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
 option(BUILD_NETWORK_UNIT_TESTS "Build SSF network layers unit tests" OFF)
-option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
+option(DISABLE_TLS "Disable TLS" OFF)
 option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
 CMAKE_DEPENDENT_OPTION(USE_STATIC_RUNTIME "Link statically against the C++ runtime libraries"
                        ON "USE_STATIC_LIBS" OFF)
 option(DISABLE_RTTI "Disable C++ Runtime Type Information" OFF)
-
-# --- Set client/server security
-if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
-  message("** SSF_SECURITY is FORCE_TCP_ONLY")
-  add_definitions(-DTCP_ONLY_LINK)
-  set(SSF_VERSION_SECURITY 0)
-else()
-  message("** SSF_SECURITY is STANDARD")
-  add_definitions(-DTLS_OVER_TCP_LINK)
-  set(SSF_VERSION_SECURITY 2)
-endif()
 
 # --- Include CMake build system scripts
 add_subdirectory(cmake)

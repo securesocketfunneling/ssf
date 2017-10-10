@@ -12,7 +12,6 @@ enum Versions : uint8_t {
   major = @SSF_VERSION_MAJOR@,
   minor = @SSF_VERSION_MINOR@,
   fix = @SSF_VERSION_FIX@,
-  security = @SSF_VERSION_SECURITY@,
   circuit = @SSF_VERSION_CIRCUIT@,
   transport = @SSF_VERSION_TRANSPORT@
 };
