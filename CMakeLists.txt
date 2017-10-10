@@ -96,6 +96,7 @@ find_package(Boost REQUIRED
 add_library(boost INTERFACE)
 target_include_directories(boost INTERFACE ${Boost_INCLUDE_DIRS})
 target_link_libraries(boost INTERFACE ${Boost_LIBRARIES})
+target_compile_definitions(boost INTERFACE BOOST_EXCEPTION_DISABLE)
 if (DISABLE_RTTI)
   target_compile_definitions(boost INTERFACE BOOST_NO_RTTI BOOST_NO_TYPEID)
 endif(DISABLE_RTTI)
