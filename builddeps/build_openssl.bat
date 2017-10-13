@@ -47,7 +47,7 @@ exit /B 1
 set DIST_DIR=%~f2
 echo %DIST_DIR%
 set BASE_DIR=%~dp0
-set OPENSSL_BUILD_DIR=%BASE_DIR%\openssl.build%ARCH%
+set OPENSSL_BUILD_DIR=%cd%\openssl.build%ARCH%
 
 set PATH=%PATH%;C:\Program Files\7-Zip
 

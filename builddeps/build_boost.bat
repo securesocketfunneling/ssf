@@ -26,8 +26,8 @@ exit /B 1
 set DIST_DIR=%~f2
 echo %DIST_DIR%
 set BASE_DIR=%~dp0
-set BOOST_BUILD_DIR=%BASE_DIR%\boost.build%ARCH%
-set BOOST_STAGE_DIR=%BASE_DIR%\boost.stage%ARCH%
+set BOOST_BUILD_DIR=%cd%\boost.build%ARCH%
+set BOOST_STAGE_DIR=%cd%\boost.stage%ARCH%
 
 set PATH=%PATH%;C:\Program Files\7-Zip
 
