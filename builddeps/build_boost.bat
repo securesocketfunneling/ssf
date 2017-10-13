@@ -49,7 +49,7 @@ set B2_ARGS=--build-dir=%BOOST_BUILD_DIR% --stagedir=%BOOST_STAGE_DIR% -j%NUMBER
 for %%l in (%BOOST_LIBRARIES%) do (
   set B2_ARGS=!B2_ARGS! --with-%%l
 )
-set B2_ARGS=!B2_ARGS! link=static runtime-link=static variant=debug,release address-model=%ARCH%
+set B2_ARGS=!B2_ARGS! link=static runtime-link=static variant=debug,release address-model=%ARCH% cxxflags="-GR-"
 if "%ARCH%"=="32" (
   set B2_ARGS=!B2_ARGS! asmflags=\safeseh
 )
