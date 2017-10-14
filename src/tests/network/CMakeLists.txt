@@ -1,9 +1,5 @@
-set(ssf_fixture_test_file
-  ssf_fixture_test.h
-  ssf_fixture_test.cpp
-)
-
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+add_library(fixture_test STATIC EXCLUDE_FROM_ALL ssf_fixture_test.h ssf_fixture_test.cpp)
+target_link_libraries(fixture_test gtest ssf_framework)
 
 # --- Fiber asio tests
 add_executable(fiber_asio_tests EXCLUDE_FROM_ALL fiber_asio_tests.cpp)
@@ -24,14 +20,14 @@ add_unit_test(ssf_client_server_cipher_suites_tests)
 set_property(TARGET ssf_client_server_cipher_suites_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Client tests
-add_executable(ssf_client_tests EXCLUDE_FROM_ALL ssf_client_tests.cpp ${ssf_fixture_test_file})
-target_link_libraries(ssf_client_tests ssf_framework tls_config_helper)
+add_executable(ssf_client_tests EXCLUDE_FROM_ALL ssf_client_tests.cpp)
+target_link_libraries(ssf_client_tests ssf_framework fixture_test tls_config_helper)
 add_unit_test(ssf_client_tests)
 set_property(TARGET ssf_client_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Server tests
-add_executable(ssf_server_tests EXCLUDE_FROM_ALL ssf_server_tests.cpp ${ssf_fixture_test_file})
-target_link_libraries(ssf_server_tests ssf_framework tls_config_helper)
+add_executable(ssf_server_tests EXCLUDE_FROM_ALL ssf_server_tests.cpp)
+target_link_libraries(ssf_server_tests ssf_framework fixture_test tls_config_helper)
 add_unit_test(ssf_server_tests)
 set_property(TARGET ssf_server_tests PROPERTY FOLDER "Unit Tests/Network")
 
