@@ -17,7 +17,7 @@ add_target(fiber_asio_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network" fiber_asio_tests)
+set_property(TARGET fiber_asio_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Client Server tests
 add_target(ssf_client_server_tests
@@ -31,7 +31,7 @@ add_target(ssf_client_server_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network" ssf_client_server_tests)
+set_property(TARGET ssf_client_server_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Client Server cipher suites tests
 add_target(ssf_client_server_cipher_suites_tests
@@ -45,7 +45,7 @@ add_target(ssf_client_server_cipher_suites_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network" ssf_client_server_cipher_suites_tests)
+set_property(TARGET ssf_client_server_cipher_suites_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Client tests
 add_target(ssf_client_tests
@@ -60,7 +60,7 @@ add_target(ssf_client_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network" ssf_client_tests)
+set_property(TARGET ssf_client_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Server tests
 add_target(ssf_server_tests
@@ -75,7 +75,7 @@ add_target(ssf_server_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network" ssf_server_tests)
+set_property(TARGET ssf_server_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- Circuit tests
 add_target(circuit_tests
@@ -89,4 +89,4 @@ add_target(circuit_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network" circuit_tests)
+set_property(TARGET circuit_tests PROPERTY FOLDER "Unit Tests/Network")

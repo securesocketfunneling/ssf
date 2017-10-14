@@ -12,4 +12,4 @@ add_target(commandline_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/CommandLine" commandline_tests)
+set_property(TARGET commandline_tests PROPERTY FOLDER "Unit Tests/CommandLine")

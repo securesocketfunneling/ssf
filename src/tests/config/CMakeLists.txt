@@ -18,4 +18,4 @@ add_target(load_config_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Config" load_config_tests)
+set_property(TARGET load_config_tests PROPERTY FOLDER "Unit Tests/Config")

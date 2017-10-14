@@ -9,7 +9,7 @@ target_link_libraries(tls_config_helper PUBLIC
   test_certs
 )
 
-project_group("Unit Tests" tls_config_helper)
+set_property(TARGET tls_config_helper PROPERTY FOLDER "Unit Tests")
 
 add_subdirectory(commandline)
 add_subdirectory(config)

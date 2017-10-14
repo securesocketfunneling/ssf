@@ -8,4 +8,4 @@ add_target(http_parser
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
 
-project_group("Third party" http_parser)
+set_property(TARGET http_parser PROPERTY FOLDER "Third party")

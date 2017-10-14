@@ -124,7 +124,8 @@ if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest/googletest/include
   )
-  project_group("Unit Tests" gtest gtest_main)
+  set_property(TARGET gtest PROPERTY FOLDER "Unit Tests")
+  set_property(TARGET gtest_main PROPERTY FOLDER "Unit Tests")
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
 # -- Images

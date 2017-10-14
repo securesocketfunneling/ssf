@@ -25,7 +25,7 @@ add_target(log_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network layers" log_tests)
+set_property(TARGET log_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Queue tests
 add_target(queue_tests
@@ -39,7 +39,7 @@ add_target(queue_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network layers" queue_tests)
+set_property(TARGET queue_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Physical layer tests
 add_target(physical_layer_tests
@@ -54,7 +54,7 @@ add_target(physical_layer_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network layers" physical_layer_tests)
+set_property(TARGET physical_layer_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Proxy layer tests
 add_target(proxy_layer_tests
@@ -69,7 +69,7 @@ add_target(proxy_layer_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network layers"  proxy_layer_tests)
+set_property(TARGET proxy_layer_tests PROPERTY FOLDER "Unit Tests/Network layers" )
 
 add_target(proxy_auth_strategies_tests
   TYPE
@@ -82,7 +82,7 @@ add_target(proxy_auth_strategies_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network layers"  proxy_auth_strategies_tests)
+set_property(TARGET proxy_auth_strategies_tests PROPERTY FOLDER "Unit Tests/Network layers" )
 
 # --- Link layer tests
 add_target(link_layer_tests
@@ -97,7 +97,7 @@ add_target(link_layer_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group("Unit Tests/Network layers" link_layer_tests)
+set_property(TARGET link_layer_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Interface layer tests
 #add_target("interface_layer_tests"
@@ -112,7 +112,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 #)
-#project_group("Unit Tests/Network layers" interface_layer_tests)
+#set_property(TARGET interface_layer_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Routing layer tests
 #add_target(routing_layer_tests
@@ -127,7 +127,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 #)
-#project_group("Unit Tests/Network layers" routing_layer_tests)
+#set_property(TARGET routing_layer_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Transport layer tests
 #add_target(transport_layer_tests
@@ -142,7 +142,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 #)
-#project_group("Unit Tests/Network layers" transport_layer_tests)
+#set_property(TARGET transport_layer_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Interface System tests
 #add_target(interfaces_system_tests
@@ -157,7 +157,7 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 #)
-#project_group("Unit Tests/Network layers" interfaces_system_tests)
+#set_property(TARGET interfaces_system_tests PROPERTY FOLDER "Unit Tests/Network layers")
 
 # --- Router System tests
 #add_target(router_system_tests
@@ -172,4 +172,4 @@ project_group("Unit Tests/Network layers" link_layer_tests)
 #  PREFIX_SKIP     .*/src
 #  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 #)
-#project_group("Unit Tests/Network layers" router_system_tests)
+#set_property(TARGET router_system_tests PROPERTY FOLDER "Unit Tests/Network layers")

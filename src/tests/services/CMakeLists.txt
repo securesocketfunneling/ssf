@@ -34,7 +34,7 @@ add_target(option_parser_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} option_parser_tests)
+set_property(TARGET option_parser_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- Socks test
 add_target(socks_tests
@@ -52,7 +52,7 @@ add_target(socks_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} socks_tests)
+set_property(TARGET socks_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- Remote socks test
 add_target(remote_socks_tests
@@ -70,7 +70,7 @@ add_target(remote_socks_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} remote_socks_tests)
+set_property(TARGET remote_socks_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- Stream forward test
 add_target(stream_forward_tests
@@ -87,7 +87,7 @@ add_target(stream_forward_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} stream_forward_tests)
+set_property(TARGET stream_forward_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- Remote stream forward test
 add_target(remote_stream_forward_tests
@@ -104,7 +104,7 @@ add_target(remote_stream_forward_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} remote_stream_forward_tests)
+set_property(TARGET remote_stream_forward_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- UDP forward test
 add_target(datagram_forward_tests
@@ -121,7 +121,7 @@ add_target(datagram_forward_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} datagram_forward_tests)
+set_property(TARGET datagram_forward_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- Remote UDP forward test
 add_target(remote_datagram_forward_tests
@@ -138,7 +138,7 @@ add_target(remote_datagram_forward_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} remote_datagram_forward_tests)
+set_property(TARGET remote_datagram_forward_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- File copy from client test
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/files_to_copy)
@@ -162,7 +162,7 @@ add_target(file_copy_from_client_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} file_copy_from_client_tests)
+set_property(TARGET file_copy_from_client_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- Process test
 add_target(process_tests
@@ -178,7 +178,7 @@ add_target(process_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} process_tests)
+set_property(TARGET process_tests PROPERTY FOLDER ${services_tests_group_name})
 
 # --- Remote process test
 add_target(remote_process_tests
@@ -194,4 +194,4 @@ add_target(remote_process_tests
   PREFIX_SKIP     .*/src
   HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
 )
-project_group(${services_tests_group_name} remote_process_tests)
+set_property(TARGET remote_process_tests PROPERTY FOLDER ${services_tests_group_name})
