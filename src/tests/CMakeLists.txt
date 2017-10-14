@@ -1,4 +1,3 @@
-enable_testing()
 
 add_library(tls_config_helper STATIC EXCLUDE_FROM_ALL
   tls_config_helper.h

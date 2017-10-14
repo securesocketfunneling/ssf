@@ -1,5 +1,3 @@
-enable_testing()
-
 set(SSF_NETWORK_LAYER_TEST_FIXTURES_FILES
   "circuit_test_fixture.h"
   "datagram_protocol_helpers.h"
