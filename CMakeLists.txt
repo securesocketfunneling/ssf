@@ -22,7 +22,6 @@ option(DISABLE_RTTI "Disable C++ Runtime Type Information" OFF)
 
 # --- Include CMake build system scripts
 add_subdirectory(cmake)
-include(HelpersIdeTarget)
 
 # --- Include platform specific settings
 if(UNIX)
