@@ -7,15 +7,7 @@ file(COPY ${CONFIG_TEST_FILES} DESTINATION config_files)
 # --- Config tests
 
 # --- Load config test
-add_target(load_config_tests
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  FILES
-    "load_config_tests.cpp"
-  LINKS
-    ssf_framework
-    gtest
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-)
+add_executable(load_config_tests EXCLUDE_FROM_ALL load_config_tests.cpp)
+target_link_libraries(load_config_tests ssf_framework gtest)
 set_property(TARGET load_config_tests PROPERTY FOLDER "Unit Tests/Config")
+add_unit_test(load_config_tests)

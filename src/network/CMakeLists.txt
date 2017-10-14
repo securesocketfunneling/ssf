@@ -210,23 +210,9 @@ if (UNIX)
     ssf/layer/proxy/unix/gssapi_auth_impl.h)
 endif (UNIX)
 
-add_target(ssf_network
-  TYPE
-    library ${EXEC_FLAG} STATIC
-  FILES
-    ${SSF_NETWORK_FILES}
-  LINKS
-    boost
-    ssl
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    ${PLATFORM_LIB}
-    http_parser
-    msgpack_c
-  INCLUDE_DIRECTORIES PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  PREFIX_SKIP     .*/src
-)
+add_library(ssf_network STATIC ${SSF_NETWORK_FILES})
+target_include_directories(ssf_network PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(ssf_network PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} ${PLATFORM_LIB} http_parser msgpack_c)
 
 if (BUILD_NETWORK_UNIT_TESTS)
   add_subdirectory(tests)
