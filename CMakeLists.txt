@@ -21,7 +21,7 @@ CMAKE_DEPENDENT_OPTION(USE_STATIC_RUNTIME "Link statically against the C++ runti
 option(DISABLE_RTTI "Disable C++ Runtime Type Information" OFF)
 
 # --- Include CMake build system scripts
-add_subdirectory(cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # --- Include platform specific settings
 if(UNIX)
