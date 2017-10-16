@@ -15,8 +15,7 @@
 #include "services/admin/requests/stop_service_request.h"
 
 #include "services/base_service.h"
-#include "services/copy_file/fiber_to_file/fiber_to_file.h"
-#include "services/copy_file/file_to_fiber/file_to_fiber.h"
+#include "services/copy/copy_server.h"
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
@@ -66,11 +65,8 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
   // set acceptor
   network_acceptor_.open();
 
-  /*
-  // TODO: reuse address ?
   network_acceptor_.set_option(boost::asio::socket_base::reuse_address(true),
                                ec);
-  */
 
   boost::system::error_code close_ec;
 
@@ -202,12 +198,8 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   services::datagrams_to_fibers::DatagramsToFibers<
       Demux>::RegisterToServiceFactory(p_service_factory,
                                        services_config_.datagram_listener());
-  services::copy_file::file_to_fiber::FileToFiber<
-      Demux>::RegisterToServiceFactory(p_service_factory,
-                                       services_config_.file_copy());
-  services::copy_file::fiber_to_file::FiberToFile<
-      Demux>::RegisterToServiceFactory(p_service_factory,
-                                       services_config_.file_copy());
+  services::copy::CopyServer<Demux>::RegisterToServiceFactory(
+      p_service_factory, services_config_.copy());
   services::process::Server<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
@@ -216,8 +208,8 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   auto p_admin_service = services::admin::Admin<Demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, empty_map);
-  if (!p_admin_service
-           ->template RegisterCommand<services::admin::CreateServiceRequest>()) {
+  if (!p_admin_service->template RegisterCommand<
+          services::admin::CreateServiceRequest>()) {
     SSF_LOG(kLogError) << "server: cannot register "
                           "CreateServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
@@ -230,7 +222,8 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
-  if (!p_admin_service->template RegisterCommand<services::admin::ServiceStatus>()) {
+  if (!p_admin_service
+           ->template RegisterCommand<services::admin::ServiceStatus>()) {
     SSF_LOG(kLogError) << "server: cannot register "
                           "ServiceStatus into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());

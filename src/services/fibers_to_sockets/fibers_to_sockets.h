@@ -13,6 +13,7 @@
 #include <ssf/network/socket_link.h>
 
 #include "services/base_service.h"
+#include "services/service_id.h"
 
 #include "core/factories/service_factory.h"
 
@@ -41,7 +42,7 @@ class FibersToSockets : public BaseService<Demux> {
   using Tcp = boost::asio::ip::tcp;
 
  public:
-  enum { kFactoryId = 3 };
+  enum { kFactoryId = ServiceId::kFibersToSockets };
 
  public:
   FibersToSockets() = delete;

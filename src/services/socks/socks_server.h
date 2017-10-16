@@ -13,6 +13,7 @@
 #include <ssf/network/manager.h>
 
 #include "services/base_service.h"
+#include "services/service_id.h"
 
 #include "core/factories/service_factory.h"
 
@@ -41,7 +42,7 @@ class SocksServer : public BaseService<Demux> {
 
  public:
   // Service ID in the service factory
-  enum { kFactoryId = 2 };
+  enum { kFactoryId = ServiceId::kSocksServer };
 
  public:
   SocksServer(const SocksServer&) = delete;

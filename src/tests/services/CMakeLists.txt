@@ -66,14 +66,10 @@ set_property(TARGET remote_datagram_forward_tests PROPERTY FOLDER ${service_test
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/files_to_copy)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/files_copied)
 
-FILE(GLOB_RECURSE TEST_FILES_TO_COPY ${CMAKE_CURRENT_SOURCE_DIR}/files_to_copy/*)
-
-file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/files_to_copy)
-
-add_executable(file_copy_from_client_tests EXCLUDE_FROM_ALL file_copy_from_client_tests.cpp file_copy_fixture_test.h file_copy_fixture_test.cpp)
-target_link_libraries(file_copy_from_client_tests ssf_framework tls_config_helper gtest)
-add_unit_test(file_copy_from_client_tests)
-set_property(TARGET file_copy_from_client_tests PROPERTY FOLDER ${service_test_group_name})
+add_executable(copy_tests EXCLUDE_FROM_ALL copy_tests.cpp copy_fixture_test.h copy_fixture_test.cpp)
+target_link_libraries(copy_tests ssf_framework tls_config_helper gtest)
+add_unit_test(copy_tests)
+set_property(TARGET copy_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- Process test
 add_executable(process_tests EXCLUDE_FROM_ALL process_tests.cpp ${SERVICE_TEST_HEADERS})

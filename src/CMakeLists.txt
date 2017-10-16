@@ -39,9 +39,24 @@ set(SSF_FRAMEWORK_FILES
   common/config/tls.cpp
   common/config/tls.h
 
+  # crypto
+  common/crypto/hash.h
+  common/crypto/md5.h
+  common/crypto/md5.cpp
+  common/crypto/sha1.h
+  common/crypto/sha1.cpp
+  common/crypto/sha256.h
+  common/crypto/sha256.cpp
+
   # errors
   common/error/error.cpp
   common/error/error.h
+
+  # filesystem
+  common/filesystem/path.h
+  common/filesystem/path.cpp
+  common/filesystem/filesystem.h
+  common/filesystem/filesystem.cpp
 
   # log
   common/log/log.cpp
@@ -84,6 +99,8 @@ set(SSF_FRAMEWORK_FILES
   services/base_service.h
   services/base_service_config.cpp
   services/base_service_config.h
+  services/service_port.h
+  services/service_id.h
 
   # microservices/admin
   services/admin/admin.h
@@ -95,19 +112,59 @@ set(SSF_FRAMEWORK_FILES
   services/admin/requests/stop_service_request.h
 
   # microservices/copy
-  services/copy_file/config.cpp
-  services/copy_file/config.h
-  services/copy_file/fiber_to_file/fiber_to_file.h
-  services/copy_file/fiber_to_file/fiber_to_ofstream_session.h
-  services/copy_file/filename_buffer.cpp
-  services/copy_file/filename_buffer.h
-  services/copy_file/filesystem/filesystem.cpp
-  services/copy_file/filesystem/filesystem.h
-  services/copy_file/file_enquirer/file_enquirer.h
-  services/copy_file/file_to_fiber/file_to_fiber.h
-  services/copy_file/file_to_fiber/istream_to_fiber_session.h
-  services/copy_file/packet/packet.cpp
-  services/copy_file/packet/packet.h
+  services/copy/config.cpp
+  services/copy/config.h
+
+  services/copy/copy_client.h
+  services/copy/copy_server.h
+  services/copy/file_acceptor.h
+  services/copy/file_sender.h
+
+  services/copy/packet.h
+  services/copy/packet.cpp
+  services/copy/packet_helper.h
+
+  # copy session
+  services/copy/copy_context.h
+  services/copy/copy_context.cpp
+  services/copy/copy_session.h
+  services/copy/copy_session.ipp
+  services/copy/error_code.h
+  services/copy/error_code.cpp
+  services/copy/i_copy_state.h
+
+  services/copy/state/on_abort.h
+  services/copy/state/on_abort.cpp
+
+  # copy states receiver
+  services/copy/state/receiver/abort_receiver_state.h
+  services/copy/state/receiver/receive_file_state.h
+  services/copy/state/receiver/send_abort_ack_state.h
+  services/copy/state/receiver/send_eof_state.h
+  services/copy/state/receiver/send_init_reply_state.h
+  services/copy/state/receiver/send_integrity_check_reply_state.h
+  services/copy/state/receiver/wait_close_state.h
+  services/copy/state/receiver/wait_init_request_state.h
+  services/copy/state/receiver/wait_integrity_check_request_state.h
+
+  # copy states sender
+  services/copy/state/sender/abort_sender_state.h
+  services/copy/state/sender/close_state.h
+  services/copy/state/sender/send_file_state.h
+  services/copy/state/sender/send_init_request_state.h
+  services/copy/state/sender/send_integrity_check_request_state.h
+  services/copy/state/sender/wait_abort_ack_state.h
+  services/copy/state/sender/wait_eof_state.h
+  services/copy/state/sender/wait_init_reply_state.h
+  services/copy/state/sender/wait_integrity_check_reply_state.h
+
+  # copy packet
+  services/copy/packet/check.h
+  services/copy/packet/control.h
+  services/copy/packet/data.h
+  services/copy/packet/error_code.h
+  services/copy/packet/error.h
+  services/copy/packet/init.h
 
   # microservices/datagram
   services/datagram/datagram_link.h
@@ -158,7 +215,7 @@ set(SSF_FRAMEWORK_FILES
 
   # services
   services/user_services/base_user_service.h
-  services/user_services/copy_file_service.h
+  services/user_services/copy.h
   services/user_services/option_parser.cpp
   services/user_services/option_parser.h
   services/user_services/parameters.h
@@ -189,21 +246,16 @@ set(SSF_FRAMEWORK_FILES
 # windows impl
 if (WIN32)
   list(APPEND SSF_FRAMEWORK_FILES
-    # microservices/copy
-    services/copy_file/filesystem/windows/win_filesystem.cpp
-
     # microservices/process
     services/process/windows/session.h
     services/process/windows/session.ipp
   )
+  list(APPEND PLATFORM_SPECIFIC_LIB_DEP "shlwapi.lib")
 endif (WIN32)
 
 # linux/unix impl
 if (UNIX)
   list(APPEND SSF_FRAMEWORK_FILES
-    # microservices/copy
-    services/copy_file/filesystem/linux/unix_filesystem.cpp
-
     # microservices/process
     services/process/posix/session.h
     services/process/posix/session.ipp

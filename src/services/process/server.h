@@ -10,6 +10,7 @@
 #include <ssf/network/base_session.h>
 
 #include "services/base_service.h"
+#include "services/service_id.h"
 
 #include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
@@ -51,7 +52,7 @@ class Server : public BaseService<Demux> {
 
  public:
   // SSF service ID for identification in the service factory
-  enum { kFactoryId = 10 };
+  enum { kFactoryId = ServiceId::kProcessServer };
 
  public:
   Server(const Server&) = delete;

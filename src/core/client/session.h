@@ -52,7 +52,9 @@ class Session
 
   void Stop(boost::system::error_code& ec);
 
-  boost::asio::io_service& get_io_service();
+  Demux& GetDemux() { return fiber_demux_; }
+
+  boost::asio::io_service& get_io_service() { return io_service_; }
 
  private:
   Session(boost::asio::io_service& io_service,

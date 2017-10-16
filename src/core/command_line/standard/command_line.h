@@ -12,8 +12,6 @@ class StandardCommandLine : public Base {
  public:
   StandardCommandLine(bool is_server = false);
 
-  ~StandardCommandLine();
-
   bool show_status() const { return show_status_; }
 
   bool relay_only() const { return relay_only_; }

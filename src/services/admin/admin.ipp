@@ -63,7 +63,7 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service[admin]: stopping";
+  SSF_LOG(kLogDebug) << "microservice[admin]: stopping";
   ec.assign(::error::success, ::error::get_ssf_category());
 
   HandleStop();
@@ -90,8 +90,9 @@ void Admin<Demux>::OnFiberAccept(const boost::system::error_code& ec) {
   }
 
   if (ec) {
-    SSF_LOG(kLogError) << "service[admin]: error accepting new connection: "
-                       << ec << " " << ec.value();
+    SSF_LOG(kLogError)
+        << "microservice[admin]: error accepting new connection: " << ec << " "
+        << ec.value();
     ShutdownServices();
     return;
   }
@@ -112,8 +113,8 @@ void Admin<Demux>::AsyncConnect() {
 template <typename Demux>
 void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
   if (!fiber_.is_open() || ec) {
-    SSF_LOG(kLogError) << "service[admin]: no new connection: " << ec.message()
-                       << " " << ec.value();
+    SSF_LOG(kLogError) << "microservice[admin]: no new connection: "
+                       << ec.message() << " " << ec.value();
     // Retry to connect if failed to open the fiber
     if (retries_ < kServiceStatusRetryCount) {
       this->AsyncConnect();
@@ -142,7 +143,7 @@ template <typename Demux>
 void Admin<Demux>::InitializeRemoteServices(
     const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogDebug) << "service[admin]: ec intializing " << ec.value();
+    SSF_LOG(kLogDebug) << "microservice[admin]: ec intializing " << ec.value();
     return;
   }
 
@@ -171,7 +172,7 @@ void Admin<Demux>::InitializeRemoteServices(
 
       // If something went wrong remote_all_started_ > 0
       if (remote_all_started_) {
-        SSF_LOG(kLogError) << "service[admin]: could not start remote "
+        SSF_LOG(kLogError) << "microservice[admin]: could not start remote "
                               "microservice for service["
                            << user_services_[i_]->GetName() << "]";
 
@@ -200,7 +201,7 @@ void Admin<Demux>::InitializeRemoteServices(
 
       // If something went wrong local_all_started_ == false
       if (!local_all_started_) {
-        SSF_LOG(kLogError) << "service[admin]: could not start local "
+        SSF_LOG(kLogError) << "microservice[admin]: could not start local "
                               "microservice for service["
                            << user_services_[i_]->GetName() << "]";
 
@@ -236,7 +237,7 @@ void Admin<Demux>::InitializeRemoteServices(
 template <typename Demux>
 void Admin<Demux>::ListenForCommand() {
   status_ = 101;
-  auto self = SelfFromThis();
+  auto self = this->shared_from_this();
   auto do_admin = [this, self]() { DoAdmin(boost::system::error_code(), 0); };
   this->get_io_service().post(do_admin);
 }

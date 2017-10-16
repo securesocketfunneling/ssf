@@ -106,8 +106,11 @@ TEST(CopyCommandLineTests, FromStdinToServerTest) {
   ASSERT_EQ(cmd.config_file(), "config_file.json");
   ASSERT_EQ(ssf::log::kLogCritical, cmd.log_level());
 
-  ASSERT_TRUE(cmd.from_stdin());
-  ASSERT_TRUE(cmd.from_local_to_remote());
+  ASSERT_TRUE(cmd.stdin_input());
+  ASSERT_TRUE(cmd.from_client_to_server());
+  ASSERT_FALSE(cmd.recursive());
+  ASSERT_FALSE(cmd.resume());
+  ASSERT_FALSE(cmd.check_file_integrity());
   ASSERT_EQ("/tmp/test_out/output", cmd.output_pattern());
 }
 
@@ -124,8 +127,11 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
   boost::system::error_code ec;
 
   std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
-                             "config_file.json", "-v", "critical",
-                             "/tmp/test_in", "127.0.0.1@/tmp/test_out"};
+                                   "config_file.json", "-v", "critical",
+                                   "--recursive", "--resume",
+                                   "--check-integrity",
+                                   "/tmp/test_in",
+                                   "127.0.0.1@/tmp/test_out"};
 
   cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
@@ -138,10 +144,13 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
   ASSERT_EQ(cmd.config_file(), "config_file.json");
   ASSERT_EQ(ssf::log::kLogCritical, cmd.log_level());
 
-  ASSERT_FALSE(cmd.from_stdin());
-  ASSERT_TRUE(cmd.from_local_to_remote());
+  ASSERT_FALSE(cmd.stdin_input());
+  ASSERT_TRUE(cmd.from_client_to_server());
+  ASSERT_TRUE(cmd.recursive());
+  ASSERT_TRUE(cmd.resume());
+  ASSERT_TRUE(cmd.check_file_integrity());
   ASSERT_EQ("/tmp/test_in", cmd.input_pattern());
-  ASSERT_EQ("/tmp/test_out/", cmd.output_pattern());
+  ASSERT_EQ("/tmp/test_out", cmd.output_pattern());
 }
 
 TEST(CopyCommandLineTests, ServerToClientTest) {
@@ -156,9 +165,17 @@ TEST(CopyCommandLineTests, ServerToClientTest) {
 
   boost::system::error_code ec;
 
-  std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
-                             "config_file.json", "-v", "critical",
-                             "127.0.0.1@/tmp/test_in", "/tmp/test_out"};
+  std::vector<const char*> argv = {"test_exec",
+                                   "-p",
+                                   "8012",
+                                   "-c",
+                                   "config_file.json",
+                                   "-v",
+                                   "critical",
+                                   "--recursive",
+                                   "--check-integrity",
+                                   "127.0.0.1@/tmp/test_in",
+                                   "/tmp/test_out"};
 
   cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 
@@ -171,8 +188,11 @@ TEST(CopyCommandLineTests, ServerToClientTest) {
   ASSERT_EQ(cmd.config_file(), "config_file.json");
   ASSERT_EQ(cmd.log_level(), ssf::log::kLogCritical);
 
-  ASSERT_FALSE(cmd.from_stdin());
-  ASSERT_FALSE(cmd.from_local_to_remote());
+  ASSERT_FALSE(cmd.stdin_input());
+  ASSERT_FALSE(cmd.from_client_to_server());
+  ASSERT_TRUE(cmd.recursive());
+  ASSERT_FALSE(cmd.resume());
+  ASSERT_TRUE(cmd.check_file_integrity());
   ASSERT_EQ("/tmp/test_in", cmd.input_pattern());
-  ASSERT_EQ("/tmp/test_out/", cmd.output_pattern());
+  ASSERT_EQ("/tmp/test_out", cmd.output_pattern());
 }

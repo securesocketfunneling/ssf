@@ -15,24 +15,23 @@
 #include "common/config/config.h"
 
 #include "core/async_engine.h"
-#include "core/network_protocol.h"
 #include "core/client/session.h"
 #include "core/client/status.h"
+#include "core/network_protocol.h"
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-#include "services/user_services/base_user_service.h"
 #include "services/user_service_factory.h"
+#include "services/user_services/base_user_service.h"
 #include "services/user_services/parameters.h"
 
 namespace ssf {
 
 class Client {
- private:
+ public:
   using ClientSession =
       Session<network::NetworkProtocol::Protocol, TransportProtocolPolicy>;
   using ClientSessionPtr = ClientSession::SessionPtr;
 
- public:
   using NetworkSocket = ClientSession::NetworkSocket;
   using NetworkQuery = ClientSession::NetworkQuery;
   using Demux = ClientSession::Demux;
@@ -55,12 +54,13 @@ class Client {
   }
 
   void Init(const NetworkQuery& network_query, uint32_t max_connection_attempts,
-            uint32_t reconnection_timeout,
-            bool no_reconnection,
+            uint32_t reconnection_timeout, bool no_reconnection,
             UserServiceParameters user_service_params,
             const ssf::config::Services& user_services_config,
             OnStatusCb on_status, OnUserServiceStatusCb on_user_service_status,
             boost::system::error_code& ec);
+
+  void Deinit();
 
   // Run
   void Run(boost::system::error_code& ec);
@@ -70,7 +70,13 @@ class Client {
 
   void Stop(boost::system::error_code& ec);
 
-  void Deinit();
+  ClientSessionPtr GetSession(boost::system::error_code& ec) {
+    if (!session_) {
+      ec.assign(::error::broken_pipe, ::error::get_ssf_category());
+      return nullptr;
+    }
+    return session_;
+  }
 
   boost::asio::io_service& get_io_service();
 

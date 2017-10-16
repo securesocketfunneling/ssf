@@ -31,6 +31,7 @@ class AsyncEngine {
   boost::asio::io_service io_service_;
   WorkerPtr p_worker_;
   std::vector<std::thread> threads_;
+  bool is_started_;
 };
 
 }  // ssf

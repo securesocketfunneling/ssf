@@ -42,17 +42,31 @@ std::string error::detail::ssf_category::message(int value) const {
     case error::connection_reset:
       return "connection reset";
       break;
+    case error::address_not_available:
+      return "address not available";
+      break;
+    case error::destination_address_required:
+      return "destination address required";
+      break;
+    case error::host_unreachable:
+      return "host unreachable";
+      break;
     case error::not_connected:
       return "not connected";
       break;
     case error::protocol_error:
       return "protocol error";
+    case error::protocol_not_supported:
+      return "protocol not supported";
       break;
     case error::wrong_protocol_type:
       return "wrong protocol type";
       break;
     case error::operation_canceled:
       return "operation canceled";
+      break;
+    case error::operation_not_supported:
+      return "operation not supported";
       break;
     case error::service_not_found:
       return "service not found";

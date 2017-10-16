@@ -12,11 +12,17 @@ class CopyCommandLine : public Base {
  public:
   CopyCommandLine();
 
-  ~CopyCommandLine();
+  bool stdin_input() const;
 
-  bool from_stdin() const;
+  bool from_client_to_server() const;
 
-  bool from_local_to_remote() const;
+  bool resume() const;
+
+  bool recursive() const;
+
+  bool check_file_integrity() const;
+
+  uint32_t max_parallel_copies() const;
 
   std::string input_pattern() const;
 
@@ -46,8 +52,12 @@ class CopyCommandLine : public Base {
  private:
   std::string input_pattern_;
   std::string output_pattern_;
-  bool from_stdin_;
-  bool from_local_to_remote_;
+  bool from_client_to_server_;
+  bool stdin_input_;
+  bool resume_;
+  bool recursive_;
+  bool check_file_integrity_;
+  uint32_t max_parallel_copies_;
 };
 
 }  // command_line

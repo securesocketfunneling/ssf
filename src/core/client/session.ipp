@@ -10,9 +10,6 @@
 #include "services/admin/requests/service_status.h"
 #include "services/admin/requests/stop_service_request.h"
 
-#include "services/copy_file/fiber_to_file/fiber_to_file.h"
-#include "services/copy_file/file_enquirer/file_enquirer.h"
-#include "services/copy_file/file_to_fiber/file_to_fiber.h"
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
@@ -181,15 +178,6 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   services::datagrams_to_fibers::DatagramsToFibers<
       Demux>::RegisterToServiceFactory(p_service_factory,
                                        services_config_.datagram_listener());
-  services::copy_file::file_to_fiber::FileToFiber<
-      Demux>::RegisterToServiceFactory(p_service_factory,
-                                       services_config_.file_copy());
-  services::copy_file::fiber_to_file::FiberToFile<
-      Demux>::RegisterToServiceFactory(p_service_factory,
-                                       services_config_.file_copy());
-  services::copy_file::file_enquirer::FileEnquirer<
-      Demux>::RegisterToServiceFactory(p_service_factory,
-                                       services_config_.file_copy());
   services::process::Server<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
@@ -204,8 +192,8 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   p_admin_service->SetAsClient(user_services_, on_user_service_status);
 
   // Register supported admin microservice commands
-  if (!p_admin_service
-           ->template RegisterCommand<services::admin::CreateServiceRequest>()) {
+  if (!p_admin_service->template RegisterCommand<
+          services::admin::CreateServiceRequest>()) {
     SSF_LOG(kLogError) << "client session: cannot register "
                           "CreateServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
@@ -218,7 +206,8 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
-  if (!p_admin_service->template RegisterCommand<services::admin::ServiceStatus>()) {
+  if (!p_admin_service
+           ->template RegisterCommand<services::admin::ServiceStatus>()) {
     SSF_LOG(kLogError) << "client session: cannot register "
                           "ServiceStatus into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());

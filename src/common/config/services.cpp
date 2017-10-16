@@ -8,7 +8,7 @@ namespace config {
 Services::Services()
     : datagram_forwarder_(),
       datagram_listener_(),
-      file_copy_(),
+      copy_(),
       shell_(),
       socks_(),
       stream_forwarder_(),
@@ -17,7 +17,7 @@ Services::Services()
 Services::Services(const Services& services)
     : datagram_forwarder_(services.datagram_forwarder_),
       datagram_listener_(services.datagram_listener_),
-      file_copy_(services.file_copy_),
+      copy_(services.copy_),
       shell_(services.shell_),
       socks_(services.socks_),
       stream_forwarder_(services.stream_forwarder_),
@@ -31,7 +31,7 @@ void Services::Update(const PTree& pt) {
 
   UpdateShell(pt);
   UpdateSocks(pt);
-  UpdateFileCopy(pt);
+  UpdateCopy(pt);
 }
 
 void Services::SetGatewayPorts(bool gateway_ports) {
@@ -72,8 +72,8 @@ void Services::LogServiceStatus() const {
                     << (stream_forwarder_.enabled() ? "On" : "Off");
   SSF_LOG(kLogInfo) << "status[microservices] stream_listener: "
                     << (stream_listener_.enabled() ? "On" : "Off");
-  SSF_LOG(kLogInfo) << "status[microservices] file_copy: "
-                    << (file_copy_.enabled() ? "On" : "Off");
+  SSF_LOG(kLogInfo) << "status[microservices] copy: "
+                    << (copy_.enabled() ? "On" : "Off");
   SSF_LOG(kLogInfo) << "status[microservices] shell: "
                     << (shell_.enabled() ? "On" : "Off");
   SSF_LOG(kLogInfo) << "status[microservices] socks: "
@@ -112,16 +112,15 @@ void Services::UpdateDatagramListener(const PTree& pt) {
   }
 }
 
-void Services::UpdateFileCopy(const PTree& pt) {
-  auto file_copy_optional = pt.get_child_optional("file_copy");
-  if (!file_copy_optional) {
+void Services::UpdateCopy(const PTree& pt) {
+  auto copy_optional = pt.get_child_optional("copy");
+  if (!copy_optional) {
     SSF_LOG(kLogDebug)
-        << "config[update]: file_copy service configuration not found";
+        << "config[update]: copy service configuration not found";
     return;
   }
 
-  file_copy_.set_enabled(
-      ServiceEnabled(file_copy_optional.get(), file_copy_.enabled()));
+  copy_.set_enabled(ServiceEnabled(copy_optional.get(), copy_.enabled()));
 }
 
 void Services::UpdateShell(const PTree& pt) {

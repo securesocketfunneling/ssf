@@ -11,7 +11,7 @@
               "enable": false,
               "gateway_ports": true
             },
-            "file_copy": { "enable": true },
+            "copy": { "enable": true },
             "shell": {
                 "enable": true,
                 "path": "/bin/custom_path",

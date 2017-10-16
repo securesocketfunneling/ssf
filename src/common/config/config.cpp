@@ -230,7 +230,7 @@ const char* Config::default_config_ = R"RAWSTRING(
         "enable": true,
         "gateway_ports": false
       },
-      "file_copy": { "enable": false },
+      "copy": { "enable": false },
       "shell": {
         "enable": false,
         "path": )RAWSTRING" SSF_PROCESS_SERVICE_BINARY_PATH R"RAWSTRING(,

@@ -40,12 +40,12 @@ class UserServiceFactory {
   }
 
   bool RegisterUserService(const std::string& index,
-                           UserServiceGenerator parser) {
+                           UserServiceGenerator generator) {
     if (service_generators_.count(index)) {
       return false;
     }
 
-    service_generators_[index] = parser;
+    service_generators_[index] = generator;
     return true;
   }
 

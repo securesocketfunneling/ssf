@@ -17,6 +17,8 @@
 #include "common/boost/fiber/stream_fiber.hpp"
 
 #include "services/base_service.h"
+#include "services/service_id.h"
+#include "services/service_port.h"
 
 #include "services/admin/admin_command.h"
 #include "services/admin/command_factory.h"
@@ -60,13 +62,13 @@ class Admin : public BaseService<Demux> {
     return AdminPtr(new Admin(io_service, fiber_demux));
   }
 
-  ~Admin() { SSF_LOG(kLogDebug) << "service[admin]: destroy"; }
+  ~Admin() { SSF_LOG(kLogDebug) << "microservice[admin]: destroy"; }
 
   enum {
-    kFactoryId = 1,
-    kServicePort = (1 << 17) + 1,  // first of the service range
-    kKeepAliveInterval = 120,      // seconds
-    kServiceStatusRetryCount = 50  // retries
+    kFactoryId = ServiceId::kAdmin,
+    kServicePort = ServicePort::kAdmin,  // first of the service range
+    kKeepAliveInterval = 120,            // seconds
+    kServiceStatusRetryCount = 50        // retries
   };
 
   static void RegisterToServiceFactory(
@@ -190,10 +192,6 @@ class Admin : public BaseService<Demux> {
         callback_(p_user_service, ec);
       });
     }
-  }
-
-  AdminPtr SelfFromThis() {
-    return std::static_pointer_cast<Admin>(this->shared_from_this());
   }
 
  private:

@@ -4,21 +4,6 @@
 
 #include "common/error/error.h"
 
-#include "services/admin/admin.h"
-#include "services/admin/requests/create_service_request.h"
-#include "services/admin/requests/service_status.h"
-#include "services/admin/requests/stop_service_request.h"
-
-#include "services/copy_file/fiber_to_file/fiber_to_file.h"
-#include "services/copy_file/file_enquirer/file_enquirer.h"
-#include "services/copy_file/file_to_fiber/file_to_fiber.h"
-#include "services/datagrams_to_fibers/datagrams_to_fibers.h"
-#include "services/fibers_to_datagrams/fibers_to_datagrams.h"
-#include "services/fibers_to_sockets/fibers_to_sockets.h"
-#include "services/process/server.h"
-#include "services/sockets_to_fibers/sockets_to_fibers.h"
-#include "services/socks/socks_server.h"
-
 #include "services/user_services/base_user_service.h"
 
 namespace ssf {
@@ -32,11 +17,8 @@ Client::Client()
       stopped_(false) {}
 
 Client::~Client() {
-  if (session_) {
-    boost::system::error_code stop_ec;
-    session_->Stop(stop_ec);
-  }
-  Deinit();
+  boost::system::error_code stop_ec;
+  Stop(stop_ec);
 }
 
 void Client::Init(const NetworkQuery& network_query,
@@ -72,6 +54,11 @@ void Client::Init(const NetworkQuery& network_query,
   async_engine_.Start();
 }
 
+void Client::Deinit() {
+  SSF_LOG(kLogDebug) << "client: deinit";
+  async_engine_.Stop();
+}
+
 void Client::Run(boost::system::error_code& ec) { RunSession(ec); }
 
 void Client::WaitStop(boost::system::error_code& ec) {
@@ -81,8 +68,6 @@ void Client::WaitStop(boost::system::error_code& ec) {
 }
 
 void Client::Stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "client: stop";
-
   {
     std::lock_guard<std::mutex> lock(stop_mutex_);
     if (stopped_) {
@@ -91,10 +76,11 @@ void Client::Stop(boost::system::error_code& ec) {
     stopped_ = true;
   }
 
+  SSF_LOG(kLogDebug) << "client: stop";
+
   timer_.cancel(ec);
-  if (ec) {
-    ec.clear();
-  }
+  ec.clear();
+
   if (session_) {
     session_->Stop(ec);
     session_.reset();
@@ -105,11 +91,6 @@ void Client::Stop(boost::system::error_code& ec) {
   }
 
   cv_wait_stop_.notify_all();
-}
-
-void Client::Deinit() {
-  SSF_LOG(kLogDebug) << "client: deinit";
-  async_engine_.Stop();
 }
 
 boost::asio::io_service& Client::get_io_service() {
@@ -184,7 +165,7 @@ void Client::RunSession(const boost::system::error_code& ec) {
     OnUserServiceStatus(user_service, ec);
   };
 
-  session_ = ClientSession::Create(
+  auto session = ClientSession::Create(
       async_engine_.get_io_service(), user_services, user_services_config_,
       on_session_status, on_user_service_status, create_session_ec);
 
@@ -192,10 +173,12 @@ void Client::RunSession(const boost::system::error_code& ec) {
     return;
   }
 
-  session_->Start(network_query_, create_session_ec);
+  session_ = session;
+
+  session->Start(network_query_, create_session_ec);
   if (create_session_ec) {
     boost::system::error_code stop_ec;
-    session_->Stop(stop_ec);
+    session->Stop(stop_ec);
     return;
   }
 }
