@@ -268,6 +268,7 @@ add_subdirectory(compat)
 add_library(ssf_framework STATIC ${SSF_FRAMEWORK_FILES})
 target_include_directories(ssf_framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} ssf_network)
+set_property(TARGET ssf_framework PROPERTY FOLDER Libraries)
 
 if(DISABLE_TLS)
   target_compile_definitions(ssf_framework PUBLIC TCP_ONLY_LINK)

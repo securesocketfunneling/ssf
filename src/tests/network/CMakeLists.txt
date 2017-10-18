@@ -1,5 +1,6 @@
 add_library(fixture_test STATIC EXCLUDE_FROM_ALL ssf_fixture_test.h ssf_fixture_test.cpp)
 target_link_libraries(fixture_test gtest ssf_framework)
+set_property(TARGET fixture_test PROPERTY FOLDER "Unit Tests/Network")
 
 # --- Fiber asio tests
 add_executable(fiber_asio_tests EXCLUDE_FROM_ALL fiber_asio_tests.cpp)

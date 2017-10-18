@@ -3,12 +3,17 @@ set(service_test_group_name "Unit Tests/Services")
 add_library(tcp_helpers STATIC EXCLUDE_FROM_ALL
   tcp_helpers.h tcp_helpers.cpp)
 target_link_libraries(tcp_helpers ssf_framework)
+set_property(TARGET tcp_helpers PROPERTY FOLDER ${service_test_group_name})
+
 add_library(udp_helpers STATIC EXCLUDE_FROM_ALL
   udp_helpers.h udp_helpers.cpp)
 target_link_libraries(udp_helpers ssf_framework)
+set_property(TARGET udp_helpers PROPERTY FOLDER ${service_test_group_name})
+
 add_library(socks_helpers STATIC EXCLUDE_FROM_ALL
   socks_helpers.h socks_helpers.cpp)
 target_link_libraries(socks_helpers ssf_framework)
+set_property(TARGET socks_helpers PROPERTY FOLDER ${service_test_group_name})
 
 set(SERVICE_TEST_HEADERS
   datagram_fixture_test.h

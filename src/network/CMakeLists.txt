@@ -213,6 +213,7 @@ endif (UNIX)
 add_library(ssf_network STATIC ${SSF_NETWORK_FILES})
 target_include_directories(ssf_network PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ssf_network PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} ${PLATFORM_LIB} http_parser msgpack_c)
+set_property(TARGET ssf_network PROPERTY FOLDER "Libraries")
 
 if (BUILD_NETWORK_UNIT_TESTS)
   add_subdirectory(tests)

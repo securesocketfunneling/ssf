@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project("SSF")
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 set(CMAKE_CXX_STANDARD 11)
 
 set(SSF_VERSION_MAJOR 2)
