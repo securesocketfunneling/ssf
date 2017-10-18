@@ -1,18 +1,17 @@
 #include "services/copy/copy_context.h"
 
+#include <memory>
+
 namespace ssf {
 namespace services {
 namespace copy {
 
-CopyContext::CopyContext(boost::asio::io_service& io_service,
-                         ICopyStateUPtr state)
+CopyContext::CopyContext(boost::asio::io_service& io_service)
     : io_service_(io_service),
       error_code(ErrorCode::kFailure),
       outbound_packet_(nullptr),
-      state_(),
-      on_state_changed_([]() {}) {
-  SetState(std::move(state));
-}
+      state_(nullptr),
+      on_state_changed_([]() {}) {}
 
 void CopyContext::Init(const std::string& i_input_filepath,
                        bool i_check_file_integrity, bool i_is_stdin_input,
@@ -91,12 +90,9 @@ void CopyContext::SetState(ICopyStateUPtr state) {
   }
   state_ = std::move(state);
 
-  auto on_state_changed = [this]() {
-    boost::system::error_code enter_ec;
-    state_->Enter(this, enter_ec);
-    on_state_changed_();
-  };
-  io_service_.post(on_state_changed);
+  boost::system::error_code enter_ec;
+  state_->Enter(this, enter_ec);
+  on_state_changed_();
 }
 
 void CopyContext::Deinit() {

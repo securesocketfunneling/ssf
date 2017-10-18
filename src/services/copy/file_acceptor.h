@@ -6,6 +6,7 @@
 #include <boost/asio/io_service.hpp>
 
 #include "common/boost/fiber/stream_fiber.hpp"
+#include "common/utils/to_underlying.h"
 
 #include "services/copy/copy_context.h"
 #include "services/copy/copy_session.h"
@@ -29,7 +30,7 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
   using OnFileCopied = std::function<void(CopyContext* context,
                                           const boost::system::error_code& ec)>;
 
-  enum { kPort = ServicePort::kCopyFileAcceptor };
+  enum { kPort = to_underlying(MicroservicePort::kCopyFileAcceptor) };
 
  private:
   using SocketType = typename Demux::socket_type;
@@ -111,7 +112,8 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
 
     ICopyStateUPtr wait_request_state = WaitInitRequestState::Create();
     CopyContextUPtr context = std::make_unique<CopyContext>(
-        p_fiber->get_io_service(), std::move(wait_request_state));
+        p_fiber->get_io_service());
+    context->SetState(std::move(wait_request_state));
 
     auto on_session_file_status =
         [this, self, on_file_status](CopyContext* context,

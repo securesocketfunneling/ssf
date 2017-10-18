@@ -4,7 +4,7 @@
 namespace ssf {
 namespace services {
 
-enum class ServicePort {
+enum class MicroservicePort {
   kMin = (1 << 17),
   kAdmin,
   kCopyServer,

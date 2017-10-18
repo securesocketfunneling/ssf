@@ -473,7 +473,7 @@ void basic_fiber_demux_service<S>::async_send_ack(implementation_type impl,
       op->complete(ec, 0);
     } else {
       auto handler = [=](const boost::system::error_code& ec, std::size_t) {
-        if (!!ec) {
+        if (ec) {
           SSF_LOG(kLogDebug) << "demux: error send ack handler "
                              << ec.message();
         } else {
@@ -509,9 +509,11 @@ void basic_fiber_demux_service<S>::async_send_syn(implementation_type impl,
 
     if (!p_fib_impl->connecting) {
       p_fib_impl->set_connecting();
-      auto handler = [](const boost::system::error_code& ec, std::size_t) {
-        if (!!ec) {
+      auto handler = [impl, p_fib_impl](const boost::system::error_code& ec, std::size_t) {
+        if (ec) {
           SSF_LOG(kLogDebug) << "demux: error " << ec.message();
+          auto connection_failed = [p_fib_impl, ec]() { p_fib_impl->access_connect_handler()(ec); };
+          impl->socket.get_io_service().post(connection_failed);
         } else {
           SSF_LOG(kLogTrace) << "demux: syn sent";
         }
@@ -531,7 +533,7 @@ void basic_fiber_demux_service<S>::async_send_rst(
   SSF_LOG(kLogTrace) << "demux: async send rst";
   auto handler = [this, id, close_handler](const boost::system::error_code& ec,
                                            std::size_t) {
-    if (!!ec) {
+    if (ec) {
       SSF_LOG(kLogDebug) << "demux: async send rst error " << ec.value()
                          << " : " << ec.message();
     } else {

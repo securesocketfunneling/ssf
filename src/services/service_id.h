@@ -4,7 +4,7 @@
 namespace ssf {
 namespace services {
 
-enum class ServiceId {
+enum class MicroserviceId {
   kMin = 0,
   kAdmin,
   kCopyServer,

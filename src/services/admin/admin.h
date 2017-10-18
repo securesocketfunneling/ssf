@@ -15,6 +15,7 @@
 
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 #include "common/boost/fiber/stream_fiber.hpp"
+#include "common/utils/to_underlying.h"
 
 #include "services/base_service.h"
 #include "services/service_id.h"
@@ -65,8 +66,8 @@ class Admin : public BaseService<Demux> {
   ~Admin() { SSF_LOG(kLogDebug) << "microservice[admin]: destroy"; }
 
   enum {
-    kFactoryId = ServiceId::kAdmin,
-    kServicePort = ServicePort::kAdmin,  // first of the service range
+    kFactoryId = to_underlying(MicroserviceId::kAdmin),
+    kServicePort = to_underlying(MicroservicePort::kAdmin),
     kKeepAliveInterval = 120,            // seconds
     kServiceStatusRetryCount = 50        // retries
   };

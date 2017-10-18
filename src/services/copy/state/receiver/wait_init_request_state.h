@@ -96,7 +96,8 @@ class WaitInitRequestState : ICopyState {
 
     auto& output_fh = context->output;
 
-    int open_flags = std::ofstream::out | std::ofstream::binary;
+    std::ios_base::openmode open_flags = std::ofstream::out | 
+                                             std::ofstream::binary;
     if (context->fs.IsFile(output_path, fs_ec)) {
       open_flags |= std::ofstream::in;
     }

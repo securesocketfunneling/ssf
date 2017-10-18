@@ -60,10 +60,8 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
       typename boost::asio::fiber::stream_fiber<SocketType>::endpoint;
 
   using CopyServer = ssf::services::copy::CopyServer<Demux>;
-  using FileAcceptor = FileAcceptor<Demux>;
-  using FileAcceptorPtr = FileAcceptor::Ptr;
-  using FileSender = FileSender<Demux>;
-  using FileSenderPtr = typename FileSender::Ptr;
+  using FileAcceptorPtr = typename FileAcceptor<Demux>::Ptr;
+  using FileSenderPtr = typename FileSender<Demux>::Ptr;
 
   using OnFiberConnect =
       std::function<void(const boost::system::error_code& ec)>;
@@ -134,7 +132,7 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
              OnFileCopied on_file_copied, OnCopyFinished on_copy_finished)
       : session_(session),
         control_fiber_(session->get_io_service()),
-        file_acceptor_(FileAcceptor::Create(session->get_io_service())),
+        file_acceptor_(FileAcceptor<Demux>::Create(session->get_io_service())),
         on_file_status_(on_file_status),
         on_file_copied_(on_file_copied),
         on_copy_finished_(on_copy_finished) {}
@@ -162,9 +160,16 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
     SSF_LOG(kLogDebug) << "microservice[copy][client] copy data to server";
 
     boost::system::error_code ec;
-    file_sender_ = FileSender::Create(
+    auto self = this->shared_from_this();
+
+    auto on_copy_finished = [this, self](uint64_t files_count, uint64_t error_count,
+      const boost::system::error_code& ec) {
+      on_copy_finished_(files_count, error_count, ec);
+    };
+
+    file_sender_ = FileSender<Demux>::Create(
         session_->GetDemux(), std::move(control_fiber_), req, on_file_status_,
-        on_file_copied_, on_copy_finished_, ec);
+        on_file_copied_, on_copy_finished, ec);
     if (ec) {
       SSF_LOG(kLogError)
           << "microservice[copy][client] cannot create file sender";

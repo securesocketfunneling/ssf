@@ -2,6 +2,7 @@
 
 configure_file(versions.h.in versions.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include(source_group_by_folder)
 
 set(SSF_FRAMEWORK_FILES
   ${CMAKE_CURRENT_BINARY_DIR}/versions.h
@@ -61,6 +62,9 @@ set(SSF_FRAMEWORK_FILES
   # log
   common/log/log.cpp
   common/log/log.h
+
+  # utils
+  common/utils/to_underlying.h
 
   # async engine
   core/async_engine.cpp
@@ -265,10 +269,12 @@ endif (UNIX)
 add_subdirectory(network)
 add_subdirectory(compat)
 
-add_library(ssf_framework STATIC ${SSF_FRAMEWORK_FILES})
+add_library(ssf_framework STATIC "")
+target_sources(ssf_framework PRIVATE ${SSF_FRAMEWORK_FILES})
 target_include_directories(ssf_framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} ssf_network)
 set_property(TARGET ssf_framework PROPERTY FOLDER Libraries)
+source_group_by_folder(ssf_framework)
 
 if(DISABLE_TLS)
   target_compile_definitions(ssf_framework PUBLIC TCP_ONLY_LINK)

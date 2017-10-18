@@ -20,11 +20,6 @@ CopyFixtureTest::CopyFixtureTest()
 void CopyFixtureTest::SetUp() {
   ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogInfo);
   std::srand(static_cast<uint32_t>(std::time(0)));
-}
-
-void CopyFixtureTest::TearDown() {
-  StopClientThreads();
-  StopServerThreads();
 
   // clean generated files
   if (boost::filesystem::is_directory(GetInputDirectory().GetString())) {
@@ -41,6 +36,11 @@ void CopyFixtureTest::TearDown() {
       std::remove(it->path().string().c_str());
     }
   }
+}
+
+void CopyFixtureTest::TearDown() {
+  StopClientThreads();
+  StopServerThreads();
 }
 
 void CopyFixtureTest::StartServer(const std::string& server_port) {

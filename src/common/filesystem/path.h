@@ -19,13 +19,13 @@ class Path {
   Path& operator=(const std::string& other);
   Path& operator=(const char* other);
 
-  Path& Path::operator/=(const Path& other);
-  Path& Path::operator/=(const std::string& other);
-  Path& Path::operator/=(const char* other);
+  Path& operator/=(const Path& other);
+  Path& operator/=(const std::string& other);
+  Path& operator/=(const char* other);
 
-  Path& Path::operator+=(const Path& other);
-  Path& Path::operator+=(const std::string& other);
-  Path& Path::operator+=(const char* other);
+  Path& operator+=(const Path& other);
+  Path& operator+=(const std::string& other);
+  Path& operator+=(const char* other);
 
   bool operator==(const Path& path);
 

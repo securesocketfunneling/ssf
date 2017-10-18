@@ -149,6 +149,7 @@ class basic_fiber_impl
         accept_op_queue(),
         port_queue_mutex(),
         port_queue(),
+        connect_user_handler([](const boost::system::error_code&) {}),
         accepts_dgr(dgr) {}
 
   basic_fiber_impl()
@@ -172,6 +173,7 @@ class basic_fiber_impl
         accept_op_queue(),
         port_queue_mutex(),
         port_queue(),
+        connect_user_handler([](const boost::system::error_code&) {}),
         accepts_dgr() {}
 
  public:
@@ -193,10 +195,12 @@ class basic_fiber_impl
       this->set_opened();
 
       this->init_connect_in_out();
-      this->connect_user_handler(ec);
 
       // reset connect handler
+      auto con_user_handler = this->connect_user_handler;
+
       this->connect_user_handler = [](const boost::system::error_code&) {};
+      con_user_handler(ec);
     };
 
     receive_handler = [this](std::vector<uint8_t>&& data,
@@ -234,6 +238,8 @@ class basic_fiber_impl
       boost::system::error_code ec(::error::connection_reset,
                                    ::error::get_ssf_category());
       cancel_operations(ec);
+      auto connect_handler = this->access_connect_handler();
+      connect_handler(ec);
     };
 
     error_handler = [](boost::system::error_code) {};

@@ -7,6 +7,7 @@
 
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <msgpack.hpp>

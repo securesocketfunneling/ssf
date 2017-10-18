@@ -12,6 +12,8 @@
 #include <ssf/network/base_session.h>
 #include <ssf/network/manager.h>
 
+#include "common/utils/to_underlying.h"
+
 #include "services/base_service.h"
 #include "services/service_id.h"
 
@@ -42,7 +44,7 @@ class SocksServer : public BaseService<Demux> {
 
  public:
   // Service ID in the service factory
-  enum { kFactoryId = ServiceId::kSocksServer };
+  enum { kFactoryId = to_underlying(MicroserviceId::kSocksServer) };
 
  public:
   SocksServer(const SocksServer&) = delete;

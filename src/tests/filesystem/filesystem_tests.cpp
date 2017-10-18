@@ -1,5 +1,6 @@
 #include <fstream>
 #include <string>
+#include <regex>
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
@@ -7,10 +8,10 @@
 
 #include "common/filesystem/filesystem.h"
 
+static constexpr char kFilesystemDirectory[] = "filesystem";
+
 class FilesystemTest : public ::testing::Test {
  protected:
-  static constexpr char kFilesystemDirectory[] = "filesystem";
-
   void SetUp() {
     if (boost::filesystem::is_directory(kFilesystemDirectory)) {
       boost::system::error_code ec;

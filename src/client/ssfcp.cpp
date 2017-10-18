@@ -185,6 +185,7 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     if (ec) {
       return;
     }
+    SSF_LOG(kLogInfo) << "[ssfcp] interrupted";
     boost::system::error_code stop_ec;
     client.Stop(stop_ec);
   });

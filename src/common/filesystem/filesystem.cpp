@@ -4,6 +4,8 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
+#include <ssf/log/log.h>
+
 #include "common/error/error.h"
 
 namespace ssf {
@@ -86,19 +88,27 @@ std::list<Path> Filesystem::ListFilesImpl(const Path& input_dir,
     return {};
   }
 
-  // convert glob filename to regex
-  std::regex special_chars_regex("[.^$\\[\\]{}+\\\\]");
-  std::string filepath_filter = std::regex_replace(
-      filepath_pattern, special_chars_regex, "\\\\&",
+  // convert pattern to regex
+  std::regex filepath_regex;
+  try {
+    std::regex special_chars_regex("[.^$\\[\\]{}+\\\\]");
+    std::string filepath_filter = std::regex_replace(
+      filepath_pattern, special_chars_regex, "[&]",
       std::regex_constants::match_default | std::regex_constants::format_sed);
+    
+    boost::replace_all(filepath_filter, "?", "*");
+    boost::replace_all(filepath_filter, "*", ".*");
 
-  boost::replace_all(filepath_filter, "?", "*");
-  boost::replace_all(filepath_filter, "*", ".*");
-  std::regex filepath_regex(filepath_filter);
+    filepath_regex = std::regex(filepath_filter.c_str(), std::regex::extended |
+	                                               std::regex::optimize);
+  }
+  catch(const std::exception&) {
+    SSF_LOG(kLogDebug) << "[filesystem] cannot create filepattern regex";
+    return {};
+  }
 
   while (directory_it != DirectoryIterator()) {
     if (IsFile(directory_it->path(), ec)) {
-      // all files match if recursive tree traversal
       if (std::regex_search(directory_it->path().generic_string(),
                             filepath_regex)) {
         files.emplace_back(directory_it->path());

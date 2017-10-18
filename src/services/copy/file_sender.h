@@ -45,7 +45,6 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   using Endpoint =
       typename boost::asio::fiber::stream_fiber<SocketType>::endpoint;
   using SessionManager = ItemManager<BaseSessionPtr>;
-  using FileAcceptor = FileAcceptor<Demux>;
 
   using OnControlConnected = std::function<void(
       FiberPtr p_fiber, const boost::system::error_code& ec)>;
@@ -138,9 +137,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
     SSF_LOG(kLogDebug)
         << "microservice[copy][file_sender] connect to file acceptor port "
-        << FileAcceptor::kPort;
-    auto on_control_connected = [this, self, input_file,
-                                 fiber](const boost::system::error_code& ec) {
+        << FileAcceptor<Demux>::kPort;
+    auto on_file_connected = [this, self, input_file,
+                              fiber](const boost::system::error_code& ec) {
       // run next file if parallel copy
       auto run_file_session = [this, self]() { RunFileSession(); };
       demux_.get_io_service().post(run_file_session);
@@ -171,8 +170,8 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       }
     };
 
-    Endpoint ep(demux_, FileAcceptor::kPort);
-    fiber->async_connect(ep, on_control_connected);
+    Endpoint ep(demux_, FileAcceptor<Demux>::kPort);
+    fiber->async_connect(ep, on_file_connected);
   }
 
   void RunStdinSession() {
@@ -181,7 +180,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
     SSF_LOG(kLogDebug)
         << "microservice[copy][file_sender] connect to file acceptor port "
-        << FileAcceptor::kPort;
+        << FileAcceptor<Demux>::kPort;
 
     auto on_control_connected = [this, self,
                                  fiber](const boost::system::error_code& ec) {
@@ -202,7 +201,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       }
     };
 
-    Endpoint ep(demux_, FileAcceptor::kPort);
+    Endpoint ep(demux_, FileAcceptor<Demux>::kPort);
     fiber->async_connect(ep, on_control_connected);
   }
 
@@ -233,9 +232,11 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     }
     ec.clear();
 
-    ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
     CopyContextUPtr context = std::make_unique<CopyContext>(
-        demux_.get_io_service(), std::move(send_init_request_state));
+        demux_.get_io_service());
+
+    ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
+    context->SetState(std::move(send_init_request_state));
 
     context->Init(input_filepath.GetString(),
                   copy_request_.check_file_integrity,
@@ -250,9 +251,11 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     Path output_directory = output_path.GetParent();
     Path output_filename = output_path.GetFilename();
 
-    ICopyStateUPtr init_request_state = SendInitRequestState::Create();
     CopyContextUPtr context = std::make_unique<CopyContext>(
-        demux_.get_io_service(), std::move(init_request_state));
+        demux_.get_io_service());
+
+    ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
+    context->SetState(std::move(send_init_request_state));
 
     context->Init("", false, copy_request_.is_from_stdin, 0,
                   copy_request_.is_resume, output_directory.GetString(),
@@ -371,6 +374,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   void NotifyCopyFinished(ErrorCode error_code) {
     auto self = this->shared_from_this();
     auto on_copy_finished = on_copy_finished_;
+
+    on_copy_finished_ = [](uint64_t files_count, uint64_t error_count,
+                           const boost::system::error_code& ec) {};
 
     auto packet = std::make_shared<Packet>();
     uint64_t files_count = input_files_count_;

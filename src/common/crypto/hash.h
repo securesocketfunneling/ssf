@@ -13,19 +13,6 @@ namespace ssf {
 namespace crypto {
 
 template <class Hash>
-typename Hash::Digest HashFile(const ssf::Path& path,
-                               boost::system::error_code& ec) {
-  ssf::Filesystem fs;
-  auto filesize = fs.GetFilesize(path, ec);
-  if (ec) {
-    SSF_LOG(kLogError) << "hash: could not get filesize of "
-                       << path.GetString();
-    return {};
-  }
-  return HashFile<Hash>(path, filesize, ec);
-}
-
-template <class Hash>
 typename Hash::Digest HashFile(const ssf::Path& path, uint64_t stop_offset,
                                boost::system::error_code& ec) {
   typename Hash::Digest digest;
@@ -53,6 +40,19 @@ typename Hash::Digest HashFile(const ssf::Path& path, uint64_t stop_offset,
   hash.Finalize(&digest);
 
   return digest;
+}
+
+template <class Hash>
+typename Hash::Digest HashFile(const ssf::Path& path,
+                               boost::system::error_code& ec) {
+  ssf::Filesystem fs;
+  auto filesize = fs.GetFilesize(path, ec);
+  if (ec) {
+    SSF_LOG(kLogError) << "hash: could not get filesize of "
+                       << path.GetString();
+    return {};
+  }
+  return HashFile<Hash>(path, filesize, ec);
 }
 
 }  // crypto

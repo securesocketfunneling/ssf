@@ -14,6 +14,7 @@
 
 #include "common/filesystem/filesystem.h"
 #include "common/filesystem/path.h"
+#include "common/utils/to_underlying.h"
 
 #include "core/factories/service_factory.h"
 #include "services/admin/requests/create_service_request.h"
@@ -45,15 +46,13 @@ class CopyServer : public BaseService<Demux> {
   using Endpoint = typename ssf::BaseService<Demux>::endpoint;
   using FiberAcceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
 
-  using FileAcceptor = FileAcceptor<Demux>;
-  using FileAcceptorPtr = typename FileAcceptor::Ptr;
-  using FileSender = FileSender<Demux>;
-  using FileSenderPtr = typename FileSender::Ptr;
+  using FileAcceptorPtr = typename FileAcceptor<Demux>::Ptr;
+  using FileSenderPtr = typename FileSender<Demux>::Ptr;
 
  public:
   enum {
-    kFactoryId = ServiceId::kCopyServer,
-    kControlServicePort = ServicePort::kCopyServer
+    kFactoryId = to_underlying(MicroserviceId::kCopyServer),
+    kControlServicePort = to_underlying(MicroservicePort::kCopyServer)
   };
 
  public:
@@ -136,11 +135,11 @@ class CopyServer : public BaseService<Demux> {
   CopyServer(boost::asio::io_service& io_service, Demux& fiber_demux)
       : BaseService<Demux>(io_service, fiber_demux),
         control_acceptor_(io_service),
-        file_acceptor_(FileAcceptor::Create(io_service)) {}
+        file_acceptor_(FileAcceptor<Demux>::Create(io_service)) {}
 
   void AcceptControlChannel(boost::system::error_code& ec) {
     // init control channel acceptor
-    endpoint control_ep(this->get_demux(), kControlServicePort);
+    Endpoint control_ep(this->get_demux(), kControlServicePort);
     SSF_LOG(kLogDebug) << "microservice[copy][server] start accepting file "
                           "transfer on fiber port "
                        << kControlServicePort;
@@ -262,7 +261,7 @@ class CopyServer : public BaseService<Demux> {
     };
 
     boost::system::error_code ec;
-    FileSenderPtr file_sender = FileSender::Create(
+    FileSenderPtr file_sender = FileSender<Demux>::Create(
         this->get_demux(), std::move(*control_fiber), req, on_file_status,
         on_file_copied, on_copy_finished, ec);
     if (ec) {
