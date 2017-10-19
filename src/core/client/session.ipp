@@ -53,7 +53,7 @@ Session<N, T>::Session(boost::asio::io_service& io_service,
 
 template <class N, template <class> class T>
 Session<N, T>::~Session() {
-  SSF_LOG(kLogDebug) << "client session: destroy";
+  SSF_LOG(kLogDebug) << "[client][session] destroy";
 }
 
 template <class N, template <class> class T>
@@ -69,7 +69,7 @@ void Session<N, T>::Start(const NetworkQuery& query,
   NetworkResolver resolver(io_service_);
   auto endpoint_it = resolver.resolve(query, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "client session: could not resolve network endpoint";
+    SSF_LOG(kLogError) << "[client][session] could not resolve network endpoint";
     UpdateStatus(Status::kEndpointNotResolvable);
     return;
   }
@@ -88,7 +88,7 @@ void Session<N, T>::Stop(boost::system::error_code& ec) {
 
   stopped_ = true;
 
-  SSF_LOG(kLogDebug) << "client session: stop";
+  SSF_LOG(kLogDebug) << "[client][session] stop";
 
   fiber_demux_.close();
   if (p_service_manager_) {
@@ -116,7 +116,7 @@ void Session<N, T>::Stop(boost::system::error_code& ec) {
 template <class N, template <class> class T>
 void Session<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogError) << "client session: server connection error: "
+    SSF_LOG(kLogError) << "[client][session] server connection error: "
                        << ec.message();
     UpdateStatus(Status::kServerUnreachable);
     return;
@@ -137,13 +137,13 @@ void Session<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
   boost::system::error_code stop_ec;
 
   if (ec) {
-    SSF_LOG(kLogError) << "client session: SSF protocol error: "
+    SSF_LOG(kLogError) << "[client][session] SSF protocol error: "
                        << ec.message();
     UpdateStatus(Status::kServerNotSupported);
     return;
   }
 
-  SSF_LOG(kLogTrace) << "client session: SSF reply ok";
+  SSF_LOG(kLogTrace) << "[client][session] SSF reply ok";
   boost::system::error_code fiberize_ec;
   DoFiberize(p_socket, fiberize_ec);
   if (fiberize_ec) {
@@ -194,21 +194,21 @@ void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   // Register supported admin microservice commands
   if (!p_admin_service->template RegisterCommand<
           services::admin::CreateServiceRequest>()) {
-    SSF_LOG(kLogError) << "client session: cannot register "
+    SSF_LOG(kLogError) << "[client][session] cannot register "
                           "CreateServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
   if (!p_admin_service
            ->template RegisterCommand<services::admin::StopServiceRequest>()) {
-    SSF_LOG(kLogError) << "client session: cannot register "
+    SSF_LOG(kLogError) << "[client][session] cannot register "
                           "StopServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
   if (!p_admin_service
            ->template RegisterCommand<services::admin::ServiceStatus>()) {
-    SSF_LOG(kLogError) << "client session: cannot register "
+    SSF_LOG(kLogError) << "[client][session] cannot register "
                           "ServiceStatus into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;

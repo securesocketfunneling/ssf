@@ -237,11 +237,13 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
               << " to " << context->GetOutputFilepath().GetString() << " "
               << ec.message();
         } else {
-          SSF_LOG(kLogDebug)
-              << "[ssfcp] data copied from "
-              << (context->is_stdin_input ? "stdin" : context->input_filepath)
-              << " to " << context->GetOutputFilepath().GetString() << " "
-              << ec.message();
+          if (!session->is_stopped()) {
+            SSF_LOG(kLogWarning)
+                << "[ssfcp] data copied from "
+                << (context->is_stdin_input ? "stdin" : context->input_filepath)
+                << " to " << context->GetOutputFilepath().GetString() << " "
+                << ec.message();
+          }
         }
       };
   auto on_copy_finished = [session, &client, &copy_ec](

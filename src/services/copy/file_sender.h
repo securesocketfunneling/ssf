@@ -153,7 +153,8 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
       if (stopped_ || pending_input_files_.empty() ||
           input_files_.size() >= copy_request_.max_parallel_copies) {
-        // noop if stopped or pending_input_files is empty or max parallel copies reached
+        // noop if stopped or pending_input_files is empty or max parallel
+        // copies reached
         return;
       }
       input_file = pending_input_files_.front();
@@ -181,10 +182,12 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       }
 
       if (ec) {
+        boost::system::error_code copy_ec(ErrorCode::kNetworkError,
+                                          get_copy_category());
         SSF_LOG(kLogDebug)
             << "microservice[copy][file_sender] could not connect file fiber "
             << ec.message();
-        NotifyFileCopied(context.get(), ec);
+        NotifyFileCopied(context.get(), copy_ec);
         return;
       }
 
@@ -282,7 +285,6 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       output_filename = output_path.GetFilename();
     }
     ec.clear();
-
 
     ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
     context->SetState(std::move(send_init_request_state));
@@ -398,10 +400,10 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     if (ec) {
       ++copy_errors_count_;
     }
-    on_file_copied_(context, ec);
 
     auto self = this->shared_from_this();
     if (!stopped_) {
+      on_file_copied_(context, ec);
       // run next copy
       io_service_.post([this, self]() { RunFileSession(); });
     }

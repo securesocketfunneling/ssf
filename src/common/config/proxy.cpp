@@ -61,18 +61,18 @@ void HttpProxy::Update(const PTree& proxy_prop) {
 
 void HttpProxy::Log() const {
   if (IsSet()) {
-    SSF_LOG(kLogInfo) << "config[http proxy]: <" << host_ << ":" << port_
+    SSF_LOG(kLogInfo) << "[config][http proxy] <" << host_ << ":" << port_
                       << ">";
     if (!username_.empty()) {
-      SSF_LOG(kLogInfo) << "config[http proxy]: username: <" << username_
+      SSF_LOG(kLogInfo) << "[config][http proxy] username: <" << username_
                         << ">";
     }
-    SSF_LOG(kLogInfo) << "config[http proxy]: reuse NTLM credentials <"
+    SSF_LOG(kLogInfo) << "[config][http proxy] reuse NTLM credentials <"
                       << (reuse_ntlm_ ? "true" : "false") << ">";
-    SSF_LOG(kLogInfo) << "config[http proxy]: reuse Kerberos credentials <"
+    SSF_LOG(kLogInfo) << "[config][http proxy] reuse Kerberos credentials <"
                       << (reuse_kerb_ ? "true" : "false") << ">";
   } else {
-    SSF_LOG(kLogInfo) << "config[http proxy]: <None>";
+    SSF_LOG(kLogInfo) << "[config][http proxy] <None>";
   }
 }
 
@@ -104,11 +104,11 @@ void SocksProxy::Update(const PTree& proxy_prop) {
 
 void SocksProxy::Log() const {
   if (IsSet()) {
-    SSF_LOG(kLogInfo) << "config[socks proxy]: <V"
+    SSF_LOG(kLogInfo) << "[config][socks proxy] <V"
                       << std::to_string(ToIntegral(version_)) << " " << host_
                       << ":" << port_ << ">";
   } else {
-    SSF_LOG(kLogInfo) << "config[socks proxy]: <None>";
+    SSF_LOG(kLogInfo) << "[config][socks proxy] <None>";
   }
 }
 

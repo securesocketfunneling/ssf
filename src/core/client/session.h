@@ -54,6 +54,10 @@ class Session
 
   Demux& GetDemux() { return fiber_demux_; }
 
+  bool is_stopped() {
+    return stopped_;
+  }
+
   boost::asio::io_service& get_io_service() { return io_service_; }
 
  private:
