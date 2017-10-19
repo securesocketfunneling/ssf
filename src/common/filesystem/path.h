@@ -15,6 +15,8 @@ class Path {
   Path(const std::string& path);
   Path(const char* path);
 
+  ~Path();
+
   Path& operator=(const Path& other);
   Path& operator=(const std::string& other);
   Path& operator=(const char* other);

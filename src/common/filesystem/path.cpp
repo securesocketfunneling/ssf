@@ -12,6 +12,8 @@ Path::Path(const char* path) : path_() { path_ = path; }
 
 Path::Path(const std::string& path) : path_() { path_ = path; }
 
+Path::~Path() {}
+
 Path& Path::operator=(const Path& other) {
   path_ = other.GetString();
   return *this;

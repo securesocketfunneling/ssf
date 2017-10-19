@@ -174,7 +174,9 @@ class CopySession : public ssf::BaseSession {
     if (context_->IsTerminal()) {
       ec = context_->GetErrorCode();
     }
-    on_file_copied_(context_.get(), ec);
+    auto self = this->shared_from_this();
+    socket_.get_io_service().post(
+        [this, self, ec]() { on_file_copied_(context_.get(), ec); });
     if (manager_) {
       boost::system::error_code stop_ec;
       manager_->stop(this->shared_from_this(), stop_ec);

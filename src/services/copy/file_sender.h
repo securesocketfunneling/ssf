@@ -81,11 +81,43 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     RunStdinSession();
   }
 
+  void Stop() {
+    stopped_ = true;
+
+    // stop all current sessions
+    manager_.stop_all();
+
+    // notify all pending files
+    boost::system::error_code copy_ec(ErrorCode::kCopyStopped,
+                                      get_copy_category());
+    while (!pending_input_files_.empty()) {
+      ssf::Path input_file;
+      {
+        std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
+        if (pending_input_files_.empty() ||
+            input_files_.size() > copy_request_.max_parallel_copies) {
+          // noop if pending_input_files is empty or max parallel copies reached
+          return;
+        }
+        input_file = pending_input_files_.front();
+        input_files_.emplace_back(input_file);
+        pending_input_files_.pop_front();
+      }
+
+      boost::system::error_code context_ec;
+      auto context = GenerateFileContext(input_file, context_ec);
+      NotifyFileCopied(context.get(), copy_ec);
+    }
+  }
+
+  uint64_t input_files_count() { return input_files_count_; }
+
  private:
   FileSender(Demux& demux, Fiber control_fiber, const CopyRequest& req,
              OnFileStatus on_file_status, OnFileCopied on_file_copied,
              OnCopyFinished on_copy_finished)
-      : demux_(demux),
+      : io_service_(demux.get_io_service()),
+        demux_(demux),
         worker_(std::make_unique<boost::asio::io_service::work>(
             demux.get_io_service())),
         control_fiber_(std::move(control_fiber)),
@@ -93,6 +125,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
         input_files_count_(0),
         copy_errors_count_(0),
         copy_ec_(ErrorCode::kSuccess),
+        stopped_(false),
         on_file_status_(on_file_status),
         on_file_copied_(on_file_copied),
         on_copy_finished_(on_copy_finished) {}
@@ -118,9 +151,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     ssf::Path input_file;
     {
       std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
-      if (pending_input_files_.empty() ||
-          input_files_.size() > copy_request_.max_parallel_copies) {
-        // noop if pending_input_files is empty or max parallel copies reached
+      if (stopped_ || pending_input_files_.empty() ||
+          input_files_.size() >= copy_request_.max_parallel_copies) {
+        // noop if stopped or pending_input_files is empty or max parallel copies reached
         return;
       }
       input_file = pending_input_files_.front();
@@ -133,17 +166,10 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
     auto self = this->shared_from_this();
 
-    FiberPtr fiber = std::make_shared<Fiber>(demux_.get_io_service());
+    FiberPtr fiber = std::make_shared<Fiber>(io_service_);
 
-    SSF_LOG(kLogDebug)
-        << "microservice[copy][file_sender] connect to file acceptor port "
-        << FileAcceptor<Demux>::kPort;
     auto on_file_connected = [this, self, input_file,
                               fiber](const boost::system::error_code& ec) {
-      // run next file if parallel copy
-      auto run_file_session = [this, self]() { RunFileSession(); };
-      demux_.get_io_service().post(run_file_session);
-
       boost::system::error_code session_ec;
       auto context = GenerateFileContext(input_file, session_ec);
       if (session_ec) {
@@ -161,6 +187,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
         NotifyFileCopied(context.get(), ec);
         return;
       }
+
       StartSession(fiber, std::move(context), session_ec);
       if (session_ec) {
         SSF_LOG(kLogDebug) << "microservice[copy][file_sender] could not "
@@ -170,20 +197,35 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       }
     };
 
+    if (stopped_) {
+      boost::system::error_code network_ec(ErrorCode::kCopyStopped,
+                                           get_copy_category());
+      on_file_connected(network_ec);
+      return;
+    }
+
+    if (!stopped_ && !pending_input_files_.empty()) {
+      io_service_.post([this, self]() { RunFileSession(); });
+    }
+
     Endpoint ep(demux_, FileAcceptor<Demux>::kPort);
+
+    SSF_LOG(kLogDebug)
+        << "microservice[copy][file_sender] connect to file acceptor port "
+        << FileAcceptor<Demux>::kPort;
     fiber->async_connect(ep, on_file_connected);
   }
 
   void RunStdinSession() {
     auto self = this->shared_from_this();
-    FiberPtr fiber = std::make_shared<Fiber>(demux_.get_io_service());
+    FiberPtr fiber = std::make_shared<Fiber>(io_service_);
 
     SSF_LOG(kLogDebug)
         << "microservice[copy][file_sender] connect to file acceptor port "
         << FileAcceptor<Demux>::kPort;
 
-    auto on_control_connected = [this, self,
-                                 fiber](const boost::system::error_code& ec) {
+    auto on_file_connected = [this, self,
+                              fiber](const boost::system::error_code& ec) {
       boost::system::error_code session_ec;
       auto context = GenerateStdinContext(session_ec);
       if (session_ec) {
@@ -201,25 +243,34 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       }
     };
 
+    if (stopped_) {
+      boost::system::error_code network_ec(ErrorCode::kInterrupted,
+                                           get_copy_category());
+      io_service_.post(
+          [on_file_connected, network_ec]() { on_file_connected(network_ec); });
+      return;
+    }
+
     Endpoint ep(demux_, FileAcceptor<Demux>::kPort);
-    fiber->async_connect(ep, on_control_connected);
+    fiber->async_connect(ep, on_file_connected);
   }
 
   void ConnectControlChannel(OnControlConnected on_control_connected) {}
 
   CopyContextUPtr GenerateFileContext(const Path& input_filepath,
                                       boost::system::error_code& ec) {
+    CopyContextUPtr context = std::make_unique<CopyContext>(io_service_);
+
     Path input_dir(copy_request_.input_pattern);
     if (!fs_.IsDirectory(input_dir, ec)) {
       input_dir = input_dir.GetParent();
     }
-    ec.clear();
 
     Path relative_input_filepath = input_filepath.MakeRelative(input_dir, ec);
     if (ec || relative_input_filepath == "") {
       ec.assign(ssf::services::copy::ErrorCode::kInputFileNotAvailable,
                 ssf::services::copy::get_copy_category());
-      return nullptr;
+      return context;
     }
 
     Path output_path(copy_request_.output_pattern);
@@ -232,8 +283,6 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     }
     ec.clear();
 
-    CopyContextUPtr context = std::make_unique<CopyContext>(
-        demux_.get_io_service());
 
     ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
     context->SetState(std::move(send_init_request_state));
@@ -251,8 +300,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     Path output_directory = output_path.GetParent();
     Path output_filename = output_path.GetFilename();
 
-    CopyContextUPtr context = std::make_unique<CopyContext>(
-        demux_.get_io_service());
+    CopyContextUPtr context = std::make_unique<CopyContext>(io_service_);
 
     ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
     context->SetState(std::move(send_init_request_state));
@@ -335,24 +383,28 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
   void NotifyFileCopied(CopyContext* context,
                         const boost::system::error_code& ec) {
-    std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
-    if (context->is_stdin_input) {
-      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stdin copied "
-                         << ec.message();
-    } else {
-      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] file copied "
-                         << context->input_filepath << " " << ec.message();
-      input_files_.remove(context->input_filepath);
+    {
+      std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
+      if (context->is_stdin_input) {
+        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stdin copied "
+                           << ec.message();
+      } else {
+        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] file copied "
+                           << context->input_filepath << " " << ec.message();
+        input_files_.remove(context->input_filepath);
+      }
     }
+
     if (ec) {
       ++copy_errors_count_;
     }
     on_file_copied_(context, ec);
 
     auto self = this->shared_from_this();
-    // run next copy
-    auto run_file_session = [this, self]() { RunFileSession(); };
-    demux_.get_io_service().post(run_file_session);
+    if (!stopped_) {
+      // run next copy
+      io_service_.post([this, self]() { RunFileSession(); });
+    }
 
     if (!input_files_.empty() || !pending_input_files_.empty()) {
       // remaining file copies
@@ -390,7 +442,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
           SSF_LOG(kLogDebug) << "microservice[copy][file_sender] send copy "
                                 "finished notification";
         });
-    demux_.get_io_service().post(
+    io_service_.post(
         [files_count, errors_count, error_code, on_copy_finished]() {
           boost::system::error_code ec(error_code, get_copy_category());
           on_copy_finished(files_count, errors_count, ec);
@@ -398,6 +450,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   }
 
  private:
+  boost::asio::io_service& io_service_;
   Demux& demux_;
   std::unique_ptr<boost::asio::io_service::work> worker_;
   Fiber control_fiber_;
@@ -411,6 +464,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   ssf::Filesystem fs_;
   uint64_t copy_errors_count_;
   ErrorCode copy_ec_;
+  bool stopped_;
 
   OnFileStatus on_file_status_;
   OnFileCopied on_file_copied_;

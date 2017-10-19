@@ -30,7 +30,9 @@ class CopyContext {
   using OnOutboundPacketFilledUPtr = std::unique_ptr<OnOutboundPacketFilled>;
 
  public:
-  CopyContext(boost::asio::io_service& io_service );
+  CopyContext(boost::asio::io_service& io_service);
+
+  ~CopyContext();
 
   void Init(const std::string& i_input_filepath, bool check_file_integrity,
             bool i_is_stdin_input, uint64_t i_start_offset, bool i_resume,

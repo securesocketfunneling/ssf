@@ -127,6 +127,9 @@ class CopyServer : public BaseService<Demux> {
     file_acceptor_->Close(close_ec);
     close_ec.clear();
     control_acceptor_.close(close_ec);
+    if (file_sender_) {
+      file_sender_->Stop();
+    }
   }
 
   uint32_t service_type_id() override { return kFactoryId; }
@@ -203,9 +206,9 @@ class CopyServer : public BaseService<Demux> {
         return;
       default:
         // noop
+        AsyncReadControlRequest(control_fiber);
         break;
     };
-    AsyncReadControlRequest(control_fiber);
   }
 
   void OnCopyRequest(FiberPtr control_fiber, PacketPtr packet) {
@@ -253,27 +256,30 @@ class CopyServer : public BaseService<Demux> {
                          << context->GetOutputFilepath().GetString() << " "
                          << ec.message();
     };
-    auto on_copy_finished = [](uint64_t files_count, uint64_t errors_count,
-                               const boost::system::error_code& ec) {
+    auto self = this->shared_from_this();
+    auto on_copy_finished = [this, self](uint64_t files_count,
+                                         uint64_t errors_count,
+                                         const boost::system::error_code& ec) {
       SSF_LOG(kLogDebug) << "microservice[copy][server] "
                          << (files_count - errors_count) << "/" << files_count
                          << " files copied";
     };
 
     boost::system::error_code ec;
-    FileSenderPtr file_sender = FileSender<Demux>::Create(
+    file_sender_ = FileSender<Demux>::Create(
         this->get_demux(), std::move(*control_fiber), req, on_file_status,
         on_file_copied, on_copy_finished, ec);
     if (ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][server] cannot create sender";
+      SSF_LOG(kLogDebug) << "microservice[copy][server] cannot create file sender";
       return;
     }
-    file_sender->AsyncSend();
+    file_sender_->AsyncSend();
   }
 
  private:
   FiberAcceptor control_acceptor_;
   FileAcceptorPtr file_acceptor_;
+  FileSenderPtr file_sender_;
   ssf::Filesystem fs_;
 };
 

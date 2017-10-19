@@ -16,6 +16,9 @@ enum ErrorCode {
   kFilesPartiallyCopied,
   kNoFileCopied,
 
+  kNetworkError,
+  kCopyStopped,
+
   kInboundPacketNotSupported,
   kOutboundPacketNotGenerated,
 

@@ -118,6 +118,7 @@ int main(int argc, char** argv) {
     if (ec) {
       return;
     }
+
     boost::system::error_code stop_ec;
     client.Stop(stop_ec);
   });

@@ -22,6 +22,10 @@ std::string detail::copy_category::message(int value) const {
       return "files partially copied";
     case kNoFileCopied:
       return "no file copied";
+    case kNetworkError:
+      return "network error";
+    case kCopyStopped:
+      return "copy stopped";
     case kInboundPacketNotSupported:
       return "inbound packet not supported";
     case kOutboundPacketNotGenerated:

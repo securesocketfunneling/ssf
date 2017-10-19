@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include <ssf/log/log.h>
+
 namespace ssf {
 namespace services {
 namespace copy {
@@ -12,6 +14,10 @@ CopyContext::CopyContext(boost::asio::io_service& io_service)
       outbound_packet_(nullptr),
       state_(nullptr),
       on_state_changed_([]() {}) {}
+
+CopyContext::~CopyContext() {
+  SSF_LOG(kLogDebug) << "microservice[copy][context] destroy";
+}
 
 void CopyContext::Init(const std::string& i_input_filepath,
                        bool i_check_file_integrity, bool i_is_stdin_input,
