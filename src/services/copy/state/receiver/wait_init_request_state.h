@@ -69,8 +69,8 @@ class WaitInitRequestState : ICopyState {
     }
 
     context->Init(init_req.input_filepath, init_req.check_file_integrity,
-                  init_req.stdin_input, 0, init_req.resume, init_req.output_dir,
-                  init_req.output_filename);
+                  init_req.stdin_input, 0, init_req.resume, init_req.filesize,
+                  init_req.output_dir, init_req.output_filename);
 
     ssf::Path output_path(init_req.output_dir);
     output_path /= init_req.output_filename;
@@ -96,8 +96,8 @@ class WaitInitRequestState : ICopyState {
 
     auto& output_fh = context->output;
 
-    std::ios_base::openmode open_flags = std::ofstream::out | 
-                                             std::ofstream::binary;
+    std::ios_base::openmode open_flags =
+        std::ofstream::out | std::ofstream::binary;
     if (context->fs.IsFile(output_path, fs_ec)) {
       open_flags |= std::ofstream::in;
     }

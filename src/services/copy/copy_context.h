@@ -36,7 +36,7 @@ class CopyContext {
 
   void Init(const std::string& i_input_filepath, bool check_file_integrity,
             bool i_is_stdin_input, uint64_t i_start_offset, bool i_resume,
-            const std::string& i_output_dir,
+            uint64_t i_filesize, const std::string& i_output_dir,
             const std::string& i_output_filename);
 
   void Deinit();
@@ -79,6 +79,7 @@ class CopyContext {
   bool is_stdin_input;
   uint64_t start_offset;
   bool resume;
+  uint64_t filesize;
   std::string output_dir;
   std::string output_filename;
   Hash::Digest output_file_digest;

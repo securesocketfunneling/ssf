@@ -1,6 +1,8 @@
 #ifndef SSF_SERVICES_COPY_PACKET_INIT_H_
 #define SSF_SERVICES_COPY_PACKET_INIT_H_
 
+#include <cstdint>
+
 #include <string>
 
 #include <msgpack.hpp>
@@ -18,13 +20,14 @@ struct InitRequest {
   InitRequest() {}
 
   InitRequest(const std::string& i_input_filepath, bool i_check_file_integrity,
-              bool i_stdin_input, bool i_resume,
+              bool i_stdin_input, bool i_resume, uint64_t i_filesize,
               const std::string& i_output_dir,
               const std::string& i_output_filename)
       : input_filepath(i_input_filepath),
         check_file_integrity(i_check_file_integrity),
         stdin_input(i_stdin_input),
         resume(i_resume),
+        filesize(i_filesize),
         output_dir(i_output_dir),
         output_filename(i_output_filename) {}
 
@@ -32,11 +35,12 @@ struct InitRequest {
   bool check_file_integrity;
   bool stdin_input;
   bool resume;
+  uint64_t filesize;
   std::string output_dir;
   std::string output_filename;
 
   MSGPACK_DEFINE(input_filepath, check_file_integrity, stdin_input, resume,
-                 output_dir, output_filename)
+                 filesize, output_dir, output_filename)
 };
 
 struct InitReply {

@@ -22,13 +22,14 @@ CopyContext::~CopyContext() {
 void CopyContext::Init(const std::string& i_input_filepath,
                        bool i_check_file_integrity, bool i_is_stdin_input,
                        uint64_t i_start_offset, bool i_resume,
-                       const std::string& i_output_dir,
+                       uint64_t i_filesize, const std::string& i_output_dir,
                        const std::string& i_output_filename) {
   input_filepath = i_input_filepath;
   check_file_integrity = i_check_file_integrity;
   is_stdin_input = i_is_stdin_input;
   start_offset = i_start_offset;
   resume = i_resume;
+  filesize = i_filesize;
   output_dir = i_output_dir;
   output_filename = i_output_filename;
 }

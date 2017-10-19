@@ -118,6 +118,12 @@ class CopySession : public ssf::BaseSession {
       return;
     }
 
+    if (context_->filesize != 0 && context_->input.is_open()) {
+      auto self = this->shared_from_this();
+      socket_.get_io_service().post(
+          [this, self]() { on_file_status_(context_.get(), {}); });
+    }
+
     if (context_->IsClosed()) {
       return;
     }
@@ -149,6 +155,12 @@ class CopySession : public ssf::BaseSession {
           << "microservice[copy][session] could not process inbound packet";
       StopSession();
       return;
+    }
+
+    if (context_->filesize != 0 && context_->output.is_open()) {
+      auto self = this->shared_from_this();
+      socket_.get_io_service().post(
+          [this, self]() { on_file_status_(context_.get(), {}); });
     }
 
     if (context_->IsClosed()) {

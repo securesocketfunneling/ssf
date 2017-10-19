@@ -37,7 +37,7 @@ class SendInitReplyState : ICopyState {
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
                           boost::system::error_code& ec) override {
     InitRequest req(context->input_filepath, context->check_file_integrity,
-                    context->is_stdin_input, context->resume,
+                    context->is_stdin_input, context->resume, context->filesize,
                     context->output_dir, context->output_filename);
 
     auto& output_fh = context->output;

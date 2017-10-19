@@ -39,7 +39,7 @@ class SendInitRequestState : ICopyState {
                           boost::system::error_code& ec) override {
     // create and sent Init packet
     InitRequest req(context->input_filepath, context->check_file_integrity,
-                    context->is_stdin_input, context->resume,
+                    context->is_stdin_input, context->resume, context->filesize,
                     context->output_dir, context->output_filename);
 
     boost::system::error_code convert_ec;

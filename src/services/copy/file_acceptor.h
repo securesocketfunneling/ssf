@@ -115,21 +115,18 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
         p_fiber->get_io_service());
     context->SetState(std::move(wait_request_state));
 
-    auto on_session_file_status =
-        [this, self, on_file_status](CopyContext* context,
-                                     const boost::system::error_code& ec) {
-          SSF_LOG(kLogInfo)
-              << "microservice[copy][file_acceptor] receiver on file status "
-              << ec.message();
-          on_file_status(context, ec);
-        };
+    auto on_session_file_status = [this, self, on_file_status](
+        CopyContext* context, const boost::system::error_code& ec) {
+      on_file_status(context, ec);
+    };
 
     auto on_session_file_copied =
         [this, self, on_file_copied](CopyContext* context,
                                      const boost::system::error_code& ec) {
           SSF_LOG(kLogDebug)
               << "microservice[copy][file_acceptor] receiver file copied "
-              << context->input_filepath << " " << ec.message();
+              << context->GetOutputFilepath().GetString() << " "
+              << ec.message();
           on_file_copied(context, ec);
         };
 

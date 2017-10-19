@@ -140,7 +140,25 @@ bool CopyFixtureTest::StartCopy(const ssf::services::copy::CopyRequest& req,
   }
 
   auto on_file_status = [this](ssf::services::copy::CopyContext* context,
-                               const boost::system::error_code& ec) {};
+                               const boost::system::error_code& ec) {
+    if (context->filesize == 0) {
+      return;
+    }
+
+    uint64_t percent = 0;
+    if (context->output.is_open()) {
+      percent = 100 * context->output.tellp() / context->filesize;
+      SSF_LOG(kLogInfo) << "[copy_tests] Receiving: "
+                        << context->GetOutputFilepath().GetString() << " "
+                        << percent << "% / " << context->filesize << "b";
+    } else if (context->input.is_open()) {
+      percent = context->input.eof()
+                    ? 100
+                    : (100 * context->input.tellg() / context->filesize);
+      SSF_LOG(kLogInfo) << "[copy_tests] Sending: " << context->input_filepath
+                        << " " << percent << "% / " << context->filesize << "b";
+    }
+  };
   auto on_file_copied = [this](ssf::services::copy::CopyContext* context,
                                const boost::system::error_code& ec) {
     if (context->is_stdin_input) {

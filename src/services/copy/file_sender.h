@@ -288,11 +288,16 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
     ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
     context->SetState(std::move(send_init_request_state));
+    boost::system::error_code fs_ec;
+    auto filesize = context->fs.GetFilesize(input_filepath, fs_ec);
+    if (fs_ec) {
+      filesize = 0;
+    }
 
-    context->Init(input_filepath.GetString(),
-                  copy_request_.check_file_integrity,
-                  copy_request_.is_from_stdin, 0, copy_request_.is_resume,
-                  output_directory.GetString(), output_filename.GetString());
+    context->Init(
+        input_filepath.GetString(), copy_request_.check_file_integrity,
+        copy_request_.is_from_stdin, 0, copy_request_.is_resume, filesize,
+        output_directory.GetString(), output_filename.GetString());
 
     return context;
   }
@@ -308,7 +313,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     context->SetState(std::move(send_init_request_state));
 
     context->Init("", false, copy_request_.is_from_stdin, 0,
-                  copy_request_.is_resume, output_directory.GetString(),
+                  copy_request_.is_resume, 0, output_directory.GetString(),
                   output_filename.GetString());
 
     return context;
@@ -371,30 +376,21 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
   void NotifyFileStatus(CopyContext* context,
                         const boost::system::error_code& ec) {
-    if (context->is_stdin_input) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][file_sender] sender on file status "
-          << ec.message();
-    } else {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][file_sender] sender on file status "
-          << context->input_filepath << "  " << ec.message();
+    if (!stopped_) {
+      on_file_status_(context, ec);
     }
-    on_file_status_(context, ec);
   }
 
   void NotifyFileCopied(CopyContext* context,
                         const boost::system::error_code& ec) {
-    {
+    if (context->is_stdin_input) {
+      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stdin copied "
+                         << ec.message();
+    } else {
+      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] file copied "
+                         << context->input_filepath << " " << ec.message();
       std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
-      if (context->is_stdin_input) {
-        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stdin copied "
-                           << ec.message();
-      } else {
-        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] file copied "
-                           << context->input_filepath << " " << ec.message();
-        input_files_.remove(context->input_filepath);
-      }
+      input_files_.remove(context->input_filepath);
     }
 
     if (ec) {
