@@ -113,10 +113,11 @@ void Admin<Demux>::AsyncConnect() {
 template <typename Demux>
 void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
   if (!fiber_.is_open() || ec) {
-    SSF_LOG(kLogError) << "microservice[admin]: no new connection: "
+    SSF_LOG(kLogDebug) << "microservice[admin]: admin connection failed: "
                        << ec.message() << " " << ec.value();
     // Retry to connect if failed to open the fiber
     if (retries_ < kServiceStatusRetryCount) {
+      SSF_LOG(kLogDebug) << "microservice[admin]: retry connection";
       this->AsyncConnect();
       ++retries_;
     }

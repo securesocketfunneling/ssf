@@ -365,6 +365,7 @@ void basic_fiber_demux_service<S>::handle_rst(implementation_type impl,
 
     if (p_fib_impl->connecting || p_fib_impl->connected) {
       if (p_fib_impl->connecting) {
+        p_fib_impl->set_disconnected();
         auto on_connection = p_fib_impl->access_connect_handler();
         on_connection(boost::system::error_code(::error::connection_refused,
                                                 ::error::get_ssf_category()));
