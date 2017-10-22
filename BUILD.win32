@@ -1,10 +1,15 @@
 Building SSF for Windows
 ========================
 
-With prebuilt binaries
+Get build dependencies
 ----------------------
 
-Get installer for prebuilt dependency libraries:
+SSF depends on Boost and OpenSSL libraries. You can choose to build
+dependencies yourself, or install prebuilt library packages.
+
+### Using prebuilt packages
+
+Obtain installers for the libraries and install them:
 
 * Boost 1.65.1:
 
@@ -28,8 +33,7 @@ If you have not installed OpenSSL in the default directory (`C:\OpenSSL-Win32`
 for `C:\OpenSSL-Win64`), you will need to point the cmake variable
 `OPENSSL_ROOT_DIR` to the install location.
 
-Without prebuilt binaries
--------------------------
+### Building dependencies yourself
 
 Boost and OpenSSL dependencies will need to be built manually. Convenience
 scripts for automatically building these can be found in the `builddeps`
@@ -37,7 +41,8 @@ directory.
 
 7-Zip is required to decompress the source tarballs.
 
-First prepare a build directory, download boost and openssl source and place them inside the build directory:
+First prepare a build directory, download boost and openssl source and place
+them inside the build directory:
 
 ```
 C:\Users\you>mkdir C:\build
@@ -62,8 +67,8 @@ libraries will be installed in `C:\boost`
 support, when generating the project files prior to building SSF, make sure
 `DISABLE_RTTI` is set to `ON`.
 
-**NOTE**: `build_boost.bat` will only build static/runtime static versions of the
-boost libraries.
+**NOTE**: `build_boost.bat` will only build static/runtime static versions of
+the boost libraries.
 
 ### Building openssl
 
