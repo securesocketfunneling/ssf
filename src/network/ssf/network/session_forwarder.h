@@ -42,13 +42,13 @@ class SessionForwarder : public ssf::BaseSession {
 
   /// Start forwarding
   void start(boost::system::error_code&) override {
-    SSF_LOG(kLogInfo) << "session[forwarder]: start";
+    SSF_LOG(kLogDebug) << "session[forwarder]: start";
     DoForward();
   }
 
   /// Stop forwarding
   void stop(boost::system::error_code&) override {
-    SSF_LOG(kLogInfo) << "session[forwarder]: stop";
+    SSF_LOG(kLogDebug) << "session[forwarder]: stop";
     boost::system::error_code ec;
     if (inbound_.lowest_layer().is_open()) {
       inbound_.lowest_layer().shutdown(boost::asio::socket_base::shutdown_both,

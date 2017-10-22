@@ -75,9 +75,11 @@ void Session<N, T>::Start(const NetworkQuery& query,
   }
 
   // async connect to given endpoint
-  p_socket_->async_connect(
-      *endpoint_it, std::bind(&Session<N, T>::NetworkToTransport,
-                              this->shared_from_this(), std::placeholders::_1));
+  auto self = this->shared_from_this();
+  auto on_connect = [this, self](const boost::system::error_code& ec) {
+    NetworkToTransport(ec);
+  };
+  p_socket_->async_connect(*endpoint_it, on_connect);
 }
 
 template <class N, template <class> class T>
@@ -94,7 +96,6 @@ void Session<N, T>::Stop(boost::system::error_code& ec) {
   if (p_service_manager_) {
     p_service_manager_->stop_all();
   }
-  // p_service_manager_.reset();
 
   if (p_socket_) {
     boost::system::error_code close_ec;

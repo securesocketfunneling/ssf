@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
+#include <limits>
 #include <map>
 #include <set>
-#include <limits>
 
 #include <boost/system/error_code.hpp>
 
@@ -13,46 +13,48 @@
 
 namespace ssf {
 
-/// Manage actionable items
+// Manage actionable items
 /** Items must support start() and stop() interfaces and
 * implement operator==
 */
 template <typename ActionableItem>
 class ItemManager : private boost::noncopyable {
-
  public:
-  /// Type for the unique instance id given to each item managed
+  // Type for the unique instance id given to each item managed
   typedef uint32_t instance_id_type;
 
  public:
   ItemManager() : id_map_mutex_(), id_map_() {}
 
-  virtual ~ItemManager() { do_stop_all(); }
+  virtual ~ItemManager() { stop_all(); }
 
-  /// Activate an Item and return a unique ID
+  // Activate an Item and return a unique ID
   instance_id_type start(ActionableItem item, boost::system::error_code& ec) {
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
     return do_start(item, ec);
   }
 
-  /// Stop an item
+  // Stop an item
   void stop(ActionableItem item, boost::system::error_code& ec) {
     std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
     do_stop(find_id_from_item(item), ec);
   }
 
-  /// Stop the item given its unique ID
+  // Stop the item given its unique ID
   void stop_with_id(instance_id_type id, boost::system::error_code& ec) {
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
     do_stop(id, ec);
   }
 
-  /// Stop all items
-  void stop_all() { do_stop_all(); }
+  // Stop all items
+  void stop_all() {
+    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
+    do_stop_all();
+  }
 
  private:
-  /// Find the unique ID of the given item
+  // Find the unique ID of the given item
   instance_id_type find_id_from_item(ActionableItem item) {
-    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
-
     for (const auto& item_pair : id_map_) {
       if (item_pair.second == item) {
         return item_pair.first;
@@ -62,15 +64,13 @@ class ItemManager : private boost::noncopyable {
     return 0;
   }
 
-  /// Activate the item and return a unique ID
+  // Activate the item and return a unique ID
   instance_id_type do_start(ActionableItem item,
                             boost::system::error_code& ec) {
-    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
-
-    /// Get an available ID
+    // Get an available ID
     instance_id_type new_id = get_available_id();
 
-    /// If new_id == 0, no ID was available
+    // If new_id == 0, no ID was available
     if (!new_id) {
       ec.assign(ssf::error::device_or_resource_busy,
                 ssf::error::get_ssf_category());
@@ -86,10 +86,8 @@ class ItemManager : private boost::noncopyable {
     }
   }
 
-  /// Stop the item associated to the given unique ID
+  // Stop the item associated to the given unique ID
   void do_stop(instance_id_type id, boost::system::error_code& ec) {
-    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
-
     auto it = id_map_.find(id);
 
     if (it != std::end(id_map_)) {
@@ -102,10 +100,8 @@ class ItemManager : private boost::noncopyable {
     }
   }
 
-  /// Stop all items
+  // Stop all items
   void do_stop_all() {
-    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
-
     boost::system::error_code ec;
     for (auto& item : id_map_) {
       item.second->stop(ec);
@@ -113,10 +109,8 @@ class ItemManager : private boost::noncopyable {
     id_map_.clear();
   }
 
-  /// Return the next available ID and 0 if no ID is available
+  // Return the next available ID and 0 if no ID is available
   instance_id_type get_available_id() {
-    std::unique_lock<std::recursive_mutex> lock(id_map_mutex_);
-
     for (instance_id_type i = 1; i < std::numeric_limits<uint32_t>::max();
          ++i) {
       if (!id_map_.count(i)) {

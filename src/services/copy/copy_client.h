@@ -77,10 +77,9 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
       return nullptr;
     }
 
-    CopyClientPtr client(new CopyClient(session, on_file_status, on_file_copied,
-                                        on_copy_finished));
+    CopyClientPtr client(new CopyClient(session));
 
-    client->Init(ec);
+    client->Init(on_file_status, on_file_copied, on_copy_finished, ec);
     if (ec) {
       return nullptr;
     }
@@ -97,6 +96,23 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
       }
 #endif
     }
+  }
+
+  void Stop() {
+    boost::system::error_code stop_ec;
+    if (file_sender_) {
+      file_sender_->Stop();
+    }
+    if (file_acceptor_) {
+      file_acceptor_->Close(stop_ec);
+    }
+
+    on_file_status_ = [](CopyContext* context,
+                         const boost::system::error_code& ec) {};
+    on_file_copied_ = [](CopyContext* context,
+                         const boost::system::error_code& ec) {};
+    on_copy_finished_ = [](uint64_t files_count, uint64_t error_count,
+                           const boost::system::error_code& ec) {};
   }
 
   void AsyncCopyToServer(const CopyRequest& req) {
@@ -128,16 +144,20 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
   }
 
  private:
-  CopyClient(SessionPtr session, OnFileStatus on_file_status,
-             OnFileCopied on_file_copied, OnCopyFinished on_copy_finished)
+  CopyClient(SessionPtr session)
       : session_(session),
         control_fiber_(session->get_io_service()),
-        file_acceptor_(FileAcceptor<Demux>::Create(session->get_io_service())),
-        on_file_status_(on_file_status),
-        on_file_copied_(on_file_copied),
-        on_copy_finished_(on_copy_finished) {}
+        file_acceptor_(FileAcceptor<Demux>::Create(session->get_io_service())) {
+  }
 
-  void Init(boost::system::error_code& ec) {
+  void Init(OnFileStatus on_file_status, OnFileCopied on_file_copied,
+            OnCopyFinished on_copy_finished, boost::system::error_code& ec) {
+    auto self = this->shared_from_this();
+
+    on_file_status_ = on_file_status;
+    on_file_copied_ = on_file_copied;
+    on_copy_finished_ = on_copy_finished;
+
     if (copy_request_.is_from_stdin) {
 // set stdin in binary mode
 #ifdef WIN32
@@ -162,14 +182,9 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
     boost::system::error_code ec;
     auto self = this->shared_from_this();
 
-    auto on_copy_finished = [this, self](uint64_t files_count, uint64_t error_count,
-      const boost::system::error_code& ec) {
-      on_copy_finished_(files_count, error_count, ec);
-    };
-
     file_sender_ = FileSender<Demux>::Create(
         session_->GetDemux(), std::move(control_fiber_), req, on_file_status_,
-        on_file_copied_, on_copy_finished, ec);
+        on_file_copied_, on_copy_finished_, ec);
     if (ec) {
       SSF_LOG(kLogError)
           << "microservice[copy][client] cannot create file sender";
@@ -279,10 +294,10 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
   void NotifyCopyFinished(uint64_t files_count, uint64_t errors_count,
                           ErrorCode error_code) {
     auto self = this->shared_from_this();
-    boost::system::error_code copy_finished_ec;
-    copy_finished_ec.assign(error_code, get_copy_category());
     session_->get_io_service().post(
-        [this, self, files_count, errors_count, copy_finished_ec]() {
+        [this, self, files_count, errors_count, error_code]() {
+          boost::system::error_code copy_finished_ec(error_code,
+                                                     get_copy_category());
           on_copy_finished_(files_count, errors_count, copy_finished_ec);
         });
   }

@@ -166,7 +166,7 @@ TEST_F(CopyFixtureTest, CopyGlobFileFromClientToServerSequentiallyTest) {
   ssf::Path input_pattern(GetInputDirectory());
   input_pattern /= "*.txt";
 
-  ssf::services::copy::CopyRequest req(false, false, false, true, 5,
+  ssf::services::copy::CopyRequest req(false, false, false, true, 1,
                                        input_pattern.GetString(),
                                        GetOutputDirectory().GetString());
   StartCopy(req, true);

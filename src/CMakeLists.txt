@@ -132,7 +132,6 @@ set(SSF_FRAMEWORK_FILES
   services/copy/copy_context.h
   services/copy/copy_context.cpp
   services/copy/copy_session.h
-  services/copy/copy_session.ipp
   services/copy/error_code.h
   services/copy/error_code.cpp
   services/copy/i_copy_state.h

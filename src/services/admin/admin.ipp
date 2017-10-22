@@ -63,7 +63,8 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "microservice[admin]: stopping";
+  SSF_LOG(kLogDebug) << "microservice[admin]: stopping "
+                     << (is_server_ ? "server" : "client");
   ec.assign(::error::success, ::error::get_ssf_category());
 
   HandleStop();
@@ -93,7 +94,6 @@ void Admin<Demux>::OnFiberAccept(const boost::system::error_code& ec) {
     SSF_LOG(kLogError)
         << "microservice[admin]: error accepting new connection: " << ec << " "
         << ec.value();
-    ShutdownServices();
     return;
   }
 
@@ -102,6 +102,13 @@ void Admin<Demux>::OnFiberAccept(const boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::AsyncConnect() {
+  {
+    std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+    if (stopped_) {
+      return;
+    }
+  }
+
   auto self = this->shared_from_this();
   FiberEndpoint ep(this->get_demux(), kServicePort);
   auto on_fiber_connect = [this, self](const boost::system::error_code& ec) {
@@ -115,6 +122,7 @@ void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
   if (!fiber_.is_open() || ec) {
     SSF_LOG(kLogDebug) << "microservice[admin]: admin connection failed: "
                        << ec.message() << " " << ec.value();
+
     // Retry to connect if failed to open the fiber
     if (retries_ < kServiceStatusRetryCount) {
       SSF_LOG(kLogDebug) << "microservice[admin]: retry connection";
@@ -246,9 +254,6 @@ void Admin<Demux>::ListenForCommand() {
 template <typename Demux>
 void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
   if (ec) {
-    auto self = this->shared_from_this();
-    auto shutdown_services = [this, self]() { ShutdownServices(); };
-    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -378,9 +383,6 @@ void Admin<Demux>::StopRemoteService(
 template <typename Demux>
 void Admin<Demux>::OnSendKeepAlive(const boost::system::error_code& ec) {
   if (ec) {
-    auto self = this->shared_from_this();
-    auto shutdown_services = [this, self]() { ShutdownServices(); };
-    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -402,8 +404,6 @@ void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
                                  size_t length) {
   auto self = this->shared_from_this();
   if (ec) {
-    auto shutdown_services = [this, self]() { ShutdownServices(); };
-    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -416,26 +416,19 @@ void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
 }
 
 template <typename Demux>
-void Admin<Demux>::ShutdownServices() {
+void Admin<Demux>::HandleStop() {
   std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
   if (stopped_) {
     return;
   }
 
-  Demux& d = this->get_demux();
-  auto p_service_factory = ServiceFactoryManager<Demux>::GetServiceFactory(&d);
-  if (p_service_factory) {
-    p_service_factory->Destroy();
-  }
-  callback_ = [](BaseUserServicePtr, const boost::system::error_code&) {};
   stopped_ = true;
-}
 
-template <typename Demux>
-void Admin<Demux>::HandleStop() {
   reserved_keep_alive_timer_.cancel();
   fiber_acceptor_.close();
   fiber_.close();
+
+  callback_ = [](BaseUserServicePtr, const boost::system::error_code&) {};
 }
 
 }  // admin

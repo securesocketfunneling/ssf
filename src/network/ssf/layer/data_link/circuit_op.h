@@ -16,8 +16,7 @@ namespace layer {
 namespace data_link {
 namespace detail {
 
-template <class Protocol, class Stream, class Endpoint,
-          class ConnectHandler>
+template <class Protocol, class Stream, class Endpoint, class ConnectHandler>
 class CircuitConnectOp {
  public:
   CircuitConnectOp(Stream& stream, Endpoint* p_local_endpoint,
@@ -45,23 +44,24 @@ class CircuitConnectOp {
 #include <boost/asio/yield.hpp>
   void operator()(
       const boost::system::error_code& ec = boost::system::error_code()) {
-    if (!ec) {
-      reenter(coro_) {
-        yield stream_.async_connect(
-            p_remote_endpoint_->next_layer_endpoint(), std::move(*this));
-
-        boost::system::error_code endpoint_ec;
-        auto& next_layer_endpoint = p_local_endpoint_->next_layer_endpoint();
-        next_layer_endpoint = stream_.local_endpoint(endpoint_ec);
-        p_local_endpoint_->set();
-
-        Protocol::circuit_policy::AsyncInitConnection(
-            stream_, p_remote_endpoint_, Protocol::circuit_policy::client,
-            std::move(handler_));
-      }
-    } else {
+    if (ec) {
       // error
       handler_(ec);
+      return;
+    }
+
+    reenter(coro_) {
+      yield stream_.async_connect(p_remote_endpoint_->next_layer_endpoint(),
+                                  std::move(*this));
+
+      boost::system::error_code endpoint_ec;
+      auto& next_layer_endpoint = p_local_endpoint_->next_layer_endpoint();
+      next_layer_endpoint = stream_.local_endpoint(endpoint_ec);
+      p_local_endpoint_->set();
+
+      Protocol::circuit_policy::AsyncInitConnection(
+          stream_, p_remote_endpoint_, Protocol::circuit_policy::client,
+          std::move(handler_));
     }
   }
 #include <boost/asio/unyield.hpp>
@@ -79,14 +79,14 @@ class CircuitConnectOp {
 template <class Protocol, class StreamPtr, class EndpointPtr,
           class ConnectHandler>
 inline void* asio_handler_allocate(
-    std::size_t size, CircuitConnectOp<Protocol, StreamPtr, EndpointPtr,
-                                       ConnectHandler>* this_handler) {
+    std::size_t size,
+    CircuitConnectOp<Protocol, StreamPtr, EndpointPtr, ConnectHandler>*
+        this_handler) {
   return boost_asio_handler_alloc_helpers::allocate(size,
                                                     this_handler->handler());
 }
 
-template <class Protocol, class Stream, class Endpoint,
-          class ConnectHandler>
+template <class Protocol, class Stream, class Endpoint, class ConnectHandler>
 inline void asio_handler_deallocate(
     void* pointer, std::size_t size,
     CircuitConnectOp<Protocol, Stream, Endpoint, ConnectHandler>*
@@ -95,10 +95,10 @@ inline void asio_handler_deallocate(
                                                this_handler->handler());
 }
 
-template <class Protocol, class Stream, class Endpoint,
-          class ConnectHandler>
-inline bool asio_handler_is_continuation(CircuitConnectOp<
-    Protocol, Stream, Endpoint, ConnectHandler>* this_handler) {
+template <class Protocol, class Stream, class Endpoint, class ConnectHandler>
+inline bool asio_handler_is_continuation(
+    CircuitConnectOp<Protocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   return boost_asio_handler_cont_helpers::is_continuation(
       this_handler->handler());
 }
@@ -106,16 +106,18 @@ inline bool asio_handler_is_continuation(CircuitConnectOp<
 template <class Function, class Protocol, class Stream, class Endpoint,
           class ConnectHandler>
 inline void asio_handler_invoke(
-    Function& function, CircuitConnectOp<Protocol, Stream, Endpoint,
-                                         ConnectHandler>* this_handler) {
+    Function& function,
+    CircuitConnectOp<Protocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   boost_asio_handler_invoke_helpers::invoke(function, this_handler->handler());
 }
 
 template <class Function, class Protocol, class Stream, class Endpoint,
           class ConnectHandler>
 inline void asio_handler_invoke(
-    const Function& function, CircuitConnectOp<Protocol, Stream, Endpoint,
-                                               ConnectHandler>* this_handler) {
+    const Function& function,
+    CircuitConnectOp<Protocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   boost_asio_handler_invoke_helpers::invoke(function, this_handler->handler());
 }
 

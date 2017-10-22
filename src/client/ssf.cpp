@@ -103,14 +103,14 @@ int main(int argc, char** argv) {
               user_service_parameters, ssf_config.services(), on_status,
               on_user_service_status, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "ssfc: cannot init client";
+    SSF_LOG(kLogError) << "[ssf] cannot init client";
     return 1;
   }
 
-  SSF_LOG(kLogInfo) << "ssfc: connecting to <" << cmd.host() << ":"
+  SSF_LOG(kLogInfo) << "[ssf] connecting to <" << cmd.host() << ":"
                     << cmd.port() << ">";
 
-  SSF_LOG(kLogInfo) << "ssfc: running (Ctrl + C to stop)";
+  SSF_LOG(kLogInfo) << "[ssf] running (Ctrl + C to stop)";
 
   // stop client on SIGINT or SIGTERM
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
 
   client.Run(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "ssfc: error happened when running client: "
+    SSF_LOG(kLogError) << "[ssf] error happened when running client: "
                        << ec.message();
     return 1;
   }
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
   // blocks until signal or max reconnection attempts
   client.WaitStop(ec);
 
-  SSF_LOG(kLogInfo) << "ssfc: stop";
+  SSF_LOG(kLogInfo) << "[ssf] stop";
   signal.cancel(ec);
 
   return 0;

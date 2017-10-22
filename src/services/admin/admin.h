@@ -175,7 +175,6 @@ class Admin : public BaseService<Demux> {
   void ReceiveInstructionHeader();
   void ReceiveInstructionParameters();
   void ProcessInstructionId();
-  void ShutdownServices();
 
   template <typename Handler>
   void AsyncSendCommand(const AdminCommand& command, Handler handler) {

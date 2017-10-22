@@ -131,6 +131,10 @@ class stream_fiber_service
   /// Close a fiber implementation.
   boost::system::error_code close(implementation_type& impl,
                                   boost::system::error_code& ec) {
+    if (!is_open(impl)) {
+      return ec;
+    }
+
     impl->p_fib_demux->close_fiber(impl);
     return ec;
   }

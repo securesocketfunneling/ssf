@@ -24,8 +24,8 @@
 #include "ssf/io/read_stream_op.h"
 
 #include "ssf/layer/basic_endpoint.h"
-#include "ssf/layer/protocol_attributes.h"
 #include "ssf/layer/parameters.h"
+#include "ssf/layer/protocol_attributes.h"
 
 #include "ssf/log/log.h"
 
@@ -63,7 +63,9 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   TLSStreamBufferer(const TLSStreamBufferer&) = delete;
   TLSStreamBufferer& operator=(const TLSStreamBufferer&) = delete;
 
-  ~TLSStreamBufferer() {}
+  ~TLSStreamBufferer() {
+    SSF_LOG(kLogDebug) << "network[crypto] stream buffer destroy";
+  }
 
   static p_puller_type create(p_tls_stream_type p_socket,
                               p_strand_type p_strand) {
@@ -76,9 +78,9 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
       std::unique_lock<std::recursive_mutex> lock(pulling_mutex_);
       if (!pulling_) {
         pulling_ = true;
-        SSF_LOG(kLogDebug) << "network[crypto]: pulling";
+        SSF_LOG(kLogDebug) << "network[crypto] pulling";
         io_service_.post(std::bind(&TLSStreamBufferer::async_pull_packets,
-                                     this->shared_from_this()));
+                                   this->shared_from_this()));
       }
     }
   }
@@ -87,8 +89,7 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_read_some(const MutableBufferSequence& buffers,
-                      ReadHandler&& handler) {
+  async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
@@ -97,7 +98,8 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
 
     if (buffer_size) {
       typedef io::pending_read_stream_operation<MutableBufferSequence,
-                                                decltype(init.handler)> op;
+                                                decltype(init.handler)>
+          op;
       typename op::ptr p = {
           boost::asio::detail::addressof(init.handler),
           boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),
@@ -113,7 +115,7 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
       p.v = p.p = 0;
 
       io_service_.post(std::bind(&TLSStreamBufferer::handle_data_n_ops,
-                                   this->shared_from_this()));
+                                 this->shared_from_this()));
     } else {
       io_service_.post(std::bind(init.handler, boost::system::error_code(), 0));
     }
@@ -168,8 +170,9 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
 
         size_t copied = op->fill_buffer(data_queue_);
 
-        auto do_complete =
-            [=]() { op->complete(boost::system::error_code(), copied); };
+        auto do_complete = [=]() {
+          op->complete(boost::system::error_code(), copied);
+        };
         io_service_.post(do_complete);
 
         io_service_.dispatch(std::bind(&TLSStreamBufferer::handle_data_n_ops,
@@ -182,8 +185,9 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
         auto op = op_queue_.front();
         op_queue_.pop();
         auto self = this->shared_from_this();
-        auto do_complete =
-            [op, this, self]() { op->complete(this->status_, 0); };
+        auto do_complete = [op, this, self]() {
+          op->complete(this->status_, 0);
+        };
         io_service_.post(do_complete);
 
         io_service_.dispatch(std::bind(&TLSStreamBufferer::handle_data_n_ops,
@@ -214,8 +218,9 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
           boost::system::error_code cancel_ec;
           cancel(cancel_ec);
         } else {
+          data_queue_.consume(data_queue_.size());
           this->status_ = ec;
-          SSF_LOG(kLogDebug) << "network[crypto]: TLS connection terminated ("
+          SSF_LOG(kLogDebug) << "network[crypto] TLS connection terminated ("
                              << ec.value() << ": " << ec.message() << ")";
         }
       }
@@ -236,7 +241,7 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
         strand_.dispatch(lambda);
       } else {
         pulling_ = false;
-        SSF_LOG(kLogDebug) << "network[crypto]: not pulling";
+        SSF_LOG(kLogDebug) << "network[crypto] not pulling";
       }
     }
   }
@@ -321,7 +326,9 @@ class basic_buffered_tls_socket {
     other.socket_ = *(other.p_socket_);
   }
 
-  ~basic_buffered_tls_socket() {}
+  ~basic_buffered_tls_socket() {
+    SSF_LOG(kLogDebug) << "network[crypto] TLS buffered socket destroy";
+  }
 
   basic_buffered_tls_socket(const basic_buffered_tls_socket&) = delete;
   basic_buffered_tls_socket& operator=(const basic_buffered_tls_socket&) =
@@ -354,7 +361,7 @@ class basic_buffered_tls_socket {
           if (!ec) {
             this->p_puller_->start_pulling();
           } else {
-            SSF_LOG(kLogError) << "network[crypto]: TLS handshake failed";
+            SSF_LOG(kLogError) << "network[crypto] TLS handshake failed";
           }
           handler(ec);
         };
@@ -383,8 +390,7 @@ class basic_buffered_tls_socket {
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_read_some(const MutableBufferSequence& buffers,
-                      ReadHandler&& handler) {
+  async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler) {
     return p_puller_->async_read_some(buffers,
                                       std::forward<ReadHandler>(handler));
   }
@@ -399,8 +405,7 @@ class basic_buffered_tls_socket {
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_write_some(const ConstBufferSequence& buffers,
-                       WriteHandler&& handler) {
+  async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
@@ -492,7 +497,9 @@ class basic_tls_socket {
     other.socket_ = *(other.p_socket_);
   }
 
-  ~basic_tls_socket() {}
+  ~basic_tls_socket() {
+    SSF_LOG(kLogDebug) << "network[crypto] TLS socket destroy";
+  }
 
   basic_tls_socket(const basic_tls_socket&) = delete;
   basic_tls_socket& operator=(const basic_tls_socket&) = delete;
@@ -620,7 +627,7 @@ class basic_tls {
       boost::system::error_code& ec) {
     auto context = detail::make_tls_context(io_service, *parameters_it);
     if (!context) {
-      SSF_LOG(kLogError) << "network[crypto]: could not generate context";
+      SSF_LOG(kLogError) << "network[crypto] could not generate context";
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
     }
 

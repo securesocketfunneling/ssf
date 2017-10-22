@@ -78,7 +78,7 @@ void SocketsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void SocketsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "microservice[stream_listener]: stopping";
+  SSF_LOG(kLogDebug) << "microservice[stream_listener]: stop";
   socket_acceptor_.close(ec);
   if (ec) {
     SSF_LOG(kLogDebug) << "microservice[stream_listener]: " << ec.message();

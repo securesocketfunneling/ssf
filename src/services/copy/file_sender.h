@@ -82,6 +82,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   }
 
   void Stop() {
+    SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stop";
     stopped_ = true;
 
     // stop all current sessions
@@ -383,6 +384,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
   void NotifyFileCopied(CopyContext* context,
                         const boost::system::error_code& ec) {
+    auto is_copy_finished = true;
     if (context->is_stdin_input) {
       SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stdin copied "
                          << ec.message();
@@ -391,27 +393,29 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
                          << context->input_filepath << " " << ec.message();
       std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
       input_files_.remove(context->input_filepath);
+
+      if (ec) {
+        ++copy_errors_count_;
+      }
+      is_copy_finished =
+          input_files_.empty() && pending_input_files_.empty();
     }
 
-    if (ec) {
-      ++copy_errors_count_;
-    }
-
-    auto self = this->shared_from_this();
     if (!stopped_) {
       on_file_copied_(context, ec);
       // run next copy
-      io_service_.post([this, self]() { RunFileSession(); });
+      if (!context->is_stdin_input) {
+        RunFileSession();
+      }
     }
 
-    if (!input_files_.empty() || !pending_input_files_.empty()) {
-      // remaining file copies
+    if (!is_copy_finished) {
       return;
     }
 
     // copy finished
     ErrorCode copy_finished_ec = ErrorCode::kSuccess;
-    if (input_files_count_ == 1) {
+    if (input_files_count_ == 1 || copy_request_.is_from_stdin) {
       copy_finished_ec = ErrorCode(ec.value());
     } else if (copy_errors_count_ == input_files_count_) {
       copy_finished_ec = ErrorCode::kNoFileCopied;
@@ -423,8 +427,8 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
   void NotifyCopyFinished(ErrorCode error_code) {
     auto self = this->shared_from_this();
-    auto on_copy_finished = on_copy_finished_;
 
+    auto on_copy_finished = on_copy_finished_;
     on_copy_finished_ = [](uint64_t files_count, uint64_t error_count,
                            const boost::system::error_code& ec) {};
 
@@ -442,8 +446,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
         });
     io_service_.post(
         [files_count, errors_count, error_code, on_copy_finished]() {
-          boost::system::error_code ec(error_code, get_copy_category());
-          on_copy_finished(files_count, errors_count, ec);
+          boost::system::error_code copy_finished_ec(error_code,
+                                                     get_copy_category());
+          on_copy_finished(files_count, errors_count, copy_finished_ec);
         });
   }
 

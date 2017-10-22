@@ -161,6 +161,7 @@ void SSFServer<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
     p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
     p_socket->close(close_ec);
     SSF_LOG(kLogError) << "[server] SSF protocol error " << ec.message();
+    p_socket.reset();
   }
 }
 
@@ -248,10 +249,7 @@ void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
-  SSF_LOG(kLogTrace) << "[server] removing a demux";
-
-  p_fiber_demux->close();
-  p_fiber_demuxes_.erase(p_fiber_demux);
+  SSF_LOG(kLogDebug) << "[server] removing a demux";
 
   if (p_service_managers_.count(p_fiber_demux)) {
     auto p_service_manager = p_service_managers_[p_fiber_demux];
@@ -264,6 +262,9 @@ void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   if (p_service_factory) {
     p_service_factory->Destroy();
   }
+
+  p_fiber_demux->close();
+  p_fiber_demuxes_.erase(p_fiber_demux);
 }
 
 template <class N, template <class> class T>

@@ -72,7 +72,8 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
     }
   }
 
-  void AsyncAccept(OnFileStatus on_file_status, OnFileCopied on_file_copied) {
+  void AsyncAccept(const OnFileStatus& on_file_status,
+                   const OnFileCopied& on_file_copied) {
     if (!fiber_acceptor_.is_open()) {
       return;
     }
@@ -80,19 +81,17 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
     auto self = this->shared_from_this();
     auto p_fiber = std::make_shared<Fiber>(fiber_acceptor_.get_io_service());
 
-    auto on_file_fiber_accept =
-        [this, self, p_fiber, on_file_status,
-         on_file_copied](const boost::system::error_code& ec) {
-          if (ec) {
-            SSF_LOG(kLogDebug) << "microservice[copy][file_acceptor] could not "
-                                  "accept new file transfer";
-            return;
-          }
+    auto on_file_fiber_accept = [this, self, p_fiber, on_file_status, on_file_copied](
+        const boost::system::error_code& ec) {
+      if (ec) {
+        SSF_LOG(kLogDebug) << "microservice[copy][file_acceptor] could not "
+                              "accept new file transfer";
+        return;
+      }
+      AsyncAccept(on_file_status, on_file_copied);
 
-          AsyncAccept(on_file_status, on_file_copied);
-
-          ReceiveFile(p_fiber, on_file_status, on_file_copied);
-        };
+      ReceiveFile(p_fiber, on_file_status, on_file_copied);
+    };
     fiber_acceptor_.async_accept(*p_fiber, std::move(on_file_fiber_accept));
   }
 
@@ -106,41 +105,25 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
       : fiber_acceptor_(io_service),
         worker_(std::make_unique<boost::asio::io_service::work>(io_service)) {}
 
-  void ReceiveFile(FiberPtr p_fiber, OnFileStatus on_file_status,
-                   OnFileCopied on_file_copied) {
+  void ReceiveFile(FiberPtr p_fiber, const OnFileStatus& on_file_status,
+                   const OnFileCopied& on_file_copied) {
     auto self = this->shared_from_this();
 
     ICopyStateUPtr wait_request_state = WaitInitRequestState::Create();
-    CopyContextUPtr context = std::make_unique<CopyContext>(
-        p_fiber->get_io_service());
+    CopyContextUPtr context =
+        std::make_unique<CopyContext>(p_fiber->get_io_service());
     context->SetState(std::move(wait_request_state));
-
-    auto on_session_file_status = [this, self, on_file_status](
-        CopyContext* context, const boost::system::error_code& ec) {
-      on_file_status(context, ec);
-    };
-
-    auto on_session_file_copied =
-        [this, self, on_file_copied](CopyContext* context,
-                                     const boost::system::error_code& ec) {
-          SSF_LOG(kLogDebug)
-              << "microservice[copy][file_acceptor] receiver file copied "
-              << context->GetOutputFilepath().GetString() << " "
-              << ec.message();
-          on_file_copied(context, ec);
-        };
 
     boost::system::error_code start_ec;
     auto p_session = CopySession<Fiber>::Create(
         &manager_, std::move(*p_fiber), std::move(context),
-        on_session_file_status, on_session_file_copied);
+        on_file_status, on_file_copied);
     manager_.start(p_session, start_ec);
   }
 
  private:
   FiberAcceptor fiber_acceptor_;
   std::unique_ptr<boost::asio::io_service::work> worker_;
-  OnFileCopied on_file_copied_;
   SessionManager manager_;
 };
 

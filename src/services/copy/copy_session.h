@@ -49,7 +49,7 @@ class CopySession : public ssf::BaseSession {
   }
 
   void start(boost::system::error_code&) {
-    AsyncSend();
+    AsyncWrite();
     AsyncRead();
   }
 
@@ -57,6 +57,8 @@ class CopySession : public ssf::BaseSession {
     SSF_LOG(kLogDebug) << "microservice[copy][session] stop";
     socket_.close(ec);
     context_->Deinit();
+    on_file_status_ = [](CopyContext*, const boost::system::error_code&) {};
+    on_file_copied_ = [](CopyContext*, const boost::system::error_code&) {};
   }
 
  private:
@@ -69,7 +71,7 @@ class CopySession : public ssf::BaseSession {
         on_file_status_(on_file_status),
         on_file_copied_(on_file_copied) {}
 
-  void AsyncSend() {
+  void AsyncWrite() {
     boost::system::error_code fill_ec;
 
     auto self = this->shared_from_this();
@@ -128,7 +130,7 @@ class CopySession : public ssf::BaseSession {
       return;
     }
 
-    AsyncSend();
+    AsyncWrite();
   }
 
   void AsyncRead() {
@@ -186,9 +188,7 @@ class CopySession : public ssf::BaseSession {
     if (context_->IsTerminal()) {
       ec = context_->GetErrorCode();
     }
-    auto self = this->shared_from_this();
-    socket_.get_io_service().post(
-        [this, self, ec]() { on_file_copied_(context_.get(), ec); });
+    on_file_copied_(context_.get(), ec);
     if (manager_) {
       boost::system::error_code stop_ec;
       manager_->stop(this->shared_from_this(), stop_ec);

@@ -65,7 +65,7 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void FibersToSockets<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "microservice[stream_forwarder]: stopping";
+  SSF_LOG(kLogDebug) << "microservice[stream_forwarder]: stop";
   ec.assign(::error::success, ::error::get_ssf_category());
 
   fiber_acceptor_.close();

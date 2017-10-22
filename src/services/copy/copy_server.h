@@ -130,6 +130,7 @@ class CopyServer : public BaseService<Demux> {
     if (file_sender_) {
       file_sender_->Stop();
     }
+    file_sender_.reset();
   }
 
   uint32_t service_type_id() override { return kFactoryId; }

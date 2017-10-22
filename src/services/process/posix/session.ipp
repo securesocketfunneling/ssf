@@ -42,7 +42,7 @@ Session<Demux>::Session(std::weak_ptr<ShellServer> server, Fiber client,
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[shell]: start";
+  SSF_LOG(kLogDebug) << "session[shell]: start";
   int master_tty;
   int slave_tty;
 
@@ -138,7 +138,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[shell]: stop";
+  SSF_LOG(kLogDebug) << "session[shell]: stop";
 
   client_.close();
   if (ec) {

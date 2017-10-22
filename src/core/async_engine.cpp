@@ -19,7 +19,7 @@ void AsyncEngine::Start() {
     return;
   }
 
-  SSF_LOG(kLogDebug) << "async engine: starting";
+  SSF_LOG(kLogDebug) << "[async engine] starting";
   is_started_ = true;
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
   for (uint8_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
@@ -39,7 +39,7 @@ void AsyncEngine::Stop() {
     return;
   }
 
-  SSF_LOG(kLogDebug) << "async engine: stopping";
+  SSF_LOG(kLogDebug) << "[async engine] stopping";
   p_worker_.reset(nullptr);
   for (auto& thread : threads_) {
     if (thread.joinable()) {

@@ -147,15 +147,16 @@ bool CopyFixtureTest::StartCopy(const ssf::services::copy::CopyRequest& req,
 
     uint64_t percent = 0;
     if (context->output.is_open()) {
-      percent = 100 * context->output.tellp() / context->filesize;
-      SSF_LOG(kLogInfo) << "[copy_tests] Receiving: "
+      uint64_t file_offset = context->output.tellp();
+      percent = (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
+      SSF_LOG(kLogDebug) << "[copy_tests] Receiving: "
                         << context->GetOutputFilepath().GetString() << " "
                         << percent << "% / " << context->filesize << "b";
     } else if (context->input.is_open()) {
-      percent = context->input.eof()
-                    ? 100
-                    : (100 * context->input.tellg() / context->filesize);
-      SSF_LOG(kLogInfo) << "[copy_tests] Sending: " << context->input_filepath
+      uint64_t file_offset = context->input.tellg();
+      percent =
+          (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
+      SSF_LOG(kLogDebug) << "[copy_tests] Sending: " << context->input_filepath
                         << " " << percent << "% / " << context->filesize << "b";
     }
   };
