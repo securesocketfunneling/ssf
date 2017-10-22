@@ -138,6 +138,11 @@ void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::Initialize() {
+  std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+  if (stopped_) {
+    return;
+  }
+
   // Initialize the command reception processes
   this->ListenForCommand();
 
@@ -393,6 +398,11 @@ void Admin<Demux>::OnSendKeepAlive(const boost::system::error_code& ec) {
   auto self = this->shared_from_this();
   auto on_command_sent = [this, self, p_command](
       const boost::system::error_code& ec, size_t length) {
+    std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+    if (stopped_) {
+      return;
+    }
+
     this->PostKeepAlive(ec, length);
   };
 

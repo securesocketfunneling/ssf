@@ -68,8 +68,8 @@ class Admin : public BaseService<Demux> {
   enum {
     kFactoryId = to_underlying(MicroserviceId::kAdmin),
     kServicePort = to_underlying(MicroservicePort::kAdmin),
-    kKeepAliveInterval = 120,            // seconds
-    kServiceStatusRetryCount = 50        // retries
+    kKeepAliveInterval = 120,      // seconds
+    kServiceStatusRetryCount = 50  // retries
   };
 
   static void RegisterToServiceFactory(
@@ -81,7 +81,7 @@ class Admin : public BaseService<Demux> {
     p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
-  template <template<class> class Command>
+  template <template <class> class Command>
   bool RegisterCommand() {
     return cmd_factory_.template Register<Command<Demux>>();
   }
