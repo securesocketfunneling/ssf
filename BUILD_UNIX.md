@@ -23,7 +23,7 @@ source. The `build_openssl.sh` and `build_boost.sh` scripts in the
 Building SSF
 ------------
 
-Building SSF requires CMake and a working C++ compiler.
+Building SSF requires CMake and a C++ compiler.
 
 On Debian/Ubuntu, these can be obtained using apt:
 
@@ -55,7 +55,7 @@ $ cmake /path/to/ssf/source -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=
 
 Various parameters can be customized when generating the project files:
 
-* `CMAKE_BUILD_TYPE`: `Debug` or `Release`. Build type.
+* `CMAKE_BUILD_TYPE`: `Debug`, `RelWithDebInfo`, `Release` or `MinSizeRel`. Build type.
 * `CMAKE_INSTALL_PREFIX`: Install directory prefix.
 * `USE_STATIC_LIBS`: `ON` or `OFF` to enable/disable linking statically against
 boost and OpenSSL. It is recommended to set this to `ON` if you intend to build

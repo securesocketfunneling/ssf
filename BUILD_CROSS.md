@@ -7,7 +7,7 @@ Toolchain
 First you need to obtain the toolchain for the target architecture. Choosing
 or building the right toolchain is outside of the scope of this document.
 
-In the rest of this document we will use the arm-linux-gnueabihf toolchain
+In the rest of this document we will use the `arm-linux-gnueabihf` toolchain
 which can be used to cross-compile applications for the Raspberry Pi 2/3
 platform. On Debian/Ubuntu you can install it using the package manager.
 
@@ -45,7 +45,7 @@ set(CMAKE_SIZEOF_VOID_P 4)
 ```
 
 **NOTE**: Due to an apparent bug in CMake depending on which version of GCC
-the toolchain is using, CMake can choose to ignore the CMAKE_CXX_STANDARD
+the toolchain is using, CMake can choose to ignore the `CMAKE_CXX_STANDARD`
 variable. You might want to add the following line to the toolchain
 configuration file:
 
@@ -53,7 +53,7 @@ configuration file:
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 ```
 
-Then, from the build directory, invoke cmake specifying your toolchain
+Then, from the build directory, invoke `cmake` specifying your toolchain
 configuration file using the `-DCMAKE_TOOLCHAIN_FILE` parameter:
 
 ```

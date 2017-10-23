@@ -13,17 +13,17 @@ Obtain installers for the libraries and install them:
 
 * Boost 1.65.1:
 
-Install boost_1_65_1-msvc-14.1-32.exe (32-bit) or
-boost_1_65_1-msvc-14.1-32.exe (64-bit) from
+Install `boost_1_65_1-msvc-14.1-32.exe` (32-bit) or
+`boost_1_65_1-msvc-14.1-32.exe` (64-bit) from
 http://sourceforge.net/projects/boost/files/boost-binaries.
-Replace msvc-14.1 with your version of Visual Studio.
+Replace `msvc-14.1` with your version of Visual Studio.
 
 You will then need to point the cmake `BOOST_ROOT` variable to the location
 of the boost install (By default: `C:\local\boost_1_65_1`).
 
 * OpenSSL 1.0.2l:
 
-Install Win32OpenSSL-1_0_2L.exe (32-bit) or Win64OpenSSL-1_0_2L.exe (64-bit)
+Install `Win32OpenSSL-1_0_2L.exe` (32-bit) or `Win64OpenSSL-1_0_2L.exe` (64-bit)
 from https://slproweb.com/products/Win32OpenSSL.html
 
 *NOTE*: OpenSSL versions 1.1 is currently incompatible with Boost.
@@ -49,12 +49,12 @@ C:\Users\you>mkdir C:\build
 C:\Users\you>cd C:\build
 ```
 
-Boost 1.64 can be downloaded from https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.bz2
-and OpenSSL 1.0.2k from https://www.openssl.org/source/old/1.0.2/openssl-1.0.2k.tar.gz
+Boost 1.65.1 can be downloaded from https://dl.bintray.com/boostorg/release/1.65.1/source/boost_1_65_1.tar.bz2
+and OpenSSL 1.0.2l from https://www.openssl.org/source/openssl-1.0.2l.tar.gz
 
 ### Building boost
 
-Build boost using `build_boost.bat`
+Build Boost using `build_boost.bat`
 
 ```
 C:\build>C:\path_to_ssf_source\builddeps\build_boost.bat 32 C:\boost
@@ -63,14 +63,14 @@ C:\build>C:\path_to_ssf_source\builddeps\build_boost.bat 32 C:\boost
 Pass `32` for 32-bit or `64` for 64-bit builds. Boost headers and
 libraries will be installed in `C:\boost`
 
-**NOTE**: `build_boost.bat` will build a version of boost without C++ RTTI
+**NOTE**: `build_boost.bat` will build a version of Boost without C++ RTTI
 support, when generating the project files prior to building SSF, make sure
 `DISABLE_RTTI` is set to `ON`.
 
 **NOTE**: `build_boost.bat` will only build static/runtime static versions of
 the boost libraries.
 
-### Building openssl
+### Building OpenSSL
 
 A Perl distribution is required for building OpenSSL, you can get
 Strawberry Perl 5.26.0.2 from http://strawberryperl.com.
@@ -78,7 +78,7 @@ Strawberry Perl 5.26.0.2 from http://strawberryperl.com.
 The netwide assembler is also required for building OpenSSL. Grab and
 install NASM from http://www.nasm.us/.
 
-Make sure perl.exe and nasm.exe can be found in your environment before
+Make sure `perl.exe` and `nasm.exe` can be found in your environment before
 running the following commands (adjust `Path` if needed).
 
 ```

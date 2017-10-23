@@ -67,7 +67,7 @@ local side
 Forward TCP connections to `[[bind_address]:]port` on the local host to
 `host:hostport` on the server
 
-* `-R [[bind_addr]:]port:host:hostport`:
+* `-R [[bind_address]:]port:host:hostport`:
 Forward TCP connections to `[[bind_address]:]port` on the server to
 `host:hostport` on the local side
 
@@ -258,7 +258,7 @@ Given the following configuration file `conf.json`:
 
 SSF will extract the given arguments and use them as a replacement of the initial arguments (except `-c`).
 
-For example, `ssfc -c conf.json` will be equivalent to `ssfc 10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug`:
+For example, `ssf -c conf.json` will be equivalent to `ssf 10.0.0.1 -p 443 -D 9000 -L 11000:localhost:12000 -v debug`:
 
   * connect to `10.0.0.1:443` (`10.0.0.1 -p 443`)
   * start the SOCKS service (`-D 9000`)
@@ -270,8 +270,6 @@ For example, `ssfc -c conf.json` will be equivalent to `ssfc 10.0.0.1 -p 443 -D 
 | Configuration key | Description                                                               |
 |:------------------|:--------------------------------------------------------------------------|
 | circuit           | relay chain servers used to establish the connection to the remote server |
-
-The `circuit` key replaces the `-b` client command line option.
 
 The circuit is a JSON array containing the bounce servers and ports which will be used to establish the connection.
 They are listed as follow:
@@ -425,7 +423,7 @@ Each feature is the combination of at least one client side microservice and one
 
 This table sums up how each feature is assembled:
 
-| ssfc feature                | microservice client side | microservice server side |
+| ssf feature                 | microservice client side | microservice server side |
 |:----------------------------|:-------------------------|:-------------------------|
 | `-L`: TCP forwarding        | stream_listener          | stream_forwarder         |
 | `-R`: remote TCP forwarding | stream_forwarder         | stream_listener          |
@@ -438,7 +436,7 @@ This table sums up how each feature is assembled:
 
 This architecture makes it easier to build remote features: they use the same microservices but on the opposite side.
 
-`ssfc` and `ssfs` come with pre-enabled microservices.
+`ssf` and `ssfd` come with pre-enabled microservices.
 Here is the default microservices configuration:
 
 ```json
@@ -462,14 +460,6 @@ To enable or disable a microservice, set the `enable` key to `true` or `false`.
 Trying to use a feature requiring a disabled microservice will result in an error message.
 
 ## How to generate certificates for TLS connections
-
-### Using the utility script
-
-```bash
-./tools/generate_cert.sh /path/to/store/certs
-```
-
-The first argument is the directory where the CA and certificates will be generated.
 
 ### Manually
 
