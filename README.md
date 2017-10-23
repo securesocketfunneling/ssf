@@ -2,17 +2,17 @@
 
 Secure Socket Funneling (SSF) is a network tool and toolkit.
 
-It provides simple and efficient ways to forward data from multiple sockets (TCP or UDP) through a single secure TLS link to a remote computer.
+It provides simple and efficient ways to forward data from multiple sockets (TCP or UDP) through a single secure TLS tunnel to a remote computer.
 
-SSF is cross platform (Windows, Linux, OSX) and shipped as standalone executables.
+SSF is cross platform (Windows, Linux, OSX) and comes as standalone executables.
 
 Features:
 * Local and remote TCP port forwarding
 * Local and remote UDP port forwarding
 * Local and remote SOCKS server
-* Local and remote shell through socket
+* Local and remote shell through sockets
 * Native relay protocol
-* TLS connection with strongest cipher-suites
+* TLS connection with the strongest cipher-suites
 
 [Download prebuilt binaries](https://securesocketfunneling.github.io/ssf/#download)
 
@@ -20,99 +20,93 @@ Features:
 
 ## How to use
 
-### Standard command line
+### Command line
 
-#### Client command line
+#### Client
 
-```plaintext
-ssfc[.exe] [options] host
+Usage: `ssf [options] server_address`
 
-Basic options:
-  -h [ --help ]                         Produce help message
-  -v [ --verbosity ] level (=info)      Verbosity:
-                                          critical|error|warning|info|debug|trace
-  -q [ --quiet ]                        Do not display log
+Options:
 
-Local options:
-  -c [ --config ] config_file_path      Set config file. If option empty, try to load 'config.json' file from working
-                                        directory
-  -p [ --port ] port (=8011)            Set remote SSF server port
-  -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify
-                                        listening network interface on every services
-  -S [ --status ]                       Display microservices status (on/off)
+* `-c config_file_path`:
+Specify configuration file. If not set, 'config.json' is loaded from the
+current working directory
 
-Supported service commands:
-  -Y [ --remote-shell ] [[rem_ip]:]rem_port
-                                        Open a port server side, each connection to that port launches a
-                                        shell client side with I/O forwarded from/to the socket (shell microservice
-                                        must be enabled client side prior to use)
-  -F [ --remote-socks ] [[rem_ip]:]rem_port
-                                        Run a SOCKS proxy on localhost accessible from server [[rem_ip]:]rem_port
-  -X [ --shell ] [[loc_ip]:]loc_port
-                                        Open a port on the client side, each connection to that port launches a
-                                        shell server side with I/O forwarded to/from the socket (shell microservice
-                                        must be enabled server side prior to use)
-  -D [ --socks ] [[loc_ip]:]loc_port
-                                        Run a SOCKS proxy on remote host accessible from client [[loc_ip]:]loc_port
-  -L [ --tcp-forward ] [[loc_ip]:]loc_port:dest_ip:dest_port
-                                        Forward TCP client [[loc_ip]:]port to dest_ip:dest_port from server
-  -R [ --tcp-remote-forward ] [[rem_ip]:]rem_port:dest_ip:dest_port
-                                        Forward TCP server [[rem_ip]:]rem_port to target dest_ip:dest_port from client
-  -U [ --udp-forward ] [[loc_ip]:]loc_port:dest_ip:dest_port
-                                        Forward UDP client [[loc_ip]:]loc_port to target dest_ip:dest_port from server
-  -V [ --udp-remote-forward ] [[rem_ip]:]rem_port:dest_ip:dest_port
-                                        Forward UDP server [[rem_ip]:]rem_port to dest_ip:dest_port from client
-```
+* `-m max-connection-attempts`:
+Max connection attempts before stopping client
 
-#### Server command line
+* `-t reconnection-timeout`:
+Timeout between connection attempts in seconds
 
-```plaintext
-ssfs[.exe] [options] [host]
+* `-n`:
+Do not try to reconnect client if connection is interrupted
 
-Basic options:
-  -h [ --help ]                         Produce help message
-  -v [ --verbosity ] level (=info)      Verbosity:
-                                          critical|error|warning|info|debug|trace
-  -q [ --quiet ]                        Do not display log
+* `-g`:
+Allow gateway ports. Allow client to bind local sockets for a service to a
+specific address rather than "localhost"
 
-Local options:
-  -c [ --config ] config_file_path      Set config file. If option empty, try to load 'config.json' file from working
-                                        directory
-  -p [ --port ] port (=8011)            Set local SSF server port
-  -R [ --relay-only ]                   Server will only relay connections
-  -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify listening
-                                        network interface on every services
-  -S [ --status ]                       Display microservices status (on/off)
-```
+* `-S`:
+Display microservices status (on/off)
 
-#### Client example
+* `-Y [[bind_address]:]port`:
+Forward local shell I/O to the specified port on the server
 
-Client will open port 9000 locally and wait SOCKS requests to be transferred to
-server **192.168.0.1:8000**
+* `-F [[bind_address]:]port`:
+Run a SOCKS proxy on the local host accessible from the server on
+`[[bind_address]:]port`
 
-```plaintext
-ssfc[.exe] -D 9000 -c config.json -p 8000 192.168.0.1
-```
+* `-X [[bind_address]:]port`:
+Forward server shell I/O to the specified port on the local side. Each
+connection creates a new shell process
 
-#### Server example
+* `-D [[bind_address]:]port`:
+Run a SOCKS proxy on the server accessible on `[[bind_address]:]port` on the
+local side
 
-Server will listen on all network interfaces on port **8011**
+* `-L [[bind_address]:]port:host:hostport`:
+Forward TCP connections to `[[bind_address]:]port` on the local host to
+`host:hostport` on the server
 
-```plaintext
-ssfs[.exe]
-```
+* `-R [[bind_addr]:]port:host:hostport`:
+Forward TCP connections to `[[bind_address]:]port` on the server to
+`host:hostport` on the local side
 
-Server will listen on **192.168.0.1:9000**
+* `-U [[bind_address]:]port:host:hostport`:
+Forward local UDP traffic on `[[bind_address]:]port` to `host:hostport` on the server
 
-```plaintext
-ssfs[.exe] -p 9000 192.168.0.1
-```
+* `-V [[bind_address]:]port:host:hostport`:
+Forward UDP traffic on `[[bind_address]:]port` on the server to `host:hostport`
+on the local side
 
-### Copy command line
+#### Server
 
-Copy feature must be enabled both on client and server before usage.
+Usage: `ssfd [options] [bind_address]`
 
-Configuration file example:
+Options:
+
+* `-c config_file_path`:
+Specify configuration file. If not set, 'config.json' is loaded from the current
+working directory
+
+* `-p port`:
+Local port
+
+* `-R`:
+The server will only relay connections
+
+* `-H host`:
+Set server host
+
+* `-g`:
+Allow gateway ports. Allow client to bind local sockets for a service to a
+specific address rather than "localhost"
+
+* `-S`:
+Display microservices status (on/off)
+
+#### Copy
+
+The copy feature must be enabled on both client and server configuration file:
 
 ```json
 {
@@ -124,50 +118,69 @@ Configuration file example:
 }
 ```
 
-#### Command line
+Usage: `ssfcp [options] [host@]/absolute/path/file [[host@]/absolute/path/file]`
+
+Options:
+
+* `-c config_file_path`:
+Specify configuration file. If not set, 'config.json' is loaded from the
+current working directory
+
+* `-p port`:
+Remote port
+
+* `-t`:
+Input will be stdin
+
+### Examples
+
+#### Client
+
+The client will run a SOCKS proxy on port 9000 and transfer connection requests
+to the server **192.168.0.1:8000**
 
 ```plaintext
-ssfcp[.exe] [options] [host@]/absolute/path/file [[host@]/absolute/path/file]
-
-Basic options:
-  -h [ --help ]                       Produce help message
-  -v [ --verbosity ] level (=info)    Verbosity:
-                                        critical|error|warning|info|debug|trace
-  -q [ --quiet ]                      Do not display log
-
-Local options:
-  -c [ --config ] config_file_path    Set config file. If option empty, try to load 'config.json' file from working
-                                      directory
-  -p [ --port ] port (=8011)          Set remote SSF server port
-
-Copy options:
-  -t [ --stdin ]                      Input will be stdin
+ssf -D 9000 -c config.json -p 8000 192.168.0.1
 ```
 
-#### Copy from local to remote destination :
+#### Server
+
+The server will bind to port **8011** on all the network interfaces
 
 ```plaintext
-ssfcp[.exe] [-c config_file] [-p port] path/to/file host@absolute/path/directory_destination
+ssfd
+```
+
+The server will bind to **192.168.0.1:9000**
+
+```plaintext
+ssfd -p 9000 192.168.0.1
+```
+
+#### Copy local file to remote filesystem
+
+```plaintext
+ssfcp [-c config_file] [-p port] path/to/file host@absolute/path/directory_destination
 ```
 
 ```plaintext
-ssfcp[.exe] [-c config_file] [-p port] path/to/file* host@absolute/path/directory_destination
+ssfcp [-c config_file] [-p port] path/to/file* host@absolute/path/directory_destination
 ```
 
-#### From stdin to remote destination
+#### Pipe file from standard input to remote filesystem
 
 ```plaintext
-data_in_stdin | ssfcp[.exe] [-c config_file] [-p port] -t host@path/to/destination/file_destination
+data_in_stdin | ssfcp [-c config_file] [-p port] -t host@path/to/destination/file_destination
 ```
 
-#### Copy remote files to local destination :
+#### Copy remote files to local filesystem :
 
 ```plaintext
-ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file absolute/path/directory_destination
+ssfcp [-c config_file] [-p port] remote_host@path/to/file absolute/path/directory_destination
 ```
 
 ```plaintext
-ssfcp[.exe] [-c config_file] [-p port] remote_host@path/to/file* absolute/path/directory_destination
+ssfcp [-c config_file] [-p port] remote_host@path/to/file* absolute/path/directory_destination
 ```
 
 ### Configuration file
@@ -397,7 +410,7 @@ Certificates, private keys and DH parameters must be in PEM format. :warning: `\
 | services.shell.path      | binary path used for shell creation      |
 | services.shell.args      | binary arguments used for shell creation |
 
-SSF is using microservices to build its features (TCP forwarding, remote SOCKS, ...)
+SSF's features are built using microservices (TCP forwarding, remote SOCKS, ...)
 
 There are 7 microservices:
 * stream_forwarder
@@ -444,21 +457,19 @@ Here is the default microservices configuration:
 }
 ```
 
-To enable or disable a microservice, set its `enable` option to `true` or `false`.
+To enable or disable a microservice, set the `enable` key to `true` or `false`.
 
 Trying to use a feature requiring a disabled microservice will result in an error message.
 
-
-
 ## How to generate certificates for TLS connections
 
-### With tool script
+### Using the utility script
 
 ```bash
 ./tools/generate_cert.sh /path/to/store/certs
 ```
 
-The first argument should be the directory where the CA and certificates will be generated
+The first argument is the directory where the CA and certificates will be generated.
 
 ### Manually
 
@@ -483,171 +494,16 @@ Then, generate a self-signed certificate (the CA) *ca.crt* and its private key *
 openssl req -x509 -nodes -newkey rsa:4096 -keyout ca.key -out ca.crt -days 3650
 ```
 
-#### Generating a certificate (signed with the CA) and its private key
+#### Generating a private key and a certificate (signed with the CA)
 
-Generate a private key *private.key* and signing request *certificate.csr*:
+Generate a private key *private.key* and a certificate signing request *certificate.csr*:
 
 ```bash
 openssl req -newkey rsa:4096 -nodes -keyout private.key -out certificate.csr
 ```
 
-Sign with the CA (*ca.crt*, *ca.key*) the signing request to get the certificate *certificate.pem* :
+Generate the certificate (*certificate.pem*) by signing the CSR with the CA (*ca.crt*, *ca.key*):
 
 ```bash
 openssl x509 -extfile extfile.txt -extensions v3_req_p -req -sha1 -days 3650 -CA ca.crt -CAkey ca.key -CAcreateserial -in certificate.csr -out certificate.pem
-```
-
-
-
-## How to build
-
-### Requirements
-
-  * Winrar >= 5.2.1 (Third party builds on windows)
-  * Boost >= 1.61.0
-  * OpenSSL >= 1.0.2
-  * Google Test = 1.7.0
-  * CMake >= 2.8.11
-  * nasm (openssl build on windows)
-  * Perl | Active Perl >= 5.20 (openssl build on windows)
-  * C++11 compiler (Visual Studio 2013, Clang, g++, etc.)
-  * libkrb5-dev or equivalent (gssapi on linux)
-
-SSF_SECURITY:
-
-* **STANDARD**: the project will be build with standard security features
-* **FORCE_TCP_ONLY**: the project will be built without security features to facilitate debugging
-
-### Build SSF on Windows
-
-* Go in project directory
-
-```bash
-cd PROJECT_PATH
-```
-
-* Copy [Boost archive](http://www.boost.org/users/download/) in ``third_party/boost``
-
-```bash
-cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost
-```
-
-* Copy [OpenSSL archive](https://www.openssl.org/source/) in ``third_party/openssl``
-
-```bash
-cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl
-```
-
-If you are using *openssl-1.0.2a*, you need to fix the file ``crypto/x509v3/v3_scts.c``. It contains an incorrect ``#include`` line.
-Copy [the diff from OpenSSL Github](https://github.com/openssl/openssl/commit/77b1f87214224689a84db21d2eb54e9497186d93.diff)
-(ignore the 2 first lines) and put it in ``PROJECT_PATH/third_party/openssl/patches``. The build script will then patch the sources.
-
-* Copy [GTest archive](https://github.com/google/googletest/archive/release-1.7.0.zip) in ``third_party/gtest``
-
- ```bash
- cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
- ```
-
-* Generate project
-
-```bash
-git submodule update --init --recursive
-mkdir PROJECT_PATH/build
-cd PROJECT_PATH/build
-cmake .. -T "v120_xp" -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY"
-```
-
-Platform toolset option (`-T`):
-* `v120_xp` : Visual Studio 2013, XP support
-* `v140_xp` : Visual Studio 2015, XP support
-
-* Build project
-
-```bash
-cd PROJECT_PATH/build
-cmake --build . --config Debug|Release
-```
-
-### Build SSF on Linux
-
-* Go in project directory
-
-```bash
-cd PROJECT_PATH
-```
-
-* Copy [Boost archive](http://www.boost.org/users/download/) in ``third_party/boost``
-
-```bash
-cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost
-```
-
-* Copy [OpenSSL archive](https://www.openssl.org/source/) in ``third_party/openssl``
-
-```bash
-cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl
-```
-
-* Copy [GTest archive](https://github.com/google/googletest/archive/release-1.7.0.zip) in ``third_party/gtest``
-
-```bash
-cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
-```
-
-* Generate project
-
-```bash
-git submodule update --init --recursive
-mkdir PROJECT_PATH/build
-cd PROJECT_PATH/build
-cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
-```
-
-* Build project
-
-```bash
-cd PROJECT_PATH/build
-cmake --build . -- -j
-```
-
-### Build SSF on Mac OS X
-
-* Go in project directory
-
-```bash
-cd PROJECT_PATH
-```
-
-* Copy [Boost archive](http://www.boost.org/users/download/) in ``third_party/boost``
-
-```bash
-cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost
-```
-
-* Copy [OpenSSL archive](https://www.openssl.org/source/) in ``third_party/openssl``
-
-```bash
-cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl
-```
-
-* Copy [GTest archive](https://github.com/google/googletest/archive/release-1.7.0.zip) in ``third_party/gtest``
-
-```bash
-cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest
-```
-
-* Generate project
-
-```bash
-git submodule update --init --recursive
-mkdir PROJECT_PATH/build
-cd PROJECT_PATH/build
-cmake -DCMAKE_BUILD_TYPE=Release|Debug -DSSF_SECURITY:STRING="STANDARD|FORCE_TCP_ONLY" ../
-```
-
-* Build project
-
-```bash
-cd PROJECT_PATH/build
-cmake --build .
 ```

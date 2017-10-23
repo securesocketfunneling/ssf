@@ -28,11 +28,11 @@ class Socks : public BaseUserService<Demux> {
 
   static std::string GetParseName() { return "socks"; }
 
-  static std::string GetValueName() { return "[[loc_ip]:]loc_port"; }
+  static std::string GetValueName() { return "[[bind_address]:]port"; }
 
   static std::string GetParseDesc() {
-    return "Run a SOCKS proxy on remote host accessible from client "
-           "[[loc_ip]:]loc_port";
+    return "Run a SOCKS proxy on the server accessible on "
+           "[[bind_address]:]port on the local side";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(

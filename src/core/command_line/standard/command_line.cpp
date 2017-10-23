@@ -30,7 +30,7 @@ void StandardCommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
                              boost::program_options::bool_switch()
                                  ->value_name("relay-only")
                                  ->default_value(false),
-                             "Server will only relay connections");
+                             "The server will only relay connections");
   } else {
     // client cli
     local_opts.add_options()("max-connection-attempts,m",
@@ -58,8 +58,8 @@ void StandardCommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
       "gateway-ports,g", boost::program_options::bool_switch()
                              ->value_name("gateway-ports")
                              ->default_value(false),
-      "Allow gateway ports. At connection, client will be allowed to "
-      "specify listening network interface on every services");
+      "Allow gateway ports. Allow client to bind local sockets for a service to"
+      " a specific address rather than \"localhost\"");
 
   local_opts.add_options()("status,S", boost::program_options::bool_switch()
                                            ->value_name("status")
@@ -108,7 +108,13 @@ void StandardCommandLine::ParseOptions(const VariableMap& vm,
 
 std::string StandardCommandLine::GetUsageDesc() {
   std::stringstream ss_desc;
-  ss_desc << exec_name_ << " [options] [host]";
+
+  if (IsServerCli()) {
+    ss_desc << exec_name_ << " [options] bind_address";
+  } else {
+    ss_desc << exec_name_ << " [options] server_address";
+  }
+
   return ss_desc.str();
 }
 

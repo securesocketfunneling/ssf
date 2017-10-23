@@ -188,7 +188,7 @@ UserServiceParameters Base::DoParse(
 void Base::InitBasicOptions(OptionDescription& basic_opts) {
   // clang-format off
   basic_opts.add_options()
-    ("help,h", "Produce help message");
+    ("help,h", "Show help message");
 
   basic_opts.add_options()
     ("verbosity,v",
@@ -198,7 +198,7 @@ void Base::InitBasicOptions(OptionDescription& basic_opts) {
         "Verbosity:\n  critical|error|warning|info|debug|trace");
 
   basic_opts.add_options()
-    ("quiet,q", "Do not display log");
+    ("quiet,q", "Do not print logs");
   // clang-format on
 }
 
@@ -208,21 +208,21 @@ void Base::InitLocalOptions(OptionDescription& local_opts) {
     ("config,c",
         boost::program_options::value<std::string>()
           ->value_name("config_file_path"),
-        "Set config file. If option empty, try to load 'config.json' file from"
-        " working directory");
+        "Specify configuration file. If not set, 'config.json' is loaded"
+        " from the current working directory");
 
   if (!IsServerCli()) {
     local_opts.add_options()
       ("port,p",
           boost::program_options::value<int>()->default_value(8011)
             ->value_name("port"),
-          "Set remote SSF server port");
+          "Remote port");
   } else {
     local_opts.add_options()
       ("port,p",
           boost::program_options::value<int>()->default_value(8011)
             ->value_name("port"),
-          "Set local SSF server port");
+          "Local port");
   }
   // clang-format on
 }
