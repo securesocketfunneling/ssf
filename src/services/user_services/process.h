@@ -25,12 +25,11 @@ class Process : public BaseUserService<Demux> {
 
   static std::string GetParseName() { return "shell"; }
 
-  static std::string GetValueName() { return "[[loc_ip]:]loc_port"; }
+  static std::string GetValueName() { return "[[bind_address]:]port"; }
 
   static std::string GetParseDesc() {
-    return "Open a port on the client side, each connection to that port "
-           "launches a shell server side with I/O forwarded to/from the socket"
-           " (shell microservice must be enabled server side prior to use)";
+    return "Forward server shell I/O to the specified port on the local side. "
+           "Each connection creates a new shell process";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(

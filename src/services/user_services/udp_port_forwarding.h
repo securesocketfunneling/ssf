@@ -36,12 +36,12 @@ class UdpPortForwarding : public BaseUserService<Demux> {
   static std::string GetParseName() { return "udp-forward"; }
 
   static std::string GetValueName() {
-    return "[[loc_ip]:]loc_port:dest_ip:dest_port";
+    return "[[bind_address]:]port:host:hostport";
   }
 
   static std::string GetParseDesc() {
-    return "Forward UDP client [[loc_ip]:]loc_port to target dest_ip:dest_port "
-           "from server";
+    return "Forward local UDP traffic on [[bind_address]:]port to "
+           " host:hostport on the server";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(

@@ -213,21 +213,15 @@ endif (UNIX)
 add_subdirectory(network)
 add_subdirectory(compat)
 
-add_target(lib_ssf_framework
-  TYPE
-    LIBRARY ${EXEC_FLAG} STATIC
-  FILES
-    ${SSF_FRAMEWORK_FILES}
-  INCLUDE_DIRECTORIES PUBLIC
-    ${OPENSSL_INCLUDE_DIR}
-    ${Boost_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-  LINKS
-    ${Boost_LIBRARIES}
-    ${OPENSSL_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-)
+add_library(ssf_framework STATIC ${SSF_FRAMEWORK_FILES})
+target_include_directories(ssf_framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} ssf_network)
+
+if(DISABLE_TLS)
+  target_compile_definitions(ssf_framework PUBLIC TCP_ONLY_LINK)
+else()
+  target_compile_definitions(ssf_framework PUBLIC TLS_OVER_TCP_LINK)
+endif()
 
 add_subdirectory(client)
 add_subdirectory(server)

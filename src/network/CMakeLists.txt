@@ -195,7 +195,7 @@ set(SSF_NETWORK_FILES
 
 if (WIN32)
   # windows impl
-  list(APPEND PLATFORM_LIB "Secur32.lib")
+  list(APPEND PLATFORM_LIB Secur32.lib)
   list(APPEND SSF_NETWORK_FILES
     # layer/proxy
     ssf/layer/proxy/windows/sspi_auth_impl.cpp
@@ -203,31 +203,16 @@ if (WIN32)
 endif (WIN32)
 if (UNIX)
   # linux/unix impl
+  list(APPEND PLATFORM_LIB dl)
   list(APPEND SSF_NETWORK_FILES
     # layer/proxy
     ssf/layer/proxy/unix/gssapi_auth_impl.cpp
     ssf/layer/proxy/unix/gssapi_auth_impl.h)
 endif (UNIX)
 
-add_target("lib_ssf_network"
-  TYPE
-    library ${EXEC_FLAG} STATIC
-  FILES
-    ${SSF_NETWORK_FILES}
-  LINKS
-    ${OPENSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    ${PLATFORM_LIB}
-    lib_http_parser
-    lib_msgpack_c
-  INCLUDE_DIRECTORIES PUBLIC
-    ${OPENSSL_INCLUDE_DIR}
-    ${Boost_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  PREFIX_SKIP     .*/src
-)
+add_library(ssf_network STATIC ${SSF_NETWORK_FILES})
+target_include_directories(ssf_network PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(ssf_network PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} ${PLATFORM_LIB} http_parser msgpack_c)
 
 if (BUILD_NETWORK_UNIT_TESTS)
   add_subdirectory(tests)

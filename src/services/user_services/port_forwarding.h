@@ -49,12 +49,12 @@ class PortForwarding : public BaseUserService<Demux> {
   static std::string GetParseName() { return "tcp-forward"; }
 
   static std::string GetValueName() {
-    return "[[loc_ip]:]loc_port:dest_ip:dest_port";
+    return "[[bind_address]:]port:host:hostport";
   }
 
   static std::string GetParseDesc() {
-    return "Forward TCP client [[loc_ip]:]port to dest_ip:dest_port from "
-           "server";
+    return "Forward TCP connections to [[bind_address]:]port on the local host to "
+           " host:hostport on the server";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(

@@ -1,0 +1,6 @@
+include(CMakeForceCompiler)
+set(CMAKE_SYSTEM_NAME Linux)
+CMAKE_FORCE_C_COMPILER(arm-linux-gnueabihf-gcc GNU)
+CMAKE_FORCE_CXX_COMPILER(arm-linux-gnueabihf-g++ GNU)
+set(CMAKE_SIZEOF_VOID_P 4)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")

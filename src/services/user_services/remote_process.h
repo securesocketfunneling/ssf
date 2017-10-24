@@ -25,12 +25,10 @@ class RemoteProcess : public BaseUserService<Demux> {
 
   static std::string GetParseName() { return "remote-shell"; }
 
-  static std::string GetValueName() { return "[[rem_ip]:]rem_port"; }
+  static std::string GetValueName() { return "[[bind_address]:]port"; }
 
   static std::string GetParseDesc() {
-    return "Open a port server side, each connection to that port "
-           "launches a shell client side with I/O forwarded from/to the socket"
-           " (shell microservice must be enabled client side prior to use)";
+    return "Forward local shell I/O to the specified port on the server";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(

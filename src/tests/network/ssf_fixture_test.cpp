@@ -1,4 +1,4 @@
-#include "tests/network/ssf_fixture_test.h"
+#include "ssf_fixture_test.h"
 
 #include "tests/tls_config_helper.h"
 

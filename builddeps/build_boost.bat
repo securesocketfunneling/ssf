@@ -5,7 +5,7 @@ setlocal enabledelayedexpansion
 set BOOST_VERSION=1_64_0
 set BOOST_ARCHIVE=boost_%BOOST_VERSION%.tar.bz2
 set BOOST_SOURCE=boost_%BOOST_VERSION%
-set BOOST_LIBRARIES=system,serialization,program_options,date_time,filesystem,regex,thread,chrono
+set BOOST_LIBRARIES=system,program_options,date_time,filesystem,regex,thread,chrono
 
 if "%1"=="32" (
   set ARCH=32
@@ -26,8 +26,8 @@ exit /B 1
 set DIST_DIR=%~f2
 echo %DIST_DIR%
 set BASE_DIR=%~dp0
-set BOOST_BUILD_DIR=%BASE_DIR%\boost.build%ARCH%
-set BOOST_STAGE_DIR=%BASE_DIR%\boost.stage%ARCH%
+set BOOST_BUILD_DIR=%cd%\boost.build%ARCH%
+set BOOST_STAGE_DIR=%cd%\boost.stage%ARCH%
 
 set PATH=%PATH%;C:\Program Files\7-Zip
 
@@ -49,7 +49,7 @@ set B2_ARGS=--build-dir=%BOOST_BUILD_DIR% --stagedir=%BOOST_STAGE_DIR% -j%NUMBER
 for %%l in (%BOOST_LIBRARIES%) do (
   set B2_ARGS=!B2_ARGS! --with-%%l
 )
-set B2_ARGS=!B2_ARGS! link=static runtime-link=static variant=debug,release address-model=%ARCH%
+set B2_ARGS=!B2_ARGS! link=static runtime-link=static variant=debug,release address-model=%ARCH% cxxflags="-GR-"
 if "%ARCH%"=="32" (
   set B2_ARGS=!B2_ARGS! asmflags=\safeseh
 )

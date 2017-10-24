@@ -36,12 +36,12 @@ class RemotePortForwarding : public BaseUserService<Demux> {
   static std::string GetParseName() { return "tcp-remote-forward"; }
 
   static std::string GetValueName() {
-    return "[[rem_ip]:]rem_port:dest_ip:dest_port";
+    return "[[bind_address]:]port:host:hostport";
   }
 
   static std::string GetParseDesc() {
-    return "Forward TCP server [[rem_ip]:]rem_port to target dest_ip:dest_port "
-           "from client";
+    return "Forward TCP connections to [[bind_address]:]port on the server to "
+           " host:hostport on the local side";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(

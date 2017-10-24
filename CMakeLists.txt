@@ -1,47 +1,71 @@
 cmake_minimum_required(VERSION 2.8)
-set(project_name "SSF")
-project(${project_name})
+project("SSF")
+set(CMAKE_CXX_STANDARD 11)
 
 set(SSF_VERSION_MAJOR 2)
 set(SSF_VERSION_MINOR 2)
 set(SSF_VERSION_FIX 0)
 set(SSF_VERSION_CIRCUIT 2)
 set(SSF_VERSION_TRANSPORT 2)
-set(SSF_VERSION_BOUNCE 2)
-set(SSF_VERSION_TRANSPORT 1)
 
 set(SSF_VERSION "${SSF_VERSION_MAJOR}.${SSF_VERSION_MINOR}.${SSF_VERSION_FIX}")
 
-message("** SSF_VERSION: ${SSF_VERSION}")
-
-message("** BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-
 # --- Options
+include(CMakeDependentOption)
 option(BUILD_UNIT_TESTS "Build SSF unit tests" OFF)
 option(BUILD_NETWORK_UNIT_TESTS "Build SSF network layers unit tests" OFF)
-option(SSF_SECURITY "Activate TLS layer over TCP (FORCE_TCP_ONLY or STANDARD)" "STANDARD")
+option(DISABLE_TLS "Disable TLS" OFF)
 option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
-
-# --- Set client/server security
-if(SSF_SECURITY STREQUAL "FORCE_TCP_ONLY")
-  message("** SSF_SECURITY is FORCE_TCP_ONLY")
-  add_definitions(-DTCP_ONLY_LINK)
-  set(SSF_VERSION_SECURITY 0)
-else()
-  message("** SSF_SECURITY is STANDARD")
-  add_definitions(-DTLS_OVER_TCP_LINK)
-  set(SSF_VERSION_SECURITY 2)
-endif()
+CMAKE_DEPENDENT_OPTION(USE_STATIC_RUNTIME "Link statically against the C++ runtime libraries"
+                       ON "USE_STATIC_LIBS" OFF)
+option(DISABLE_RTTI "Disable C++ Runtime Type Information" OFF)
 
 # --- Include CMake build system scripts
-add_subdirectory(cmake)
-include(HelpersIdeTarget)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # --- Include platform specific settings
-include(Platform)
+if(UNIX)
+  if(USE_STATIC_RUNTIME)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+  endif(USE_STATIC_RUNTIME)
+  if(DISABLE_RTTI)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+  endif(DISABLE_RTTI)
+  if(${CMAKE_SIZEOF_VOID_P} EQUAL "8")
+    list(APPEND PLATFORM_SPECIFIC_LIB_DEP memcpy)
+  endif()
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+endif(UNIX)
+if(MSVC)
+  if(USE_STATIC_RUNTIME)
+    set(EXEC_FLAG "RUNTIME_STATIC")
+    foreach(fl CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+               CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE)
+      string(REPLACE "/MD" "/MT" ${fl} "${${fl}}")
+    endforeach()
+  endif(USE_STATIC_RUNTIME)
+  if(DISABLE_RTTI)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+  endif(DISABLE_RTTI)
+  add_definitions(-D_WIN32_WINNT=0x0501)
+  # Increase the number of sections that an object file can contain
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+  # Disable warning: 'identifier': decorated name length exceeded, name was truncated
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4503")
+  # Disable warning C4996: security advice
+  add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif(MSVC)
 
 # --- Boost components
-set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+# Force linking boost statically on Visual Studio
+if (MSVC)
+  set(Boost_USE_STATIC_LIBS ON)
+else()
+  set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+endif()
+set(Boost_USE_STATIC_RUNTIME ${USE_STATIC_RUNTIME})
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED
              COMPONENTS system
@@ -51,19 +75,33 @@ find_package(Boost REQUIRED
                         regex
                         chrono
                         thread)
+add_library(boost INTERFACE)
+target_include_directories(boost INTERFACE ${Boost_INCLUDE_DIRS})
+target_link_libraries(boost INTERFACE ${Boost_LIBRARIES})
+if(UNIX)
+  target_link_libraries(boost INTERFACE pthread)
+endif(UNIX)
+target_compile_definitions(boost INTERFACE BOOST_EXCEPTION_DISABLE)
+if (DISABLE_RTTI)
+  target_compile_definitions(boost INTERFACE BOOST_NO_RTTI BOOST_NO_TYPEID)
+endif(DISABLE_RTTI)
 
 # --- OpenSSL components
 set(OPENSSL_USE_STATIC_LIBS ${USE_STATIC_LIBS})
+set(OPENSSL_MSVC_STATIC_RT ${USE_STATIC_RUNTIME})
 find_package(OpenSSL REQUIRED)
+add_library(ssl INTERFACE)
+target_include_directories(ssl INTERFACE ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(ssl INTERFACE ${OPENSSL_LIBRARIES})
 if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
   include(CheckFunctionExists)
   CHECK_FUNCTION_EXISTS("_snprintf" HAVE_SNPRINTF)
   if(NOT HAVE_SNPRINTF)
-    list(APPEND OPENSSL_LIBRARIES legacy_stdio_definitions.lib)
+    target_link_libraries(ssl INTERFACE legacy_stdio_definitions.lib)
   endif(NOT HAVE_SNPRINTF)
   CHECK_FUNCTION_EXISTS("__iob_func" HAVE_IOB_FUNC)
   if(NOT HAVE_IOB_FUNC)
-    list(APPEND OPENSSL_LIBRARIES iob_func)
+    target_link_libraries(ssl INTERFACE iob_func)
   endif(NOT HAVE_IOB_FUNC)
 endif()
 
@@ -76,9 +114,7 @@ add_subdirectory(certs)
 
 # --- Unit tests
 if (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
-  enable_testing()
-  add_subdirectory(third_party/googletest/googletest)
-  project_group("Unit Tests" gtest gtest_main)
+  include(unit_tests)
 endif (BUILD_UNIT_TESTS OR BUILD_FRAMEWORK_UNIT_TESTS)
 
 # -- Images
@@ -86,3 +122,13 @@ add_subdirectory(img)
 
 # --- Add sources
 add_subdirectory(src)
+
+# --- Print summary
+message(STATUS "Build configuration:")
+message(STATUS "  Version: ${SSF_VERSION}")
+message(STATUS "  Unit Tests: ${BUILD_UNIT_TESTS}")
+message(STATUS "  Network Unit Tests: ${BUILD_NETWORK_UNIT_TESTS}")
+message(STATUS "  TLS Disabled: ${DISABLE_TLS}")
+message(STATUS "  Static Libraries: ${USE_STATIC_LIBS} (Boost: ${Boost_USE_STATIC_LIBS}, OpenSSL: ${OPENSSL_USE_STATIC_LIBS})")
+message(STATUS "  Static Runtime: ${USE_STATIC_RUNTIME} (Boost: ${Boost_USE_STATIC_RUNTIME}, OpenSSL: ${OPENSSL_MSVC_STATIC_RT})")
+message(STATUS "  RTTI disabled: ${DISABLE_RTTI}")
