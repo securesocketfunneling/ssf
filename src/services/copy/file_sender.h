@@ -329,9 +329,12 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       NotifyFileStatus(context, ec);
     };
 
-    auto on_file_copied = [this, self](CopyContext* context,
+    auto on_file_copied = [this, self](BaseSessionPtr session,
+                                       CopyContext* context,
                                        const boost::system::error_code& ec) {
       NotifyFileCopied(context, ec);
+      boost::system::error_code stop_ec;
+      manager_.stop(session, stop_ec);
     };
 
     if (context->is_stdin_input) {
@@ -346,9 +349,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     }
 
     boost::system::error_code start_ec;
-    auto p_session = CopySession<Fiber>::Create(&manager_, std::move(*p_fiber),
-                                                std::move(context),
-                                                on_file_status, on_file_copied);
+    auto p_session =
+        CopySession<Fiber>::Create(std::move(*p_fiber), std::move(context),
+                                   on_file_status, on_file_copied);
     manager_.start(p_session, start_ec);
   }
 
@@ -397,8 +400,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       if (ec) {
         ++copy_errors_count_;
       }
-      is_copy_finished =
-          input_files_.empty() && pending_input_files_.empty();
+      is_copy_finished = input_files_.empty() && pending_input_files_.empty();
     }
 
     if (!stopped_) {

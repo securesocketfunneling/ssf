@@ -31,8 +31,8 @@ class CopySession : public ssf::BaseSession {
   using SessionManager = ItemManager<BaseSessionPtr>;
   using OnFileStatus =
       std::function<void(CopyContext*, const boost::system::error_code&)>;
-  using OnFileCopied =
-      std::function<void(CopyContext*, const boost::system::error_code&)>;
+  using OnFileCopied = std::function<void(BaseSessionPtr, CopyContext*,
+                                          const boost::system::error_code&)>;
 
  public:
   template <typename... Args>
@@ -58,15 +58,14 @@ class CopySession : public ssf::BaseSession {
     socket_.close(ec);
     context_->Deinit();
     on_file_status_ = [](CopyContext*, const boost::system::error_code&) {};
-    on_file_copied_ = [](CopyContext*, const boost::system::error_code&) {};
+    on_file_copied_ = [](BaseSessionPtr, CopyContext*,
+                         const boost::system::error_code&) {};
   }
 
  private:
-  CopySession(SessionManager* manager, SocketStream socket,
-              CopyContextUPtr context, OnFileStatus on_file_status,
-              OnFileCopied on_file_copied)
-      : manager_(manager),
-        socket_(std::move(socket)),
+  CopySession(SocketStream socket, CopyContextUPtr context,
+              OnFileStatus on_file_status, OnFileCopied on_file_copied)
+      : socket_(std::move(socket)),
         context_(std::move(context)),
         on_file_status_(on_file_status),
         on_file_copied_(on_file_copied) {}
@@ -188,15 +187,10 @@ class CopySession : public ssf::BaseSession {
     if (context_->IsTerminal()) {
       ec = context_->GetErrorCode();
     }
-    on_file_copied_(context_.get(), ec);
-    if (manager_) {
-      boost::system::error_code stop_ec;
-      manager_->stop(this->shared_from_this(), stop_ec);
-    }
+    on_file_copied_(this->shared_from_this(), context_.get(), ec);
   }
 
  private:
-  SessionManager* manager_;
   SocketStream socket_;
   CopyContextUPtr context_;
   Packet inbound_packet_;

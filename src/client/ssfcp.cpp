@@ -249,8 +249,10 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
       [session, &copy_ec](ssf::services::copy::CopyContext* context,
                           const boost::system::error_code& ec) {
         if (!ec) {
-          copy_ec.assign(ssf::services::copy::ErrorCode::kFilesPartiallyCopied,
-                         ssf::services::copy::get_copy_category());
+          if (!session->is_stopped()) {
+            copy_ec.assign(ssf::services::copy::ErrorCode::kFilesPartiallyCopied,
+                           ssf::services::copy::get_copy_category());
+          }
           SSF_LOG(kLogInfo)
               << "[ssfcp] data copied from "
               << (context->is_stdin_input ? "stdin" : context->input_filepath)

@@ -81,17 +81,18 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
     auto self = this->shared_from_this();
     auto p_fiber = std::make_shared<Fiber>(fiber_acceptor_.get_io_service());
 
-    auto on_file_fiber_accept = [this, self, p_fiber, on_file_status, on_file_copied](
-        const boost::system::error_code& ec) {
-      if (ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][file_acceptor] could not "
-                              "accept new file transfer";
-        return;
-      }
-      AsyncAccept(on_file_status, on_file_copied);
+    auto on_file_fiber_accept =
+        [this, self, p_fiber, on_file_status,
+         on_file_copied](const boost::system::error_code& ec) {
+          if (ec) {
+            SSF_LOG(kLogDebug) << "microservice[copy][file_acceptor] could not "
+                                  "accept new file transfer";
+            return;
+          }
+          AsyncAccept(on_file_status, on_file_copied);
 
-      ReceiveFile(p_fiber, on_file_status, on_file_copied);
-    };
+          ReceiveFile(p_fiber, on_file_status, on_file_copied);
+        };
     fiber_acceptor_.async_accept(*p_fiber, std::move(on_file_fiber_accept));
   }
 
@@ -114,10 +115,17 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
         std::make_unique<CopyContext>(p_fiber->get_io_service());
     context->SetState(std::move(wait_request_state));
 
+    auto file_copied = [this, self, on_file_copied](
+        BaseSessionPtr session, CopyContext* context,
+        const boost::system::error_code& ec) {
+      on_file_copied(context, ec);
+      boost::system::error_code stop_ec;
+      manager_.stop(session, stop_ec);
+    };
+
     boost::system::error_code start_ec;
     auto p_session = CopySession<Fiber>::Create(
-        &manager_, std::move(*p_fiber), std::move(context),
-        on_file_status, on_file_copied);
+        std::move(*p_fiber), std::move(context), on_file_status, file_copied);
     manager_.start(p_session, start_ec);
   }
 
