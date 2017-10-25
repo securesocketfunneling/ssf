@@ -69,7 +69,8 @@ void Session<N, T>::Start(const NetworkQuery& query,
   NetworkResolver resolver(io_service_);
   auto endpoint_it = resolver.resolve(query, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "[client][session] could not resolve network endpoint";
+    SSF_LOG(kLogError)
+        << "[client][session] could not resolve network endpoint";
     UpdateStatus(Status::kEndpointNotResolvable);
     return;
   }
@@ -103,8 +104,6 @@ void Session<N, T>::Stop(boost::system::error_code& ec) {
     p_socket_->close(close_ec);
   }
 
-  // p_socket_.reset();
-
   auto self = this->shared_from_this();
   if (status_ == Status::kConnected || status_ == Status::kRunning) {
     auto update_status = [this, self]() {
@@ -125,16 +124,15 @@ void Session<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
 
   UpdateStatus(Status::kConnected);
   auto self = this->shared_from_this();
-  auto on_ssf_initiate = [this, self](NetworkSocketPtr p_socket,
+  auto on_ssf_initiate = [this, self](NetworkSocket& socket,
                                       const boost::system::error_code& ec) {
-    DoSSFStart(p_socket, ec);
+    DoSSFStart(ec);
   };
-  this->DoSSFInitiate(p_socket_, on_ssf_initiate);
+  this->DoSSFInitiate(*p_socket_, on_ssf_initiate);
 }
 
 template <class N, template <class> class T>
-void Session<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
-                               const boost::system::error_code& ec) {
+void Session<N, T>::DoSSFStart(const boost::system::error_code& ec) {
   boost::system::error_code stop_ec;
 
   if (ec) {
@@ -146,7 +144,7 @@ void Session<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 
   SSF_LOG(kLogTrace) << "[client][session] SSF reply ok";
   boost::system::error_code fiberize_ec;
-  DoFiberize(p_socket, fiberize_ec);
+  DoFiberize(fiberize_ec);
   if (fiberize_ec) {
     UpdateStatus(Status::kServerNotSupported);
     return;
@@ -154,11 +152,10 @@ void Session<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
 }
 
 template <class N, template <class> class T>
-void Session<N, T>::DoFiberize(NetworkSocketPtr p_socket,
-                               boost::system::error_code& ec) {
+void Session<N, T>::DoFiberize(boost::system::error_code& ec) {
   auto self = this->shared_from_this();
   auto close_demux_handler = [this, self]() { OnDemuxClose(); };
-  fiber_demux_.fiberize(std::move(*p_socket), close_demux_handler);
+  fiber_demux_.fiberize(std::move(*p_socket_), close_demux_handler);
 
   p_socket_.reset();
 

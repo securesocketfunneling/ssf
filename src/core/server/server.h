@@ -52,7 +52,7 @@ class SSFServer
                           NetworkSocketPtr p_socket);
   void AddDemux(DemuxPtr p_fiber_demux,
                 ServiceManagerPtr<Demux> p_service_manager);
-  void DoSSFStart(NetworkSocketPtr p_socket,
+  void DoSSFStart(NetworkSocketPtr p_socket, NetworkSocket& socket,
                   const boost::system::error_code& ec);
   void DoFiberize(NetworkSocketPtr p_socket, boost::system::error_code& ec);
   void RemoveDemux(DemuxPtr p_fiber_demux);

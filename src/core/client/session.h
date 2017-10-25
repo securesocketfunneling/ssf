@@ -68,10 +68,9 @@ class Session
 
   void NetworkToTransport(const boost::system::error_code& ec);
 
-  void DoSSFStart(NetworkSocketPtr p_socket,
-                  const boost::system::error_code& ec);
+  void DoSSFStart(const boost::system::error_code& ec);
 
-  void DoFiberize(NetworkSocketPtr p_socket, boost::system::error_code& ec);
+  void DoFiberize(boost::system::error_code& ec);
 
   void OnDemuxClose();
 

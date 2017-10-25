@@ -128,41 +128,41 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
                                          NetworkSocketPtr p_socket) {
   AsyncAcceptConnection();
 
-  if (!ec) {
-    if (!relay_only_) {
-      this->DoSSFInitiateReceive(
-          p_socket, std::bind(&SSFServer::DoSSFStart, this,
-                              std::placeholders::_1, std::placeholders::_2));
-      return;
-    }
+  if (!ec && !relay_only_) {
+    this->DoSSFInitiateReceive(
+        *p_socket, std::bind(&SSFServer::DoSSFStart, this, p_socket,
+                             std::placeholders::_1, std::placeholders::_2));
+    return;
   }
 
-  // Close connection
-  boost::system::error_code close_ec;
-  p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-  p_socket->close(close_ec);
+  // close connection
   if (ec) {
     SSF_LOG(kLogError) << "[server] network error: " << ec.message();
   } else if (relay_only_) {
     SSF_LOG(kLogWarning)
         << "server: direct connection attempt with relay-only option";
   }
+
+  boost::system::error_code close_ec;
+  p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+  p_socket->close(close_ec);
 }
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
+                                 NetworkSocket& socket,
                                  const boost::system::error_code& ec) {
-  if (!ec) {
-    SSF_LOG(kLogTrace) << "[server] SSF reply ok";
-    boost::system::error_code ec2;
-    DoFiberize(p_socket, ec2);
-  } else {
+  if (ec) {
+    SSF_LOG(kLogError) << "[server] SSF protocol error " << ec.message();
     boost::system::error_code close_ec;
     p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
     p_socket->close(close_ec);
-    SSF_LOG(kLogError) << "[server] SSF protocol error " << ec.message();
-    p_socket.reset();
+    return;
   }
+
+  SSF_LOG(kLogDebug) << "[server] SSF reply ok";
+  boost::system::error_code fiberize_ec;
+  DoFiberize(p_socket, fiberize_ec);
 }
 
 template <class N, template <class> class T>
@@ -179,9 +179,6 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   // Make a new service manager
   auto p_service_manager = std::make_shared<ServiceManager<Demux>>();
-
-  // Save the demux, the socket and the service manager
-  AddDemux(p_fiber_demux, p_service_manager);
 
   // Make a new service factory
   auto p_service_factory = ServiceFactory<Demux>::Create(
@@ -234,6 +231,9 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   p_admin_service->SetAsServer();
   p_service_manager->start(p_admin_service, ec);
+
+  // Save the demux, the socket and the service manager
+  AddDemux(p_fiber_demux, p_service_manager);
 }
 
 template <class N, template <class> class T>
@@ -249,7 +249,7 @@ void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
-  SSF_LOG(kLogDebug) << "[server] removing a demux";
+  SSF_LOG(kLogTrace) << "[server] removing a demux";
 
   if (p_service_managers_.count(p_fiber_demux)) {
     auto p_service_manager = p_service_managers_[p_fiber_demux];
@@ -273,22 +273,8 @@ void SSFServer<N, T>::RemoveAllDemuxes() {
   SSF_LOG(kLogTrace) << "[server] removing all demuxes";
 
   for (auto& p_fiber_demux : p_fiber_demuxes_) {
-    p_fiber_demux->close();
-
-    if (p_service_managers_.count(p_fiber_demux)) {
-      auto p_service_manager = p_service_managers_[p_fiber_demux];
-      p_service_manager->stop_all();
-      p_service_managers_.erase(p_fiber_demux);
-    }
-
-    auto p_service_factory =
-        ServiceFactoryManager<Demux>::GetServiceFactory(p_fiber_demux.get());
-    if (p_service_factory) {
-      p_service_factory->Destroy();
-    }
+    RemoveDemux(p_fiber_demux);
   }
-
-  p_fiber_demuxes_.clear();
 }
 
 }  // ssf
