@@ -235,7 +235,6 @@ void Client::OnSessionStatus(Status status) {
 
 void Client::OnUserServiceStatus(UserServicePtr user_service,
                                  const boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "[client] on service status";
   if (user_service == nullptr) {
     return;
   }

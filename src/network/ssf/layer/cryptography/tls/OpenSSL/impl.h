@@ -362,7 +362,7 @@ class basic_buffered_tls_socket {
           if (!ec) {
             p_puller->start_pulling();
           } else {
-            SSF_LOG(kLogError) << "network[crypto] TLS handshake failed";
+            SSF_LOG(kLogDebug) << "network[crypto] TLS handshake failed";
           }
           handler(ec);
         };

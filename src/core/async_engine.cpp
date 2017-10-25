@@ -39,7 +39,7 @@ void AsyncEngine::Stop() {
     return;
   }
 
-  SSF_LOG(kLogDebug) << "[async engine] stopping";
+  SSF_LOG(kLogDebug) << "[async engine] stop";
   p_worker_.reset(nullptr);
   for (auto& thread : threads_) {
     if (thread.joinable()) {

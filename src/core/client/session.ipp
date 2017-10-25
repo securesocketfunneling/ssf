@@ -116,7 +116,7 @@ void Session<N, T>::Stop(boost::system::error_code& ec) {
 template <class N, template <class> class T>
 void Session<N, T>::NetworkToTransport(const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogError) << "[client][session] server connection error: "
+    SSF_LOG(kLogDebug) << "[client][session] server connection error: "
                        << ec.message();
     UpdateStatus(Status::kServerUnreachable);
     return;

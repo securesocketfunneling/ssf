@@ -63,7 +63,7 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "microservice[admin]: stopping "
+  SSF_LOG(kLogDebug) << "microservice[admin]: stop "
                      << (is_server_ ? "server" : "client");
   ec.assign(::error::success, ::error::get_ssf_category());
 

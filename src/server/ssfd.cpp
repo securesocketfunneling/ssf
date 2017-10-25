@@ -27,6 +27,9 @@ int main(int argc, char** argv) {
 
   Run(argc, argv, exit_ec);
 
+  SSF_LOG(kLogInfo) << "[ssfd] exit " << exit_ec.value() << " ("
+                    << exit_ec.message() << ")";
+
   return exit_ec.value();
 }
 

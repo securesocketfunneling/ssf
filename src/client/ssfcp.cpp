@@ -207,7 +207,6 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
   copy_client.reset();
 
   signal.cancel(stop_ec);
-  stop_ec.clear();
 
   client.Deinit();
 }

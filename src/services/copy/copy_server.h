@@ -122,7 +122,7 @@ class CopyServer : public BaseService<Demux> {
 
   // Stop service
   void stop(boost::system::error_code& ec) override {
-    SSF_LOG(kLogDebug) << "microservice[copy][server] stopping";
+    SSF_LOG(kLogDebug) << "microservice[copy][server] stop";
     boost::system::error_code close_ec;
     file_acceptor_->Close(close_ec);
     close_ec.clear();

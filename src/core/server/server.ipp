@@ -137,7 +137,7 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
 
   // close connection
   if (ec) {
-    SSF_LOG(kLogError) << "[server] network error: " << ec.message();
+    SSF_LOG(kLogDebug) << "[server] network error: " << ec.message();
   } else if (relay_only_) {
     SSF_LOG(kLogWarning)
         << "server: direct connection attempt with relay-only option";

@@ -43,9 +43,10 @@ void Session<Demux>::stop(boost::system::error_code&) {
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code&) {
-  AsyncReadRequest(client_, &request_,
-                   std::bind(&Session<Demux>::HandleRequestDispatch, SelfFromThis(),
-                             std::placeholders::_1, std::placeholders::_2));
+  AsyncReadRequest(
+      client_, &request_,
+      std::bind(&Session<Demux>::HandleRequestDispatch, SelfFromThis(),
+                std::placeholders::_1, std::placeholders::_2));
 }
 
 template <typename Demux>
@@ -115,18 +116,18 @@ void Session<Demux>::HandleApplicationServerConnect(
   auto self = SelfFromThis();
   auto p_reply = std::make_shared<Reply>(err, boost::asio::ip::tcp::endpoint());
 
-  if (err) {  // Error connecting to the server, informing client and stopping
+  if (err) {  // error connecting to the server, notify client and stop
     AsyncSendReply(client_, *p_reply,
                    [this, self, p_reply](boost::system::error_code,
                                          std::size_t) { HandleStop(); });
-  } else {  // We successfully connect to application server
+  } else {  // we successfully connect to application server
     AsyncSendReply(
         client_, *p_reply,
         [this, self, p_reply](boost::system::error_code ec, std::size_t) {
           if (ec) {
             HandleStop();
             return;
-          }  // reply successfully sent, Establishing link
+          }  // reply successfully sent, establish link
           EstablishLink();
         });
   }
