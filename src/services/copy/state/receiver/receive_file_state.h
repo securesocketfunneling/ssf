@@ -29,7 +29,7 @@ class ReceiveFileState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][receive_file] enter";
+    SSF_LOG(kLogTrace) << "microservice[copy][receive_file] enter";
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,

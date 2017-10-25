@@ -27,7 +27,7 @@ class AbortSenderState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][abort_sender] enter";
+    SSF_LOG(kLogTrace) << "microservice[copy][abort_sender] enter";
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,

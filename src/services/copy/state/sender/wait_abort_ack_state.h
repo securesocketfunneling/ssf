@@ -22,7 +22,7 @@ class WaitAbortAckState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][wait_abort_ack] enter";
+    SSF_LOG(kLogTrace) << "microservice[copy][wait_abort_ack] enter";
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,

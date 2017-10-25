@@ -32,7 +32,7 @@ class SendInitRequestState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][send_init_request] enter";
+    SSF_LOG(kLogTrace) << "microservice[copy][send_init_request] enter";
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,

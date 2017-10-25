@@ -35,7 +35,7 @@ class SendIntegrityCheckReplyState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug)
+    SSF_LOG(kLogTrace)
         << "microservice[copy][send_integrity_check_reply] enter";
   }
 

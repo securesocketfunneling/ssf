@@ -33,7 +33,7 @@ class WaitIntegrityCheckReplyState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug)
+    SSF_LOG(kLogTrace)
         << "microservice[copy][wait_integrity_check_reply] enter";
   }
 

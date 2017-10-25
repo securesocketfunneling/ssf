@@ -21,7 +21,7 @@ class CloseState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][close] enter";
+    SSF_LOG(kLogTrace) << "microservice[copy][close] enter";
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,

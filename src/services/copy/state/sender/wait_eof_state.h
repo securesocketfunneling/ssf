@@ -33,7 +33,7 @@ class WaitEofState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][wait_eof] enter";
+    SSF_LOG(kLogTrace) << "microservice[copy][wait_eof] enter";
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,

@@ -31,7 +31,7 @@ class SendInitReplyState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][send_init_reply] enter";
+    SSF_LOG(kLogTrace) << "microservice[copy][send_init_reply] enter";
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
