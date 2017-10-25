@@ -54,6 +54,7 @@ void SSFFixtureTest::StopClient() {
   }
   boost::system::error_code stop_ec;
   p_ssf_client_->Stop(stop_ec);
+  p_ssf_client_->Deinit();
 }
 
 void SSFFixtureTest::StartServer(const std::string& addr,

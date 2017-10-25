@@ -66,6 +66,7 @@ class ServiceFixtureTest : public ::testing::Test {
     boost::system::error_code stop_ec;
     if (p_ssf_client_) {
       p_ssf_client_->Stop(stop_ec);
+      p_ssf_client_->Deinit();
     }
     if (p_ssf_server_) {
       p_ssf_server_->Stop();

@@ -43,6 +43,7 @@ class SSFClientServerTest : public ::testing::Test {
   virtual void TearDown() {
     boost::system::error_code ec;
     p_ssf_client_->Stop(ec);
+    p_ssf_client_->Deinit();
     p_ssf_server_->Stop();
   }
 

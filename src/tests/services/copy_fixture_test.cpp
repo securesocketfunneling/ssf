@@ -39,6 +39,10 @@ void CopyFixtureTest::SetUp() {
 }
 
 void CopyFixtureTest::TearDown() {
+  if (copy_client_) {
+    copy_client_->Stop();
+    copy_client_.reset();
+  }
   StopClientThreads();
   StopServerThreads();
 }
@@ -148,16 +152,18 @@ bool CopyFixtureTest::StartCopy(const ssf::services::copy::CopyRequest& req,
     uint64_t percent = 0;
     if (context->output.is_open()) {
       uint64_t file_offset = context->output.tellp();
-      percent = (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
+      percent =
+          (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
       SSF_LOG(kLogDebug) << "[copy_tests] Receiving: "
-                        << context->GetOutputFilepath().GetString() << " "
-                        << percent << "% / " << context->filesize << "b";
+                         << context->GetOutputFilepath().GetString() << " "
+                         << percent << "% / " << context->filesize << "b";
     } else if (context->input.is_open()) {
       uint64_t file_offset = context->input.tellg();
       percent =
           (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
       SSF_LOG(kLogDebug) << "[copy_tests] Sending: " << context->input_filepath
-                        << " " << percent << "% / " << context->filesize << "b";
+                         << " " << percent << "% / " << context->filesize
+                         << "b";
     }
   };
   auto on_file_copied = [this](ssf::services::copy::CopyContext* context,
@@ -209,6 +215,7 @@ void CopyFixtureTest::StopServerThreads() { p_ssf_server_->Stop(); }
 void CopyFixtureTest::StopClientThreads() {
   boost::system::error_code stop_ec;
   p_ssf_client_->Stop(stop_ec);
+  p_ssf_client_->Deinit();
 }
 
 void CopyFixtureTest::OnClientStatus(ssf::Status status) {
