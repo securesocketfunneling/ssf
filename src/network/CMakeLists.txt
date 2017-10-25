@@ -1,5 +1,5 @@
 # specific platform lib
-set(PLATFORM_SPECIFIC_LIB_DEP "")
+set(PLATFORM_LIBS "")
 
 include(source_group_by_folder)
 
@@ -207,7 +207,7 @@ endif()
 
 if (WIN32)
   # windows impl
-  list(APPEND PLATFORM_SPECIFIC_LIB_DEP Secur32.lib)
+  list(APPEND PLATFORM_LIBS Secur32.lib)
   list(APPEND SSF_NETWORK_FILES
     # layer/proxy
     ssf/layer/proxy/windows/sspi_auth_impl.cpp
@@ -215,7 +215,7 @@ if (WIN32)
 endif (WIN32)
 if (UNIX)
   # linux/unix impl
-  list(APPEND PLATFORM_SPECIFIC_LIB_DEP dl)
+  list(APPEND PLATFORM_LIBS dl)
   list(APPEND SSF_NETWORK_FILES
     # layer/proxy
     ssf/layer/proxy/unix/gssapi_auth_impl.cpp
@@ -224,7 +224,7 @@ endif (UNIX)
 
 add_library(ssf_network STATIC ${SSF_NETWORK_FILES})
 target_include_directories(ssf_network PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ssf_network PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} http_parser msgpack_c spdlog)
+target_link_libraries(ssf_network PUBLIC boost ssl ${PLATFORM_LIBS} http_parser msgpack_c spdlog)
 target_compile_definitions(ssf_network PUBLIC ${SSF_NETWORK_DEFINITIONS})
 set_property(TARGET ssf_network PROPERTY FOLDER "Libraries")
 source_group_by_folder(ssf_network)
