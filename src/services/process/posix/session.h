@@ -41,6 +41,8 @@ class Session : public ssf::BaseSession {
   Session(std::weak_ptr<ShellServer> server, Fiber client,
           const std::string& binary_path, const std::string& binary_args);
 
+  ~Session();
+
  public:
   void start(boost::system::error_code&) override;
 
