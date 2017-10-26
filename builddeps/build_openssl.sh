@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -x
-
 OPENSSL_VERSION=1.0.2k
 OPENSSL_ARCHIVE=openssl-${OPENSSL_VERSION}.tar.gz
 OPENSSL_SOURCE=openssl-${OPENSSL_VERSION}
