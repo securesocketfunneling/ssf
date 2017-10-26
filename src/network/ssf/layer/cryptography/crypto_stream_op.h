@@ -48,6 +48,7 @@ class CryptoStreamConnectOp {
     if (ec) {
       // error
       handler_(ec);
+      return;
     }
 
     reenter(coro_) {
