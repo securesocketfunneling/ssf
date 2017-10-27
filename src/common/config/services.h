@@ -4,7 +4,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
-#include "services/copy_file/config.h"
+#include "services/copy/config.h"
 #include "services/datagrams_to_fibers/config.h"
 #include "services/fibers_to_sockets/config.h"
 #include "services/fibers_to_datagrams/config.h"
@@ -21,7 +21,7 @@ class Services {
 
   using DatagramForwarderConfig = ssf::services::fibers_to_datagrams::Config;
   using DatagramListenerConfig = ssf::services::datagrams_to_fibers::Config;
-  using FileCopyConfig = ssf::services::copy_file::Config;
+  using CopyConfig = ssf::services::copy::Config;
   using ShellConfig = ssf::services::process::Config;
   using SocksConfig = ssf::services::socks::Config;
   using StreamForwarderConfig = ssf::services::fibers_to_sockets::Config;
@@ -55,9 +55,9 @@ class Services {
 
   SocksConfig* mutable_socks() { return &socks_; }
 
-  const FileCopyConfig& file_copy() const { return file_copy_; }
+  const CopyConfig& copy() const { return copy_; }
 
-  FileCopyConfig* mutable_file_copy() { return &file_copy_; }
+  CopyConfig* mutable_copy() { return &copy_; }
 
   const StreamForwarderConfig& stream_forwarder() const {
     return stream_forwarder_;
@@ -85,7 +85,7 @@ class Services {
  private:
   void UpdateDatagramForwarder(const PTree& pt);
   void UpdateDatagramListener(const PTree& pt);
-  void UpdateFileCopy(const PTree& pt);
+  void UpdateCopy(const PTree& pt);
   void UpdateShell(const PTree& pt);
   void UpdateSocks(const PTree& pt);
   void UpdateStreamForwarder(const PTree& pt);
@@ -96,7 +96,7 @@ class Services {
  private:
   DatagramForwarderConfig datagram_forwarder_;
   DatagramListenerConfig datagram_listener_;
-  FileCopyConfig file_copy_;
+  CopyConfig copy_;
   ShellConfig shell_;
   SocksConfig socks_;
   StreamForwarderConfig stream_forwarder_;

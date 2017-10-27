@@ -45,7 +45,7 @@ template <typename Demux>
 void SocksServer<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  SSF_LOG(kLogInfo) << "microservice[socks]: stopping server";
+  SSF_LOG(kLogDebug) << "microservice[socks]: stop server";
   this->HandleStop();
 }
 

@@ -17,8 +17,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
-#include "ssf/io/handler_helpers.h"
 #include "ssf/error/error.h"
+#include "ssf/io/handler_helpers.h"
 
 #include "ssf/layer/basic_endpoint.h"
 #include "ssf/layer/basic_impl.h"
@@ -64,11 +64,13 @@ class basic_CryptoStreamProtocol {
   typedef boost::asio::basic_stream_socket<
       basic_CryptoStreamProtocol,
       basic_CryptoStreamSocket_service<basic_CryptoStreamProtocol,
-                                       CryptoProtocol>> socket;
+                                       CryptoProtocol>>
+      socket;
   typedef boost::asio::basic_socket_acceptor<
       basic_CryptoStreamProtocol,
       basic_CryptoStreamAcceptor_service<basic_CryptoStreamProtocol,
-                                         CryptoProtocol>> acceptor;
+                                         CryptoProtocol>>
+      acceptor;
 
   struct acceptor_context {
     using op_queue_type =
@@ -222,7 +224,7 @@ class basic_CryptoStreamSocket_service
 
     impl.p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
                                        ec);
-    return impl.p_next_layer_socket->next_layer().close(ec);
+    return impl.p_next_layer_socket->close(ec);
   }
 
   native_type native(implementation_type& impl) { return impl; }
@@ -235,7 +237,7 @@ class basic_CryptoStreamSocket_service
       return ec;
     }
 
-    return impl.p_next_layer_socket->next_layer().cancel(ec);
+    return impl.p_next_layer_socket->cancel(ec);
   }
 
   bool at_mark(const implementation_type& impl,
@@ -308,9 +310,8 @@ class basic_CryptoStreamSocket_service
   /// Then async handshake, then async execute handler
   template <typename ConnectHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ConnectHandler, void(boost::system::error_code))
-      async_connect(implementation_type& impl,
-                    const endpoint_type& peer_endpoint,
-                    ConnectHandler&& handler) {
+  async_connect(implementation_type& impl, const endpoint_type& peer_endpoint,
+                ConnectHandler&& handler) {
     boost::asio::detail::async_result_init<ConnectHandler,
                                            void(boost::system::error_code)>
         init(std::forward<ConnectHandler>(handler));
@@ -346,9 +347,9 @@ class basic_CryptoStreamSocket_service
   template <typename ConstBufferSequence, typename WriteHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_send(implementation_type& impl, const ConstBufferSequence& buffers,
-                 boost::asio::socket_base::message_flags flags,
-                 WriteHandler&& handler) {
+  async_send(implementation_type& impl, const ConstBufferSequence& buffers,
+             boost::asio::socket_base::message_flags flags,
+             WriteHandler&& handler) {
     boost::asio::detail::async_result_init<
         WriteHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<WriteHandler>(handler));
@@ -382,10 +383,9 @@ class basic_CryptoStreamSocket_service
   template <typename MutableBufferSequence, typename ReadHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
                                 void(boost::system::error_code, std::size_t))
-      async_receive(implementation_type& impl,
-                    const MutableBufferSequence& buffers,
-                    boost::asio::socket_base::message_flags flags,
-                    ReadHandler&& handler) {
+  async_receive(implementation_type& impl, const MutableBufferSequence& buffers,
+                boost::asio::socket_base::message_flags flags,
+                ReadHandler&& handler) {
     boost::asio::detail::async_result_init<
         ReadHandler, void(boost::system::error_code, std::size_t)>
         init(std::forward<ReadHandler>(handler));
@@ -610,11 +610,12 @@ class basic_CryptoStreamAcceptor_service
 
   template <typename Protocol1, typename SocketService, typename AcceptHandler>
   BOOST_ASIO_INITFN_RESULT_TYPE(AcceptHandler, void(boost::system::error_code))
-      async_accept(implementation_type& impl,
-                   boost::asio::basic_socket<Protocol1, SocketService>& peer,
-                   endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
-                   typename std::enable_if<std::is_convertible<
-                       protocol_type, Protocol1>::value>::type* = 0) {
+  async_accept(
+      implementation_type& impl,
+      boost::asio::basic_socket<Protocol1, SocketService>& peer,
+      endpoint_type* p_peer_endpoint, AcceptHandler&& handler,
+      typename std::enable_if<
+          std::is_convertible<protocol_type, Protocol1>::value>::type* = 0) {
     boost::asio::detail::async_result_init<AcceptHandler,
                                            void(boost::system::error_code)>
         init(std::forward<AcceptHandler>(handler));
@@ -636,7 +637,8 @@ class basic_CryptoStreamAcceptor_service
       typedef io::pending_accept_operation<
           typename boost::asio::handler_type<
               AcceptHandler, void(boost::system::error_code)>::type,
-          protocol_type> op;
+          protocol_type>
+          op;
       typename op::ptr p = {
           boost::asio::detail::addressof(init.handler),
           boost_asio_handler_alloc_helpers::allocate(sizeof(op), init.handler),
@@ -680,11 +682,11 @@ class basic_CryptoStreamAcceptor_service
     peer_impl.p_remote_endpoint =
         std::make_shared<endpoint_type>(p_local_endpoint->endpoint_context());
 
-    auto on_accept =
-        [this, p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
-         p_socket](const boost::system::error_code& ec) {
-          accepted(p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
-                   p_socket, ec);
+    auto on_accept = [this, p_next_layer_acceptor, p_local_endpoint,
+                      p_acceptor_context,
+                      p_socket](const boost::system::error_code& ec) {
+      accepted(p_next_layer_acceptor, p_local_endpoint, p_acceptor_context,
+               p_socket, ec);
     };
     p_next_layer_acceptor->async_accept(
         peer_impl.p_next_layer_socket->next_layer(),
@@ -754,7 +756,8 @@ class basic_CryptoStreamAcceptor_service
   void connection_queue_handler(
       p_acceptor_context_type p_acceptor_context,
       const boost::system::error_code& ec = boost::system::error_code()) {
-    std::unique_lock<std::recursive_mutex> lock(p_acceptor_context->accept_mutex);
+    std::unique_lock<std::recursive_mutex> lock(
+        p_acceptor_context->accept_mutex);
 
     auto& connection_queue = p_acceptor_context->connection_queue;
     auto& accept_queue = p_acceptor_context->accept_queue;

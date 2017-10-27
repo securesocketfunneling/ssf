@@ -9,10 +9,12 @@
 
 #include "common/boost/fiber/datagram_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/utils/to_underlying.h"
 
 #include "core/factories/service_factory.h"
 
 #include "services/base_service.h"
+#include "services/service_id.h"
 
 #include "services/admin/requests/create_service_request.h"
 #include "services/datagram/datagram_link.h"
@@ -48,7 +50,7 @@ class DatagramsToFibers : public BaseService<Demux> {
   using WorkingBufferType = std::array<uint8_t, 50 * 1024>;
 
  public:
-  enum { kFactoryId = 6 };
+  enum { kFactoryId = to_underlying(MicroserviceId::kDatagramsToFibers) };
 
  public:
   DatagramsToFibers() = delete;

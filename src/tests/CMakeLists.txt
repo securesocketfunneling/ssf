@@ -6,5 +6,6 @@ set_property(TARGET tls_config_helper PROPERTY FOLDER "Unit Tests")
 
 add_subdirectory(commandline)
 add_subdirectory(config)
+add_subdirectory(filesystem)
 add_subdirectory(network)
 add_subdirectory(services)

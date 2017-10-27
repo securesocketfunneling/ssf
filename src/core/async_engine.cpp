@@ -7,18 +7,20 @@
 
 namespace ssf {
 
-AsyncEngine::AsyncEngine() : io_service_(), p_worker_(nullptr), threads_() {}
+AsyncEngine::AsyncEngine()
+    : io_service_(), p_worker_(nullptr), threads_(), is_started_(false) {}
 
 AsyncEngine::~AsyncEngine() { Stop(); }
 
 boost::asio::io_service& AsyncEngine::get_io_service() { return io_service_; }
 
 void AsyncEngine::Start() {
-  if (IsStarted()) {
+  if (is_started_) {
     return;
   }
 
-  SSF_LOG(kLogDebug) << "async engine: starting";
+  SSF_LOG(kLogDebug) << "[async engine] starting";
+  is_started_ = true;
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
   for (uint8_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
     threads_.emplace_back([this]() {
@@ -33,11 +35,11 @@ void AsyncEngine::Start() {
 }
 
 void AsyncEngine::Stop() {
-  if (!IsStarted()) {
+  if (!is_started_) {
     return;
   }
 
-  SSF_LOG(kLogDebug) << "async engine: stopping";
+  SSF_LOG(kLogDebug) << "[async engine] stop";
   p_worker_.reset(nullptr);
   for (auto& thread : threads_) {
     if (thread.joinable()) {
@@ -46,8 +48,9 @@ void AsyncEngine::Stop() {
   }
   io_service_.stop();
   io_service_.reset();
+  is_started_ = false;
 }
 
-bool AsyncEngine::IsStarted() const { return p_worker_.get() != nullptr; }
+bool AsyncEngine::IsStarted() const { return is_started_; }
 
 }  // ssf

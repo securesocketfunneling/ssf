@@ -59,7 +59,7 @@ template <typename Demux>
 void Server<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  SSF_LOG(kLogInfo) << "microservice[shell]: stop server";
+  SSF_LOG(kLogDebug) << "microservice[shell]: stop server";
   this->HandleStop();
 }
 
@@ -96,7 +96,7 @@ void Server<Demux>::FiberAcceptHandler(FiberPtr new_connection,
     return;
   }
 
-  SSF_LOG(kLogInfo) << "microservice[shell]: start session";
+  SSF_LOG(kLogDebug) << "microservice[shell]: start session";
 
   this->AsyncAcceptFiber();
 

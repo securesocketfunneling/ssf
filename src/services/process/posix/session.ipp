@@ -37,12 +37,16 @@ Session<Demux>::Session(std::weak_ptr<ShellServer> server, Fiber client,
       binary_path_(binary_path),
       binary_args_(binary_args),
       child_pid_(kInvalidProcessId),
-      master_tty_(kInvalidTtyDescriptor),
       sd_(io_service_) {}
 
 template <typename Demux>
+Session<Demux>::~Session() {
+  SSF_LOG(kLogDebug) << "session[shell]: destroy";
+}
+
+template <typename Demux>
 void Session<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[shell]: start";
+  SSF_LOG(kLogDebug) << "session[shell]: start";
   int master_tty;
   int slave_tty;
 
@@ -50,6 +54,8 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
   if (ec) {
     SSF_LOG(kLogError) << "session[shell]: init tty failed";
+    close(master_tty);
+    close(slave_tty);
     stop(ec);
     return;
   }
@@ -58,6 +64,8 @@ void Session<Demux>::start(boost::system::error_code& ec) {
   if (ec) {
     SSF_LOG(kLogError)
         << "session[shell]: init signal handler on SIGCHLD failed";
+    close(master_tty);
+    close(slave_tty);
     stop(ec);
     return;
   }
@@ -65,6 +73,8 @@ void Session<Demux>::start(boost::system::error_code& ec) {
   child_pid_ = fork();
   if (child_pid_ < 0) {
     SSF_LOG(kLogError) << "session[shell]: fork failed";
+    close(master_tty);
+    close(slave_tty);
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
     stop(ec);
     return;
@@ -126,7 +136,11 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
   // parent
   close(slave_tty);
-  master_tty_ = master_tty;
+  sd_.assign(master_tty, ec);
+  if (ec) {
+    stop(ec);
+    return;
+  }
 
   StartSignalWait();
 
@@ -138,25 +152,20 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[shell]: stop";
-
+  SSF_LOG(kLogDebug) << "session[shell]: stop";
+  
   client_.close();
-  if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: stop error " << ec.message();
-  }
+  
+  sd_.cancel(ec);
+  sd_.close(ec);
 
   if (child_pid_ > 0) {
     kill(child_pid_, SIGTERM);
     child_pid_ = kInvalidProcessId;
   }
-
-  if (master_tty_ > kInvalidTtyDescriptor) {
-    close(master_tty_);
-    master_tty_ = kInvalidTtyDescriptor;
-  }
-
-  sd_.close(ec);
+  
   signal_.cancel(ec);
+  signal_.clear(ec);
 }
 
 template <typename Demux>
@@ -174,6 +183,10 @@ void Session<Demux>::StopHandler(const boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::StartSignalWait() {
+  if (!client_.is_open() || !sd_.is_open()) {
+    return;
+  }
+  
   signal_.async_wait(std::bind(&Session::SigchldHandler, this->SelfFromThis(),
                                std::placeholders::_1, std::placeholders::_2));
 }
@@ -283,7 +296,6 @@ void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
 
 template <typename Demux>
 void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
-  sd_.assign(master_tty_, ec);
   if (ec) {
     SSF_LOG(kLogError) << "session[shell]: could not initialize stream handle";
     return;

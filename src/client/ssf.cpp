@@ -14,12 +14,12 @@
 
 #include "services/user_services/base_user_service.h"
 #include "services/user_services/parameters.h"
-#include "services/user_services/socks.h"
-#include "services/user_services/remote_socks.h"
 #include "services/user_services/port_forwarding.h"
-#include "services/user_services/remote_port_forwarding.h"
 #include "services/user_services/process.h"
+#include "services/user_services/remote_port_forwarding.h"
 #include "services/user_services/remote_process.h"
+#include "services/user_services/remote_socks.h"
+#include "services/user_services/socks.h"
 #include "services/user_services/udp_port_forwarding.h"
 #include "services/user_services/udp_remote_port_forwarding.h"
 
@@ -30,9 +30,20 @@ void RegisterUserServices(
     ssf::Client* client,
     ssf::UserServiceOptionFactory* user_service_option_factory);
 
-int main(int argc, char** argv) {
-  boost::system::error_code ec;
+void Run(int argc, char** argv, boost::system::error_code& exit_ec);
 
+int main(int argc, char** argv) {
+  boost::system::error_code exit_ec;
+
+  Run(argc, argv, exit_ec);
+
+  SSF_LOG(kLogInfo) << "[ssf] exit " << exit_ec.value() << " ("
+                    << exit_ec.message() << ")";
+
+  return exit_ec.value();
+}
+
+void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
   ssf::Client client;
   ssf::UserServiceOptionFactory user_service_option_factory;
   ssf::UserServiceParameters user_service_parameters;
@@ -43,31 +54,32 @@ int main(int argc, char** argv) {
   ssf::command_line::StandardCommandLine cmd;
 
   user_service_parameters =
-      cmd.Parse(argc, argv, user_service_option_factory, ec);
-  if (ec.value() == ::error::operation_canceled) {
-    return 0;
-  } else if (ec) {
-    SSF_LOG(kLogError) << "ssfc: invalid command line arguments";
-    return 1;
+      cmd.Parse(argc, argv, user_service_option_factory, exit_ec);
+  if (exit_ec.value() == ::error::operation_canceled) {
+    exit_ec.assign(::error::success, ::error::get_ssf_category());
+    return;
+  } else if (exit_ec) {
+    SSF_LOG(kLogError) << "[ssf] invalid command line arguments";
+    return;
   }
 
   // read configuration file
   ssf::config::Config ssf_config;
   ssf_config.Init();
-  ssf_config.UpdateFromFile(cmd.config_file(), ec);
-  if (ec) {
-    SSF_LOG(kLogError) << "ssfc: invalid config file format";
-    return 1;
+  ssf_config.UpdateFromFile(cmd.config_file(), exit_ec);
+  if (exit_ec) {
+    SSF_LOG(kLogError) << "[ssf] invalid config file format";
+    return;
   }
 
   if (ssf_config.GetArgc() > 0) {
     // update command line with config file argv
     user_service_parameters =
         cmd.Parse(ssf_config.GetArgc(), ssf_config.GetArgv().data(),
-                  user_service_option_factory, ec);
-    if (ec) {
-      SSF_LOG(kLogError) << "ssfc: invalid command line arguments";
-      return 1;
+                  user_service_option_factory, exit_ec);
+    if (exit_ec) {
+      SSF_LOG(kLogError) << "[ssf] invalid command line arguments";
+      return;
     }
   }
 
@@ -79,13 +91,17 @@ int main(int argc, char** argv) {
   ssf::log::Configure(cmd.log_level());
 
   if (!cmd.host_set()) {
-    SSF_LOG(kLogError) << "ssfc: no server host provided";
-    return 1;
+    SSF_LOG(kLogError) << "[ssf] no server host provided";
+    exit_ec.assign(::error::destination_address_required,
+                   ::error::get_ssf_category());
+    return;
   }
 
   if (!cmd.port_set()) {
-    SSF_LOG(kLogError) << "ssfc: no server port provided";
-    return 1;
+    SSF_LOG(kLogError) << "[ssf] no server port provided";
+    exit_ec.assign(::error::destination_address_required,
+                   ::error::get_ssf_category());
+    return;
   }
 
   auto endpoint_query = ssf::GenerateNetworkQuery(
@@ -94,23 +110,24 @@ int main(int argc, char** argv) {
   ssf_config.services().SetGatewayPorts(cmd.gateway_ports());
 
   // initialize and run client
-  auto on_status = [](ssf::Status) {};
-  auto on_user_service_status =
-      [](ssf::Client::UserServicePtr, const boost::system::error_code&) {};
+  auto on_status = [&client, &exit_ec](ssf::Status status) {};
+  auto on_user_service_status = [&client, &cmd, &exit_ec](
+      ssf::Client::UserServicePtr service,
+      const boost::system::error_code& ec) {};
 
   client.Init(endpoint_query, cmd.max_connection_attempts(),
               cmd.reconnection_timeout(), cmd.no_reconnection(),
               user_service_parameters, ssf_config.services(), on_status,
-              on_user_service_status, ec);
-  if (ec) {
-    SSF_LOG(kLogError) << "ssfc: cannot init client";
-    return 1;
+              on_user_service_status, exit_ec);
+  if (exit_ec) {
+    SSF_LOG(kLogError) << "[ssf] cannot init client";
+    return;
   }
 
-  SSF_LOG(kLogInfo) << "ssfc: connecting to <" << cmd.host() << ":"
+  SSF_LOG(kLogInfo) << "[ssf] connecting to <" << cmd.host() << ":"
                     << cmd.port() << ">";
 
-  SSF_LOG(kLogInfo) << "ssfc: running (Ctrl + C to stop)";
+  SSF_LOG(kLogInfo) << "[ssf] running (Ctrl + C to stop)";
 
   // stop client on SIGINT or SIGTERM
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
@@ -118,24 +135,26 @@ int main(int argc, char** argv) {
     if (ec) {
       return;
     }
+
     boost::system::error_code stop_ec;
     client.Stop(stop_ec);
   });
 
-  client.Run(ec);
-  if (ec) {
-    SSF_LOG(kLogError) << "ssfc: error happened when running client: "
-                       << ec.message();
-    return 1;
+  client.Run(exit_ec);
+  if (exit_ec) {
+    SSF_LOG(kLogError) << "[ssf] error happened when running client: "
+                       << exit_ec.message();
+    return;
   }
 
   // blocks until signal or max reconnection attempts
-  client.WaitStop(ec);
+  boost::system::error_code stop_ec;
+  client.WaitStop(stop_ec);
 
-  SSF_LOG(kLogInfo) << "ssfc: stop";
-  signal.cancel(ec);
+  SSF_LOG(kLogInfo) << "[ssf] stop";
+  signal.cancel(stop_ec);
 
-  return 0;
+  client.Deinit();
 }
 
 void RegisterUserServices(

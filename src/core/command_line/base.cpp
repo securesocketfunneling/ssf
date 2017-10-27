@@ -80,7 +80,7 @@ UserServiceParameters Base::Parse(
 
     return DoParse(user_service_option_factory, vm, ec);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogCritical) << "command line: parsing failed: " << e.what();
+    SSF_LOG(kLogCritical) << "[cli] parsing failed: " << e.what();
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
@@ -138,7 +138,7 @@ void Base::ParseBasicOptions(const VariableMap& vm,
         port_set_ = true;
       } else {
         SSF_LOG(kLogError)
-            << "command line: parsing failed: port option is not "
+            << "[cli] parsing failed: port option is not "
                "between 1 - 65536";
         ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       }

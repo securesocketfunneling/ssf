@@ -147,9 +147,9 @@ void Session<Demux>::DoConnectRequest() {
       break;
     }
     case static_cast<uint8_t>(AddressType::kDNS): {
-      auto resolve_handler =
-          std::bind(&Session<Demux>::HandleResolveServerEndpoint, SelfFromThis(),
-                    std::placeholders::_1, std::placeholders::_2);
+      auto resolve_handler = std::bind(
+          &Session<Demux>::HandleResolveServerEndpoint, SelfFromThis(),
+          std::placeholders::_1, std::placeholders::_2);
 
       boost::asio::ip::tcp::resolver::query query(
           std::string(request_.domain().data(), request_.domain().size()),
@@ -240,18 +240,18 @@ void Session<Demux>::HandleApplicationServerConnect(
     p_reply->set_port(request_.port());
   }
 
-  if (err) {  // Error connecting to the server, informing client and stopping
+  if (err) {  // error connecting to the server, notify client and stop
     AsyncSendReply(client_, *p_reply,
                    [this, self, p_reply](boost::system::error_code,
                                          std::size_t) { HandleStop(); });
-  } else {  // We successfully connect to application server
+  } else {  // we successfully connect to application server
     AsyncSendReply(
         client_, *p_reply,
         [this, self, p_reply](boost::system::error_code ec, std::size_t) {
           if (ec) {
             HandleStop();
             return;
-          }  // reply successfully sent, Establishing link
+          }  // reply successfully sent, establish link
           EstablishLink();
         });
   }

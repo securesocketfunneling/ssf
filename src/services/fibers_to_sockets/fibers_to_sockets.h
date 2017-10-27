@@ -7,12 +7,14 @@
 
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 #include "common/boost/fiber/stream_fiber.hpp"
+#include "common/utils/to_underlying.h"
 
 #include <ssf/network/base_session.h>
 #include <ssf/network/manager.h>
 #include <ssf/network/socket_link.h>
 
 #include "services/base_service.h"
+#include "services/service_id.h"
 
 #include "core/factories/service_factory.h"
 
@@ -41,7 +43,7 @@ class FibersToSockets : public BaseService<Demux> {
   using Tcp = boost::asio::ip::tcp;
 
  public:
-  enum { kFactoryId = 3 };
+  enum { kFactoryId = to_underlying(MicroserviceId::kFibersToSockets) };
 
  public:
   FibersToSockets() = delete;

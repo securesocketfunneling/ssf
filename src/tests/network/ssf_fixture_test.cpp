@@ -5,7 +5,7 @@
 SSFFixtureTest::SSFFixtureTest() : success_(false), stopped_(false) {}
 
 void SSFFixtureTest::SetUp() {
-  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogDebug);
+  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogInfo);
   StartAsyncEngine();
 }
 
@@ -54,6 +54,7 @@ void SSFFixtureTest::StopClient() {
   }
   boost::system::error_code stop_ec;
   p_ssf_client_->Stop(stop_ec);
+  p_ssf_client_->Deinit();
 }
 
 void SSFFixtureTest::StartServer(const std::string& addr,

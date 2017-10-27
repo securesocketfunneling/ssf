@@ -16,8 +16,6 @@ StandardCommandLine::StandardCommandLine(bool is_server)
       max_connection_attempts_(1),
       reconnection_timeout_(60) {}
 
-StandardCommandLine::~StandardCommandLine() {}
-
 void StandardCommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
 
 void StandardCommandLine::PopulateLocalOptions(OptionDescription& local_opts) {

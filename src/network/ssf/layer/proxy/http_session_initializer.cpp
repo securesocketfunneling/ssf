@@ -61,7 +61,7 @@ void HttpSessionInitializer::PopulateRequest(HttpRequest* p_request,
 void HttpSessionInitializer::ProcessResponse(const HttpResponse& response,
                                              boost::system::error_code& ec) {
   if (response.Success()) {
-    SSF_LOG(kLogInfo) << "network[http proxy]: connected (auth: "
+    SSF_LOG(kLogDebug) << "network[http proxy]: connected (auth: "
                       << ((p_current_auth_strategy_ != nullptr)
                               ? (p_current_auth_strategy_->AuthName())
                               : "None") << ")";

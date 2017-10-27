@@ -45,22 +45,23 @@ class CryptoStreamConnectOp {
 #include <boost/asio/yield.hpp>
   void operator()(
       const boost::system::error_code& ec = boost::system::error_code()) {
-    if (!ec) {
-      reenter(coro_) {
-        yield stream_.next_layer().async_connect(
-            peer_endpoint_.next_layer_endpoint(), std::move(*this));
-
-        boost::system::error_code endpoint_ec;
-        p_local_endpoint_->next_layer_endpoint() =
-            stream_.next_layer().local_endpoint(endpoint_ec);
-        p_local_endpoint_->set();
-
-        stream_.async_handshake(CryptoProtocol::handshake_type::client,
-                                std::move(handler_));
-      }
-    } else {
+    if (ec) {
       // error
       handler_(ec);
+      return;
+    }
+
+    reenter(coro_) {
+      yield stream_.next_layer().async_connect(
+          peer_endpoint_.next_layer_endpoint(), std::move(*this));
+
+      boost::system::error_code endpoint_ec;
+      p_local_endpoint_->next_layer_endpoint() =
+          stream_.next_layer().local_endpoint(endpoint_ec);
+      p_local_endpoint_->set();
+
+      stream_.async_handshake(CryptoProtocol::handshake_type::client,
+                              std::move(handler_));
     }
   }
 #include <boost/asio/unyield.hpp>
@@ -78,8 +79,9 @@ class CryptoStreamConnectOp {
 template <class CryptoProtocol, class Stream, class Endpoint,
           class ConnectHandler>
 inline void* asio_handler_allocate(
-    std::size_t size, CryptoStreamConnectOp<CryptoProtocol, Stream, Endpoint,
-                                            ConnectHandler>* this_handler) {
+    std::size_t size,
+    CryptoStreamConnectOp<CryptoProtocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   return boost_asio_handler_alloc_helpers::allocate(size,
                                                     this_handler->handler());
 }
@@ -96,8 +98,9 @@ inline void asio_handler_deallocate(
 
 template <class CryptoProtocol, class Stream, class Endpoint,
           class ConnectHandler>
-inline bool asio_handler_is_continuation(CryptoStreamConnectOp<
-    CryptoProtocol, Stream, Endpoint, ConnectHandler>* this_handler) {
+inline bool asio_handler_is_continuation(
+    CryptoStreamConnectOp<CryptoProtocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   return boost_asio_handler_cont_helpers::is_continuation(
       this_handler->handler());
 }
@@ -105,8 +108,9 @@ inline bool asio_handler_is_continuation(CryptoStreamConnectOp<
 template <class Function, class CryptoProtocol, class Stream, class Endpoint,
           class ConnectHandler>
 inline void asio_handler_invoke(
-    Function& function, CryptoStreamConnectOp<CryptoProtocol, Stream, Endpoint,
-                                              ConnectHandler>* this_handler) {
+    Function& function,
+    CryptoStreamConnectOp<CryptoProtocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   boost_asio_handler_invoke_helpers::invoke(function, this_handler->handler());
 }
 

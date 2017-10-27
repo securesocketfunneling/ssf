@@ -28,8 +28,7 @@ Config::Config() : tls_(), http_proxy_(), services_() {}
 void Config::Init() {
   boost::system::error_code ec;
 
-  SSF_LOG(kLogDebug) << "config[ssf]: default configuration: "
-                     << default_config_;
+  SSF_LOG(kLogDebug) << "[config] default configuration: " << default_config_;
 
   UpdateFromString(default_config_, ec);
 }
@@ -47,7 +46,7 @@ void Config::UpdateFromFile(const std::string& filepath,
     conf_file = filepath;
   }
 
-  SSF_LOG(kLogInfo) << "config[ssf]: loading file <" << conf_file << ">";
+  SSF_LOG(kLogInfo) << "[config] loading file <" << conf_file << ">";
 
   try {
     boost::property_tree::ptree pt;
@@ -55,12 +54,12 @@ void Config::UpdateFromFile(const std::string& filepath,
 
     std::stringstream ss_loaded_config;
     boost::property_tree::write_json(ss_loaded_config, pt);
-    SSF_LOG(kLogDebug) << "config[ssf]: file configuration: " << std::endl
+    SSF_LOG(kLogDebug) << "[config] file configuration: " << std::endl
                        << ss_loaded_config.str();
 
     UpdateFromPTree(pt);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "config[ssf]: error reading SSF config file: "
+    SSF_LOG(kLogError) << "[config] error reading SSF config file: "
                        << e.what();
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
@@ -77,8 +76,7 @@ void Config::UpdateFromString(const std::string& config_string,
 
     UpdateFromPTree(pt);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "config[ssf]: error reading config string: "
-                       << e.what();
+    SSF_LOG(kLogError) << "[config] error reading config string: " << e.what();
   }
 }
 
@@ -116,7 +114,7 @@ void Config::UpdateFromPTree(const PTree& pt) {
 void Config::UpdateTls(const PTree& pt) {
   auto tls_optional = pt.get_child_optional("ssf.tls");
   if (!tls_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: TLS configuration not found";
+    SSF_LOG(kLogDebug) << "[config] update TLS: configuration not found";
     return;
   }
 
@@ -126,7 +124,7 @@ void Config::UpdateTls(const PTree& pt) {
 void Config::UpdateHttpProxy(const PTree& pt) {
   auto proxy_optional = pt.get_child_optional("ssf.http_proxy");
   if (!proxy_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: http proxy configuration not found";
+    SSF_LOG(kLogDebug) << "[config] update HTTP proxy: configuration not found";
     return;
   }
 
@@ -136,7 +134,8 @@ void Config::UpdateHttpProxy(const PTree& pt) {
 void Config::UpdateSocksProxy(const PTree& pt) {
   auto proxy_optional = pt.get_child_optional("ssf.socks_proxy");
   if (!proxy_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: socks proxy configuration not found";
+    SSF_LOG(kLogDebug)
+        << "[config] update SOCKS proxy: configuration not found";
     return;
   }
 
@@ -146,7 +145,7 @@ void Config::UpdateSocksProxy(const PTree& pt) {
 void Config::UpdateServices(const PTree& pt) {
   auto services_optional = pt.get_child_optional("ssf.services");
   if (!services_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: services configuration not found";
+    SSF_LOG(kLogDebug) << "[config] update services: configuration not found";
     return;
   }
 
@@ -156,7 +155,7 @@ void Config::UpdateServices(const PTree& pt) {
 void Config::UpdateCircuit(const PTree& pt) {
   auto circuit_optional = pt.get_child_optional("ssf.circuit");
   if (!circuit_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: circuit configuration not found";
+    SSF_LOG(kLogDebug) << "[config] update circuit: configuration not found";
     return;
   }
 
@@ -166,7 +165,7 @@ void Config::UpdateCircuit(const PTree& pt) {
 void Config::UpdateArguments(const PTree& pt) {
   auto arguments_optional = pt.get_child_optional("ssf.arguments");
   if (!arguments_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: arguments configuration not found";
+    SSF_LOG(kLogDebug) << "[config] update arguments: configuration not found";
     return;
   }
 
@@ -230,7 +229,7 @@ const char* Config::default_config_ = R"RAWSTRING(
         "enable": true,
         "gateway_ports": false
       },
-      "file_copy": { "enable": false },
+      "copy": { "enable": false },
       "shell": {
         "enable": false,
         "path": )RAWSTRING" SSF_PROCESS_SERVICE_BINARY_PATH R"RAWSTRING(,

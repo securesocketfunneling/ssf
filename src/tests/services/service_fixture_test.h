@@ -36,6 +36,7 @@ class ServiceFixtureTest : public ::testing::Test {
   virtual ~ServiceFixtureTest() {}
 
   void SetUp() override {
+    ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogDebug);
     auto cleanup = [this]() {
       network_set_.set_value(false);
       service_set_.set_value(false);
@@ -44,7 +45,7 @@ class ServiceFixtureTest : public ::testing::Test {
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distribution(30000, 65000);
+    std::uniform_int_distribution<> distribution(10000, 32767);
 
     auto port = std::to_string(distribution(gen));
 
@@ -66,6 +67,7 @@ class ServiceFixtureTest : public ::testing::Test {
     boost::system::error_code stop_ec;
     if (p_ssf_client_) {
       p_ssf_client_->Stop(stop_ec);
+      p_ssf_client_->Deinit();
     }
     if (p_ssf_server_) {
       p_ssf_server_->Stop();

@@ -26,9 +26,9 @@ template <typename Demux>
 void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
   fiber_.bind(FiberEndpoint(this->get_demux(), local_port_), ec);
   if (ec) {
-    SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: cannot bind "
-                         "datagram fiber to port "
-                      << local_port_;
+    SSF_LOG(kLogError) << "microservice[datagram_forwarder]: cannot bind "
+                          "datagram fiber to port "
+                       << local_port_;
     return;
   }
 
@@ -37,9 +37,9 @@ void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
   Udp::resolver::query query(ip_, std::to_string(remote_port_));
   Udp::resolver::iterator iterator(resolver.resolve(query, ec));
   if (ec) {
-    SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: cannot resolve "
-                         "remote UDP endpoint <"
-                      << ip_ << ":" << remote_port_ << ">";
+    SSF_LOG(kLogError) << "microservice[datagram_forwarder]: cannot resolve "
+                          "remote UDP endpoint <"
+                       << ip_ << ":" << remote_port_ << ">";
     return;
   }
 
@@ -55,7 +55,7 @@ void FibersToDatagrams<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void FibersToDatagrams<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "microservice[datagram_forwarder]: stopping";
+  SSF_LOG(kLogDebug) << "microservice[datagram_forwarder]: stop";
   ec.assign(::error::success, ::error::get_ssf_category());
 
   fiber_.close();

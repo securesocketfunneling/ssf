@@ -52,7 +52,13 @@ class Session
 
   void Stop(boost::system::error_code& ec);
 
-  boost::asio::io_service& get_io_service();
+  Demux& GetDemux() { return fiber_demux_; }
+
+  bool is_stopped() {
+    return stopped_;
+  }
+
+  boost::asio::io_service& get_io_service() { return io_service_; }
 
  private:
   Session(boost::asio::io_service& io_service,
@@ -62,10 +68,9 @@ class Session
 
   void NetworkToTransport(const boost::system::error_code& ec);
 
-  void DoSSFStart(NetworkSocketPtr p_socket,
-                  const boost::system::error_code& ec);
+  void DoSSFStart(const boost::system::error_code& ec);
 
-  void DoFiberize(NetworkSocketPtr p_socket, boost::system::error_code& ec);
+  void DoFiberize(boost::system::error_code& ec);
 
   void OnDemuxClose();
 

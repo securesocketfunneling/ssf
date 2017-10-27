@@ -50,7 +50,12 @@ struct AsyncHDSocketLinker : boost::asio::coroutine {
   * @param n number of bytes handled
   */
   void operator() (const boost::system::error_code& ec, std::size_t n) {
-    if (!ec && r_.is_open() && w_.is_open()) reenter(this) {
+    if (ec || !r_.is_open() || !w_.is_open()) {
+      handler_(ec, 0);
+      return;
+    }
+    
+    reenter(this) {
       for (;;) {
         // Receive some data
         yield r_.async_read_some(working_buffer_, std::move(*this));
@@ -65,9 +70,6 @@ struct AsyncHDSocketLinker : boost::asio::coroutine {
               std::move(*this));
         } while (!n && transfered_bytes_);
       }
-    }
-    else {
-      handler_(ec);
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT

@@ -26,8 +26,8 @@ class ServiceFactory
  private:
   using Parameters = std::map<std::string, std::string>;
   using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
-  using ServiceCreator = std::function<BaseServicePtr(boost::asio::io_service&,
-                                                      Demux&, const Parameters&)>;
+  using ServiceCreator = std::function<BaseServicePtr(
+      boost::asio::io_service&, Demux&, const Parameters&)>;
   using ServiceCreatorMap = std::map<uint32_t, ServiceCreator>;
   using ServiceManagerPtr = std::shared_ptr<ServiceManager<Demux>>;
 
@@ -70,7 +70,6 @@ class ServiceFactory
       if (p_service) {
         auto service_id = p_service_manager_->start(p_service, ec);
         p_service->set_local_id(service_id);
-
         return service_id;
       } else {
         ec.assign(::error::service_not_started, error::get_ssf_category());

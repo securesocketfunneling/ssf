@@ -77,7 +77,7 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "microservice[datagram_listener]: stopping";
+  SSF_LOG(kLogDebug) << "microservice[datagram_listener]: stop";
   socket_.close(ec);
 
   if (ec) {

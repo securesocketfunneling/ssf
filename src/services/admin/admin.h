@@ -15,8 +15,11 @@
 
 #include "common/boost/fiber/basic_fiber_demux.hpp"
 #include "common/boost/fiber/stream_fiber.hpp"
+#include "common/utils/to_underlying.h"
 
 #include "services/base_service.h"
+#include "services/service_id.h"
+#include "services/service_port.h"
 
 #include "services/admin/admin_command.h"
 #include "services/admin/command_factory.h"
@@ -60,11 +63,11 @@ class Admin : public BaseService<Demux> {
     return AdminPtr(new Admin(io_service, fiber_demux));
   }
 
-  ~Admin() { SSF_LOG(kLogDebug) << "service[admin]: destroy"; }
+  ~Admin() { SSF_LOG(kLogDebug) << "microservice[admin]: destroy"; }
 
   enum {
-    kFactoryId = 1,
-    kServicePort = (1 << 17) + 1,  // first of the service range
+    kFactoryId = to_underlying(MicroserviceId::kAdmin),
+    kServicePort = to_underlying(MicroservicePort::kAdmin),
     kKeepAliveInterval = 120,      // seconds
     kServiceStatusRetryCount = 50  // retries
   };
@@ -78,7 +81,7 @@ class Admin : public BaseService<Demux> {
     p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
-  template <template<class> class Command>
+  template <template <class> class Command>
   bool RegisterCommand() {
     return cmd_factory_.template Register<Command<Demux>>();
   }
@@ -172,7 +175,6 @@ class Admin : public BaseService<Demux> {
   void ReceiveInstructionHeader();
   void ReceiveInstructionParameters();
   void ProcessInstructionId();
-  void ShutdownServices();
 
   template <typename Handler>
   void AsyncSendCommand(const AdminCommand& command, Handler handler) {
@@ -190,10 +192,6 @@ class Admin : public BaseService<Demux> {
         callback_(p_user_service, ec);
       });
     }
-  }
-
-  AdminPtr SelfFromThis() {
-    return std::static_pointer_cast<Admin>(this->shared_from_this());
   }
 
  private:

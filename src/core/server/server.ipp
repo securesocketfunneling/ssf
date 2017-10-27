@@ -15,8 +15,7 @@
 #include "services/admin/requests/stop_service_request.h"
 
 #include "services/base_service.h"
-#include "services/copy_file/fiber_to_file/fiber_to_file.h"
-#include "services/copy_file/file_to_fiber/file_to_fiber.h"
+#include "services/copy/copy_server.h"
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
 #include "services/fibers_to_datagrams/fibers_to_datagrams.h"
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
@@ -46,12 +45,12 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
                           boost::system::error_code& ec) {
   if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
-    SSF_LOG(kLogError) << "server: already running";
+    SSF_LOG(kLogError) << "[server] already running";
     return;
   }
 
   if (relay_only_) {
-    SSF_LOG(kLogWarning) << "server: relay only";
+    SSF_LOG(kLogWarning) << "[server] relay only";
   }
 
   // resolve remote endpoint with query
@@ -59,32 +58,30 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
   auto endpoint_it = resolver.resolve(query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "server: could not resolve network endpoint";
+    SSF_LOG(kLogError) << "[server] could not resolve network endpoint";
     return;
   }
 
   // set acceptor
   network_acceptor_.open();
 
-  /*
-  // TODO: reuse address ?
   network_acceptor_.set_option(boost::asio::socket_base::reuse_address(true),
                                ec);
-  */
 
   boost::system::error_code close_ec;
 
   network_acceptor_.bind(*endpoint_it, ec);
   if (ec) {
     network_acceptor_.close(close_ec);
-    SSF_LOG(kLogError) << "server: could not bind acceptor to network endpoint";
+    SSF_LOG(kLogError)
+        << "[server] could not bind acceptor to network endpoint";
     return;
   }
 
   network_acceptor_.listen(100, ec);
   if (ec) {
     network_acceptor_.close(close_ec);
-    SSF_LOG(kLogError) << "server: could not listen for new connections";
+    SSF_LOG(kLogError) << "[server] could not listen for new connections";
     return;
   }
 
@@ -97,7 +94,7 @@ void SSFServer<N, T>::Run(const NetworkQuery& query,
 /// Stop accepting connections and end all on going connections
 template <class N, template <class> class T>
 void SSFServer<N, T>::Stop() {
-  SSF_LOG(kLogDebug) << "server: stop";
+  SSF_LOG(kLogDebug) << "[server] stop";
 
   RemoveAllDemuxes();
 
@@ -131,40 +128,41 @@ void SSFServer<N, T>::NetworkToTransport(const boost::system::error_code& ec,
                                          NetworkSocketPtr p_socket) {
   AsyncAcceptConnection();
 
-  if (!ec) {
-    if (!relay_only_) {
-      this->DoSSFInitiateReceive(
-          p_socket, std::bind(&SSFServer::DoSSFStart, this,
-                              std::placeholders::_1, std::placeholders::_2));
-      return;
-    }
+  if (!ec && !relay_only_) {
+    this->DoSSFInitiateReceive(
+        *p_socket, std::bind(&SSFServer::DoSSFStart, this, p_socket,
+                             std::placeholders::_1, std::placeholders::_2));
+    return;
   }
 
-  // Close connection
-  boost::system::error_code close_ec;
-  p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
-  p_socket->close(close_ec);
+  // close connection
   if (ec) {
-    SSF_LOG(kLogError) << "server: network error: " << ec.message();
+    SSF_LOG(kLogDebug) << "[server] network error: " << ec.message();
   } else if (relay_only_) {
     SSF_LOG(kLogWarning)
         << "server: direct connection attempt with relay-only option";
   }
+
+  boost::system::error_code close_ec;
+  p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
+  p_socket->close(close_ec);
 }
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::DoSSFStart(NetworkSocketPtr p_socket,
+                                 NetworkSocket& socket,
                                  const boost::system::error_code& ec) {
-  if (!ec) {
-    SSF_LOG(kLogTrace) << "server: SSF reply ok";
-    boost::system::error_code ec2;
-    DoFiberize(p_socket, ec2);
-  } else {
+  if (ec) {
+    SSF_LOG(kLogError) << "[server] SSF protocol error " << ec.message();
     boost::system::error_code close_ec;
     p_socket->shutdown(boost::asio::socket_base::shutdown_both, close_ec);
     p_socket->close(close_ec);
-    SSF_LOG(kLogError) << "server: SSF protocol error " << ec.message();
+    return;
   }
+
+  SSF_LOG(kLogDebug) << "[server] SSF reply ok";
+  boost::system::error_code fiberize_ec;
+  DoFiberize(p_socket, fiberize_ec);
 }
 
 template <class N, template <class> class T>
@@ -181,9 +179,6 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   // Make a new service manager
   auto p_service_manager = std::make_shared<ServiceManager<Demux>>();
-
-  // Save the demux, the socket and the service manager
-  AddDemux(p_fiber_demux, p_service_manager);
 
   // Make a new service factory
   auto p_service_factory = ServiceFactory<Demux>::Create(
@@ -202,12 +197,8 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   services::datagrams_to_fibers::DatagramsToFibers<
       Demux>::RegisterToServiceFactory(p_service_factory,
                                        services_config_.datagram_listener());
-  services::copy_file::file_to_fiber::FileToFiber<
-      Demux>::RegisterToServiceFactory(p_service_factory,
-                                       services_config_.file_copy());
-  services::copy_file::fiber_to_file::FiberToFile<
-      Demux>::RegisterToServiceFactory(p_service_factory,
-                                       services_config_.file_copy());
+  services::copy::CopyServer<Demux>::RegisterToServiceFactory(
+      p_service_factory, services_config_.copy());
   services::process::Server<Demux>::RegisterToServiceFactory(
       p_service_factory, services_config_.process());
 
@@ -216,22 +207,23 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   auto p_admin_service = services::admin::Admin<Demux>::Create(
       async_engine_.get_io_service(), *p_fiber_demux, empty_map);
-  if (!p_admin_service
-           ->template RegisterCommand<services::admin::CreateServiceRequest>()) {
-    SSF_LOG(kLogError) << "server: cannot register "
+  if (!p_admin_service->template RegisterCommand<
+          services::admin::CreateServiceRequest>()) {
+    SSF_LOG(kLogError) << "[server] cannot register "
                           "CreateServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
   if (!p_admin_service
            ->template RegisterCommand<services::admin::StopServiceRequest>()) {
-    SSF_LOG(kLogError) << "server: cannot register "
+    SSF_LOG(kLogError) << "[server] cannot register "
                           "StopServiceRequest into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
-  if (!p_admin_service->template RegisterCommand<services::admin::ServiceStatus>()) {
-    SSF_LOG(kLogError) << "server: cannot register "
+  if (!p_admin_service
+           ->template RegisterCommand<services::admin::ServiceStatus>()) {
+    SSF_LOG(kLogError) << "[server] cannot register "
                           "ServiceStatus into admin service";
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
@@ -239,13 +231,16 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 
   p_admin_service->SetAsServer();
   p_service_manager->start(p_admin_service, ec);
+
+  // Save the demux, the socket and the service manager
+  AddDemux(p_fiber_demux, p_service_manager);
 }
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
                                ServiceManagerPtr<Demux> p_service_manager) {
   std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
-  SSF_LOG(kLogTrace) << "server: adding a new demux";
+  SSF_LOG(kLogTrace) << "[server] adding a new demux";
 
   p_fiber_demuxes_.insert(p_fiber_demux);
   p_service_managers_[p_fiber_demux] = p_service_manager;
@@ -254,10 +249,7 @@ void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
-  SSF_LOG(kLogTrace) << "server: removing a demux";
-
-  p_fiber_demux->close();
-  p_fiber_demuxes_.erase(p_fiber_demux);
+  SSF_LOG(kLogTrace) << "[server] removing a demux";
 
   if (p_service_managers_.count(p_fiber_demux)) {
     auto p_service_manager = p_service_managers_[p_fiber_demux];
@@ -270,30 +262,19 @@ void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
   if (p_service_factory) {
     p_service_factory->Destroy();
   }
+
+  p_fiber_demux->close();
+  p_fiber_demuxes_.erase(p_fiber_demux);
 }
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveAllDemuxes() {
   std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
-  SSF_LOG(kLogTrace) << "server: removing all demuxes";
+  SSF_LOG(kLogTrace) << "[server] removing all demuxes";
 
   for (auto& p_fiber_demux : p_fiber_demuxes_) {
-    p_fiber_demux->close();
-
-    if (p_service_managers_.count(p_fiber_demux)) {
-      auto p_service_manager = p_service_managers_[p_fiber_demux];
-      p_service_manager->stop_all();
-      p_service_managers_.erase(p_fiber_demux);
-    }
-
-    auto p_service_factory =
-        ServiceFactoryManager<Demux>::GetServiceFactory(p_fiber_demux.get());
-    if (p_service_factory) {
-      p_service_factory->Destroy();
-    }
+    RemoveDemux(p_fiber_demux);
   }
-
-  p_fiber_demuxes_.clear();
 }
 
 }  // ssf

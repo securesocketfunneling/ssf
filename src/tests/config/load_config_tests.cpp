@@ -75,7 +75,7 @@ TEST_F(LoadConfigTest, DefaultValueTest) {
   ASSERT_TRUE(config_.services().datagram_forwarder().enabled());
   ASSERT_TRUE(config_.services().datagram_listener().enabled());
   ASSERT_FALSE(config_.services().datagram_listener().gateway_ports());
-  ASSERT_FALSE(config_.services().file_copy().enabled());
+  ASSERT_FALSE(config_.services().copy().enabled());
   ASSERT_TRUE(config_.services().socks().enabled());
   ASSERT_TRUE(config_.services().stream_forwarder().enabled());
   ASSERT_TRUE(config_.services().stream_listener().enabled());
@@ -154,7 +154,7 @@ TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
   ASSERT_TRUE(config_.services().datagram_forwarder().enabled());
   ASSERT_TRUE(config_.services().datagram_listener().enabled());
   ASSERT_FALSE(config_.services().datagram_listener().gateway_ports());
-  ASSERT_FALSE(config_.services().file_copy().enabled());
+  ASSERT_FALSE(config_.services().copy().enabled());
   ASSERT_TRUE(config_.services().socks().enabled());
   ASSERT_TRUE(config_.services().stream_forwarder().enabled());
   ASSERT_TRUE(config_.services().stream_listener().enabled());
@@ -195,7 +195,7 @@ TEST_F(LoadConfigTest, LoadServicesFileTest) {
   ASSERT_FALSE(config_.services().datagram_forwarder().enabled());
   ASSERT_FALSE(config_.services().datagram_listener().enabled());
   ASSERT_TRUE(config_.services().datagram_listener().gateway_ports());
-  ASSERT_TRUE(config_.services().file_copy().enabled());
+  ASSERT_TRUE(config_.services().copy().enabled());
   ASSERT_FALSE(config_.services().socks().enabled());
   ASSERT_FALSE(config_.services().stream_forwarder().enabled());
   ASSERT_FALSE(config_.services().stream_listener().enabled());

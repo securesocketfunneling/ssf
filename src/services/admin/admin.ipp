@@ -63,7 +63,8 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "service[admin]: stopping";
+  SSF_LOG(kLogDebug) << "microservice[admin]: stop "
+                     << (is_server_ ? "server" : "client");
   ec.assign(::error::success, ::error::get_ssf_category());
 
   HandleStop();
@@ -90,9 +91,9 @@ void Admin<Demux>::OnFiberAccept(const boost::system::error_code& ec) {
   }
 
   if (ec) {
-    SSF_LOG(kLogError) << "service[admin]: error accepting new connection: "
-                       << ec << " " << ec.value();
-    ShutdownServices();
+    SSF_LOG(kLogError)
+        << "microservice[admin]: error accepting new connection: " << ec << " "
+        << ec.value();
     return;
   }
 
@@ -101,6 +102,13 @@ void Admin<Demux>::OnFiberAccept(const boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::AsyncConnect() {
+  {
+    std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+    if (stopped_) {
+      return;
+    }
+  }
+
   auto self = this->shared_from_this();
   FiberEndpoint ep(this->get_demux(), kServicePort);
   auto on_fiber_connect = [this, self](const boost::system::error_code& ec) {
@@ -112,10 +120,12 @@ void Admin<Demux>::AsyncConnect() {
 template <typename Demux>
 void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
   if (!fiber_.is_open() || ec) {
-    SSF_LOG(kLogError) << "service[admin]: no new connection: " << ec.message()
-                       << " " << ec.value();
+    SSF_LOG(kLogDebug) << "microservice[admin]: admin connection failed: "
+                       << ec.message() << " " << ec.value();
+
     // Retry to connect if failed to open the fiber
     if (retries_ < kServiceStatusRetryCount) {
+      SSF_LOG(kLogDebug) << "microservice[admin]: retry connection";
       this->AsyncConnect();
       ++retries_;
     }
@@ -128,6 +138,11 @@ void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::Initialize() {
+  std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+  if (stopped_) {
+    return;
+  }
+
   // Initialize the command reception processes
   this->ListenForCommand();
 
@@ -142,7 +157,7 @@ template <typename Demux>
 void Admin<Demux>::InitializeRemoteServices(
     const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogDebug) << "service[admin]: ec intializing " << ec.value();
+    SSF_LOG(kLogDebug) << "microservice[admin]: ec intializing " << ec.value();
     return;
   }
 
@@ -171,7 +186,7 @@ void Admin<Demux>::InitializeRemoteServices(
 
       // If something went wrong remote_all_started_ > 0
       if (remote_all_started_) {
-        SSF_LOG(kLogError) << "service[admin]: could not start remote "
+        SSF_LOG(kLogError) << "microservice[admin]: could not start remote "
                               "microservice for service["
                            << user_services_[i_]->GetName() << "]";
 
@@ -200,7 +215,7 @@ void Admin<Demux>::InitializeRemoteServices(
 
       // If something went wrong local_all_started_ == false
       if (!local_all_started_) {
-        SSF_LOG(kLogError) << "service[admin]: could not start local "
+        SSF_LOG(kLogError) << "microservice[admin]: could not start local "
                               "microservice for service["
                            << user_services_[i_]->GetName() << "]";
 
@@ -236,7 +251,7 @@ void Admin<Demux>::InitializeRemoteServices(
 template <typename Demux>
 void Admin<Demux>::ListenForCommand() {
   status_ = 101;
-  auto self = SelfFromThis();
+  auto self = this->shared_from_this();
   auto do_admin = [this, self]() { DoAdmin(boost::system::error_code(), 0); };
   this->get_io_service().post(do_admin);
 }
@@ -244,9 +259,6 @@ void Admin<Demux>::ListenForCommand() {
 template <typename Demux>
 void Admin<Demux>::DoAdmin(const boost::system::error_code& ec, size_t length) {
   if (ec) {
-    auto self = this->shared_from_this();
-    auto shutdown_services = [this, self]() { ShutdownServices(); };
-    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -376,9 +388,6 @@ void Admin<Demux>::StopRemoteService(
 template <typename Demux>
 void Admin<Demux>::OnSendKeepAlive(const boost::system::error_code& ec) {
   if (ec) {
-    auto self = this->shared_from_this();
-    auto shutdown_services = [this, self]() { ShutdownServices(); };
-    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -389,6 +398,11 @@ void Admin<Demux>::OnSendKeepAlive(const boost::system::error_code& ec) {
   auto self = this->shared_from_this();
   auto on_command_sent = [this, self, p_command](
       const boost::system::error_code& ec, size_t length) {
+    std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+    if (stopped_) {
+      return;
+    }
+
     this->PostKeepAlive(ec, length);
   };
 
@@ -400,8 +414,6 @@ void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
                                  size_t length) {
   auto self = this->shared_from_this();
   if (ec) {
-    auto shutdown_services = [this, self]() { ShutdownServices(); };
-    this->get_io_service().post(shutdown_services);
     return;
   }
 
@@ -414,26 +426,19 @@ void Admin<Demux>::PostKeepAlive(const boost::system::error_code& ec,
 }
 
 template <typename Demux>
-void Admin<Demux>::ShutdownServices() {
+void Admin<Demux>::HandleStop() {
   std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
   if (stopped_) {
     return;
   }
 
-  Demux& d = this->get_demux();
-  auto p_service_factory = ServiceFactoryManager<Demux>::GetServiceFactory(&d);
-  if (p_service_factory) {
-    p_service_factory->Destroy();
-  }
-  callback_ = [](BaseUserServicePtr, const boost::system::error_code&) {};
   stopped_ = true;
-}
 
-template <typename Demux>
-void Admin<Demux>::HandleStop() {
   reserved_keep_alive_timer_.cancel();
   fiber_acceptor_.close();
   fiber_.close();
+
+  callback_ = [](BaseUserServicePtr, const boost::system::error_code&) {};
 }
 
 }  // admin
