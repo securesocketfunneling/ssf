@@ -91,7 +91,7 @@ class Services {
   void UpdateStreamForwarder(const PTree& pt);
   void UpdateStreamListener(const PTree& pt);
 
-  static bool ServiceEnabled(const PTree& service, bool default_value);
+  static bool IsServiceEnabled(const PTree& service, bool default_value);
 
  private:
   DatagramForwarderConfig datagram_forwarder_;

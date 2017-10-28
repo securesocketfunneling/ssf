@@ -1,5 +1,7 @@
 #include <boost/property_tree/ptree.hpp>
 
+#include <boost/algorithm/string.hpp>
+
 #include <ssf/log/log.h>
 #include <ssf/utils/enum.h>
 
@@ -21,29 +23,34 @@ void HttpProxy::Update(const PTree& proxy_prop) {
   auto host_optional = proxy_prop.get_child_optional("host");
   if (host_optional) {
     host_ = host_optional.get().data();
+    boost::trim(host_);
   }
 
   auto port_optional = proxy_prop.get_child_optional("port");
   if (port_optional) {
     port_ = port_optional.get().data();
+    boost::trim(port_);
   }
 
   auto cred_username_optional =
       proxy_prop.get_child_optional("credentials.username");
   if (cred_username_optional) {
     username_ = cred_username_optional.get().data();
+    boost::trim(username_);
   }
 
   auto cred_domain_optional =
       proxy_prop.get_child_optional("credentials.domain");
   if (cred_domain_optional) {
     domain_ = cred_domain_optional.get().data();
+    boost::trim(domain_);
   }
 
   auto cred_password_optional =
       proxy_prop.get_child_optional("credentials.password");
   if (cred_password_optional) {
     password_ = cred_password_optional.get().data();
+    boost::trim(password_);
   }
 
   auto cred_reuse_ntlm_optional =
@@ -94,11 +101,13 @@ void SocksProxy::Update(const PTree& proxy_prop) {
   auto host_optional = proxy_prop.get_child_optional("host");
   if (host_optional) {
     host_ = host_optional.get().data();
+    boost::trim(host_);
   }
 
   auto port_optional = proxy_prop.get_child_optional("port");
   if (port_optional) {
     port_ = port_optional.get().data();
+    boost::trim(port_);
   }
 }
 

@@ -63,6 +63,8 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     return;
   }
 
+  ssf::log::Configure(cmd.log_level());
+
   // read configuration file
   ssf::config::Config ssf_config;
   ssf_config.Init();
@@ -88,8 +90,6 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     ssf_config.LogStatus();
   }
 
-  ssf::log::Configure(cmd.log_level());
-
   if (!cmd.host_set()) {
     SSF_LOG(kLogError) << "[ssf] no server host provided";
     exit_ec.assign(::error::destination_address_required,
@@ -110,7 +110,25 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
   ssf_config.services().SetGatewayPorts(cmd.gateway_ports());
 
   // initialize and run client
-  auto on_status = [&client, &exit_ec](ssf::Status status) {};
+  auto on_status = [&client, &exit_ec](ssf::Status status) {
+    switch (status) {
+      case ssf::Status::kEndpointNotResolvable:
+        exit_ec.assign(::error::address_not_available,
+                       ::error::get_ssf_category());
+        break;
+      case ssf::Status::kServerUnreachable:
+        exit_ec.assign(::error::host_unreachable, ::error::get_ssf_category());
+        break;
+      case ssf::Status::kConnected:
+        exit_ec.assign(::error::success, ::error::get_ssf_category());
+        break;
+      case ssf::Status::kDisconnected:
+        if (exit_ec.value() != ::error::interrupted) {
+          exit_ec.assign(::error::broken_pipe, ::error::get_ssf_category());
+        }
+        break;
+    }
+  };
   auto on_user_service_status = [&client, &cmd, &exit_ec](
       ssf::Client::UserServicePtr service,
       const boost::system::error_code& ec) {};
@@ -131,14 +149,16 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
 
   // stop client on SIGINT or SIGTERM
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
-  signal.async_wait([&client](const boost::system::error_code& ec, int signum) {
-    if (ec) {
-      return;
-    }
+  signal.async_wait(
+      [&client, &exit_ec](const boost::system::error_code& ec, int signum) {
+        if (ec) {
+          return;
+        }
 
-    boost::system::error_code stop_ec;
-    client.Stop(stop_ec);
-  });
+        exit_ec.assign(::error::interrupted, ::error::get_ssf_category());
+        boost::system::error_code stop_ec;
+        client.Stop(stop_ec);
+      });
 
   client.Run(exit_ec);
   if (exit_ec) {
