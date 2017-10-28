@@ -32,6 +32,12 @@ void HttpProxy::Update(const PTree& proxy_prop) {
     boost::trim(port_);
   }
 
+  auto user_agent_optional = proxy_prop.get_child_optional("user_agent");
+  if (user_agent_optional) {
+    user_agent_ = user_agent_optional.get().data();
+    boost::trim(user_agent_);
+  }
+
   auto cred_username_optional =
       proxy_prop.get_child_optional("credentials.username");
   if (cred_username_optional) {

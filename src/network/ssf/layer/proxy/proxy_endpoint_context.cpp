@@ -52,6 +52,8 @@ void ProxyEndpointContext::Init(const LayerParameters& proxy_parameters) {
 
     http_proxy_.host = http_host;
     http_proxy_.port = http_port;
+    http_proxy_.user_agent =
+        ssf::helpers::GetField<std::string>("http_user_agent", proxy_parameters);
     http_proxy_.username =
         ssf::helpers::GetField<std::string>("http_username", proxy_parameters);
     http_proxy_.domain =

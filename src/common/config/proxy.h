@@ -34,6 +34,8 @@ class HttpProxy {
 
   inline std::string password() const { return password_; }
 
+  inline std::string user_agent() const { return user_agent_; }
+
   inline bool reuse_ntlm() const { return reuse_ntlm_; }
 
   inline bool reuse_kerb() const { return reuse_kerb_; }
@@ -43,6 +45,8 @@ class HttpProxy {
   std::string host_;
   // Proxy port
   std::string port_;
+  // Custom user agent
+  std::string user_agent_;
   // Credentials username
   std::string username_;
   // Credentials user's domain

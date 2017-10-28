@@ -1,10 +1,10 @@
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <string>
 
+#include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 #include <boost/system/error_code.hpp>
-#include <gtest/gtest.h>
 
 #include "common/config/config.h"
 
@@ -62,6 +62,7 @@ TEST_F(LoadConfigTest, DefaultValueTest) {
 
   ASSERT_EQ(config_.http_proxy().host(), "");
   ASSERT_EQ(config_.http_proxy().port(), "");
+  ASSERT_EQ(config_.http_proxy().user_agent(), "");
   ASSERT_EQ(config_.http_proxy().username(), "");
   ASSERT_EQ(config_.http_proxy().domain(), "");
   ASSERT_EQ(config_.http_proxy().password(), "");
@@ -145,6 +146,7 @@ TEST_F(LoadConfigTest, LoadTlsCompleteFileTest) {
 
   ASSERT_EQ(config_.http_proxy().host(), "");
   ASSERT_EQ(config_.http_proxy().port(), "");
+  ASSERT_EQ(config_.http_proxy().user_agent(), "");
   ASSERT_EQ(config_.http_proxy().username(), "");
   ASSERT_EQ(config_.http_proxy().domain(), "");
   ASSERT_EQ(config_.http_proxy().password(), "");
@@ -175,6 +177,7 @@ TEST_F(LoadConfigTest, LoadProxyFileTest) {
 
   ASSERT_EQ(config_.http_proxy().host(), "127.0.0.1");
   ASSERT_EQ(config_.http_proxy().port(), "8080");
+  ASSERT_EQ(config_.http_proxy().user_agent(), "Mozilla/5.0");
   ASSERT_EQ(config_.http_proxy().username(), "test_user");
   ASSERT_EQ(config_.http_proxy().domain(), "test_domain");
   ASSERT_EQ(config_.http_proxy().password(), "test_password");
@@ -264,6 +267,7 @@ TEST_F(LoadConfigTest, LoadCompleteFileTest) {
 
   ASSERT_EQ(config_.http_proxy().host(), "127.0.0.1");
   ASSERT_EQ(config_.http_proxy().port(), "8080");
+  ASSERT_EQ(config_.http_proxy().user_agent(), "Mozilla/5.0");
   ASSERT_EQ(config_.http_proxy().username(), "test_user");
   ASSERT_EQ(config_.http_proxy().password(), "test_password");
   ASSERT_EQ(config_.http_proxy().domain(), "test_domain");

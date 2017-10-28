@@ -27,7 +27,8 @@ struct Proxy {
 
 struct HttpProxy : public Proxy {
   HttpProxy();
-
+  
+  std::string user_agent;
   std::string username;
   std::string password;
   std::string domain;

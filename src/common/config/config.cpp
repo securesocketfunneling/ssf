@@ -206,6 +206,7 @@ const char* Config::default_config_ = R"RAWSTRING(
     "http_proxy": {
       "host": "",
       "port": "",
+      "user_agent": "",
       "credentials": {
         "username": "",
         "password": "",
