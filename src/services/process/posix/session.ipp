@@ -159,7 +159,10 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
   sd_.close(ec);
 
   if (child_pid_ > 0) {
+    int status;
+
     kill(child_pid_, SIGTERM);
+    waitpid(child_pid_, &status, 0);
     child_pid_ = kInvalidProcessId;
   }
   
