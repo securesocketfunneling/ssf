@@ -34,6 +34,12 @@ void CopyContext::Init(const std::string& i_input_filepath,
   output_filename = i_output_filename;
 }
 
+ssf::Path CopyContext::GetOutputFilepath() {
+  ssf::Path result(output_dir);
+  result /= output_filename;
+  return result;
+}
+
 void CopyContext::AsyncFillOutboundPacket(Packet* packet,
                                           OnOutboundPacketFilled on_filled,
                                           boost::system::error_code& ec) {

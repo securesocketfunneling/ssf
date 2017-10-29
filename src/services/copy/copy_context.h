@@ -45,11 +45,9 @@ class CopyContext {
     on_state_changed_ = on_state_changed;
   }
 
-  ssf::Path GetOutputFilepath() {
-    ssf::Path result(output_dir);
-    result /= output_filename;
-    return result;
-  }
+  ssf::Path GetOutputFilepath();
+
+
 
   void AsyncFillOutboundPacket(Packet* packet, OnOutboundPacketFilled on_filled,
                                boost::system::error_code& ec);

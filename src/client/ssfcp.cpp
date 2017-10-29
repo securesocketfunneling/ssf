@@ -230,14 +230,14 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
     }
 
     uint64_t percent = 0;
-    if (context->output.is_open() && context->output.good()) {
+    if (context->output.good() && context->output.is_open()) {
       uint64_t offset = context->output.tellp();
       percent = (offset == -1) ? 100 : 100 * offset / context->filesize;
 
       SSF_LOG(kLogDebug) << "[ssfcp] Receiving: "
                          << context->GetOutputFilepath().GetString() << " "
                          << percent << "% / " << context->filesize << "b";
-    } else if (context->input.is_open()) {
+    } else if (context->input.good() && context->input.is_open()) {
       uint64_t offset = context->input.tellg();
       percent = (offset == -1) ? 100 : (100 * offset / context->filesize);
 
