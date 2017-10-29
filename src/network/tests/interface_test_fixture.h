@@ -125,8 +125,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
     auto simple_tls1_local_endpoint_it =
         simple_tls_resolver.resolve(simple_tls1_parameters, tls1_ec);
     if (tls1_ec) {
-      SSF_LOG(kLogError) << "Fail resolving interface tls1 endpoint : "
-                         << tls1_ec.message();
+      SSF_LOG("test", error, "fail resolving interface tls1 endpoint: {}",
+              tls1_ec.message());
       promises_["simple_tls_lo1"].set_value(false);
     } else {
       SimpleTLSLinkProtocol::endpoint simple_tls1_local_endpoint(
@@ -151,8 +151,8 @@ class InterfaceTestFixture : public CircuitTestFixture {
     auto simple_tls2_remote_endpoint_it =
         simple_tls_resolver.resolve(simple_tls2_parameters, tls2_ec);
     if (tls2_ec) {
-      SSF_LOG(kLogError) << "Fail resolving interface tls2 endpoint : "
-                         << tls2_ec.message();
+      SSF_LOG("test", error, "fail resolving interface tls2 endpoint: {}",
+              tls2_ec.message());
       promises_["simple_tls_lo2"].set_value(false);
     } else {
       SimpleTLSLinkProtocol::endpoint simple_tls2_remote_endpoint(
@@ -235,8 +235,9 @@ class InterfaceTestFixture : public CircuitTestFixture {
         circuit_tls_resolver.resolve(circuit_tls1_parameters, circuit_tls1_ec);
 
     if (circuit_tls1_ec) {
-      SSF_LOG(kLogError) << "Fail resolving interface circuit tls1 endpoint : "
-                         << circuit_tls1_ec.message();
+      SSF_LOG("test", error,
+              "fail resolving interface circuit tls1 endpoint: {}",
+              circuit_tls1_ec.message());
       promises_["circuit_tls_lo1"].set_value(false);
     } else {
       CircuitTLSLinkProtocol::endpoint circuit_tls1_local_endpoint(
@@ -268,8 +269,9 @@ class InterfaceTestFixture : public CircuitTestFixture {
         circuit_tls_resolver.resolve(circuit_tls2_parameters, circuit_tls2_ec);
 
     if (circuit_tls2_ec) {
-      SSF_LOG(kLogError) << "Fail resolving interface circuit tls2 endpoint : "
-                         << circuit_tls2_ec.message();
+      SSF_LOG("test", error,
+              "fail resolving interface circuit tls2 endpoint: {}",
+              circuit_tls2_ec.message());
       promises_["circuit_tls_lo2"].set_value(false);
     } else {
       CircuitTLSLinkProtocol::endpoint circuit_tls2_local_endpoint(
@@ -315,7 +317,7 @@ class InterfaceTestFixture : public CircuitTestFixture {
   void InterfaceOnline(const std::string& interface_id,
                        const boost::system::error_code& ec) {
     if (!ec) {
-      SSF_LOG(kLogInfo) << "Interface up : " << interface_id;
+      SSF_LOG("test", info, "interface {} up", interface_id);
     }
     promises_[interface_id].set_value(!ec);
   }

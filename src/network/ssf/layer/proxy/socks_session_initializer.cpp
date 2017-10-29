@@ -19,27 +19,27 @@ void SocksSessionInitializer::Reset(const std::string& target_host,
   try {
     auto port_conversion = std::stoul(target_port);
     if (port_conversion > 65536) {
-      SSF_LOG(kLogError) << "network[socks proxy]: target port " << target_port
-                         << " out of range";
+      SSF_LOG("network_proxy", error, "SOCKS target port {} out of range",
+              target_port);
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
       return;
     }
     target_port_ = static_cast<uint16_t>(port_conversion);
   } catch (const std::exception&) {
-    SSF_LOG(kLogError) << "network[socks proxy]: cannot process target port "
-                       << target_port;
+    SSF_LOG("network_proxy", error, "cannot process target port {}",
+            target_port);
     ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
     return;
   }
 
   socks4_strategy_.Init(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "network[socks proxy]: cannot init socks v4 stategy";
+    SSF_LOG("network_proxy", error, "cannot init SOCKSv4 stategy");
     return;
   }
   socks5_strategy_.Init(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "network[socks proxy]: cannot init socks v5 stategy";
+    SSF_LOG("network_proxy", error, "cannot init SOCKSv5 stategy");
     return;
   }
 }
@@ -65,8 +65,8 @@ void SocksSessionInitializer::PopulateRequest(
     socks5_strategy_.PopulateRequest(target_host_, target_port_, p_request,
                                      p_expected_response_size, ec);
   } else {
-    SSF_LOG(kLogError) << "network[socks proxy]: invalid socks version "
-                       << proxy_ep_ctx_.socks_proxy().version;
+    SSF_LOG("network_proxy", error, "invalid SOCKS version {}",
+            proxy_ep_ctx_.socks_proxy().version);
     ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
     return;
   }
@@ -93,8 +93,8 @@ void SocksSessionInitializer::ProcessResponse(const Buffer& response,
         return;
     }
   } else {
-    SSF_LOG(kLogError) << "network[socks proxy]: invalid socks version "
-                       << proxy_ep_ctx_.socks_proxy().version;
+    SSF_LOG("network_proxy", error, "invalid SOCKS version {}",
+            proxy_ep_ctx_.socks_proxy().version);
     ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
     return;
   }

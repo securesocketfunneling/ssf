@@ -28,8 +28,8 @@ class basic_RoutingTable {
       boost::system::error_code& ec) {
     std::unique_lock<std::recursive_mutex> lock(mutex_);
 
-    SSF_LOG(kLogTrace) << " * Routing table : add route from " << prefix
-                       << " to " << network_endpoint_context;
+    SSF_LOG("network_router", trace, "add route from {} to {}", prefix,
+            network_endpoint_context);
 
     auto inserted = table_.insert(
         std::make_pair(std::move(prefix), std::move(network_endpoint_context)));

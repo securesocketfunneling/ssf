@@ -63,8 +63,8 @@ void Admin<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Admin<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "microservice[admin]: stop "
-                     << (is_server_ ? "server" : "client");
+  SSF_LOG("microservice", debug, "[admin] stop {}",
+          (is_server_ ? "server" : "client"));
   ec.assign(::error::success, ::error::get_ssf_category());
 
   HandleStop();
@@ -91,9 +91,9 @@ void Admin<Demux>::OnFiberAccept(const boost::system::error_code& ec) {
   }
 
   if (ec) {
-    SSF_LOG(kLogError)
-        << "microservice[admin]: error accepting new connection: " << ec << " "
-        << ec.value();
+    SSF_LOG("microservice", error,
+            "[admin] error accepting new connection: {} ({})", ec.message(),
+            ec.value());
     return;
   }
 
@@ -120,12 +120,12 @@ void Admin<Demux>::AsyncConnect() {
 template <typename Demux>
 void Admin<Demux>::OnFiberConnect(const boost::system::error_code& ec) {
   if (!fiber_.is_open() || ec) {
-    SSF_LOG(kLogDebug) << "microservice[admin]: admin connection failed: "
-                       << ec.message() << " " << ec.value();
+    SSF_LOG("microservice", debug, "[admin] connection failed: {} ({})",
+            ec.message(), ec.value());
 
     // Retry to connect if failed to open the fiber
     if (retries_ < kServiceStatusRetryCount) {
-      SSF_LOG(kLogDebug) << "microservice[admin]: retry connection";
+      SSF_LOG("microservice", debug, "[admin] retry connection");
       this->AsyncConnect();
       ++retries_;
     }
@@ -157,7 +157,8 @@ template <typename Demux>
 void Admin<Demux>::InitializeRemoteServices(
     const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogDebug) << "microservice[admin]: ec intializing " << ec.value();
+    SSF_LOG("microservice", debug,
+            "[admin] intializing remote services failed {}", ec.value());
     return;
   }
 
@@ -186,9 +187,9 @@ void Admin<Demux>::InitializeRemoteServices(
 
       // If something went wrong remote_all_started_ > 0
       if (remote_all_started_) {
-        SSF_LOG(kLogError) << "microservice[admin]: could not start remote "
-                              "microservice for service["
-                           << user_services_[i_]->GetName() << "]";
+        SSF_LOG("microservice", error,
+                "[admin] could not start remote microservice for service[{}]",
+                user_services_[i_]->GetName());
 
         Notify(user_services_[i_],
                boost::system::error_code(::error::operation_canceled,
@@ -215,9 +216,9 @@ void Admin<Demux>::InitializeRemoteServices(
 
       // If something went wrong local_all_started_ == false
       if (!local_all_started_) {
-        SSF_LOG(kLogError) << "microservice[admin]: could not start local "
-                              "microservice for service["
-                           << user_services_[i_]->GetName() << "]";
+        SSF_LOG("microservice", error,
+                "[admin] could not start local microservice for service[{}]",
+                user_services_[i_]->GetName());
 
         Notify(user_services_[i_],
                boost::system::error_code(::error::operation_canceled,

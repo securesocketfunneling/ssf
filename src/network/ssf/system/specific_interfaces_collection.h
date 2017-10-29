@@ -124,7 +124,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
       } else {
         if (!interface_it->second.is_open()) {
           auto& interface_name = *interface_up_it;
-          SSF_LOG(kLogTrace) << " * Interface " << interface_name << " down";
+          SSF_LOG("network_interface", trace, "{} down", interface_name);
 
           const auto& config = interfaces_config_[interface_name];
           InitializeInterface(*interface_up_it, config.ttl);
@@ -279,7 +279,7 @@ class SpecificInterfacesCollection : public BasicInterfacesCollection {
       return;
     }
 
-    SSF_LOG(kLogTrace) << " * Interface " << interface_name << " up";
+    SSF_LOG("network_interface", trace, "{} up", interface_name);
     interfaces_up_.insert(interface_name);
 
     interface_it->second.get_io_service().post(

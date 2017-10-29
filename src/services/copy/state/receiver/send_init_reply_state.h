@@ -31,7 +31,7 @@ class SendInitReplyState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][send_init_reply] enter";
+    SSF_LOG("microservice", trace, "[copy][send_init_reply] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -44,9 +44,10 @@ class SendInitReplyState : ICopyState {
     InitReply::Hash::Digest file_digest = {{0}};
     if (context->resume) {
       output_fh.seekp(0, std::ofstream::end);
-      SSF_LOG(kLogDebug) << "microservice[copy][send_init_reply] resume file "
-                            "transfer at byte index "
-                         << output_fh.tellp();
+      SSF_LOG("microservice", debug,
+              "[copy][send_init_reply] resume file "
+              "transfer at byte index {}",
+              output_fh.tellp());
 
       boost::system::error_code hash_ec;
       file_digest = ssf::crypto::HashFile<InitReply::Hash>(
@@ -54,9 +55,10 @@ class SendInitReplyState : ICopyState {
       if (!hash_ec) {
         context->start_offset = output_fh.tellp();
       } else {
-        SSF_LOG(kLogDebug) << "microservice[copy][send_init_reply] could not "
-                              "generate digest for "
-                              "output_file. Do not resume file copy";
+        SSF_LOG("microservice", debug,
+                "[copy][send_init_reply] could not "
+                "generate digest for "
+                "output_file. Do not resume file copy");
         context->start_offset = 0;
       }
     }
@@ -67,8 +69,9 @@ class SendInitReplyState : ICopyState {
     boost::system::error_code convert_ec;
     PayloadToPacket(rep, packet, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][send_init_reply] cannot "
-                            "convert init reply to packet";
+      SSF_LOG("microservice", debug,
+              "[copy][send_init_reply] cannot "
+              "convert init reply to packet");
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kInitReplyPacketNotGenerated));
       return false;

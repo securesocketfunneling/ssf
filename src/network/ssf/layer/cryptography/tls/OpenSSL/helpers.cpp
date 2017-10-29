@@ -64,7 +64,7 @@ ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
   ctx.set_verify_callback(&VerifyCertificate, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "network[crypto]: could not set verify callback";
+    SSF_LOG("network_crypto", error, "could not set verify callback");
     return ExtendedTLSContext(nullptr);
   }
 
@@ -85,29 +85,28 @@ ExtendedTLSContext make_tls_context(boost::asio::io_service& io_service,
   bool success = true;
 
   if (!SetCtxCipher(ctx, parameters, ec)) {
-    SSF_LOG(kLogError) << "network[crypto]: set context cipher suite failed";
+    SSF_LOG("network_crypto", error, "set context cipher suite failed");
     success = false;
   }
   if (!SetCtxCa(ctx, parameters, ec)) {
-    SSF_LOG(kLogError) << "network[crypto]: set context CA failed: "
-                       << ec.message();
+    SSF_LOG("network_crypto", error, "set context CA failed ({})", ec.message());
     success = false;
   }
   if (!SetCtxCrt(ctx, parameters, ec)) {
-    SSF_LOG(kLogError) << "network[crypto]: set context crt failed: "
-                       << ec.message();
+    SSF_LOG("network_crypto", error, "set context crt failed ({})",
+            ec.message());
     success = false;
   }
   if (!SetCtxKey(ctx, parameters, ec)) {
-    SSF_LOG(kLogError) << "network[crypto]: set context key failed: "
-                       << ec.message();
+    SSF_LOG("network_crypto", error, "set context key failed ({})",
+            ec.message());
     success = false;
   }
 
   success |= SetCtxDhparam(ctx, parameters, ec);
 
   if (!success) {
-    SSF_LOG(kLogError) << "network[crypto]: context init failed";
+    SSF_LOG("network_crypto", error, "context init failed");
     return ExtendedTLSContext(nullptr);
   }
 
@@ -232,8 +231,9 @@ bool VerifyCertificate(bool preverified,
   }
 
   X509_NAME_oneline(X509_get_subject_name(cert), subject_buf, 256);
-  SSF_LOG(kLogDebug) << "network[crypto]: verify cert (subject=" << subject_buf
-                    << ", issuer=" << issuer_buf << ")";
+  SSF_LOG("network_crypto", debug,
+          "verify cert (subject=\"{}\", issuer=\"{}\")", subject_buf,
+          issuer_buf);
 
   // More checking ?
   return preverified;

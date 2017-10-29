@@ -45,7 +45,7 @@ class CopySession : public ssf::BaseSession {
   }
 
   ~CopySession() {
-    SSF_LOG(kLogDebug) << "microservice[copy][session] destroy";
+    SSF_LOG("microservice", debug, "[copy][session] destroy");
   }
 
   void start(boost::system::error_code&) {
@@ -54,7 +54,7 @@ class CopySession : public ssf::BaseSession {
   }
 
   void stop(boost::system::error_code& ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][session] stop";
+    SSF_LOG("microservice", debug, "[copy][session] stop");
     socket_.close(ec);
     context_->Deinit();
     on_file_status_ = [](CopyContext*, const boost::system::error_code&) {};
@@ -80,8 +80,8 @@ class CopySession : public ssf::BaseSession {
     context_->AsyncFillOutboundPacket(&outbound_packet_, on_outbound_packet,
                                       fill_ec);
     if (fill_ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][session] cannot fill outbound packet";
+      SSF_LOG("microservice", debug,
+              "[copy][session] cannot fill outbound packet");
       StopSession();
       return;
     }
@@ -89,15 +89,15 @@ class CopySession : public ssf::BaseSession {
 
   void OnOutboundPacket(const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][session] fill outbound packet failed";
+      SSF_LOG("microservice", debug,
+              "[copy][session] fill outbound packet failed");
       StopSession();
       return;
     }
 
     if (outbound_packet_.type() == PacketType::kUnknown) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][session] cannot send unknown packet type";
+      SSF_LOG("microservice", debug,
+              "[copy][session] cannot send unknown packet type");
       StopSession();
       return;
     }
@@ -113,8 +113,8 @@ class CopySession : public ssf::BaseSession {
 
   void OnPacketSent(const boost::system::error_code& ec, std::size_t length) {
     if (ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][session] could not send outbound packet";
+      SSF_LOG("microservice", debug,
+              "[copy][session] could not send outbound packet");
       StopSession();
       return;
     }
@@ -142,8 +142,8 @@ class CopySession : public ssf::BaseSession {
 
   void OnPacketReceived(const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][session] could not read packet payload";
+      SSF_LOG("microservice", debug,
+              "[copy][session] could not read packet payload");
       StopSession();
       return;
     }
@@ -151,8 +151,8 @@ class CopySession : public ssf::BaseSession {
     boost::system::error_code process_ec;
     context_->ProcessInboundPacket(inbound_packet_, process_ec);
     if (process_ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][session] could not process inbound packet";
+      SSF_LOG("microservice", debug,
+              "[copy][session] could not process inbound packet");
       StopSession();
       return;
     }

@@ -230,9 +230,8 @@ class basic_fiber_impl
     };
 
     close_handler = [this]() {
-      SSF_LOG(kLogTrace) << "fiber impl: close handler "
-                         << this->id.remote_port() << ":"
-                         << this->id.local_port();
+      SSF_LOG("fiber_impl", trace, "close handler {}:{}",
+              this->id.remote_port(), this->id.local_port());
       this->set_closed();
 
       boost::system::error_code ec(::error::connection_reset,
@@ -344,8 +343,8 @@ class basic_fiber_impl
 
         p_fib_demux->async_send_ack(op->get_p_fib(), op);
 
-        SSF_LOG(kLogDebug) << "fiber impl: new connection from remote port: "
-                           << remote_port;
+        SSF_LOG("fiber_impl", debug,
+                "fiber impl: new connection from remote port: {}", remote_port);
 
         p_fib_demux->get_io_service().dispatch(std::bind(
             &basic_fiber_impl::a_queues_handler, this->shared_from_this(), ec));
@@ -378,9 +377,8 @@ class basic_fiber_impl
       }
     }
 
-    SSF_LOG(kLogTrace) << "fiber impl: queue empty : " << read_op_queue.empty()
-                       << " | queue size " << data_queue.size() << " | ec "
-                       << ec.value();
+    SSF_LOG("fiber_impl", trace, "queue empty: {} | queue size {} | ec {}",
+            read_op_queue.empty(), data_queue.size(), ec.value());
     if (ec) {
       if (!read_op_queue.empty()) {
         auto op = read_op_queue.front();
@@ -415,11 +413,11 @@ class basic_fiber_impl
     std::unique_lock<std::recursive_mutex> lock1(read_op_queue_mutex);
     std::unique_lock<std::recursive_mutex> lock2(data_queue_mutex);
     std::unique_lock<std::recursive_mutex> lock3(port_queue_mutex);
-    SSF_LOG(kLogTrace) << "fiber impl: queue empty: " << read_op_queue.empty()
-                       << " | port queue empty : " << port_queue.empty()
-                       << " | queue size " << data_queue.size()
-                       << " | dgr queue size " << dgr_data_queue_.size()
-                       << " | ec " << ec.value();
+    SSF_LOG("fiber_impl", trace,
+            "queue empty: {} | port queue empty: {} | queue size {} | dgr "
+            "queue size {} | ec {}",
+            read_op_queue.empty(), port_queue.empty(), data_queue.size(),
+            dgr_data_queue_.size(), ec.value());
     if (ec) {
       if (!read_dgr_op_queue.empty()) {
         auto op = read_dgr_op_queue.front();

@@ -45,9 +45,8 @@ bool SSPIAuthImpl::Init() {
       const_cast<char*>(GenerateSecurityPackageName(sec_package_).c_str()),
       &p_win_sec_package);
   if (status != SEC_E_OK) {
-    SSF_LOG(kLogDebug) << "network[proxy]: sspi["
-                       << sec_package_names_[sec_package_]
-                       << "]: could not query security package";
+    SSF_LOG("network_proxy", debug, "sspi[{}] could not query security package",
+            sec_package_names_[sec_package_]);
     state_ = State::kFailure;
     return false;
   }
@@ -83,9 +82,8 @@ bool SSPIAuthImpl::Init() {
   ::FreeContextBuffer(p_win_sec_package);
 
   if (cred_status != SEC_E_OK) {
-    SSF_LOG(kLogDebug) << "network[proxy]: sspi["
-                       << sec_package_names_[sec_package_]
-                       << "]: could not acquire credentials";
+    SSF_LOG("network_proxy", debug, "sspi[{}] could not acquire credentials",
+            sec_package_names_[sec_package_]);
     state_ = State::kFailure;
     Clear();
     return false;
@@ -140,9 +138,9 @@ bool SSPIAuthImpl::ProcessServerToken(const Token& server_token) {
       state_ = State::kContinue;
       break;
     default:
-      SSF_LOG(kLogDebug) << "network[proxy]: sspi["
-                         << sec_package_names_[sec_package_]
-                         << "]: error initializing security context";
+      SSF_LOG("network_proxy", debug,
+              "sspi[{}] error initializing security context",
+              sec_package_names_[sec_package_]);
       state_ = State::kFailure;
   }
 

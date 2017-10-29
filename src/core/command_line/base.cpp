@@ -20,7 +20,7 @@ Base::Base()
     : host_(""),
       port_(0),
       config_file_(""),
-      log_level_(ssf::log::kLogInfo),
+      log_level_(spdlog::level::info),
       port_set_(false) {}
 
 UserServiceParameters Base::Parse(int argc, char* argv[],
@@ -80,7 +80,8 @@ UserServiceParameters Base::Parse(
 
     return DoParse(user_service_option_factory, vm, ec);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogCritical) << "[cli] parsing failed: " << e.what();
+    (void)(e);
+    SSF_LOG("cli", error, "parsing failed: {}", e.what());
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
@@ -121,14 +122,14 @@ bool Base::DisplayHelp(const VariableMap& vm, const OptionDescription& cli) {
 
 void Base::ParseBasicOptions(const VariableMap& vm,
                              boost::system::error_code& ec) {
-  log_level_ = ssf::log::kLogInfo;
+  log_level_ = spdlog::level::info;
   port_ = 0;
   port_set_ = false;
   config_file_ = "";
 
   for (const auto& option : vm) {
     if (option.first == "quiet") {
-      log_level_ = ssf::log::kLogNone;
+      log_level_ = spdlog::level::off;
     } else if (option.first == "verbosity") {
       set_log_level(option.second.as<std::string>());
     } else if (option.first == "port") {
@@ -137,9 +138,8 @@ void Base::ParseBasicOptions(const VariableMap& vm,
         port_ = static_cast<uint16_t>(port);
         port_set_ = true;
       } else {
-        SSF_LOG(kLogError)
-            << "[cli] parsing failed: port option is not "
-               "between 1 - 65536";
+        SSF_LOG("cli", error,
+                "parsing failed: port option is not between 1 - 65536");
         ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       }
     } else if (option.first == "config") {
@@ -228,25 +228,25 @@ void Base::InitLocalOptions(OptionDescription& local_opts) {
 }
 
 void Base::set_log_level(const std::string& level) {
-  if (log_level_ == ssf::log::kLogNone) {
+  if (log_level_ == spdlog::level::off) {
     // Quiet set
     return;
   }
 
   if (level == "critical") {
-    log_level_ = ssf::log::kLogCritical;
+    log_level_ = spdlog::level::critical;
   } else if (level == "error") {
-    log_level_ = ssf::log::kLogError;
+    log_level_ = spdlog::level::err;
   } else if (level == "warning") {
-    log_level_ = ssf::log::kLogWarning;
+    log_level_ = spdlog::level::warn;
   } else if (level == "info") {
-    log_level_ = ssf::log::kLogInfo;
+    log_level_ = spdlog::level::info;
   } else if (level == "debug") {
-    log_level_ = ssf::log::kLogDebug;
+    log_level_ = spdlog::level::debug;
   } else if (level == "trace") {
-    log_level_ = ssf::log::kLogTrace;
+    log_level_ = spdlog::level::trace;
   } else {
-    log_level_ = ssf::log::kLogInfo;
+    log_level_ = spdlog::level::info;
   }
 }
 

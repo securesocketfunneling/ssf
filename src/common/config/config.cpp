@@ -28,7 +28,7 @@ Config::Config() : tls_(), http_proxy_(), services_() {}
 void Config::Init() {
   boost::system::error_code ec;
 
-  SSF_LOG(kLogDebug) << "[config] default configuration: " << default_config_;
+  SSF_LOG("config", debug, "default configuration: {}", default_config_);
 
   UpdateFromString(default_config_, ec);
 }
@@ -46,7 +46,7 @@ void Config::UpdateFromFile(const std::string& filepath,
     conf_file = filepath;
   }
 
-  SSF_LOG(kLogInfo) << "[config] loading file <" << conf_file << ">";
+  SSF_LOG("config", info, "loading file <{}>", conf_file);
 
   try {
     boost::property_tree::ptree pt;
@@ -54,13 +54,12 @@ void Config::UpdateFromFile(const std::string& filepath,
 
     std::stringstream ss_loaded_config;
     boost::property_tree::write_json(ss_loaded_config, pt);
-    SSF_LOG(kLogDebug) << "[config] file configuration: " << std::endl
-                       << ss_loaded_config.str();
+    SSF_LOG("config", debug, "custom configuration: {}", ss_loaded_config.str());
 
     UpdateFromPTree(pt);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "[config] error reading SSF config file: "
-                       << e.what();
+    (void)(e);
+    SSF_LOG("config", error, "error parsing SSF config file: {}", e.what());
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
 }
@@ -76,7 +75,8 @@ void Config::UpdateFromString(const std::string& config_string,
 
     UpdateFromPTree(pt);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "[config] error reading config string: " << e.what();
+    (void)(e);
+    SSF_LOG("config", error, "error parsing config string: {}", e.what());
   }
 }
 
@@ -114,7 +114,7 @@ void Config::UpdateFromPTree(const PTree& pt) {
 void Config::UpdateTls(const PTree& pt) {
   auto tls_optional = pt.get_child_optional("ssf.tls");
   if (!tls_optional) {
-    SSF_LOG(kLogDebug) << "[config] update TLS: configuration not found";
+    SSF_LOG("config", debug, "update TLS: configuration not found");
     return;
   }
 
@@ -124,7 +124,7 @@ void Config::UpdateTls(const PTree& pt) {
 void Config::UpdateHttpProxy(const PTree& pt) {
   auto proxy_optional = pt.get_child_optional("ssf.http_proxy");
   if (!proxy_optional) {
-    SSF_LOG(kLogDebug) << "[config] update HTTP proxy: configuration not found";
+    SSF_LOG("config", debug, "update HTTP proxy: configuration not found");
     return;
   }
 
@@ -134,8 +134,7 @@ void Config::UpdateHttpProxy(const PTree& pt) {
 void Config::UpdateSocksProxy(const PTree& pt) {
   auto proxy_optional = pt.get_child_optional("ssf.socks_proxy");
   if (!proxy_optional) {
-    SSF_LOG(kLogDebug)
-        << "[config] update SOCKS proxy: configuration not found";
+    SSF_LOG("config", debug, "update SOCKS proxy: configuration not found");
     return;
   }
 
@@ -145,7 +144,7 @@ void Config::UpdateSocksProxy(const PTree& pt) {
 void Config::UpdateServices(const PTree& pt) {
   auto services_optional = pt.get_child_optional("ssf.services");
   if (!services_optional) {
-    SSF_LOG(kLogDebug) << "[config] update services: configuration not found";
+    SSF_LOG("config", debug, "update services: configuration not found");
     return;
   }
 
@@ -155,7 +154,7 @@ void Config::UpdateServices(const PTree& pt) {
 void Config::UpdateCircuit(const PTree& pt) {
   auto circuit_optional = pt.get_child_optional("ssf.circuit");
   if (!circuit_optional) {
-    SSF_LOG(kLogDebug) << "[config] update circuit: configuration not found";
+    SSF_LOG("config", debug, "update circuit: configuration not found");
     return;
   }
 
@@ -165,7 +164,7 @@ void Config::UpdateCircuit(const PTree& pt) {
 void Config::UpdateArguments(const PTree& pt) {
   auto arguments_optional = pt.get_child_optional("ssf.arguments");
   if (!arguments_optional) {
-    SSF_LOG(kLogDebug) << "[config] update arguments: configuration not found";
+    SSF_LOG("config", debug, "update arguments: configuration not found");
     return;
   }
 

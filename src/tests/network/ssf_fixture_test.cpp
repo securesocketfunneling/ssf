@@ -1,11 +1,13 @@
 #include "ssf_fixture_test.h"
 
+#include <ssf/log/log.h>
+
 #include "tests/tls_config_helper.h"
 
 SSFFixtureTest::SSFFixtureTest() : success_(false), stopped_(false) {}
 
 void SSFFixtureTest::SetUp() {
-  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogInfo);
+  SetLogLevel(spdlog::level::info);
   StartAsyncEngine();
 }
 
@@ -43,7 +45,7 @@ void SSFFixtureTest::StartClient(const std::string& server_port,
 
   p_ssf_client_->Run(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "Could not run client";
+    SSF_LOG("test", error, "Could not run client");
     return;
   }
 }

@@ -351,8 +351,8 @@ TEST(QueueTest, send_queued_datagram_socket) {
   auto timeout_handler = [&] (const boost::system::error_code& ec) {
     if (!ec && !timeout) {
       timeout = true;
-      SSF_LOG(kLogInfo) << "Timeout : all packets not received "
-                        << received.load() << " / " << max_sending;
+      SSF_LOG("test", info, "Timeout : all packets not received {}/{}",
+              received.load(), max_sending);
       done.set_value(true);
     }
   };

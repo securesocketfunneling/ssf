@@ -2,8 +2,8 @@
 
 #include <list>
 
-#include "ssf/log/log.h"
 #include "ssf/layer/proxy/unix/gssapi_auth_impl.h"
+#include "ssf/log/log.h"
 
 static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_VAL{
     10, const_cast<char*>("\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x04")};
@@ -19,12 +19,12 @@ gss_OID GSS_C_NT_HOSTBASED_SERVICE = &GSS_C_NT_HOSTBASED_SERVICE_VAL;
 gss_OID GSS_C_NT_HOSTBASED_SERVICE_X = &GSS_C_NT_HOSTBASED_SERVICE_X_VAL;
 gss_OID GSS_SPNEGO_MECH_OID = &GSS_SPNEGO_MECH_OID_VAL;
 
-#define GSS_DL_SYM(lib, func) \
-  fct_gss_##func##_t func = reinterpret_cast<fct_gss_##func##_t>( \
-      dlsym(lib, "gss_" #func)); \
-  if (func == NULL) { \
-    state_ = kFailure; \
-    return false; \
+#define GSS_DL_SYM(lib, func)                                         \
+  fct_gss_##func##_t func =                                           \
+      reinterpret_cast<fct_gss_##func##_t>(dlsym(lib, "gss_" #func)); \
+  if (func == NULL) {                                                 \
+    state_ = kFailure;                                                \
+    return false;                                                     \
   }
 
 namespace ssf {
@@ -68,8 +68,7 @@ GSSAPIAuthImpl::~GSSAPIAuthImpl() {
 
 bool GSSAPIAuthImpl::Init() {
   if (!InitLibrary()) {
-    SSF_LOG(kLogDebug) << "network[proxy]: gssapi: "
-                       << "could not init gssapi library";
+    SSF_LOG("network_proxy", debug, "gssapi: could not init gssapi library");
     state_ = kFailure;
     return false;
   }
@@ -83,8 +82,8 @@ bool GSSAPIAuthImpl::Init() {
   if (GSS_S_COMPLETE != fct_gss_import_name_(&minor_status, &spn_name,
                                              GSS_C_NT_HOSTBASED_SERVICE,
                                              &server_name_)) {
-    SSF_LOG(kLogDebug) << "network[proxy]: gssapi: "
-                       << "could not generate gssapi server name";
+    SSF_LOG("network_proxy", debug,
+            "gssapi: could not generate gssapi server name");
     state_ = kFailure;
     return false;
   }
@@ -170,7 +169,7 @@ bool GSSAPIAuthImpl::InitLibrary() {
   GSS_DL_SYM(h_gss_api_, release_buffer);
   GSS_DL_SYM(h_gss_api_, delete_sec_context);
   GSS_DL_SYM(h_gss_api_, release_name);
-  
+
   fct_gss_init_sec_context_ = init_sec_context;
   fct_gss_import_name_ = import_name;
   fct_gss_release_buffer_ = release_buffer;
@@ -188,7 +187,7 @@ void GSSAPIAuthImpl::LogError(OM_uint32 major_status) {
   std::string error_msg;
 
   if (GSS_CALLING_ERROR(major_status)) {
-    SSF_LOG(kLogDebug) << "network[proxy]: gssapi: calling error";
+    SSF_LOG("network_proxy", debug, "gssapi: calling error");
     return;
   }
 
@@ -231,7 +230,7 @@ void GSSAPIAuthImpl::LogError(OM_uint32 major_status) {
       error_msg = "unknown error";
       break;
   }
-  SSF_LOG(kLogDebug) << "network[proxy]: gssapi: " << error_msg;
+  SSF_LOG("network_proxy", debug, "gssapi: {}", error_msg);
 }
 
 }  // proxy

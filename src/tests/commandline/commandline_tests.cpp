@@ -15,7 +15,7 @@ TEST(StandardCommandLineTests, ServerTest) {
   ASSERT_FALSE(cmd.port_set());
   ASSERT_EQ(0, cmd.port());
   ASSERT_TRUE(cmd.config_file().empty());
-  ASSERT_EQ(ssf::log::kLogInfo, cmd.log_level());
+  ASSERT_EQ(spdlog::level::info, cmd.log_level());
 
   ASSERT_FALSE(cmd.show_status());
   ASSERT_FALSE(cmd.relay_only());
@@ -36,7 +36,7 @@ TEST(StandardCommandLineTests, ServerTest) {
   ASSERT_EQ(8012, cmd.port());
   ASSERT_FALSE(cmd.config_file().empty());
   ASSERT_EQ(cmd.config_file(), "config_file.json");
-  ASSERT_EQ(ssf::log::kLogCritical, cmd.log_level());
+  ASSERT_EQ(spdlog::level::critical, cmd.log_level());
 
   ASSERT_TRUE(cmd.show_status());
   ASSERT_TRUE(cmd.relay_only());
@@ -51,7 +51,7 @@ TEST(StandardCommandLineTests, ClientTest) {
   ASSERT_FALSE(cmd.port_set());
   ASSERT_EQ(0, cmd.port());
   ASSERT_TRUE(cmd.config_file().empty());
-  ASSERT_EQ(ssf::log::kLogInfo, cmd.log_level());
+  ASSERT_EQ(spdlog::level::info, cmd.log_level());
 
   ASSERT_FALSE(cmd.show_status());
   ASSERT_FALSE(cmd.relay_only());
@@ -72,7 +72,7 @@ TEST(StandardCommandLineTests, ClientTest) {
   ASSERT_EQ(8012, cmd.port());
   ASSERT_FALSE(cmd.config_file().empty());
   ASSERT_EQ(cmd.config_file(), "config_file.json");
-  ASSERT_EQ(ssf::log::kLogCritical, cmd.log_level());
+  ASSERT_EQ(spdlog::level::critical, cmd.log_level());
 
   ASSERT_TRUE(cmd.show_status());
   ASSERT_FALSE(cmd.relay_only());
@@ -87,7 +87,7 @@ TEST(CopyCommandLineTests, FromStdinToServerTest) {
   ASSERT_FALSE(cmd.port_set());
   ASSERT_EQ(0, cmd.port());
   ASSERT_TRUE(cmd.config_file().empty());
-  ASSERT_EQ(ssf::log::kLogInfo, cmd.log_level());
+  ASSERT_EQ(spdlog::level::info, cmd.log_level());
 
   boost::system::error_code ec;
 
@@ -104,7 +104,7 @@ TEST(CopyCommandLineTests, FromStdinToServerTest) {
   ASSERT_EQ(8012, cmd.port());
   ASSERT_FALSE(cmd.config_file().empty());
   ASSERT_EQ(cmd.config_file(), "config_file.json");
-  ASSERT_EQ(ssf::log::kLogCritical, cmd.log_level());
+  ASSERT_EQ(spdlog::level::critical, cmd.log_level());
 
   ASSERT_TRUE(cmd.stdin_input());
   ASSERT_TRUE(cmd.from_client_to_server());
@@ -122,7 +122,7 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
   ASSERT_FALSE(cmd.port_set());
   ASSERT_EQ(0, cmd.port());
   ASSERT_TRUE(cmd.config_file().empty());
-  ASSERT_EQ(ssf::log::kLogInfo, cmd.log_level());
+  ASSERT_EQ(spdlog::level::info, cmd.log_level());
 
   boost::system::error_code ec;
 
@@ -142,7 +142,7 @@ TEST(CopyCommandLineTests, ClientToServerTest) {
   ASSERT_EQ(8012, cmd.port());
   ASSERT_FALSE(cmd.config_file().empty());
   ASSERT_EQ(cmd.config_file(), "config_file.json");
-  ASSERT_EQ(ssf::log::kLogCritical, cmd.log_level());
+  ASSERT_EQ(spdlog::level::critical, cmd.log_level());
 
   ASSERT_FALSE(cmd.stdin_input());
   ASSERT_TRUE(cmd.from_client_to_server());
@@ -161,7 +161,7 @@ TEST(CopyCommandLineTests, ServerToClientTest) {
   ASSERT_FALSE(cmd.port_set());
   ASSERT_EQ(cmd.port(), 0);
   ASSERT_TRUE(cmd.config_file().empty());
-  ASSERT_EQ(cmd.log_level(), ssf::log::kLogInfo);
+  ASSERT_EQ(spdlog::level::info, cmd.log_level());
 
   boost::system::error_code ec;
 
@@ -186,7 +186,7 @@ TEST(CopyCommandLineTests, ServerToClientTest) {
   ASSERT_EQ(cmd.port(), 8012);
   ASSERT_FALSE(cmd.config_file().empty());
   ASSERT_EQ(cmd.config_file(), "config_file.json");
-  ASSERT_EQ(cmd.log_level(), ssf::log::kLogCritical);
+  ASSERT_EQ(spdlog::level::critical, cmd.log_level());
 
   ASSERT_FALSE(cmd.stdin_input());
   ASSERT_FALSE(cmd.from_client_to_server());

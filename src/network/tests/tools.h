@@ -27,7 +27,7 @@ class TimedScope {
   }
 
   void PrintDuration() {
-    SSF_LOG(kLogDebug) << "Timed scope: " << Duration().count();
+    SSF_LOG("test", debug, "Timed scope: {}", Duration().count());
   }
 
  private:
@@ -49,9 +49,9 @@ class ScopedBandWidth : public TimedScope {
   double BandWidth() const { return bits_ / this->FloatSecondDuration(); }
 
   void PrintBandWidth() const {
-    SSF_LOG(kLogInfo) << "Bandwidth: transferred " << bits_ << " bits in "
-                      << this->FloatSecondDuration() << " seconds ==> "
-                      << BandWidth() / 1000 / 1000 << " Mbits/s";
+    SSF_LOG("test", info,
+            "Bandwidth: transferred {} bits in {} seconds ==> {}  Mbits/s",
+            bits_, this->FloatSecondDuration(), (BandWidth() / 1000 / 1000));
   }
 
  private:

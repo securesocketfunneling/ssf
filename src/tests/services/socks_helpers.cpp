@@ -39,7 +39,7 @@ bool SocksDummyClient::Init() {
   boost::asio::connect(socket_, r.resolve(q), ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "dummy client: fail to connect " << ec.value();
+    SSF_LOG("test", error, "dummy client: fail to connect {}", ec.value());
     Stop();
   }
 
@@ -124,7 +124,7 @@ bool Socks4DummyClient::InitSocks() {
   }
   boost::asio::write(socket_, req.ConstBuffer(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "socks4 client: fail to write " << ec.value();
+    SSF_LOG("test", error, "socks4 client: fail to write {}", ec.value());
     Stop();
     return false;
   }
@@ -132,7 +132,7 @@ bool Socks4DummyClient::InitSocks() {
   Reply rep;
   boost::asio::read(socket_, rep.MutBuffer(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "socks4 client: fail to read " << ec.value();
+    SSF_LOG("test", error, "socks4 client: fail to read {}", ec.value());
     Stop();
     return false;
   }
@@ -144,7 +144,7 @@ bool Socks4DummyClient::InitSocks() {
   boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_t)), ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "socks4 client: fail to write " << ec.value();
+    SSF_LOG("test", error, "socks4 client: fail to write {}", ec.value());
     Stop();
   }
 
@@ -178,8 +178,8 @@ bool Socks5DummyClient::InitSocks() {
                  AuthMethod::kUserPassword});
   boost::asio::write(socket_, auth_req.ConstBuffers(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "socks5 client: fail to write auth request "
-                       << ec.value();
+    SSF_LOG("test", error, "socks5 client: fail to write auth request {}",
+            ec.value());
     Stop();
     return false;
   }
@@ -187,8 +187,8 @@ bool Socks5DummyClient::InitSocks() {
   ReplyAuth auth_rep;
   boost::asio::read(socket_, auth_rep.MutBuffer(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "socks5 client: fail to read auth reply"
-                       << ec.value();
+    SSF_LOG("test", error, "socks5 client: fail to read auth reply {}",
+            ec.value());
     Stop();
     return false;
   }
@@ -211,8 +211,8 @@ bool Socks5DummyClient::InitSocks() {
   }
   boost::asio::write(socket_, req.ConstBuffers(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "socks5 client: fail to write conenct request"
-                       << ec.value();
+    SSF_LOG("test", error, "socks5 client: fail to write conenct request {}",
+            ec.value());
     Stop();
     return false;
   }
@@ -220,28 +220,29 @@ bool Socks5DummyClient::InitSocks() {
   Reply rep;
   boost::asio::read(socket_, rep.MutBaseBuffers(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "socks5 client: fail to read reply (first part)"
-                       << ec.value();
+    SSF_LOG("test", error, "socks5 client: fail to read reply (first part) {}",
+            ec.value());
     Stop();
     return false;
   }
   boost::asio::read(socket_, rep.MutDynamicBuffers(), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "socks5 client: fail to read reply (second part)"
-                       << ec.value();
+    SSF_LOG("test", error, "socks5 client: fail to read reply (second part) {}",
+            ec.value());
     Stop();
     return false;
   }
   if (!rep.IsComplete() || !rep.AccessGranted()) {
-    SSF_LOG(kLogError) << "socks5 client: request incomplete or access refused"
-                       << ec.value();
+    SSF_LOG("test", error,
+            "socks5 client: request incomplete or access refused {}",
+            ec.value());
     Stop();
     return false;
   }
 
   boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_t)), ec);
   if (ec) {
-    SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
+    SSF_LOG("test", error, "dummy client: fail to write {}", ec.value());
     Stop();
   }
 

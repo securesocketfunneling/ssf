@@ -118,13 +118,12 @@ void Tls::Update(const PTree& tls_prop) {
 
 void Tls::Log() const {
 #ifdef TLS_OVER_TCP_LINK
-  SSF_LOG(kLogInfo) << "[config][tls] CA cert path: <" << ca_cert_.ToString()
-                    << ">";
-  SSF_LOG(kLogInfo) << "[config][tls] cert path: <" << cert_.ToString() << ">";
-  SSF_LOG(kLogInfo) << "[config][tls] key path: <" << key_.ToString() << ">";
-  SSF_LOG(kLogInfo) << "[config][tls] key password: <" << key_password_ << ">";
-  SSF_LOG(kLogInfo) << "[config][tls] dh path: <" << dh_.ToString() << ">";
-  SSF_LOG(kLogInfo) << "[config][tls] cipher suite: <" << cipher_alg_ << ">";
+  SSF_LOG("config", info, "[tls] CA cert path: <{}>", ca_cert_.ToString());
+  SSF_LOG("config", info, "[tls] cert path: <{}>", cert_.ToString());
+  SSF_LOG("config", info, "[tls] key path: <{}>", key_.ToString());
+  SSF_LOG("config", info, "[tls] key password: <{}>", key_password_);
+  SSF_LOG("config", info, "[tls] dh path: <{}>", dh_.ToString());
+  SSF_LOG("config", info, "[tls] cipher suite: <{}>", cipher_alg_);
 #endif
 }
 

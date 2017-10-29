@@ -37,8 +37,8 @@ class Process : public BaseUserService<Demux> {
     auto listener = OptionParser::ParseListeningOption(line, ec);
 
     if (ec) {
-      SSF_LOG(kLogError) << "user_service " << GetParseName()
-                         << ": cannot parse " << line;
+      SSF_LOG("user_service", error, "[{}] cannot parse {}", GetParseName(),
+              line);
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return {};
     }
@@ -50,17 +50,15 @@ class Process : public BaseUserService<Demux> {
       const UserServiceParameterBag& parameters,
       boost::system::error_code& ec) {
     if (parameters.count("addr") == 0 || parameters.count("port") == 0) {
-      SSF_LOG(kLogError) << "user_service " << GetParseName()
-                         << ": missing parameters";
+      SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<Process>(nullptr);
     }
 
     uint16_t port = OptionParser::ParsePort(parameters.at("port"), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service " << GetParseName()
-                         << ": invalid port: "
-                         << "(" << ec.message() << ")";
+      SSF_LOG("user_service", error, "[{}] invalid port ({})", GetParseName(),
+              ec.message());
       return std::shared_ptr<Process>(nullptr);
     }
     return std::shared_ptr<Process>(new Process(parameters.at("addr"), port));
@@ -118,10 +116,9 @@ class Process : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError)
-          << "user_service[shell]: "
-          << "local microservice[stream_listener]: start failed: "
-          << ec.message();
+      SSF_LOG("user_service", error,
+              "[{}] local microservice[stream_listener]: start failed: {}",
+              GetParseName(), ec.message());
     }
     return !ec;
   };

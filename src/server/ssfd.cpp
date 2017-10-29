@@ -8,7 +8,6 @@
 #include <ssf/log/log.h>
 
 #include "common/config/config.h"
-#include "common/log/log.h"
 
 #include "core/command_line/standard/command_line.h"
 #include "core/network_protocol.h"
@@ -27,8 +26,7 @@ int main(int argc, char** argv) {
 
   Run(argc, argv, exit_ec);
 
-  SSF_LOG(kLogInfo) << "[ssfd] exit " << exit_ec.value() << " ("
-                    << exit_ec.message() << ")";
+  SSF_LOG("ssfd", debug, "exit {} ({})", exit_ec.value(), exit_ec.message());
 
   return exit_ec.value();
 }
@@ -48,16 +46,16 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     exit_ec.assign(::error::success, ::error::get_ssf_category());
     return;
   } else if (exit_ec) {
-    SSF_LOG(kLogError) << "[ssfd] wrong command line arguments";
+    SSF_LOG("ssfd", error, "invalid command line arguments");
     return;
   }
 
-  ssf::log::Configure(cmd.log_level());
+  SetLogLevel(cmd.log_level());
 
   // load config file
   ssf_config.UpdateFromFile(cmd.config_file(), exit_ec);
   if (exit_ec) {
-    SSF_LOG(kLogError) << "[ssfd] invalid config file format";
+    SSF_LOG("ssfd", error, "invalid config file format");
     return;
   }
 
@@ -65,7 +63,7 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     // update command line with config file argv
     cmd.Parse(ssf_config.GetArgc(), ssf_config.GetArgv().data(), exit_ec);
     if (exit_ec) {
-      SSF_LOG(kLogError) << "[ssfd] invalid command line arguments";
+      SSF_LOG("ssfd", debug, "invalid command line arguments");
       return;
     }
   }
@@ -84,15 +82,14 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
   auto endpoint_query = NetworkProtocol::GenerateServerQuery(
       cmd.host(), std::to_string(cmd.port()), ssf_config);
 
-  SSF_LOG(kLogInfo) << "[ssfd] listening on <"
-                    << (!cmd.host().empty() ? cmd.host() : "*") << ":"
-                    << cmd.port() << ">";
+  SSF_LOG("ssfd", info, "listening on <{}:{}>",
+          (!cmd.host().empty() ? cmd.host() : "*"), cmd.port());
 
   server.Run(endpoint_query, exit_ec);
 
   if (exit_ec) {
-    SSF_LOG(kLogError) << "[ssfd] error happened when running server: "
-                       << exit_ec.message();
+    SSF_LOG("ssfd", error, "error happened when running server: {}",
+            exit_ec.message());
     return;
   }
 
@@ -107,7 +104,7 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
       return;
     }
 
-    SSF_LOG(kLogInfo) << "[ssfd] interrupted";
+    SSF_LOG("ssfd", info, "interrupted");
 
     {
       std::lock_guard<std::mutex> lock(mutex);
@@ -116,13 +113,13 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     wait_stop_cv.notify_all();
   });
 
-  SSF_LOG(kLogInfo) << "[ssfd] running (Ctrl + C to stop)";
+  SSF_LOG("ssfd", info, "running (Ctrl + C to stop)");
 
   std::unique_lock<std::mutex> lock(mutex);
   wait_stop_cv.wait(lock, [&stopped] { return stopped; });
   lock.unlock();
 
-  SSF_LOG(kLogInfo) << "[ssfd] stop";
+  SSF_LOG("ssfd", debug, "stop");
   signal.cancel(stop_ec);
   server.Stop();
 

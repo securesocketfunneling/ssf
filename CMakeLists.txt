@@ -22,6 +22,10 @@ option(USE_STATIC_LIBS "Link binaries statically against libraries" OFF)
 CMAKE_DEPENDENT_OPTION(USE_STATIC_RUNTIME "Link statically against the C++ runtime libraries"
                        ON "USE_STATIC_LIBS" OFF)
 option(DISABLE_RTTI "Disable C++ Runtime Type Information" OFF)
+option(DISABLE_LOGS "Disable logs" OFF)
+if (UNIX)
+option(ENABLE_SYSLOG "Use syslog collector" ON)
+endif (UNIX)
 
 # --- Include CMake build system scripts
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
@@ -114,6 +118,7 @@ endif()
 # --- http-parser components
 add_subdirectory(third_party/http-parser)
 add_subdirectory(third_party/msgpack)
+add_subdirectory(third_party/spdlog)
 
 # --- Test certs
 add_subdirectory(certs)
@@ -138,3 +143,7 @@ message(STATUS "  TLS Disabled: ${DISABLE_TLS}")
 message(STATUS "  Static Libraries: ${USE_STATIC_LIBS} (Boost: ${Boost_USE_STATIC_LIBS}, OpenSSL: ${OPENSSL_USE_STATIC_LIBS})")
 message(STATUS "  Static Runtime: ${USE_STATIC_RUNTIME} (Boost: ${Boost_USE_STATIC_RUNTIME}, OpenSSL: ${OPENSSL_MSVC_STATIC_RT})")
 message(STATUS "  RTTI disabled: ${DISABLE_RTTI}")
+message(STATUS "  Logs disabled: ${DISABLE_LOGS}")
+if (UNIX)
+message(STATUS "  Syslog collector enabled: ${ENABLE_SYSLOG}")
+endif (UNIX)

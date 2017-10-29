@@ -41,8 +41,8 @@ void DummyServer::Run() {
     acceptor_.bind(endpoint);
     acceptor_.listen();
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "dummy tcp server: fail to initialize acceptor ("
-                       << e.what() << ")";
+    SSF_LOG("test", error, "dummy tcp server: fail to initialize acceptor ({})",
+            e.what());
     Stop();
     return;
   }
@@ -136,14 +136,14 @@ bool DummyClient::Run() {
   boost::asio::connect(socket_, r.resolve(q), ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "dummy client: fail to connect " << ec.value();
+    SSF_LOG("test", error, "dummy client: fail to connect {}", ec.value());
     return false;
   }
 
   boost::asio::write(socket_, boost::asio::buffer(&size_, sizeof(size_t)), ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "dummy client: fail to write " << ec.value();
+    SSF_LOG("test", error, "dummy client: fail to write {}", ec.value());
     return false;
   }
 

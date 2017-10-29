@@ -28,15 +28,15 @@ void Circuit::Update(const PTree& pt) {
 
 void Circuit::Log() const {
   if (nodes_.size() == 0) {
-    SSF_LOG(kLogInfo) << "[config][circuit] <None>";
+    SSF_LOG("config", info, "[circuit] <None>");
     return;
   }
 
   unsigned int i = 0;
   for (const auto& node : nodes_) {
     ++i;
-    SSF_LOG(kLogInfo) << "[config][circuit] " << std::to_string(i) << ". <"
-                      << node.addr() << ":" << node.port() << ">";
+    SSF_LOG("config", info, "[circuit] {}. <{}:{}>", std::to_string(i),
+            node.addr(), node.port());
   }
 }
 

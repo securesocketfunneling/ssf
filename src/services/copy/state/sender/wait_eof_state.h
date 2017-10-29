@@ -33,7 +33,7 @@ class WaitEofState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][wait_eof] enter";
+    SSF_LOG("microservice", trace, "[copy][wait_eof] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -52,8 +52,8 @@ class WaitEofState : ICopyState {
     }
 
     if (packet.type() != PacketType::kEof) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][wait_eof] cannot process inbound packet";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_eof] cannot process inbound packet");
       context->SetState(
           AbortSenderState::Create(ErrorCode::kInboundPacketNotSupported));
       return;

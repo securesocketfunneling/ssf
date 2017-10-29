@@ -83,7 +83,7 @@ class CopyServer : public BaseService<Demux> {
   }
 
  public:
-  ~CopyServer() { SSF_LOG(kLogDebug) << "microservice[copy][server] destroy"; }
+  ~CopyServer() { SSF_LOG("microservice", debug, "[copy][server] destroy"); }
 
   // Start service
   void start(boost::system::error_code& ec) override {
@@ -98,23 +98,23 @@ class CopyServer : public BaseService<Demux> {
     auto on_file_status = [](CopyContext* context,
                              const boost::system::error_code& ec) {
       if (context->is_stdin_input) {
-        SSF_LOG(kLogDebug) << "microservice[copy][server] receive stdin > "
-                           << context->GetOutputFilepath().GetString();
+        SSF_LOG("microservice", debug, "[copy][server] receive stdin into {}",
+                context->GetOutputFilepath().GetString());
       } else {
-        SSF_LOG(kLogDebug) << "microservice[copy][server] receive "
-                           << context->input_filepath << " > "
-                           << context->GetOutputFilepath().GetString();
+        SSF_LOG("microservice", debug, "[copy][server] receive {} into {}",
+                context->input_filepath,
+                context->GetOutputFilepath().GetString());
       }
     };
     auto on_file_copied = [](CopyContext* context,
                              const boost::system::error_code& ec) {
       if (context->is_stdin_input) {
-        SSF_LOG(kLogDebug) << "microservice[copy][server] copied stdin > "
-                           << context->GetOutputFilepath().GetString();
+        SSF_LOG("microservice", debug, "[copy][server] copied stdin into {}",
+                context->GetOutputFilepath().GetString());
       } else {
-        SSF_LOG(kLogDebug) << "microservice[copy][server] copied "
-                           << context->input_filepath << " > "
-                           << context->GetOutputFilepath().GetString();
+        SSF_LOG("microservice", debug, "[copy][server] copied {} into {}",
+                context->input_filepath,
+                context->GetOutputFilepath().GetString());
       }
     };
     file_acceptor_->AsyncAccept(on_file_status, on_file_copied);
@@ -122,7 +122,7 @@ class CopyServer : public BaseService<Demux> {
 
   // Stop service
   void stop(boost::system::error_code& ec) override {
-    SSF_LOG(kLogDebug) << "microservice[copy][server] stop";
+    SSF_LOG("microservice", debug, "[copy][server] stop");
     boost::system::error_code close_ec;
     file_acceptor_->Close(close_ec);
     close_ec.clear();
@@ -144,14 +144,14 @@ class CopyServer : public BaseService<Demux> {
   void AcceptControlChannel(boost::system::error_code& ec) {
     // init control channel acceptor
     Endpoint control_ep(this->get_demux(), kControlServicePort);
-    SSF_LOG(kLogDebug) << "microservice[copy][server] start accepting file "
-                          "transfer on fiber port "
-                       << kControlServicePort;
+    SSF_LOG("microservice", debug,
+            "[copy][server] start accepting file transfer on fiber port {}",
+            kControlServicePort);
     control_acceptor_.bind(control_ep, ec);
     control_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
     if (ec) {
-      SSF_LOG(kLogError)
-          << "microservice[copy][server] cannot accept control fiber";
+      SSF_LOG("microservice", error,
+              "[copy][server] cannot accept control fiber");
       return;
     }
     AcceptControlFiber();
@@ -169,8 +169,8 @@ class CopyServer : public BaseService<Demux> {
         *control_fiber,
         [this, self, control_fiber](const boost::system::error_code& ec) {
           if (ec) {
-            SSF_LOG(kLogDebug)
-                << "microservice[copy][server] could not accept control fiber";
+            SSF_LOG("microservice", debug,
+                    "[copy][server] could not accept control fiber");
             return;
           }
 
@@ -183,15 +183,15 @@ class CopyServer : public BaseService<Demux> {
   }
 
   void AsyncReadControlRequest(FiberPtr control_fiber) {
-    SSF_LOG(kLogDebug) << "microservice[copy][server] async read request";
+    SSF_LOG("microservice", debug, "[copy][server] async read request");
     auto self = this->shared_from_this();
     auto packet = std::make_shared<Packet>();
     AsyncReadPacket(*control_fiber, *packet,
                     [this, self, control_fiber,
                      packet](const boost::system::error_code& ec) {
                       if (ec) {
-                        SSF_LOG(kLogDebug) << "microservice[copy][server] "
-                                              "error while reading packet";
+                        SSF_LOG("microservice", debug,
+                                "[copy][server] error while reading packet");
                         return;
                       }
 
@@ -217,8 +217,8 @@ class CopyServer : public BaseService<Demux> {
     boost::system::error_code ec;
     PacketToPayload(*packet, req, ec);
     if (ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][server] cannot convert packet "
-                            "into CopyRequest";
+      SSF_LOG("microservice", debug,
+              "[copy][server] cannot convert packet into CopyRequest");
 
       return;
     }
@@ -231,8 +231,8 @@ class CopyServer : public BaseService<Demux> {
         *control_fiber, ack, packet,
         [this, self, control_fiber, req](const boost::system::error_code& ec) {
           if (ec) {
-            SSF_LOG(kLogError) << "microservice[copy][server] cannot "
-                                  "process copy request";
+            SSF_LOG("microservice", error,
+                    "[copy][server] cannot process copy request");
             boost::system::error_code close_ec;
             control_fiber->close(close_ec);
             return;
@@ -242,28 +242,26 @@ class CopyServer : public BaseService<Demux> {
   }
 
   void StartCopy(FiberPtr control_fiber, const CopyRequest& req) {
-    SSF_LOG(kLogDebug) << "microservice[copy][server] start copy";
+    SSF_LOG("microservice", debug, "[copy][server] start copy");
 
     auto on_file_status = [](CopyContext* context,
                              const boost::system::error_code& ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][server] send "
-                         << context->input_filepath << " > "
-                         << context->GetOutputFilepath().GetString();
+      SSF_LOG("microservice", debug, "[copy][server] send {} into {}",
+              context->input_filepath,
+              context->GetOutputFilepath().GetString());
     };
     auto on_file_copied = [](CopyContext* context,
                              const boost::system::error_code& ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][server] send "
-                         << context->input_filepath << " > "
-                         << context->GetOutputFilepath().GetString() << " "
-                         << ec.message();
+      SSF_LOG("microservice", debug, "[copy][server] send {} into {} ({})",
+              context->input_filepath, context->GetOutputFilepath().GetString(),
+              ec.message());
     };
     auto self = this->shared_from_this();
     auto on_copy_finished = [this, self](uint64_t files_count,
                                          uint64_t errors_count,
                                          const boost::system::error_code& ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][server] "
-                         << (files_count - errors_count) << "/" << files_count
-                         << " files copied";
+      SSF_LOG("microservice", debug, "[copy][server] {}/{} files copied",
+              (files_count - errors_count), files_count);
     };
 
     boost::system::error_code ec;
@@ -271,7 +269,8 @@ class CopyServer : public BaseService<Demux> {
         this->get_demux(), std::move(*control_fiber), req, on_file_status,
         on_file_copied, on_copy_finished, ec);
     if (ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][server] cannot create file sender";
+      SSF_LOG("microservice", debug,
+              "[copy][server] cannot create file sender");
       return;
     }
     file_sender_->AsyncSend();

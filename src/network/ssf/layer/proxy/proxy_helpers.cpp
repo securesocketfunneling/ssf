@@ -31,18 +31,18 @@ ProxyEndpointContext MakeProxyContext(boost::asio::io_service& io_service,
       !CanResolveHost(io_service, context.http_proxy().host,
                       context.http_proxy().port)) {
     ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
-    SSF_LOG(kLogError)
-        << "network[http proxy]: could not resolve target address <"
-        << context.http_proxy().host << ":" << context.http_proxy().port << ">";
+    SSF_LOG("network_proxy", error,
+            "could not resolve HTTP target address <{}:{}>",
+            context.http_proxy().host, context.http_proxy().port);
   }
   if (context.SocksProxyEnabled() &&
       !CanResolveHost(io_service, context.socks_proxy().host,
                       context.socks_proxy().port)) {
     ec.assign(ssf::error::bad_address, ssf::error::get_ssf_category());
-    SSF_LOG(kLogError)
-        << "network[socks proxy]: could not resolve target address <"
-        << context.socks_proxy().host << ":" << context.socks_proxy().port
-        << ">";
+
+    SSF_LOG("network_proxy", error,
+            "could not resolve SOCKS target address <{}:{}>",
+            context.socks_proxy().host, context.socks_proxy().port);
   }
 
   return context;

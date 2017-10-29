@@ -29,10 +29,10 @@ void Client::Init(const NetworkQuery& network_query,
                   OnStatusCb on_status,
                   OnUserServiceStatusCb on_user_service_status,
                   boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "[client] init";
+  SSF_LOG("client", debug, "init");
   if (async_engine_.IsStarted()) {
     ec.assign(::error::device_or_resource_busy, ::error::get_ssf_category());
-    SSF_LOG(kLogError) << "[client] already initialized";
+    SSF_LOG("client", error, "already initialized");
     return;
   }
 
@@ -55,7 +55,7 @@ void Client::Init(const NetworkQuery& network_query,
 }
 
 void Client::Deinit() {
-  SSF_LOG(kLogDebug) << "[client] deinit";
+  SSF_LOG("client", debug, "deinit");
   async_engine_.Stop();
 }
 
@@ -76,7 +76,7 @@ void Client::Stop(boost::system::error_code& ec) {
     stopped_ = true;
   }
 
-  SSF_LOG(kLogDebug) << "[client] stop";
+  SSF_LOG("client", debug, "stop");
 
   timer_.cancel(ec);
   ec.clear();
@@ -86,8 +86,7 @@ void Client::Stop(boost::system::error_code& ec) {
     session_.reset();
   }
   if (ec) {
-    SSF_LOG(kLogDebug) << "[client] error while closing session: "
-                       << ec.message();
+    SSF_LOG("client", debug, "error while closing session: {}", ec.message());
   }
 
   cv_wait_stop_.notify_all();
@@ -108,9 +107,8 @@ Client::UserServices Client::CreateUserServices(boost::system::error_code& ec) {
       if (!parse_ec) {
         user_services.push_back(user_service);
       } else {
-        SSF_LOG(kLogError) << "[client] invalid option value for service<"
-                           << service.first << "> (" << parse_ec.message()
-                           << ")";
+        SSF_LOG("client", error, "invalid option value for service<{}> ({})",
+                service.first, parse_ec.message());
         ec.assign(parse_ec.value(), parse_ec.category());
       }
     }
@@ -128,8 +126,8 @@ void Client::AsyncWaitReconnection() {
     return;
   }
 
-  SSF_LOG(kLogInfo) << "[client] wait " << reconnection_timeout_.count()
-                    << "s before reconnection";
+  SSF_LOG("client", info, "wait {}s before reconnection",
+          reconnection_timeout_.count());
   timer_.expires_from_now(reconnection_timeout_);
   timer_.async_wait(
       [this](const boost::system::error_code& ec) { RunSession(ec); });
@@ -147,8 +145,8 @@ void Client::RunSession(const boost::system::error_code& ec) {
     }
   }
 
-  SSF_LOG(kLogInfo) << "[client] connection attempt " << connection_attempts_
-                    << "/" << max_connection_attempts_;
+  SSF_LOG("client", info, "connection attempt {}/{}", connection_attempts_,
+          max_connection_attempts_);
 
   ++connection_attempts_;
 
@@ -194,30 +192,30 @@ void Client::OnSessionStatus(Status status) {
 
   switch (status) {
     case Status::kEndpointNotResolvable:
-      SSF_LOG(kLogInfo) << "[client] endpoint not resolvable";
+      SSF_LOG("client", info, "endpoint not resolvable");
       if (session_) {
         session_->Stop(stop_ec);
       }
       break;
     case Status::kServerUnreachable:
-      SSF_LOG(kLogInfo) << "[client] server unreachable";
+      SSF_LOG("client", info, "server unreachable");
       if (session_) {
         session_->Stop(stop_ec);
       }
       AsyncWaitReconnection();
       break;
     case Status::kServerNotSupported:
-      SSF_LOG(kLogInfo) << "[client] server not supported";
+      SSF_LOG("client", info, "server not supported");
       if (session_) {
         session_->Stop(stop_ec);
       }
       AsyncWaitReconnection();
       break;
     case Status::kConnected:
-      SSF_LOG(kLogInfo) << "[client] connected to server";
+      SSF_LOG("client", info, "connected to server");
       break;
     case Status::kDisconnected:
-      SSF_LOG(kLogInfo) << "[client] disconnected";
+      SSF_LOG("client", info, "disconnected");
       if (session_) {
         session_->Stop(stop_ec);
       }
@@ -226,7 +224,7 @@ void Client::OnSessionStatus(Status status) {
     case Status::kRunning:
       // reset connection attempts
       connection_attempts_ = 1;
-      SSF_LOG(kLogInfo) << "[client] running";
+      SSF_LOG("client", info, "running");
       break;
     default:
       break;
@@ -240,11 +238,9 @@ void Client::OnUserServiceStatus(UserServicePtr user_service,
   }
 
   if (ec) {
-    SSF_LOG(kLogError) << "[client] service <" << user_service->GetName()
-                       << "> KO";
+    SSF_LOG("client", error, "service <{}> KO", user_service->GetName());
   } else {
-    SSF_LOG(kLogInfo) << "[client] service <" << user_service->GetName()
-                      << "> OK";
+    SSF_LOG("client", info, "service <{}> OK", user_service->GetName());
   }
   on_user_service_status_(user_service, ec);
 }

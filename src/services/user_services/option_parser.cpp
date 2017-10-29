@@ -123,13 +123,13 @@ uint16_t OptionParser::ParsePort(const std::string& port,
       return 0;
     }
     if (res < 1 || res > 65535) {
-      SSF_LOG(kLogError) << "invalid port: " << port << " not in [1 - 65355]";
+      SSF_LOG("parser", error, "invalid port: {} not in [1 - 65355]", port);
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return 0;
     }
     return res;
   } catch (...) {
-    SSF_LOG(kLogError) << "invalid port: " << port;
+    SSF_LOG("parser", error, "invalid port: {}", port);
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return 0;
   }

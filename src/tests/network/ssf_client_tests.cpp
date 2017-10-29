@@ -20,21 +20,21 @@ TEST_F(SSFFixtureTest, ConnectToUnknownHost) {
   StartTimer(std::chrono::seconds(5), timer_callback, timer_ec);
 
   auto client_callback = [this](ssf::Status status) {
-    switch(status) {
+    switch (status) {
       case ssf::Status::kEndpointNotResolvable:
       case ssf::Status::kServerUnreachable:
-        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SSF_LOG("test", critical, "Network initialization failed");
         SendNotification(true);
         break;
       case ssf::Status::kServerNotSupported:
-        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SSF_LOG("test", critical, "Transport initialization failed");
         SendNotification(false);
         break;
       case ssf::Status::kConnected:
         SendNotification(false);
         break;
       case ssf::Status::kDisconnected:
-        SSF_LOG(kLogInfo) << "client: disconnected";
+        SSF_LOG("test", info, "client: disconnected");
         break;
       case ssf::Status::kRunning:
         SendNotification(false);
@@ -76,21 +76,21 @@ TEST_F(SSFFixtureTest, CloseWhileConnecting) {
 
   // Init client
   auto client_callback = [this](ssf::Status status) {
-    switch(status) {
+    switch (status) {
       case ssf::Status::kEndpointNotResolvable:
       case ssf::Status::kServerUnreachable:
-        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SSF_LOG("test", critical, "Network initialization failed");
         SendNotification(true);
         break;
       case ssf::Status::kServerNotSupported:
-        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SSF_LOG("test", critical, "Transport initialization failed");
         SendNotification(true);
         break;
       case ssf::Status::kConnected:
         SendNotification(true);
         break;
       case ssf::Status::kDisconnected:
-        SSF_LOG(kLogInfo) << "client: disconnected";
+        SSF_LOG("test", info, "client: disconnected");
         break;
       case ssf::Status::kRunning:
         SendNotification(false);

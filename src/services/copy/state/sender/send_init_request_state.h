@@ -32,7 +32,7 @@ class SendInitRequestState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][send_init_request] enter";
+    SSF_LOG("microservice", trace, "[copy][send_init_request] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -45,8 +45,9 @@ class SendInitRequestState : ICopyState {
     boost::system::error_code convert_ec;
     PayloadToPacket(req, packet, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][send_init_request] cannot "
-                            "convert init request to packet";
+      SSF_LOG("microservice", debug,
+              "[copy][send_init_request] cannot "
+              "convert init request to packet");
       context->SetState(
           AbortSenderState::Create(ErrorCode::kInitRequestPacketNotGenerated));
       return false;
@@ -63,8 +64,8 @@ class SendInitRequestState : ICopyState {
       return OnSenderAbortPacket(context, packet, ec);
     }
 
-    SSF_LOG(kLogDebug)
-        << "microservice[copy][send_init_request] cannot process packet type";
+    SSF_LOG("microservice", debug,
+            "[copy][send_init_request] cannot process packet type");
     context->SetState(
         AbortSenderState::Create(ErrorCode::kInboundPacketNotSupported));
   }

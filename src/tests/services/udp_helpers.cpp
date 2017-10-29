@@ -32,9 +32,9 @@ void DummyServer::Run() {
     socket_.open(endpoint.protocol());
     socket_.bind(endpoint);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError)
-        << "dummy udp server: fail to initialize listening state (" << e.what()
-        << ")";
+    SSF_LOG("test", error,
+            "dummy udp server: fail to initialize listening state ({})",
+            e.what());
     Stop();
     return;
   }

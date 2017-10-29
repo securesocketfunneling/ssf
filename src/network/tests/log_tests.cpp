@@ -3,40 +3,40 @@
 #include "ssf/log/log.h"
 
 TEST(LogTests, DefaultLog) {
-  SSF_LOG(kLogCritical) << "critical";
-  SSF_LOG(kLogError) << "error";
-  SSF_LOG(kLogWarning) << "warning";
-  SSF_LOG(kLogInfo) << "info";
-  SSF_LOG(kLogDebug) << "debug";
-  SSF_LOG(kLogTrace) << "trace";
+  SSF_LOG("test", critical, "critical");
+  SSF_LOG("test", error, "error");
+  SSF_LOG("test", warn, "warning");
+  SSF_LOG("test", info, "info");
+  SSF_LOG("test", debug, "debug");
+  SSF_LOG("test", trace, "trace");
 }
 
 TEST(LogTests, TraceLog) {
-  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogTrace);
-  SSF_LOG(kLogCritical) << "critical";
-  SSF_LOG(kLogError) << "error";
-  SSF_LOG(kLogWarning) << "warning";
-  SSF_LOG(kLogInfo) << "info";
-  SSF_LOG(kLogDebug) << "debug";
-  SSF_LOG(kLogTrace) << "trace";
+  SetLogLevel(spdlog::level::trace);
+  SSF_LOG("test", critical, "critical");
+  SSF_LOG("test", error, "error");
+  SSF_LOG("test", warn, "warning");
+  SSF_LOG("test", info, "info");
+  SSF_LOG("test", debug, "debug");
+  SSF_LOG("test", trace, "trace");
 }
 
 TEST(LogTests, CriticalLog) {
-  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogCritical);
-  SSF_LOG(kLogCritical) << "critical";
-  SSF_LOG(kLogError) << "error";
-  SSF_LOG(kLogWarning) << "warning";
-  SSF_LOG(kLogInfo) << "info";
-  SSF_LOG(kLogDebug) << "debug";
-  SSF_LOG(kLogTrace) << "trace";
+  SetLogLevel(spdlog::level::critical);
+  SSF_LOG("test", critical, "critical");
+  SSF_LOG("test", error, "error");
+  SSF_LOG("test", warn, "warning");
+  SSF_LOG("test", info, "info");
+  SSF_LOG("test", debug, "debug");
+  SSF_LOG("test", trace, "trace");
 }
 
 TEST(LogTests, NoLog) {
-  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogNone);
-  SSF_LOG(kLogCritical) << "critical";
-  SSF_LOG(kLogError) << "error";
-  SSF_LOG(kLogWarning) << "warning";
-  SSF_LOG(kLogInfo) << "info";
-  SSF_LOG(kLogDebug) << "debug";
-  SSF_LOG(kLogTrace) << "trace";
+  SetLogLevel(spdlog::level::off);
+  SSF_LOG("test", critical, "critical");
+  SSF_LOG("test", error, "error");
+  SSF_LOG("test", warn, "warning");
+  SSF_LOG("test", info, "info");
+  SSF_LOG("test", debug, "debug");
+  SSF_LOG("test", trace, "trace");
 }

@@ -26,15 +26,14 @@ DatagramsToFibers<Demux>::DatagramsToFibers(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
-
   Udp::resolver resolver(socket_.get_io_service());
   Udp::resolver::query query(local_addr_, std::to_string(local_port_));
   auto ep_it = resolver.resolve(query, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "microservice[datagram_listener]: could not "
-                          "resolve query <" << local_addr_ << ":" << local_port_
-                       << ">";
+    SSF_LOG("microservice", error,
+            "[datagram_listener]: could not resolve query <{}:{}>", local_addr_,
+            local_port_);
     return;
   }
 
@@ -43,8 +42,8 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   boost::system::error_code close_ec;
   socket_.open(Udp::v4(), ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "microservice[datagram_listener]: could not open UDP socket";
+    SSF_LOG("microservice", error,
+            "[datagram_listener]: could not open UDP socket");
     socket_.close(close_ec);
     return;
   }
@@ -52,37 +51,37 @@ void DatagramsToFibers<Demux>::start(boost::system::error_code& ec) {
   boost::asio::socket_base::reuse_address reuse_address_option(true);
   socket_.set_option(reuse_address_option, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "microservice[datagram_listener]: could not set "
-                          "reuse address option";
+    SSF_LOG("microservice", error,
+            "[datagram_listener]: could not set reuse address option");
     socket_.close(close_ec);
     return;
   }
 
   socket_.bind(from_endpoint_, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "microservice[datagram_listener]: could not bind UDP socket <"
-        << local_addr_ << ":" << local_port_ << ">";
+    SSF_LOG("microservice", error,
+            "[datagram_listener]: could not bind UDP socket <{}:{}>",
+            local_addr_, local_port_);
     socket_.close(close_ec);
     return;
   }
 
-  SSF_LOG(kLogInfo)
-      << "microservice[datagram_listener]: forward UDP datagrams from <"
-      << local_addr_ << ":" << local_port_ << "> to fiber port "
-      << remote_port_;
+  SSF_LOG("microservice", info,
+          "[datagram_listener]: forward UDP datagrams from <{}:{}> to fiber "
+          "port {}",
+          local_addr_, local_port_, remote_port_);
 
   this->AsyncReceiveDatagram();
 }
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "microservice[datagram_listener]: stop";
+  SSF_LOG("microservice", debug, "[datagram_listener]: stop");
   socket_.close(ec);
 
   if (ec) {
-    SSF_LOG(kLogDebug) << "microservice[datagram_listener]: error on stop "
-                       << ec.message();
+    SSF_LOG("microservice", debug, "[datagram_listener]: error on stop {}",
+            ec.message());
   }
 
   p_udp_operator_->StopAll();
@@ -95,8 +94,7 @@ uint32_t DatagramsToFibers<Demux>::service_type_id() {
 
 template <typename Demux>
 void DatagramsToFibers<Demux>::AsyncReceiveDatagram() {
-  SSF_LOG(kLogTrace)
-      << "microservice[datagram_listener]: receiving new datagram";
+  SSF_LOG("microservice", trace, "[datagram_listener]: receiving new datagram");
 
   socket_.async_receive_from(
       boost::asio::buffer(working_buffer_), from_endpoint_,
@@ -109,9 +107,9 @@ template <typename Demux>
 void DatagramsToFibers<Demux>::OnSocketDatagramReceive(
     BaseServicePtr self, const boost::system::error_code& ec, size_t length) {
   if (ec) {
-    SSF_LOG(kLogDebug)
-        << "microservice[datagram_listener]: error receiving datagram: "
-        << ec.message() << " " << ec.value();
+    SSF_LOG("microservice", debug,
+            "[datagram_listener]: error receiving datagram: {} ({})",
+            ec.message(), ec.value());
     return;
   }
 

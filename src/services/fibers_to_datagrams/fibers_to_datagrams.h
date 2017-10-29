@@ -54,7 +54,7 @@ class FibersToDatagrams : public BaseService<Demux> {
   FibersToDatagrams(const FibersToDatagrams&) = delete;
 
   ~FibersToDatagrams() {
-    SSF_LOG(kLogDebug) << "microservice[datagram_forwarder]: destroy";
+    SSF_LOG("microservice", debug, "[datagram_forwarder]: destroy");
   }
 
  public:
@@ -72,14 +72,14 @@ class FibersToDatagrams : public BaseService<Demux> {
       local_port = std::stoul(parameters.at("local_port"));
       remote_port = std::stoul(parameters.at("remote_port"));
     } catch (const std::exception&) {
-      SSF_LOG(kLogError) << "microservice[datagram_forwarder]: cannot extract "
-                            "port parameters";
+      SSF_LOG("microservice", error,
+              "[datagram_forwarder]: cannot extract port parameters");
       return FibersToDatagramsPtr(nullptr);
     }
 
     if (remote_port > 65535) {
-      SSF_LOG(kLogError) << "microservice[datagram_forwarder]: remote port ("
-                         << remote_port << ") out of range ";
+      SSF_LOG("microservice", error,
+              "[datagram_forwarder]: remote port {} out of range", remote_port);
       return FibersToDatagramsPtr(nullptr);
     }
 

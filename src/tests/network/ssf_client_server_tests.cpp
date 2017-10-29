@@ -83,7 +83,7 @@ class SSFClientServerTest : public ::testing::Test {
 
     p_ssf_client_->Run(ec);
     if (ec) {
-      SSF_LOG(kLogError) << "Could not run client";
+      SSF_LOG("test", error, "Could not run client");
       return;
     }
   }
@@ -102,19 +102,19 @@ class SSFClientServerTest : public ::testing::Test {
     switch (status) {
       case ssf::Status::kEndpointNotResolvable:
       case ssf::Status::kServerUnreachable:
-        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SSF_LOG("test", critical, "Network initialization failed");
         network_set_.set_value(false);
         transport_set_.set_value(false);
         break;
       case ssf::Status::kServerNotSupported:
-        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SSF_LOG("test", critical, "Transport initialization failed");
         transport_set_.set_value(false);
         break;
       case ssf::Status::kConnected:
         network_set_.set_value(true);
         break;
       case ssf::Status::kDisconnected:
-        SSF_LOG(kLogInfo) << "client: disconnected";
+        SSF_LOG("test", info, "client: disconnected");
         break;
       case ssf::Status::kRunning:
         transport_set_.set_value(true);

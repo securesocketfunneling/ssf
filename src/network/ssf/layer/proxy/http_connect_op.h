@@ -18,6 +18,8 @@
 #include "ssf/layer/proxy/http_response_builder.h"
 #include "ssf/layer/proxy/http_session_initializer.h"
 
+#include "ssf/log/log.h"
+
 namespace ssf {
 namespace layer {
 namespace proxy {
@@ -72,16 +74,18 @@ class HttpConnectOp {
         // send request
         session_initializer.PopulateRequest(&http_request, connect_ec);
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
-                                "generate connect request";
+          SSF_LOG("network_proxy", error,
+                  "session initializer could not "
+                  "generate connect request");
           break;
         }
 
         auto request = http_request.Serialize();
         boost::asio::write(stream_, boost::asio::buffer(request), connect_ec);
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
-                                "process connect response";
+          SSF_LOG("network_proxy", error,
+                  "session initializer could not "
+                  "process connect response");
           break;
         }
 
@@ -96,8 +100,9 @@ class HttpConnectOp {
         session_initializer.ProcessResponse(*response_builder.Get(),
                                             connect_ec);
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
-                                "process connect response";
+          SSF_LOG("network_proxy", error,
+                  "session initializer could not "
+                  "process connect response");
           break;
         }
       }
@@ -108,11 +113,11 @@ class HttpConnectOp {
         return;
       }
 
-      SSF_LOG(kLogError) << "network[proxy]: connection through proxy failed";
+      SSF_LOG("network_proxy", error, "connection through proxy failed");
       stream_.close(close_ec);
       ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
     } catch (const std::exception&) {
-      SSF_LOG(kLogError) << "network[proxy]: connection through proxy failed";
+      SSF_LOG("network_proxy", error, "connection through proxy failed");
       stream_.close(close_ec);
       ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
       return;
@@ -210,8 +215,9 @@ class AsyncHttpConnectOp {
         p_session_initializer_->PopulateRequest(p_http_request_.get(),
                                                 connect_ec);
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
-                                "generate connect request";
+          SSF_LOG("network_proxy", error,
+                  "session initializer could not "
+                  "generate connect request");
           break;
         }
 
@@ -231,8 +237,9 @@ class AsyncHttpConnectOp {
         p_session_initializer_->ProcessResponse(*p_response_builder_->Get(),
                                                 connect_ec);
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError) << "network[proxy]: session initializer could not "
-                                "process connect response";
+          SSF_LOG("network_proxy", error,
+                  "session initializer could not "
+                  "process connect response");
           break;
         }
       }
@@ -245,7 +252,7 @@ class AsyncHttpConnectOp {
         return;
       }
 
-      SSF_LOG(kLogError) << "network[proxy]: connection through proxy failed";
+      SSF_LOG("network_proxy", error, "connection through proxy failed");
       stream_.close(close_ec_);
       close_ec_.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
       handler_(close_ec_);
@@ -272,8 +279,9 @@ class AsyncHttpConnectOp {
 
 template <class Protocol, class Stream, class Endpoint, class ConnectHandler>
 inline void* asio_handler_allocate(
-    std::size_t size, AsyncHttpConnectOp<Protocol, Stream, Endpoint,
-                                         ConnectHandler>* this_handler) {
+    std::size_t size,
+    AsyncHttpConnectOp<Protocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   return boost_asio_handler_alloc_helpers::allocate(size,
                                                     this_handler->handler());
 }
@@ -288,8 +296,9 @@ inline void asio_handler_deallocate(
 }
 
 template <class Protocol, class Stream, class Endpoint, class ConnectHandler>
-inline bool asio_handler_is_continuation(AsyncHttpConnectOp<
-    Protocol, Stream, Endpoint, ConnectHandler>* this_handler) {
+inline bool asio_handler_is_continuation(
+    AsyncHttpConnectOp<Protocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   return boost_asio_handler_cont_helpers::is_continuation(
       this_handler->handler());
 }
@@ -297,8 +306,9 @@ inline bool asio_handler_is_continuation(AsyncHttpConnectOp<
 template <class Function, class Protocol, class Stream, class Endpoint,
           class ConnectHandler>
 inline void asio_handler_invoke(
-    Function& function, AsyncHttpConnectOp<Protocol, Stream, Endpoint,
-                                           ConnectHandler>* this_handler) {
+    Function& function,
+    AsyncHttpConnectOp<Protocol, Stream, Endpoint, ConnectHandler>*
+        this_handler) {
   boost_asio_handler_invoke_helpers::invoke(function, this_handler->handler());
 }
 

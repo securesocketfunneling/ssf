@@ -177,9 +177,8 @@ class basic_Router_service
 
     std::unique_lock<std::recursive_mutex> lock(impl.network_sockets_mutex);
 
-    SSF_LOG(kLogTrace)
-        << " * Router: add network " << prefix << " bound to interface "
-        << next_endpoint.next_layer_endpoint().endpoint_context();
+    SSF_LOG("network_router", trace, "add network {} bound to interface {}",
+            prefix, next_endpoint.next_layer_endpoint().endpoint_context());
 
     if (!ec) {
       auto inserted = impl.network_sockets.insert(std::make_pair(

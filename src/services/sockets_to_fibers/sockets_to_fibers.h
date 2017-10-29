@@ -3,13 +3,13 @@
 
 #include <boost/asio.hpp>
 
-#include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/boost/fiber/stream_fiber.hpp"
 #include "common/utils/to_underlying.h"
 
-#include <ssf/network/socket_link.h>
-#include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
+#include <ssf/network/manager.h>
+#include <ssf/network/socket_link.h>
 
 #include "services/base_service.h"
 #include "services/service_id.h"
@@ -52,7 +52,7 @@ class SocketsToFibers : public BaseService<Demux> {
   SocketsToFibers(const SocketsToFibers&) = delete;
 
   ~SocketsToFibers() {
-    SSF_LOG(kLogDebug) << "microservice[stream_listener]: destroy";
+    SSF_LOG("microservice", debug, "[stream_listener] destroy");
   }
 
  public:
@@ -80,7 +80,8 @@ class SocketsToFibers : public BaseService<Demux> {
     }
 
     std::string local_addr("127.0.0.1");
-    if (parameters.count("local_addr") && !parameters.at("local_addr").empty()) {
+    if (parameters.count("local_addr") &&
+        !parameters.at("local_addr").empty()) {
       if (gateway_ports) {
         if (parameters.at("local_addr") == "*") {
           local_addr = "0.0.0.0";
@@ -88,10 +89,10 @@ class SocketsToFibers : public BaseService<Demux> {
           local_addr = parameters.at("local_addr");
         }
       } else {
-        SSF_LOG(kLogWarning) << "microservice[stream_listener]: cannot listen "
-                                "on network interface <"
-                             << parameters.at("local_addr")
-                             << "> without gateway ports option";
+        SSF_LOG("microservice", warn,
+                "[stream_listener]: cannot listen on network interface <{}> "
+                "without gateway ports option",
+                parameters.at("local_addr"));
       }
     }
 
@@ -101,14 +102,14 @@ class SocketsToFibers : public BaseService<Demux> {
       local_port = std::stoul(parameters.at("local_port"));
       remote_port = std::stoul(parameters.at("remote_port"));
     } catch (const std::exception&) {
-      SSF_LOG(kLogError)
-          << "microservice[stream_listener]: cannot extract port parameters";
+      SSF_LOG("microservice", error,
+              "[stream_listener]: cannot extract port parameters");
       return SocketsToFibersPtr(nullptr);
     }
 
     if (local_port > 65535) {
-      SSF_LOG(kLogError) << "microservice[stream_listener]: local port ("
-                         << local_port << ") out of range ";
+      SSF_LOG("microservice", error,
+              "[stream_listener]: local port {} out of range", local_port);
       return SocketsToFibersPtr(nullptr);
     }
 

@@ -32,7 +32,7 @@ class WaitInitReplyState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][wait_init_reply] enter";
+    SSF_LOG("microservice", trace, "[copy][wait_init_reply] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -47,8 +47,8 @@ class WaitInitReplyState : ICopyState {
     }
 
     if (packet.type() != PacketType::kInitReply) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][wait_init_reply] cannot process packet type";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_reply] cannot process packet type");
       context->SetState(
           AbortSenderState::Create(ErrorCode::kInboundPacketNotSupported));
       return;
@@ -60,16 +60,17 @@ class WaitInitReplyState : ICopyState {
     boost::system::error_code convert_ec;
     PacketToPayload(packet, init_rep, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][wait_init_reply] cannot "
-                            "convert packet to init reply";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_reply] cannot "
+              "convert packet to init reply");
       context->SetState(
           AbortSenderState::Create(ErrorCode::kInitReplyPacketCorrupted));
       return;
     }
 
     if (init_rep.status != InitReply::Status::kInitializationSucceeded) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][wait_init_reply] remote initialization failed";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_reply] remote initialization failed");
       context->SetState(
           AbortSenderState::Create(ErrorCode::kCopyInitializationFailed));
       return;
@@ -83,8 +84,9 @@ class WaitInitReplyState : ICopyState {
       auto digest = ssf::crypto::HashFile<CopyContext::Hash>(
           context->input_filepath, init_rep.start_offset, hash_ec);
       if (hash_ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][wait_init_reply] cannot "
-                              "generate input file hash";
+        SSF_LOG("microservice", debug,
+                "[copy][wait_init_reply] cannot "
+                "generate input file hash");
         context->SetState(
             AbortSenderState::Create(ErrorCode::kInputFileDigestNotAvailable));
         return;
@@ -92,9 +94,9 @@ class WaitInitReplyState : ICopyState {
 
       if (!std::equal(digest.begin(), digest.end(),
                       init_rep.current_filehash.begin())) {
-        SSF_LOG(kLogDebug)
-            << "microservice[copy][wait_init_reply] input file and output "
-               "file are different";
+        SSF_LOG("microservice", debug,
+                "[copy][wait_init_reply] input file and output "
+                "file are different");
         context->SetState(AbortSenderState::Create(
             ErrorCode::kResumeFileTransferNotPermitted));
         return;
@@ -106,9 +108,9 @@ class WaitInitReplyState : ICopyState {
       context->input.open(context->input_filepath,
                       std::ifstream::binary | std::ifstream::in);
       if (!context->input.is_open() || !context->input.good()) {
-        SSF_LOG(kLogDebug)
-            << "microservice[copy][wait_init_reply] cannot open input file "
-            << context->input_filepath;
+        SSF_LOG("microservice", debug,
+                "[copy][wait_init_reply] cannot open input file {}",
+                context->input_filepath);
         context->SetState(
             AbortSenderState::Create(ErrorCode::kInputFileNotAvailable));
         return;

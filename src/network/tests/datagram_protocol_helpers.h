@@ -24,8 +24,8 @@ void TestDatagramProtocolPerfHalfDuplex(
     uint64_t size_in_mtu_multiples) {
   using Buffer = std::vector<uint8_t>;
 
-  SSF_LOG(kLogTrace) << " * TestDatagramProtocolPerfHalfDuplex";
-  SSF_LOG(kLogTrace) << "   MTU : " << DatagramProtocol::mtu;
+  SSF_LOG("test", trace, " * TestDatagramProtocolPerfHalfDuplex");
+  SSF_LOG("test", trace, "   MTU : {}", DatagramProtocol::mtu);
 
   std::promise<bool> s_finished1;
   std::promise<bool> finished1;
@@ -91,9 +91,8 @@ void TestDatagramProtocolPerfHalfDuplex(
       socket1.async_send_to(boost::asio::buffer(buffer1), socket2_endpoint,
                             sent_handler1);
     } else {
-      SSF_LOG(kLogTrace) << "   Packet loss1: "
-                         << static_cast<double>(s_count1 - count1) /
-                                DatagramProtocol::mtu;
+      SSF_LOG("test", trace, "   Packet loss1: {}",
+              (static_cast<double>(s_count1 - count1) / DatagramProtocol::mtu));
       s_finished1.set_value(true);
     }
   };
@@ -145,8 +144,8 @@ void TestDatagramProtocolPerfFullDuplex(
     uint64_t size_in_mtu_multiples) {
   using Buffer = std::vector<uint8_t>;
 
-  SSF_LOG(kLogTrace) << " * TestDatagramProtocolPerfFullDuplex";
-  SSF_LOG(kLogTrace) << "   MTU : " << DatagramProtocol::mtu;
+  SSF_LOG("test", trace, " * TestDatagramProtocolPerfFullDuplex");
+  SSF_LOG("test", trace, "   MTU : {}", DatagramProtocol::mtu);
 
   std::promise<bool> s_finished1;
   std::promise<bool> finished1;
@@ -212,7 +211,7 @@ void TestDatagramProtocolPerfFullDuplex(
       socket1.async_receive_from(boost::asio::buffer(r_buffer1),
                                  socket1_r_endpoint, received_handler1);
     } else {
-      SSF_LOG(kLogTrace) << "   Received2 finished";
+      SSF_LOG("test", trace, "   Received2 finished");
       ASSERT_EQ(data_size_to_send, count2);
       finished2.set_value(true);
     }
@@ -231,7 +230,7 @@ void TestDatagramProtocolPerfFullDuplex(
       socket2.async_receive_from(boost::asio::buffer(r_buffer2),
                                  socket2_r_endpoint, received_handler2);
     } else {
-      SSF_LOG(kLogTrace) << "   Received1 finished";
+      SSF_LOG("test", trace, "   Received1 finished");
       ASSERT_EQ(data_size_to_send, count1);
       finished1.set_value(true);
     }
@@ -246,9 +245,8 @@ void TestDatagramProtocolPerfFullDuplex(
       socket1.async_send_to(boost::asio::buffer(buffer1), socket2_endpoint,
                             sent_handler1);
     } else {
-      SSF_LOG(kLogTrace) << "   Packet loss1: "
-                         << static_cast<double>(s_count1 - count1) /
-                                DatagramProtocol::mtu;
+      SSF_LOG("test", trace, "   Packet loss1: {}",
+              (static_cast<double>(s_count1 - count1) / DatagramProtocol::mtu));
       s_finished1.set_value(true);
     }
   };
@@ -262,9 +260,8 @@ void TestDatagramProtocolPerfFullDuplex(
       socket2.async_send_to(boost::asio::buffer(buffer2), socket1_endpoint,
                             sent_handler2);
     } else {
-      SSF_LOG(kLogTrace) << "   Packet loss2: "
-                         << static_cast<double>(s_count2 - count2) /
-                                DatagramProtocol::mtu;
+      SSF_LOG("test", trace, "   Packet loss2: {}",
+              (static_cast<double>(s_count2 - count2) / DatagramProtocol::mtu));
       s_finished2.set_value(true);
     }
   };
@@ -556,10 +553,9 @@ void TestBindSendLocalDatagramProtocol(
   ASSERT_EQ(0, bind_ec.value())
       << "Bind socket2 should not be in error: " << bind_ec.message();
 
-  std::cout << "Transfering " << DatagramProtocol::next_layer_protocol::mtu
-            << " * " << max_packets << " = "
-            << DatagramProtocol::next_layer_protocol::mtu* max_packets
-            << " bytes in both direction" << std::endl;
+  SSF_LOG("test", info, "Transfering {} * {} = {} bytes in both direction",
+          DatagramProtocol::next_layer_protocol::mtu, max_packets,
+          DatagramProtocol::next_layer_protocol::mtu * max_packets);
 
   socket1.async_send(boost::asio::buffer(buffer1), sent_handler1);
   socket2.async_send(boost::asio::buffer(buffer2), sent_handler2);

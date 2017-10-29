@@ -7,7 +7,6 @@
 #include <ssf/log/log.h>
 
 #include "common/config/config.h"
-#include "common/log/log.h"
 
 #include "core/client/client.h"
 #include "core/client/client_helper.h"
@@ -37,8 +36,7 @@ int main(int argc, char** argv) {
 
   Run(argc, argv, exit_ec);
 
-  SSF_LOG(kLogInfo) << "[ssfcp] exit " << exit_ec.value() << " ("
-                    << exit_ec.message() << ")";
+  SSF_LOG("ssfcp", debug, "exit {} ({})", exit_ec.value(), exit_ec.message());
 
   return exit_ec.value();
 }
@@ -62,16 +60,16 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     exit_ec.assign(::error::success, ::error::get_ssf_category());
     return;
   } else if (exit_ec) {
-    SSF_LOG(kLogError) << "[ssfcp] invalid command line arguments";
+    SSF_LOG("ssfcp", error, "invalid command line arguments");
     return;
   }
 
-  ssf::log::Configure(cmd.log_level());
+  SetLogLevel(cmd.log_level());
 
   // read file configuration file
   ssf_config.UpdateFromFile(cmd.config_file(), exit_ec);
   if (exit_ec) {
-    SSF_LOG(kLogError) << "[ssfcp] invalid config file format";
+    SSF_LOG("ssfcp", error, "invalid config file format");
     return;
   }
 
@@ -79,7 +77,7 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     // update command line with config file argv
     cmd.Parse(ssf_config.GetArgc(), ssf_config.GetArgv().data(), exit_ec);
     if (exit_ec) {
-      SSF_LOG(kLogError) << "[ssfcp] invalid command line arguments";
+      SSF_LOG("ssfcp", error, "invalid command line arguments");
       return;
     }
   }
@@ -92,20 +90,19 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
        {CopyService::CreateUserServiceParameters(exit_ec)}}};
 
   if (exit_ec) {
-    SSF_LOG(kLogError)
-        << "[ssfcp] copy service parameters could not be generated";
+    SSF_LOG("ssfcp", error, "copy service parameters could not be generated");
     return;
   }
 
   if (!cmd.host_set()) {
-    SSF_LOG(kLogError) << "[ssfcp] no remote host provided";
+    SSF_LOG("ssfcp", error, "no remote host provided");
     exit_ec.assign(::error::destination_address_required,
                    ::error::get_ssf_category());
     return;
   }
 
   if (!cmd.port_set()) {
-    SSF_LOG(kLogError) << "[ssfcp] no host port provided";
+    SSF_LOG("ssfcp", error, "no host port provided");
     exit_ec.assign(::error::destination_address_required,
                    ::error::get_ssf_category());
     return;
@@ -145,8 +142,8 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
       ssf::Client::UserServicePtr service,
       const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogCritical) << "[ssfcp] service[" << service->GetName()
-                            << "] initialization failed";
+      SSF_LOG("ssfcp", error, "service[{}] initialization failed",
+              service->GetName());
       exit_ec.assign(::error::operation_not_supported,
                      ::error::get_ssf_category());
       boost::system::error_code stop_ec;
@@ -170,15 +167,12 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
   client.Init(endpoint_query, 1, 0, true, copy_params, ssf_config.services(),
               on_status, on_user_service_status, exit_ec);
   if (exit_ec) {
-    SSF_LOG(kLogError) << "[ssfcp] cannot init client (" << exit_ec.message()
-                       << ")";
+    SSF_LOG("ssfcp", error, "cannot init client ({})", exit_ec.message());
     return;
   }
 
-  SSF_LOG(kLogInfo) << "[ssfcp] connecting to <" << cmd.host() << ":"
-                    << cmd.port() << ">";
-
-  SSF_LOG(kLogInfo) << "[ssfcp] running (Ctrl + C to stop)";
+  SSF_LOG("ssfcp", info, "connecting to <{}:{}>", cmd.host(), cmd.port());
+  SSF_LOG("ssfcp", info, "running (Ctrl + C to stop)");
 
   // stop client on SIGINT or SIGTERM
   boost::asio::signal_set signal(client.get_io_service(), SIGINT, SIGTERM);
@@ -189,15 +183,15 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
         }
         exit_ec.assign(ssf::services::copy::ErrorCode::kInterrupted,
                        ssf::services::copy::get_copy_category());
-        SSF_LOG(kLogInfo) << "[ssfcp] interrupted";
+        SSF_LOG("ssfcp", info, "interrupted");
         boost::system::error_code stop_ec;
         client.Stop(stop_ec);
       });
 
   client.Run(exit_ec);
   if (exit_ec) {
-    SSF_LOG(kLogError) << "[ssfcp] error happened when running client: "
-                       << exit_ec.message();
+    SSF_LOG("ssfcp", error, "error happened when running client: {}",
+            exit_ec.message());
     signal.cancel(stop_ec);
   }
 
@@ -219,7 +213,7 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
   CopyClientPtr copy_client;
   auto session = client.GetSession(start_ec);
   if (start_ec) {
-    SSF_LOG(kLogError) << "[ssfcp] cannot get client session";
+    SSF_LOG("ssfcp", error, "cannot get client session");
     return nullptr;
   }
 
@@ -233,17 +227,15 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
     if (context->output.good() && context->output.is_open()) {
       uint64_t offset = context->output.tellp();
       percent = (offset == -1) ? 100 : 100 * offset / context->filesize;
-
-      SSF_LOG(kLogDebug) << "[ssfcp] Receiving: "
-                         << context->GetOutputFilepath().GetString() << " "
-                         << percent << "% / " << context->filesize << "b";
+      SSF_LOG("ssfcp", debug, "receiving: {} {}% / {}b",
+              context->GetOutputFilepath().GetString(), percent,
+              context->filesize);
     } else if (context->input.good() && context->input.is_open()) {
       uint64_t offset = context->input.tellg();
       percent = (offset == -1) ? 100 : (100 * offset / context->filesize);
 
-      SSF_LOG(kLogDebug) << "[ssfcp] Sending: " << context->input_filepath
-                         << " " << percent << "% / " << context->filesize
-                         << "b";
+      SSF_LOG("ssfcp", debug, "sending: {} {}% / {}b", context->input_filepath,
+              percent, context->filesize);
     }
   };
   auto on_file_copied = [session, &copy_ec](
@@ -254,18 +246,14 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
         copy_ec.assign(ssf::services::copy::ErrorCode::kFilesPartiallyCopied,
                        ssf::services::copy::get_copy_category());
       }
-      SSF_LOG(kLogInfo) << "[ssfcp] data copied from "
-                        << (context->is_stdin_input ? "stdin"
-                                                    : context->input_filepath)
-                        << " to " << context->GetOutputFilepath().GetString()
-                        << " " << ec.message();
+      SSF_LOG("ssfcp", info, "data copied from {} to {} ({})",
+              (context->is_stdin_input ? "stdin" : context->input_filepath),
+              context->GetOutputFilepath().GetString(), ec.message());
     } else {
       if (!session->is_stopped()) {
-        SSF_LOG(kLogWarning)
-            << "[ssfcp] data copied from "
-            << (context->is_stdin_input ? "stdin" : context->input_filepath)
-            << " to " << context->GetOutputFilepath().GetString() << " "
-            << ec.message();
+        SSF_LOG("ssfcp", warn, "data copied from {} to {} ({})",
+                (context->is_stdin_input ? "stdin" : context->input_filepath),
+                context->GetOutputFilepath().GetString(), ec.message());
       }
     }
   };
@@ -273,13 +261,11 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
       uint64_t files_count, uint64_t errors_count,
       const boost::system::error_code& ec) {
     if (!ec) {
-      SSF_LOG(kLogInfo) << "[ssfcp] copy finished " << ec.message() << " ("
-                        << (files_count - errors_count) << "/" << files_count
-                        << " files copied)";
+      SSF_LOG("ssfcp", info, "copy finished {} ({}/{} files copied)",
+              ec.message(), (files_count - errors_count), files_count);
     } else {
-      SSF_LOG(kLogWarning) << "[ssfcp] copy finished " << ec.message() << " ("
-                           << (files_count - errors_count) << "/" << files_count
-                           << " files copied)";
+      SSF_LOG("ssfcp", warn, "copy finished {} ({}/{} files copied)",
+              ec.message(), (files_count - errors_count), files_count);
     }
     // save copy ec
     copy_ec = ec;
@@ -290,7 +276,7 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
   copy_client = CopyClient::Create(session, on_file_status, on_file_copied,
                                    on_copy_finished, start_ec);
   if (start_ec) {
-    SSF_LOG(kLogError) << "[ssfcp] cannot create copy client";
+    SSF_LOG("ssfcp", error, "cannot create copy client");
     return nullptr;
   }
 

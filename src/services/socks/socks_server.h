@@ -50,7 +50,7 @@ class SocksServer : public BaseService<Demux> {
   SocksServer(const SocksServer&) = delete;
   SocksServer& operator=(const SocksServer&) = delete;
 
-  ~SocksServer() { SSF_LOG(kLogDebug) << "microservice[socks]: destroy"; }
+  ~SocksServer() { SSF_LOG("microservice", debug, "[socks]: destroy"); }
 
   // Create a new instance of the service
   static SocksServerPtr Create(boost::asio::io_service& io_service,
@@ -65,8 +65,7 @@ class SocksServer : public BaseService<Demux> {
       return SocksServerPtr(
           new SocksServer(io_service, fiber_demux, local_port));
     } catch (const std::exception&) {
-      SSF_LOG(kLogError)
-          << "microservice[socks]: cannot extract port parameter";
+      SSF_LOG("microservice", error, "[socks]: cannot extract port parameter");
       return SocksServerPtr(nullptr);
     }
   }

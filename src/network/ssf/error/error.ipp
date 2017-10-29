@@ -14,7 +14,7 @@ namespace detail {
 class ssf_category : public boost::system::error_category {
  public:
   const char* name() const BOOST_ASIO_ERROR_CATEGORY_NOEXCEPT {
-    return "ssf";
+    return "error";
   }
 
   std::string message(int value) const {
@@ -94,7 +94,7 @@ class ssf_category : public boost::system::error_category {
       case error::cannot_resolve_endpoint:
         return "cannot resolve endpoint";
       default:
-        return "ssf error";
+        return "error";
     }
   }
 };

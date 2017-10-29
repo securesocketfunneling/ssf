@@ -29,6 +29,8 @@
 #include "ssf/layer/parameters.h"
 #include "ssf/layer/protocol_attributes.h"
 
+#include "ssf/log/log.h"
+
 #include "ssf/io/accept_op.h"
 
 namespace ssf {
@@ -703,8 +705,8 @@ class basic_CryptoStreamAcceptor_service
 
     auto& peer_impl = p_socket->native_handle();
     if (ec) {
-      SSF_LOG(kLogDebug) << "network[crypto]: could not accept connection ("
-                         << ec.message() << ")";
+      SSF_LOG("network_crypto", debug, "could not accept connection ({})",
+              ec.message());
       boost::system::error_code close_ec;
 
       peer_impl.p_next_layer_socket->close(close_ec);

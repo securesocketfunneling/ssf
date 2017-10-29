@@ -59,10 +59,6 @@ set(SSF_FRAMEWORK_FILES
   common/filesystem/filesystem.h
   common/filesystem/filesystem.cpp
 
-  # log
-  common/log/log.cpp
-  common/log/log.h
-
   # utils
   common/utils/to_underlying.h
 

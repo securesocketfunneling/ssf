@@ -32,7 +32,7 @@ class SendFileState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][send_file] enter";
+    SSF_LOG("microservice", trace, "[copy][send_file] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -43,8 +43,7 @@ class SendFileState : ICopyState {
       try {
         input.read(packet->buffer().data(), packet->buffer().size());
       } catch (const std::exception&) {
-        SSF_LOG(kLogDebug)
-            << "microservice[copy][send_file] error while reading input file";
+        SSF_LOG("microservice", debug, "[copy][send_file] error while reading input file");
         context->SetState(
             AbortSenderState::Create(ErrorCode::kInputFileReadError));
         return false;
@@ -58,8 +57,7 @@ class SendFileState : ICopyState {
       context->SetState(WaitEofState::Create());
       return true;
     } else {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][send_file] cannot read input file";
+      SSF_LOG("microservice", debug, "[copy][send_file] cannot read input file");
       context->SetState(
           AbortSenderState::Create(ErrorCode::kInputFileReadError));
       return false;
@@ -72,8 +70,8 @@ class SendFileState : ICopyState {
       return OnSenderAbortPacket(context, packet, ec);
     }
 
-    SSF_LOG(kLogDebug)
-        << "microservice[copy][send_file] cannot process inbound packet";
+    SSF_LOG("microservice", debug,
+            "[copy][send_file] cannot process inbound packet");
     context->SetState(
         AbortSenderState::Create(ErrorCode::kInboundPacketNotSupported));
   }

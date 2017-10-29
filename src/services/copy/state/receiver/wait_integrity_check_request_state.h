@@ -33,8 +33,7 @@ class WaitIntegrityCheckRequestState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace)
-        << "microservice[copy][wait_integrity_check_request] enter";
+    SSF_LOG("microservice", trace, "[copy][wait_integrity_check_request] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -49,8 +48,9 @@ class WaitIntegrityCheckRequestState : ICopyState {
     }
 
     if (packet.type() != PacketType::kCheckIntegrityRequest) {
-      SSF_LOG(kLogDebug) << "microservice[copy][wait_integrity_check_request] "
-                            "cannot process inbound packet";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_integrity_check_request] "
+              "cannot process inbound packet");
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kInboundPacketNotSupported));
       return;
@@ -60,8 +60,9 @@ class WaitIntegrityCheckRequestState : ICopyState {
     CheckIntegrityRequest<CopyContext::Hash> req;
     PacketToPayload(packet, req, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][wait_integrity_check_request] "
-                            "cannot convert packet to integrity check request";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_integrity_check_request] "
+              "cannot convert packet to integrity check request");
       context->SetState(AbortReceiverState::Create(
           ErrorCode::kIntegrityCheckRequestPacketCorrupted));
     }

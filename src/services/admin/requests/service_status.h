@@ -63,9 +63,8 @@ class ServiceStatus {
       auto obj = obj_handle.get();
       obj.convert(status);
     } catch (const std::exception&) {
-      SSF_LOG(kLogWarning)
-          << "microservice[admin]: service status[on receive]: "
-             "cannot extract request";
+      SSF_LOG("microservice", warn,
+              "[admin] service status[on receive]: cannot extract request");
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return {};
     }
@@ -82,10 +81,9 @@ class ServiceStatus {
           status.id(), status.error_code_value(), ec);
     }
 
-    SSF_LOG(kLogDebug) << "microservice[admin]: service status: received "
-                       << "service unique id " << status.id() << " service id "
-                       << status.service_id() << " - error_code "
-                       << status.error_code_value();
+    SSF_LOG("microservice", debug,
+            "[admin] service status: received {} for service {} - ec {} ",
+            status.id(), status.service_id(), status.error_code_value());
 
     return {};
   }
@@ -95,8 +93,7 @@ class ServiceStatus {
                              const boost::system::error_code& ec,
                              std::string serialized_result) {
     if (ec) {
-      SSF_LOG(kLogWarning)
-          << "microservice[admin]: service status[on reply]: ec";
+      SSF_LOG("microservice", warn, "[admin] service status[on reply] error");
       return {};
     }
 

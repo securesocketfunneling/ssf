@@ -29,7 +29,7 @@ class ReceiveFileState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][receive_file] enter";
+    SSF_LOG("microservice", trace, "[copy][receive_file] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -41,7 +41,7 @@ class ReceiveFileState : ICopyState {
                             boost::system::error_code& ec) {
     switch (packet.type()) {
       case PacketType::kEof: {
-        SSF_LOG(kLogDebug) << "microservice[copy][receive_file] eof";
+        SSF_LOG("microservice", debug, "[copy][receive_file] eof");
         context->output.close();
 
         context->SetState(SendEofState::Create());
@@ -52,14 +52,15 @@ class ReceiveFileState : ICopyState {
           // write data into output file
           context->output.write(packet.buffer().data(), packet.payload_size());
         } catch (const std::exception&) {
-          SSF_LOG(kLogDebug) << "microservice[copy][receive_file] error while "
-                                "writing to output file";
+          SSF_LOG("microservice", debug,
+                  "[copy][receive_file] error while "
+                  "writing to output file");
           context->SetState(
               AbortReceiverState::Create(ErrorCode::kOutputFileWriteError));
           return;
         }
         if (!context->output.good()) {
-          SSF_LOG(kLogDebug) << "microservice[copy][receive_file] write failed";
+          SSF_LOG("microservice", debug, "[copy][receive_file] write failed");
           context->SetState(
               AbortReceiverState::Create(ErrorCode::kOutputFileWriteError));
           return;
@@ -70,8 +71,8 @@ class ReceiveFileState : ICopyState {
         return OnReceiverAbortPacket(context, packet, ec);
       }
       default: {
-        SSF_LOG(kLogDebug) << "microservice[copy][receive_file] cannot "
-                              "process inbound packet";
+        SSF_LOG("microservice", debug,
+                "[copy][receive_file] cannot process inbound packet");
         context->SetState(
             AbortReceiverState::Create(ErrorCode::kInboundPacketNotSupported));
         return;
