@@ -43,6 +43,10 @@ class WaitEofState : ICopyState {
 
   void ProcessInboundPacket(CopyContext* context, const Packet& packet,
                             boost::system::error_code& ec) {
+    if (context->input.good() && context->input.is_open()) {
+      context->input.close();
+    }
+
     if (packet.type() == PacketType::kAbort) {
       return OnSenderAbortPacket(context, packet, ec);
     }
@@ -55,7 +59,7 @@ class WaitEofState : ICopyState {
       return;
     }
 
-    if (context->check_file_integrity) {
+    if (context->check_file_integrity && !context->is_stdin_input) {
       context->SetState(SendIntegrityCheckRequestState::Create());
     } else {
       context->error_code = ErrorCode::kSuccess;

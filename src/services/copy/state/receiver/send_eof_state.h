@@ -40,7 +40,7 @@ class SendEofState : ICopyState {
     packet->set_type(PacketType::kEof);
     packet->set_payload_size(0);
 
-    if (context->check_file_integrity) {
+    if (context->check_file_integrity && !context->is_stdin_input) {
       context->SetState(WaitIntegrityCheckRequestState::Create());
     } else {
       context->error_code = ErrorCode::kSuccess;

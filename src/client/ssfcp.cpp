@@ -66,6 +66,8 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     return;
   }
 
+  ssf::log::Configure(cmd.log_level());
+
   // read file configuration file
   ssf_config.UpdateFromFile(cmd.config_file(), exit_ec);
   if (exit_ec) {
@@ -83,7 +85,6 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
   }
 
   ssf_config.Log();
-  ssf::log::Configure(cmd.log_level());
 
   // create and initialize copy user service
   ssf::UserServiceParameters copy_params = {
@@ -229,14 +230,14 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
     }
 
     uint64_t percent = 0;
-    if (context->output.is_open() && context->output.good()) {
+    if (context->output.good() && context->output.is_open()) {
       uint64_t offset = context->output.tellp();
       percent = (offset == -1) ? 100 : 100 * offset / context->filesize;
 
       SSF_LOG(kLogDebug) << "[ssfcp] Receiving: "
-                        << context->GetOutputFilepath().GetString() << " "
-                        << percent << "% / " << context->filesize << "b";
-    } else if (context->input.is_open()) {
+                         << context->GetOutputFilepath().GetString() << " "
+                         << percent << "% / " << context->filesize << "b";
+    } else if (context->input.good() && context->input.is_open()) {
       uint64_t offset = context->input.tellg();
       percent = (offset == -1) ? 100 : (100 * offset / context->filesize);
 
@@ -245,29 +246,29 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
                          << "b";
     }
   };
-  auto on_file_copied =
-      [session, &copy_ec](ssf::services::copy::CopyContext* context,
-                          const boost::system::error_code& ec) {
-        if (!ec) {
-          if (!session->is_stopped()) {
-            copy_ec.assign(ssf::services::copy::ErrorCode::kFilesPartiallyCopied,
-                           ssf::services::copy::get_copy_category());
-          }
-          SSF_LOG(kLogInfo)
-              << "[ssfcp] data copied from "
-              << (context->is_stdin_input ? "stdin" : context->input_filepath)
-              << " to " << context->GetOutputFilepath().GetString() << " "
-              << ec.message();
-        } else {
-          if (!session->is_stopped()) {
-            SSF_LOG(kLogWarning)
-                << "[ssfcp] data copied from "
-                << (context->is_stdin_input ? "stdin" : context->input_filepath)
-                << " to " << context->GetOutputFilepath().GetString() << " "
-                << ec.message();
-          }
-        }
-      };
+  auto on_file_copied = [session, &copy_ec](
+      ssf::services::copy::CopyContext* context,
+      const boost::system::error_code& ec) {
+    if (!ec) {
+      if (!session->is_stopped()) {
+        copy_ec.assign(ssf::services::copy::ErrorCode::kFilesPartiallyCopied,
+                       ssf::services::copy::get_copy_category());
+      }
+      SSF_LOG(kLogInfo) << "[ssfcp] data copied from "
+                        << (context->is_stdin_input ? "stdin"
+                                                    : context->input_filepath)
+                        << " to " << context->GetOutputFilepath().GetString()
+                        << " " << ec.message();
+    } else {
+      if (!session->is_stopped()) {
+        SSF_LOG(kLogWarning)
+            << "[ssfcp] data copied from "
+            << (context->is_stdin_input ? "stdin" : context->input_filepath)
+            << " to " << context->GetOutputFilepath().GetString() << " "
+            << ec.message();
+      }
+    }
+  };
   auto on_copy_finished = [session, &client, &copy_ec](
       uint64_t files_count, uint64_t errors_count,
       const boost::system::error_code& ec) {

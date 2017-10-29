@@ -1,5 +1,7 @@
 #include "common/config/circuit.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <ssf/log/log.h>
 
 namespace ssf {
@@ -12,10 +14,14 @@ Circuit::Circuit() : nodes_() {}
 
 void Circuit::Update(const PTree& pt) {
   for (const auto& child : pt) {
-    auto host = child.second.get_child_optional("host");
-    auto port = child.second.get_child_optional("port");
-    if (host && port) {
-      nodes_.emplace_back(host.get().data(), port.get().data());
+    auto opt_host = child.second.get_child_optional("host");
+    auto opt_port = child.second.get_child_optional("port");
+    if (opt_host && opt_port) {
+      std::string host(opt_host.get().data());
+      std::string port(opt_port.get().data());
+      boost::trim(host);
+      boost::trim(port);
+      nodes_.emplace_back(host, port);
     }
   }
 }

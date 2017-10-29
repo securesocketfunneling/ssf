@@ -174,6 +174,7 @@ ssf::layer::LayerParameters NetworkProtocol::ProxyConfigToLayerParameters(
           {"http_username", ssf_config.http_proxy().username()},
           {"http_domain", ssf_config.http_proxy().domain()},
           {"http_password", ssf_config.http_proxy().password()},
+          {"http_user_agent", ssf_config.http_proxy().user_agent()},
           {"http_reuse_ntlm",
            ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
           {"http_reuse_kerb",

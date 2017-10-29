@@ -52,6 +52,8 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
     return;
   }
 
+  ssf::log::Configure(cmd.log_level());
+
   // load config file
   ssf_config.UpdateFromFile(cmd.config_file(), exit_ec);
   if (exit_ec) {
@@ -67,8 +69,6 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
       return;
     }
   }
-
-  ssf::log::Configure(cmd.log_level());
 
   ssf_config.Log();
   if (cmd.show_status()) {

@@ -186,6 +186,7 @@ void Config::UpdateArguments(const PTree& pt) {
     auto argv = argv_it->str();
     // trim double quotes
     boost::trim_if(argv, boost::is_any_of("\""));
+    boost::trim(argv);
     argv_.push_back(argv);
     ++argv_it;
   }
@@ -205,6 +206,7 @@ const char* Config::default_config_ = R"RAWSTRING(
     "http_proxy": {
       "host": "",
       "port": "",
+      "user_agent": "",
       "credentials": {
         "username": "",
         "password": "",

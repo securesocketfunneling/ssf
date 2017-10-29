@@ -102,11 +102,10 @@ class WaitInitReplyState : ICopyState {
       context->start_offset = init_rep.start_offset;
     }
 
-    auto& input_file = context->input;
     if (!context->is_stdin_input) {
-      input_file.open(context->input_filepath,
+      context->input.open(context->input_filepath,
                       std::ifstream::binary | std::ifstream::in);
-      if (!input_file.is_open() || !input_file.good()) {
+      if (!context->input.is_open() || !context->input.good()) {
         SSF_LOG(kLogDebug)
             << "microservice[copy][wait_init_reply] cannot open input file "
             << context->input_filepath;
@@ -114,7 +113,7 @@ class WaitInitReplyState : ICopyState {
             AbortSenderState::Create(ErrorCode::kInputFileNotAvailable));
         return;
       }
-      input_file.seekg(context->start_offset, std::ifstream::beg);
+      context->input.seekg(context->start_offset, std::ifstream::beg);
     }
 
     context->SetState(SendFileState::Create());

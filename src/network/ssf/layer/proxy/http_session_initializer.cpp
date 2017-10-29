@@ -50,7 +50,9 @@ void HttpSessionInitializer::PopulateRequest(HttpRequest* p_request,
   }
 
   p_request->Reset("CONNECT", target_host_ + ':' + target_port_);
-
+  if (!proxy_ep_ctx_.http_proxy().user_agent.empty()) {
+    p_request->AddHeader("User-Agent", proxy_ep_ctx_.http_proxy().user_agent);
+  }
   if (stage_ == kProcessing) {
     if (p_current_auth_strategy_ != nullptr) {
       p_current_auth_strategy_->PopulateRequest(p_request);

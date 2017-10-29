@@ -1,28 +1,29 @@
 {
     "ssf": {
         "tls" : {
-            "ca_cert_path": "test_ca_path",
-            "cert_path": "test_cert_path",
-            "key_path": "test_key_path",
-            "key_password": "test_key_password",
-            "dh_path": "test_dh_path",
-            "cipher_alg": "test_cipher_alg"
+            "ca_cert_path": "  test_ca_path",
+            "cert_path": "test_cert_path  ",
+            "key_path": " test_key_path ",
+            "key_password": "  test_key_password  ",
+            "dh_path": " test_dh_path  ",
+            "cipher_alg": " test_cipher_alg "
         },
         "http_proxy" : {
-            "host": "127.0.0.1",
-            "port": "8080",
+            "host": "  127.0.0.1   ",
+            "port": " 8080 ",
+            "user_agent": "   Mozilla/5.0",
             "credentials": {
-                "username": "test_user",
-                "password": "test_password",
-                "domain": "test_domain",
+                "username": " test_user  ",
+                "password": " test_password  ",
+                "domain": " test_domain   ",
                 "reuse_ntlm": false,
                 "reuse_kerb": false
             }
         },
         "socks_proxy": {
             "version": 4,
-            "host": "127.0.0.2",
-            "port": "1080"
+            "host": "  127.0.0.2     ",
+            "port": "  1080    "
         },
         "services" : {
             "shell": {

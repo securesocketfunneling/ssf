@@ -1,3 +1,5 @@
+#include <boost/algorithm/string.hpp>
+
 #include <ssf/log/log.h>
 
 #include "common/config/services.h"
@@ -89,7 +91,7 @@ void Services::UpdateDatagramForwarder(const PTree& pt) {
   }
 
   datagram_forwarder_.set_enabled(
-      ServiceEnabled(optional.get(), datagram_forwarder_.enabled()));
+      IsServiceEnabled(optional.get(), datagram_forwarder_.enabled()));
 }
 
 void Services::UpdateDatagramListener(const PTree& pt) {
@@ -103,7 +105,7 @@ void Services::UpdateDatagramListener(const PTree& pt) {
   auto& datagram_listener_prop = optional.get();
 
   datagram_listener_.set_enabled(
-      ServiceEnabled(datagram_listener_prop, datagram_listener_.enabled()));
+      IsServiceEnabled(datagram_listener_prop, datagram_listener_.enabled()));
 
   auto gateway_ports =
       datagram_listener_prop.get_child_optional("gateway_ports");
@@ -120,7 +122,7 @@ void Services::UpdateCopy(const PTree& pt) {
     return;
   }
 
-  copy_.set_enabled(ServiceEnabled(copy_optional.get(), copy_.enabled()));
+  copy_.set_enabled(IsServiceEnabled(copy_optional.get(), copy_.enabled()));
 }
 
 void Services::UpdateShell(const PTree& pt) {
@@ -132,15 +134,20 @@ void Services::UpdateShell(const PTree& pt) {
   }
 
   auto& shell_prop = shell_optional.get();
-  shell_.set_enabled(ServiceEnabled(shell_prop, shell_.enabled()));
+  shell_.set_enabled(IsServiceEnabled(shell_prop, shell_.enabled()));
 
-  auto path = shell_prop.get_child_optional("path");
-  if (path) {
-    shell_.set_path(path.get().data());
+  auto opt_path = shell_prop.get_child_optional("path");
+  if (opt_path) {
+    std::string shell_path(opt_path.get().data());
+    boost::trim(shell_path);
+    shell_.set_path(shell_path);
   }
-  auto args = shell_prop.get_child_optional("args");
-  if (args) {
-    shell_.set_args(args.get().data());
+
+  auto opt_args = shell_prop.get_child_optional("args");
+  if (opt_args) {
+    std::string shell_args(opt_args.get().data());
+    boost::trim(shell_args);
+    shell_.set_args(shell_args);
   }
 }
 
@@ -152,7 +159,7 @@ void Services::UpdateSocks(const PTree& pt) {
     return;
   }
 
-  socks_.set_enabled(ServiceEnabled(socks_optional.get(), socks_.enabled()));
+  socks_.set_enabled(IsServiceEnabled(socks_optional.get(), socks_.enabled()));
 }
 
 void Services::UpdateStreamForwarder(const PTree& pt) {
@@ -164,7 +171,7 @@ void Services::UpdateStreamForwarder(const PTree& pt) {
   }
 
   stream_forwarder_.set_enabled(
-      ServiceEnabled(optional.get(), stream_forwarder_.enabled()));
+      IsServiceEnabled(optional.get(), stream_forwarder_.enabled()));
 }
 
 void Services::UpdateStreamListener(const PTree& pt) {
@@ -178,7 +185,7 @@ void Services::UpdateStreamListener(const PTree& pt) {
   auto& stream_listener_prop = optional.get();
 
   stream_listener_.set_enabled(
-      ServiceEnabled(stream_listener_prop, stream_listener_.enabled()));
+      IsServiceEnabled(stream_listener_prop, stream_listener_.enabled()));
 
   auto gateway_ports = stream_listener_prop.get_child_optional("gateway_ports");
   if (gateway_ports) {
@@ -186,7 +193,8 @@ void Services::UpdateStreamListener(const PTree& pt) {
   }
 }
 
-bool Services::ServiceEnabled(const PTree& service_ptree, bool default_value) {
+bool Services::IsServiceEnabled(const PTree& service_ptree,
+                                bool default_value) {
   auto enable_prop = service_ptree.get_child_optional("enable");
   if (enable_prop) {
     return enable_prop.get().get_value<bool>();
