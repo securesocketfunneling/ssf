@@ -334,8 +334,8 @@ void basic_fiber_demux_service<S>::handle_syn(implementation_type impl,
                                               p_fiber_buffer p_fiber_buff) {
   SSF_LOG("demux", trace, "handle syn");
   const auto& header = p_fiber_buff->header();
-  std::unique_lock<std::recursive_mutex> lock1(impl->bound_mutex);
-  std::unique_lock<std::recursive_mutex> lock2(impl->listening_mutex);
+  std::unique_lock<std::recursive_mutex> lock_listening(impl->listening_mutex);
+  std::unique_lock<std::recursive_mutex> lock_bound(impl->bound_mutex);
 
   if (impl->listening.count(header.id().remote_port())) {
     auto on_new_fiber = impl->bound[fiber_id(header.id().remote_port())]

@@ -14,7 +14,7 @@ class RemoteUdpForwardTest
   }
 };
 
-TEST_F(RemoteUdpForwardTest, transferOnesOverUdp) {
+TEST_F(RemoteUdpForwardTest, MultiDatagrams) {
   ASSERT_TRUE(Wait());
 
   Run("6464", "6565");
@@ -65,7 +65,7 @@ class RemoteUdpForwardWildcardTest : public RemoteUdpForwardTest {
   }
 };
 
-TEST_F(RemoteUdpForwardWildcardTest, transferOnesOverUdp) {
+TEST_F(RemoteUdpForwardWildcardTest, MultiDatagrams) {
   ASSERT_TRUE(Wait());
 
   Run("6666", "6767");

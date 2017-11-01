@@ -14,7 +14,7 @@ class RemoteStreamForwardTest
   }
 };
 
-TEST_F(RemoteStreamForwardTest, transferOnesOverStream) {
+TEST_F(RemoteStreamForwardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("5454", "5555");
@@ -65,7 +65,7 @@ class RemoteStreamForwardWildcardTest : public RemoteStreamForwardTest {
   }
 };
 
-TEST_F(RemoteStreamForwardWildcardTest, transferOnesOverStream) {
+TEST_F(RemoteStreamForwardWildcardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("5656", "5757");

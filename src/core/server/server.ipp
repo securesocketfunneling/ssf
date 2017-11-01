@@ -171,6 +171,7 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
   // Make a new fiber demux and fiberize
   auto p_fiber_demux = std::make_shared<Demux>(async_engine_.get_io_service());
   auto close_demux_handler = [this, p_fiber_demux]() {
+    std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
     RemoveDemux(p_fiber_demux);
   };
   p_fiber_demux->fiberize(std::move(*p_socket), close_demux_handler);
@@ -237,7 +238,6 @@ void SSFServer<N, T>::DoFiberize(NetworkSocketPtr p_socket,
 template <class N, template <class> class T>
 void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
                                ServiceManagerPtr<Demux> p_service_manager) {
-  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG("server", trace, "adding a new demux");
 
   p_fiber_demuxes_.insert(p_fiber_demux);
@@ -246,7 +246,6 @@ void SSFServer<N, T>::AddDemux(DemuxPtr p_fiber_demux,
 
 template <class N, template <class> class T>
 void SSFServer<N, T>::RemoveDemux(DemuxPtr p_fiber_demux) {
-  std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG("server", trace, "removing a demux");
 
   if (p_service_managers_.count(p_fiber_demux)) {
@@ -270,8 +269,9 @@ void SSFServer<N, T>::RemoveAllDemuxes() {
   std::unique_lock<std::recursive_mutex> lock(storage_mutex_);
   SSF_LOG("server", trace, "removing all demuxes");
 
-  for (auto& p_fiber_demux : p_fiber_demuxes_) {
-    RemoveDemux(p_fiber_demux);
+  while (!p_fiber_demuxes_.empty()) {
+    auto demux_it = p_fiber_demuxes_.begin();
+    RemoveDemux(*demux_it);
   }
 }
 

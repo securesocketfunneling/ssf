@@ -61,7 +61,7 @@ class Socks4WildcardTest : public SocksWildcardTest<Socks4Test> {
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9055"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9055"}}}}};
   }
 };
 
@@ -85,7 +85,7 @@ class Socks5Test : public SocksFixtureTest<ssf::services::Socks,
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9057"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9057"}}}}};
   }
 };
 
@@ -94,7 +94,7 @@ class Socks5hTest : public SocksFixtureTest<ssf::services::Socks,
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9059"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9059"}}}}};
   }
 };
 

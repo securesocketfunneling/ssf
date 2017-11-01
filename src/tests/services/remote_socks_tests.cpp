@@ -64,7 +64,7 @@ class RemoteSocks4WildcardTest
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9155"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9155"}}}}};
   }
 };
 
@@ -89,7 +89,7 @@ class RemoteSocks5Test
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9157"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9157"}}}}};
   }
 };
 
@@ -99,7 +99,7 @@ class RemoteSocks5hTest
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9159"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9159"}}}}};
   }
 };
 

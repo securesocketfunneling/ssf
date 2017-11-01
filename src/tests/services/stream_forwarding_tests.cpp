@@ -14,7 +14,7 @@ class StreamForwardTest
   }
 };
 
-TEST_F(StreamForwardTest, transferOnesOverStream) {
+TEST_F(StreamForwardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("7474", "7575");
@@ -65,7 +65,7 @@ class StreamForwardWildcardTest : public StreamForwardTest {
   }
 };
 
-TEST_F(StreamForwardWildcardTest, transferOnesOverStream) {
+TEST_F(StreamForwardWildcardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("7676", "7777");

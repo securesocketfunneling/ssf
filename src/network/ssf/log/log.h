@@ -14,12 +14,8 @@ void SetLogLevel(spdlog::level::level_enum level = spdlog::level::info);
 #include <string>
 #include <vector>
 
-
 namespace ssf {
 namespace log {
-
-#define SSF_LOG(channel, level, ...) \
-  ssf::log::GetManager().GetChannel(channel)->level(__VA_ARGS__);
 
 class Manager {
  public:
@@ -30,12 +26,12 @@ class Manager {
 
  private:
   std::shared_ptr<spdlog::logger> CreateChannel(const std::string& channel);
-
- private:
-  spdlog::level::level_enum level_;
 };
 
 Manager& GetManager();
+
+#define SSF_LOG(channel, level, ...) \
+  ssf::log::GetManager().GetChannel(channel)->level(__VA_ARGS__);
 
 }  // log
 }  // ssf

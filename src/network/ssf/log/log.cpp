@@ -28,7 +28,10 @@ Manager& GetManager() {
   return manager;
 }
 
-Manager::Manager() : level_(::spdlog::level::info) {}
+Manager::Manager() {
+  spdlog::set_level(spdlog::level::info);
+  spdlog::set_pattern("[%Y-%m-%dT%H:%M:%S%z] [%l] [%n] %v");
+}
 
 std::shared_ptr<spdlog::logger> Manager::GetChannel(const std::string& name) {
   auto channel = spdlog::get(name);
@@ -39,15 +42,7 @@ std::shared_ptr<spdlog::logger> Manager::GetChannel(const std::string& name) {
 }
 
 void Manager::SetLevel(spdlog::level::level_enum level) {
-  if (level_ == level) {
-    return;
-  }
-
-  level_ = level;
-  auto set_level = [this](std::shared_ptr<spdlog::logger> logger) {
-    logger->set_level(level_);
-  };
-  spdlog::apply_all(set_level);
+  spdlog::set_level(level);
 }
 
 std::shared_ptr<spdlog::logger> Manager::CreateChannel(
@@ -64,13 +59,10 @@ std::shared_ptr<spdlog::logger> Manager::CreateChannel(
 #endif  // defined(SSF_ENABLE_SYSLOG)
 #endif  // defined(_MSC_VER)
 
-  auto logger = std::make_shared<spdlog::logger>(name, std::begin(sinks),
-                                                 std::end(sinks));
-  logger->set_level(level_);
-
+  std::shared_ptr<spdlog::logger> logger;
   try {
-    spdlog::register_logger(logger);
-  } catch (const std::exception& e) {
+    logger = spdlog::create(name, sinks.cbegin(), sinks.cend());
+  } catch (const std::exception&) {
     logger = spdlog::get(name);
   }
 
