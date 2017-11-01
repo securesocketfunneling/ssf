@@ -19,7 +19,7 @@ namespace ssf {
 namespace log {
 
 #define SSF_LOG(channel, level, ...) \
-  ssf::log::GetManager()->GetChannel(channel)->level(__VA_ARGS__);
+  ssf::log::GetManager().GetChannel(channel)->level(__VA_ARGS__);
 
 class Manager {
  public:
@@ -32,12 +32,10 @@ class Manager {
   std::shared_ptr<spdlog::logger> CreateChannel(const std::string& channel);
 
  private:
-  std::mutex channel_mutex_;
   spdlog::level::level_enum level_;
-  std::vector<std::string> channels_;
 };
 
-Manager* GetManager();
+Manager& GetManager();
 
 }  // log
 }  // ssf
