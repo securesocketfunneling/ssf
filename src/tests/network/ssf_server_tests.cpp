@@ -53,18 +53,18 @@ TEST_F(SSFFixtureTest, buggyConnectionTest) {
     switch (status) {
       case ssf::Status::kEndpointNotResolvable:
       case ssf::Status::kServerUnreachable:
-        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SSF_LOG("test", critical, "Network initialization failed");
         SendNotification(false);
         break;
       case ssf::Status::kServerNotSupported:
-        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SSF_LOG("test", critical, "Transport initialization failed");
         SendNotification(false);
         break;
       case ssf::Status::kConnected:
         SendNotification(true);
         break;
       case ssf::Status::kDisconnected:
-        SSF_LOG(kLogInfo) << "client: disconnected";
+        SSF_LOG("test", info, "client: disconnected");
         break;
       case ssf::Status::kRunning:
         SendNotification(false);

@@ -30,27 +30,25 @@ void Server<Demux>::start(boost::system::error_code& ec) {
   fiber_acceptor_.bind(ep, ec);
 
   if (ec) {
-    SSF_LOG(kLogError)
-        << "microservice[shell]: fiber acceptor could not bind on port "
-        << local_port_;
+    SSF_LOG("microservice", error,
+            "[shell]: fiber acceptor could not bind on port {}", local_port_);
     return;
   }
 
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "microservice[shell]: fiber acceptor could not listen";
+    SSF_LOG("microservice", error, "[shell]: fiber acceptor could not listen");
     return;
   }
 
   if (!CheckBinaryPath()) {
-    SSF_LOG(kLogError) << "microservice[shell]: binary not found";
+    SSF_LOG("microservice", error, "[shell]: binary not found");
     ec.assign(::error::file_not_found, ::error::get_ssf_category());
     return;
   }
 
-  SSF_LOG(kLogInfo) << "microservice[shell]: start server on fiber port "
-                    << local_port_;
+  SSF_LOG("microservice", info, "[shell]: start server on fiber port {}",
+          local_port_);
 
   this->AsyncAcceptFiber();
 }
@@ -59,7 +57,7 @@ template <typename Demux>
 void Server<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  SSF_LOG(kLogDebug) << "microservice[shell]: stop server";
+  SSF_LOG("microservice", debug, "[shell]: stop server");
   this->HandleStop();
 }
 
@@ -76,7 +74,7 @@ void Server<Demux>::StopSession(BaseSessionPtr session,
 
 template <typename Demux>
 void Server<Demux>::AsyncAcceptFiber() {
-  SSF_LOG(kLogTrace) << "microservice[shell]: accepting new session";
+  SSF_LOG("microservice", trace, "[shell]: accepting new session");
   FiberPtr new_connection = std::make_shared<Fiber>(
       this->get_io_service(), FiberEndpoint(this->get_demux(), 0));
 
@@ -90,13 +88,13 @@ template <typename Demux>
 void Server<Demux>::FiberAcceptHandler(FiberPtr new_connection,
                                        const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogDebug)
-        << "microservice[shell]: error accepting new connections: "
-        << ec.message() << " " << ec.value();
+    SSF_LOG("microservice", debug,
+            "[shell]: error accepting new connections: {} ({})", ec.message(),
+            ec.value());
     return;
   }
 
-  SSF_LOG(kLogDebug) << "microservice[shell]: start session";
+  SSF_LOG("microservice", debug, "[shell]: start session");
 
   this->AsyncAcceptFiber();
 

@@ -11,6 +11,8 @@
 
 #include "ssf/layer/proxy/socks_session_initializer.h"
 
+#include "ssf/log/log.h"
+
 namespace ssf {
 namespace layer {
 namespace proxy {
@@ -57,9 +59,8 @@ class SocksConnectOp {
         session_initializer.PopulateRequest(&buffer, &expected_response_size,
                                             connect_ec);
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError)
-              << "network[socks proxy]: session initializer could not "
-                 "generate request";
+          SSF_LOG("network_proxy", error,
+                  "SOCKS session initializer could not generate request");
           break;
         }
 
@@ -77,9 +78,8 @@ class SocksConnectOp {
         }
 
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError)
-              << "network[socks proxy]: session initializer could not "
-                 "process response";
+          SSF_LOG("network_proxy", error,
+                  "SOCKS session initializer could not process response");
           break;
         }
       }
@@ -90,15 +90,13 @@ class SocksConnectOp {
         return;
       }
 
-      SSF_LOG(kLogError)
-          << "network[socks proxy]: connection through socks proxy failed";
+      SSF_LOG("network_proxy", error, "connection through socks proxy failed");
       stream_.close(close_ec);
       connect_ec.assign(ssf::error::broken_pipe,
                         ssf::error::get_ssf_category());
     } catch (const std::exception& err) {
-      SSF_LOG(kLogError)
-          << "network[socks proxy]: connection through proxy failed ("
-          << err.what() << ")";
+      SSF_LOG("network_proxy", error,
+              "connection through SOCKS proxy failed ({})", err.what());
       stream_.close(close_ec);
       ec.assign(ssf::error::broken_pipe, ssf::error::get_ssf_category());
       return;
@@ -185,9 +183,8 @@ class AsyncSocksConnectOp {
         p_session_initializer_->PopulateRequest(
             p_buffer_.get(), p_expected_response_size_.get(), connect_ec);
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError)
-              << "network[socks proxy]: session initializer could not "
-                 "generate request";
+          SSF_LOG("network_proxy", error,
+                  "SOCKS session initializer could not generate request");
           break;
         }
 
@@ -207,9 +204,8 @@ class AsyncSocksConnectOp {
         }
 
         if (connect_ec.value() != 0) {
-          SSF_LOG(kLogError)
-              << "network[socks proxy]: session initializer could not "
-                 "process response";
+          SSF_LOG("network_proxy", error,
+                  "SOCKS session initializer could not process response");
           break;
         }
       }
@@ -221,8 +217,7 @@ class AsyncSocksConnectOp {
         return;
       }
 
-      SSF_LOG(kLogError)
-          << "network[socks proxy]: connection through socks proxy failed";
+      SSF_LOG("network_proxy", error, "connection through socks proxy failed");
       stream_.close(close_ec);
       connect_ec.assign(ssf::error::broken_pipe,
                         ssf::error::get_ssf_category());

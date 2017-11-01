@@ -32,7 +32,7 @@ class SendEofState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][send_eof] enter";
+    SSF_LOG("microservice", trace, "[copy][send_eof] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -56,8 +56,8 @@ class SendEofState : ICopyState {
       return OnReceiverAbortPacket(context, packet, ec);
     }
 
-    SSF_LOG(kLogDebug)
-        << "microservice[copy][send_eof] cannot process inbound packet";
+    SSF_LOG("microservice", debug,
+            "[copy][send_eof] cannot process inbound packet");
     context->SetState(
         AbortReceiverState::Create(ErrorCode::kInboundPacketNotSupported));
   }

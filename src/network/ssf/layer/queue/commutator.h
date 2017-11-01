@@ -141,7 +141,7 @@ class Commutator : public std::enable_shared_from_this<
                      const boost::system::error_code& ec, Element element) {
     if (ec) {
       p_input_callback->item.Disactivate();
-      SSF_LOG(kLogTrace) << " * Deactivate input received callback";
+      SSF_LOG("network_queue", trace, "Deactivate input received callback");
       // TODO : erase from map?
       //        continue routing when socket is disconnected ?
 

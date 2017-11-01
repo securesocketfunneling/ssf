@@ -46,15 +46,14 @@ void Socks4Strategy::ProcessResponse(const Buffer& response,
   boost::asio::buffer_copy(socks_reply.MutBuffer(),
                            boost::asio::buffer(response));
   if (socks_reply.null_byte() != 0) {
-    SSF_LOG(kLogError)
-        << "network[socks4 proxy]: connection failed (invalid socks reply)";
+    SSF_LOG("network_proxy", error, "SOCKSv4 connection failed (invalid socks reply)");
     set_state(State::kError);
     ec.assign(ssf::error::connection_refused, ssf::error::get_ssf_category());
     return;
   }
   if (socks_reply.status() != Reply::Status::kGranted) {
-    SSF_LOG(kLogError) << "network[socks4 proxy]: connection failed (status "
-                       << static_cast<uint32_t>(socks_reply.status()) << ")";
+    SSF_LOG("network_proxy", error, "SOCKSv4 connection failed (status {})",
+            static_cast<uint32_t>(socks_reply.status()));
     set_state(State::kError);
     ec.assign(ssf::error::connection_refused, ssf::error::get_ssf_category());
     return;

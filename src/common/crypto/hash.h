@@ -48,8 +48,8 @@ typename Hash::Digest HashFile(const ssf::Path& path,
   ssf::Filesystem fs;
   auto filesize = fs.GetFilesize(path, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "hash: could not get filesize of "
-                       << path.GetString();
+    SSF_LOG("crypto", error, "hash: could not get filesize of {}",
+            path.GetString());
     return {};
   }
   return HashFile<Hash>(path, filesize, ec);

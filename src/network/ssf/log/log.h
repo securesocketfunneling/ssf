@@ -1,63 +1,41 @@
 #ifndef SSF_LOG_LOG_H_
 #define SSF_LOG_LOG_H_
 
+#include <spdlog/spdlog.h>
+
+void SetLogLevel(spdlog::level::level_enum level = spdlog::level::info);
+
+#ifdef SSF_DISABLE_LOGS
+#define SSF_LOG(...)
+#else
+
+#include <memory>
+#include <mutex>
 #include <string>
-#include <sstream>
+#include <vector>
 
 namespace ssf {
 namespace log {
 
-enum LogLevel {
-  kLogNone,
-  kLogCritical,
-  kLogError,
-  kLogWarning,
-  kLogInfo,
-  kLogDebug,
-  kLogTrace
-};
-
-// Application log
-// Example:
-//     ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogTrace);
-//     SSF_LOG(kLogCritical) << "critical";
-//     SSF_LOG(kLogError) << "error";
-//     SSF_LOG(kLogWarning) << "warning";
-//     SSF_LOG(kLogInfo) << "info";
-//     SSF_LOG(kLogDebug) << "debug";
-//     SSF_LOG(kLogTrace) << "trace";
-class Log {
+class Manager {
  public:
-  Log();
-  virtual ~Log();
+  Manager();
 
-  std::ostream& GetLog(LogLevel level);
-
- public:
-  // Global severity level
-  static LogLevel& SeverityLevel();
-
-  // Set global severity level
-  static void SetSeverityLevel(LogLevel level);
-
-  // Convert log level to string representation
-  static std::string LevelToString(LogLevel level);
-
- protected:
-  std::ostringstream os_;
+  std::shared_ptr<spdlog::logger> GetChannel(const std::string& channel);
+  void SetLevel(spdlog::level::level_enum level);
 
  private:
-  Log(const Log&) = delete;
-  Log& operator=(const Log&) = delete;
+  std::shared_ptr<spdlog::logger> CreateChannel(const std::string& channel);
 };
+
+Manager& GetManager();
+
+#define SSF_LOG(channel, level, ...) \
+  ssf::log::GetManager().GetChannel(channel)->level(__VA_ARGS__);
 
 }  // log
 }  // ssf
 
-#define SSF_LOG(level)                                  \
-  if (ssf::log::Log::SeverityLevel() < ssf::log::level) \
-    ;                                                   \
-  else                                                  \
-  ssf::log::Log().GetLog(ssf::log::level)
+#endif  // SSF_DISABLE_LOGS
 
 #endif  // SSF_LOG_LOG_H_

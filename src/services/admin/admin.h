@@ -63,7 +63,7 @@ class Admin : public BaseService<Demux> {
     return AdminPtr(new Admin(io_service, fiber_demux));
   }
 
-  ~Admin() { SSF_LOG(kLogDebug) << "microservice[admin]: destroy"; }
+  ~Admin() { SSF_LOG("microservice", debug, "[admin] destroy"); }
 
   enum {
     kFactoryId = to_underlying(MicroserviceId::kAdmin),

@@ -19,7 +19,7 @@ void AsyncEngine::Start() {
     return;
   }
 
-  SSF_LOG(kLogDebug) << "[async engine] starting";
+  SSF_LOG("async_engine", debug, "starting");
   is_started_ = true;
   p_worker_.reset(new boost::asio::io_service::work(io_service_));
   for (uint8_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
@@ -27,8 +27,8 @@ void AsyncEngine::Start() {
       boost::system::error_code ec;
       io_service_.run(ec);
       if (ec) {
-        SSF_LOG(kLogError) << "async engine: run io_service failed: "
-                           << ec.message();
+        SSF_LOG("async_engine", error, "run io_service failed: {}",
+                ec.message());
       }
     });
   }
@@ -39,7 +39,7 @@ void AsyncEngine::Stop() {
     return;
   }
 
-  SSF_LOG(kLogDebug) << "[async engine] stop";
+  SSF_LOG("async_engine", debug, "stop");
   p_worker_.reset(nullptr);
   for (auto& thread : threads_) {
     if (thread.joinable()) {

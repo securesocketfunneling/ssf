@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <ctime>
 
+#include <ssf/log/log.h>
+
 #include "common/crypto/hash.h"
 #include "common/crypto/sha256.h"
 #include "common/filesystem/path.h"
@@ -18,7 +20,7 @@ CopyFixtureTest::CopyFixtureTest()
     : p_ssf_client_(nullptr), p_ssf_server_(nullptr) {}
 
 void CopyFixtureTest::SetUp() {
-  ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogInfo);
+  SetLogLevel(spdlog::level::info);
   std::srand(static_cast<uint32_t>(std::time(0)));
 
   // clean generated files
@@ -115,7 +117,7 @@ void CopyFixtureTest::StartClient(const std::string& server_port) {
 
   p_ssf_client_->Run(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "[copy_tests] could not run client";
+    SSF_LOG("test", error, "[copy_tests] could not run client");
   }
   return;
 }
@@ -139,7 +141,7 @@ bool CopyFixtureTest::StartCopy(const ssf::services::copy::CopyRequest& req,
 
   ClientSessionPtr session = p_ssf_client_->GetSession(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "[copy_tests] cannot get client session";
+    SSF_LOG("test", error, "[copy_tests] cannot get client session");
     return false;
   }
 
@@ -154,43 +156,39 @@ bool CopyFixtureTest::StartCopy(const ssf::services::copy::CopyRequest& req,
       uint64_t file_offset = context->output.tellp();
       percent =
           (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
-      SSF_LOG(kLogDebug) << "[copy_tests] Receiving: "
-                         << context->GetOutputFilepath().GetString() << " "
-                         << percent << "% / " << context->filesize << "b";
+      SSF_LOG("test", debug, "[copy_tests] Receiving: {} {}% / {}b",
+              context->GetOutputFilepath().GetString(), percent,
+              context->filesize);
     } else if (context->input.good() && context->input.is_open()) {
       uint64_t file_offset = context->input.tellg();
       percent =
           (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
-      SSF_LOG(kLogDebug) << "[copy_tests] Sending: " << context->input_filepath
-                         << " " << percent << "% / " << context->filesize
-                         << "b";
+      SSF_LOG("test", debug, "[copy_tests] Sending: {} {}% / {}b",
+              context->input_filepath, percent, context->filesize);
     }
   };
   auto on_file_copied = [this](ssf::services::copy::CopyContext* context,
                                const boost::system::error_code& ec) {
     if (context->is_stdin_input) {
-      SSF_LOG(kLogInfo) << "[copy_tests] stdin copied in "
-                        << context->output_dir << " "
-                        << context->output_filename << " " << ec.message();
+      SSF_LOG("test", info, "[copy_tests] stdin copied in {} {} {}",
+              context->output_dir, context->output_filename, ec.message());
     } else {
-      SSF_LOG(kLogInfo) << "[copy_tests] file copied from "
-                        << context->input_filepath << " to "
-                        << context->GetOutputFilepath().GetString() << " "
-                        << ec.message();
+      SSF_LOG("test", info, "[copy_tests] file copied from {} to {} {}",
+              context->input_filepath, context->GetOutputFilepath().GetString(),
+              ec.message());
     }
   };
   auto on_copy_finished = [this](uint64_t files_count, uint64_t errors_count,
                                  const boost::system::error_code& ec) {
-    SSF_LOG(kLogInfo) << "[copy_tests] copy finished ("
-                      << (files_count - errors_count) << "/" << files_count
-                      << " files copied) " << ec.message();
+    SSF_LOG("test", info, "[copy_tests] copy finished ({}/{}) {}",
+            (files_count - errors_count), files_count, ec.message());
     boost::system::error_code stop_ec;
     p_ssf_client_->Stop(stop_ec);
   };
   copy_client_ = CopyClient::Create(session, on_file_status, on_file_copied,
                                     on_copy_finished, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "[copy_tests] cannot create copy client";
+    SSF_LOG("test", error, "[copy_tests] cannot create copy client");
     return false;
   }
 
@@ -222,13 +220,13 @@ void CopyFixtureTest::OnClientStatus(ssf::Status status) {
   switch (status) {
     case ssf::Status::kEndpointNotResolvable:
     case ssf::Status::kServerUnreachable:
-      SSF_LOG(kLogCritical) << "[copy_tests] network initialization failed";
+      SSF_LOG("test", critical, "[copy_tests] network initialization failed");
       network_set_.set_value(false);
       transport_set_.set_value(false);
       service_set_.set_value(false);
       break;
     case ssf::Status::kServerNotSupported:
-      SSF_LOG(kLogCritical) << "[copy_tests] transport initialization failed";
+      SSF_LOG("test", critical, "[copy_tests] transport initialization failed");
       transport_set_.set_value(false);
       service_set_.set_value(false);
       break;
@@ -236,7 +234,7 @@ void CopyFixtureTest::OnClientStatus(ssf::Status status) {
       network_set_.set_value(true);
       break;
     case ssf::Status::kDisconnected:
-      SSF_LOG(kLogInfo) << "[copy_tests] client disconnected";
+      SSF_LOG("test", info, "[copy_tests] client disconnected");
       close_set_.set_value(true);
       break;
     case ssf::Status::kRunning:
@@ -254,9 +252,9 @@ ssf::Path CopyFixtureTest::GetOutputDirectory() { return kOutputDirectory; }
 void CopyFixtureTest::OnClientUserServiceStatus(
     UserServicePtr p_user_service, const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogCritical) << "[copy_tests] user_service["
-                          << p_user_service->GetName()
-                          << "]: initialization failed";
+    SSF_LOG("test", critical,
+            "[copy_tests] user_service[{}] initialization failed",
+            p_user_service->GetName());
   }
   if (p_user_service->GetName() == Copy::GetParseName()) {
     service_set_.set_value(!ec);
@@ -285,8 +283,8 @@ ssf::Path CopyFixtureTest::GenerateRandomFile(const ssf::Path& file_dir,
 bool CopyFixtureTest::AreFilesEqual(const ssf::Path& source_filepath,
                                     const ssf::Path& test_filepath) {
   if (!boost::filesystem::is_regular_file(test_filepath.GetString())) {
-    SSF_LOG(kLogError) << "[copy_tests] file " << test_filepath.GetString()
-                       << " should exist in files_copied";
+    SSF_LOG("test", error, "[copy_tests] file {} should exist in files_copied",
+            test_filepath.GetString());
     return false;
   }
 
@@ -294,13 +292,13 @@ bool CopyFixtureTest::AreFilesEqual(const ssf::Path& source_filepath,
   auto source_digest =
       ssf::crypto::HashFile<ssf::crypto::Sha256>(source_filepath, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "[copy_tests] could not generate source file digest";
+    SSF_LOG("test", error, "[copy_tests] could not generate source file digest");
     return false;
   }
   auto test_digest =
       ssf::crypto::HashFile<ssf::crypto::Sha256>(test_filepath, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "[copy_tests] could not generate test file digest";
+    SSF_LOG("test", error, "[copy_tests] could not generate test file digest");
     return false;
   }
 

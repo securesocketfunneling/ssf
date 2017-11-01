@@ -41,7 +41,7 @@ class Base {
 
   inline std::string config_file() const { return config_file_; }
 
-  inline ssf::log::LogLevel log_level() const { return log_level_; }
+  inline spdlog::level::level_enum log_level() const { return log_level_; }
 
   inline bool host_set() const { return !host_.empty(); }
 
@@ -86,7 +86,7 @@ class Base {
   std::string host_;
   uint16_t port_;
   std::string config_file_;
-  ssf::log::LogLevel log_level_;
+  spdlog::level::level_enum log_level_;
   bool port_set_;
 };
 

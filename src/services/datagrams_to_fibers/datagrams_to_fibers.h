@@ -7,8 +7,8 @@
 
 #include <boost/asio.hpp>
 
-#include "common/boost/fiber/datagram_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/boost/fiber/datagram_fiber.hpp"
 #include "common/utils/to_underlying.h"
 
 #include "core/factories/service_factory.h"
@@ -57,7 +57,7 @@ class DatagramsToFibers : public BaseService<Demux> {
   DatagramsToFibers(const DatagramsToFibers&) = delete;
 
   ~DatagramsToFibers() {
-    SSF_LOG(kLogDebug) << "microservice[datagram_listener]: destroy";
+    SSF_LOG("microservice", debug, "[datagram_listener]: destroy");
   }
 
  public:
@@ -94,10 +94,10 @@ class DatagramsToFibers : public BaseService<Demux> {
           local_addr = parameters.at("local_addr");
         }
       } else {
-        SSF_LOG(kLogWarning) << "microservice[datagram_listener]: cannot "
-                                "listen on network interface <"
-                             << parameters.at("local_addr")
-                             << "> without gateway ports option";
+        SSF_LOG("microservice", warn,
+                "[datagram_listener]: cannot listen on network interface <{}> "
+                "without gateway ports option",
+                parameters.at("local_addr"));
       }
     }
 
@@ -107,14 +107,14 @@ class DatagramsToFibers : public BaseService<Demux> {
       local_port = std::stoul(parameters.at("local_port"));
       remote_port = std::stoul(parameters.at("remote_port"));
     } catch (const std::exception&) {
-      SSF_LOG(kLogError)
-          << "microservice[datagram_listener]: cannot extract port parameters";
+      SSF_LOG("microservice", error,
+              "[datagram_listener]: cannot extract port parameters");
       return DatagramsToFibersPtr(nullptr);
     }
 
     if (local_port > 65535) {
-      SSF_LOG(kLogError) << "microservice[datagram_listener]: local port ("
-                         << local_port << ") out of range ";
+      SSF_LOG("microservice", debug,
+              "[datagram_listener]: local port {} out of range", local_port);
       return DatagramsToFibersPtr(nullptr);
     }
 
@@ -131,15 +131,13 @@ class DatagramsToFibers : public BaseService<Demux> {
     }
 
     bool gateway_ports = config.gateway_ports();
-    auto creator =
-        [gateway_ports](boost::asio::io_service& io_service, Demux& fiber_demux,
-                        const Parameters& parameters) {
-          return DatagramsToFibers::Create(io_service, fiber_demux, parameters,
-                                           gateway_ports);
-        };
-    p_factory->RegisterServiceCreator(
-        kFactoryId,
-        creator);
+    auto creator = [gateway_ports](boost::asio::io_service& io_service,
+                                   Demux& fiber_demux,
+                                   const Parameters& parameters) {
+      return DatagramsToFibers::Create(io_service, fiber_demux, parameters,
+                                       gateway_ports);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
   static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(

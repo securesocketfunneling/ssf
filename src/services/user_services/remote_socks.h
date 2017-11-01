@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
-#include <vector>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 #include <boost/system/error_code.hpp>
 
@@ -41,8 +41,8 @@ class RemoteSocks : public BaseUserService<Demux> {
     auto listener = OptionParser::ParseListeningOption(line, ec);
 
     if (ec) {
-      SSF_LOG(kLogError) << "user_service " << GetParseName()
-                         << ": cannot parse " << line;
+      SSF_LOG("user_service", error, "[{}] cannot parse {}", GetParseName(),
+              line);
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return {};
     }
@@ -54,17 +54,15 @@ class RemoteSocks : public BaseUserService<Demux> {
       const UserServiceParameterBag& parameters,
       boost::system::error_code& ec) {
     if (parameters.count("addr") == 0 || parameters.count("port") == 0) {
-      SSF_LOG(kLogError) << "user_service " << GetParseName()
-                         << ": missing parameters";
+      SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<RemoteSocks>(nullptr);
     }
 
     uint16_t port = OptionParser::ParsePort(parameters.at("port"), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service " << GetParseName()
-                         << ": invalid port : "
-                         << "(" << ec.message() << ")";
+      SSF_LOG("user_service", error, "[{}] invalid port: {}", GetParseName(),
+              ec.message());
       return std::shared_ptr<RemoteSocks>(nullptr);
     }
     return std::shared_ptr<RemoteSocks>(
@@ -113,9 +111,9 @@ class RemoteSocks : public BaseUserService<Demux> {
         l_socks.service_id(), l_socks.parameters(), ec);
 
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[remote-socks]: "
-                         << "local_service[socks]: start failed: "
-                         << ec.message();
+      SSF_LOG("user_service", error,
+              "[{}] local_service[socks]: start failed: {}", GetParseName(),
+              ec.message());
     }
     return !ec;
   }

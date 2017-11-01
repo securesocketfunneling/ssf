@@ -195,6 +195,16 @@ set(SSF_NETWORK_FILES
   ssf/utils/map_helpers.h
 )
 
+set(SSF_NETWORK_DEFINITIONS "")
+
+if (DISABLE_LOGS)
+  list(APPEND SSF_NETWORK_DEFINITIONS "SSF_DISABLE_LOGS")
+endif (DISABLE_LOGS)
+
+if (ENABLE_SYSLOG)
+  list(APPEND SSF_NETWORK_DEFINITIONS "SSF_ENABLE_SYSLOG")
+endif()
+
 if (WIN32)
   # windows impl
   list(APPEND PLATFORM_SPECIFIC_LIB_DEP Secur32.lib)
@@ -214,7 +224,8 @@ endif (UNIX)
 
 add_library(ssf_network STATIC ${SSF_NETWORK_FILES})
 target_include_directories(ssf_network PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ssf_network PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} http_parser msgpack_c)
+target_link_libraries(ssf_network PUBLIC boost ssl ${PLATFORM_SPECIFIC_LIB_DEP} http_parser msgpack_c spdlog)
+target_compile_definitions(ssf_network PUBLIC ${SSF_NETWORK_DEFINITIONS})
 set_property(TARGET ssf_network PROPERTY FOLDER "Libraries")
 source_group_by_folder(ssf_network)
 

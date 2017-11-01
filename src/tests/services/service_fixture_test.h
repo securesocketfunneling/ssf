@@ -36,7 +36,7 @@ class ServiceFixtureTest : public ::testing::Test {
   virtual ~ServiceFixtureTest() {}
 
   void SetUp() override {
-    ssf::log::Log::SetSeverityLevel(ssf::log::LogLevel::kLogDebug);
+    SetLogLevel(spdlog::level::info);
     auto cleanup = [this]() {
       network_set_.set_value(false);
       service_set_.set_value(false);
@@ -49,7 +49,8 @@ class ServiceFixtureTest : public ::testing::Test {
 
     auto port = std::to_string(distribution(gen));
 
-    SSF_LOG(kLogInfo) << "Service fixture: server will listen on port " << port;
+    SSF_LOG("test", info, "Service fixture: server will listen on port {}",
+            port);
 
     if (!StartServer("127.0.0.1", port)) {
       cleanup();
@@ -92,7 +93,7 @@ class ServiceFixtureTest : public ::testing::Test {
     boost::system::error_code run_ec;
     p_ssf_server_->Run(endpoint_query, run_ec);
     if (run_ec) {
-      SSF_LOG(kLogError) << "Could not run server";
+      SSF_LOG("test", error, "Could not run server");
     }
     return run_ec.value() == 0;
   }
@@ -128,7 +129,7 @@ class ServiceFixtureTest : public ::testing::Test {
 
     p_ssf_client_->Run(ec);
     if (ec) {
-      SSF_LOG(kLogError) << "Could not run client";
+      SSF_LOG("test", error, "Could not run client");
     }
     return ec.value() == 0;
   }
@@ -153,13 +154,13 @@ class ServiceFixtureTest : public ::testing::Test {
     switch (status) {
       case ssf::Status::kEndpointNotResolvable:
       case ssf::Status::kServerUnreachable:
-        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SSF_LOG("test", critical, "Network initialization failed");
         network_set_.set_value(false);
         transport_set_.set_value(false);
         service_set_.set_value(false);
         break;
       case ssf::Status::kServerNotSupported:
-        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SSF_LOG("test", critical, "Transport initialization failed");
         transport_set_.set_value(false);
         service_set_.set_value(false);
         break;
@@ -167,7 +168,7 @@ class ServiceFixtureTest : public ::testing::Test {
         network_set_.set_value(true);
         break;
       case ssf::Status::kDisconnected:
-        SSF_LOG(kLogInfo) << "client: disconnected";
+        SSF_LOG("test", info, "client: disconnected");
         break;
       case ssf::Status::kRunning:
         transport_set_.set_value(true);
@@ -180,8 +181,8 @@ class ServiceFixtureTest : public ::testing::Test {
   void OnClientUserServiceStatus(BaseUserServicePtr p_user_service,
                                  const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogCritical) << "user_service[" << p_user_service->GetName()
-                            << "]: initialization failed";
+      SSF_LOG("test", critical, "user_service[{}] initialization failed",
+              p_user_service->GetName());
     }
     if (p_user_service->GetName() == ServiceTested::GetParseName()) {
       service_set_.set_value(!ec);

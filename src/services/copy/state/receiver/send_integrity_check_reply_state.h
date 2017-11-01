@@ -35,8 +35,7 @@ class SendIntegrityCheckReplyState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace)
-        << "microservice[copy][send_integrity_check_reply] enter";
+    SSF_LOG("microservice", trace, "[copy][send_integrity_check_reply] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -55,15 +54,17 @@ class SendIntegrityCheckReplyState : ICopyState {
     }
 
     if (!integrity_checked) {
-      SSF_LOG(kLogDebug) << "microservice[copy][send_integrity_check_reply] "
-                            "output file is corrupted";
+      SSF_LOG("microservice", debug,
+              "[copy][send_integrity_check_reply] "
+              "output file is corrupted");
       // remove file
       boost::system::error_code remove_ec;
       context->fs.Remove(context->GetOutputFilepath(), remove_ec);
       if (remove_ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][send_integrity_check_reply] "
-                              "could not remove output file "
-                           << remove_ec.message();
+        SSF_LOG("microservice", debug,
+                "[copy][send_integrity_check_reply] "
+                "could not remove output file {}",
+                remove_ec.message());
       }
     }
 
@@ -76,8 +77,9 @@ class SendIntegrityCheckReplyState : ICopyState {
     boost::system::error_code convert_ec;
     PayloadToPacket(rep, packet, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][send_integrity_check_reply] "
-                            "cannot convert init reply to packet";
+      SSF_LOG("microservice", debug,
+              "[copy][send_integrity_check_reply] "
+              "cannot convert init reply to packet");
       context->SetState(AbortReceiverState::Create(
           ErrorCode::kIntegrityCheckReplyPacketNotGenerated));
       return false;
@@ -94,8 +96,9 @@ class SendIntegrityCheckReplyState : ICopyState {
       return OnReceiverAbortPacket(context, packet, ec);
     }
 
-    SSF_LOG(kLogDebug) << "microservice[copy][send_integrity_check_reply] "
-                          "cannot process inbound packet";
+    SSF_LOG("microservice", debug,
+            "[copy][send_integrity_check_reply] "
+            "cannot process inbound packet");
     context->SetState(
         AbortReceiverState::Create(ErrorCode::kInboundPacketNotSupported));
   }

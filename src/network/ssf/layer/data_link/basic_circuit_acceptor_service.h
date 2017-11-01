@@ -26,6 +26,8 @@
 #include "ssf/layer/data_link/helpers.h"
 #include "ssf/layer/parameters.h"
 
+#include "ssf/log/log.h"
+
 #include "ssf/network/base_session.h"
 #include "ssf/network/manager.h"
 #include "ssf/network/session_forwarder.h"
@@ -447,8 +449,8 @@ class basic_CircuitAcceptor_service
     start_accepting(p_next_layer_acceptor);
 
     if (ec) {
-      SSF_LOG(kLogDebug) << "network[data_link]: could not accept connection ("
-                         << ec.message() << ")";
+      SSF_LOG("network_link", debug, "could not accept connection ({})",
+              ec.message());
       return;
     }
 
@@ -494,8 +496,8 @@ class basic_CircuitAcceptor_service
                                     next_endpoint_type next_local_endpoint,
                                     const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogDebug) << "network[data_link]: connection not initialized ("
-                         << ec.message() << ")";
+      SSF_LOG("network_link", debug, "connection not initialized ({})",
+              ec.message());
       boost::system::error_code close_ec;
       p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
                                     close_ec);
@@ -545,8 +547,7 @@ class basic_CircuitAcceptor_service
                                     p_endpoint_type p_remote_endpoint,
                                     const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogDebug) << "network[data_link]: connection not valid ("
-                         << ec.message() << ")";
+      SSF_LOG("network_link", debug, "connection not valid ({})", ec.message());
       boost::system::error_code close_ec;
       p_next_layer_socket->shutdown(boost::asio::socket_base::shutdown_both,
                                     close_ec);

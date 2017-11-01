@@ -31,8 +31,8 @@ SocksServer<Demux>::SocksServer(boost::asio::io_service& io_service,
 
 template <typename Demux>
 void SocksServer<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "microservice[socks]: start server on fiber port "
-                    << local_port_;
+  SSF_LOG("microservice", info, "[socks]: start server on fiber port {}",
+          local_port_);
   ec = init_ec_;
   if (ec) {
     return;
@@ -45,7 +45,7 @@ template <typename Demux>
 void SocksServer<Demux>::stop(boost::system::error_code& ec) {
   ec.assign(boost::system::errc::success, boost::system::system_category());
 
-  SSF_LOG(kLogDebug) << "microservice[socks]: stop server";
+  SSF_LOG("microservice", debug, "[socks]: stop server");
   this->HandleStop();
 }
 
@@ -62,7 +62,7 @@ void SocksServer<Demux>::StopSession(BaseSessionPtr session,
 
 template <typename Demux>
 void SocksServer<Demux>::AsyncAcceptFiber() {
-  SSF_LOG(kLogTrace) << "microservice[socks]: accepting new connections";
+  SSF_LOG("microservice", trace, "[socks]: accepting new connections");
   FiberPtr new_connection = std::make_shared<Fiber>(
       this->get_io_service(), FiberEndpoint(this->get_demux(), 0));
 
@@ -76,9 +76,9 @@ template <typename Demux>
 void SocksServer<Demux>::FiberAcceptHandler(
     FiberPtr fiber_connection, const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogDebug)
-        << "microservice[socks]: error accepting new connection: "
-        << ec.message() << " " << ec.value();
+    SSF_LOG("microservice", debug,
+            "[socks]: error accepting new connection: {} ({})", ec.message(),
+            ec.value());
     return;
   }
 
@@ -93,16 +93,16 @@ void SocksServer<Demux>::FiberAcceptHandler(
       [this, self, p_version, fiber_connection](
           boost::system::error_code read_ec, std::size_t) {
         if (read_ec) {
-          SSF_LOG(kLogError)
-              << "microservice[socks]: error reading protocol version: "
-              << read_ec.message() << " " << read_ec.value();
+          SSF_LOG("microservice", error,
+                  "[socks]: error reading protocol version: {} ({})",
+                  read_ec.message(), read_ec.value());
           fiber_connection->close();
           return;
         }
 
         switch (p_version->Number()) {
           case static_cast<uint8_t>(ssf::network::Socks::Version::kV4): {
-            SSF_LOG(kLogTrace) << "microservice[socks]: version accepted: v4";
+            SSF_LOG("microservice", trace, "[socks]: version accepted: v4");
             ssf::BaseSessionPtr new_socks_session =
                 std::make_shared<v4::Session<Demux> >(
                     this->SelfFromThis(), std::move(*fiber_connection));
@@ -111,7 +111,7 @@ void SocksServer<Demux>::FiberAcceptHandler(
             break;
           }
           case static_cast<uint8_t>(ssf::network::Socks::Version::kV5): {
-            SSF_LOG(kLogTrace) << "microservice[socks]: version accepted: v5";
+            SSF_LOG("microservice", trace, "[socks]: version accepted: v5");
             ssf::BaseSessionPtr new_socks_session =
                 std::make_shared<v5::Session<Demux> >(
                     this->SelfFromThis(), std::move(*fiber_connection));
@@ -120,9 +120,9 @@ void SocksServer<Demux>::FiberAcceptHandler(
             break;
           }
           default: {
-            SSF_LOG(kLogError)
-                << "microservice[socks]: protocol not supported yet: "
-                << p_version->Number();
+            SSF_LOG("microservice", error,
+                    "[socks]: protocol not supported yet: {}",
+                    p_version->Number());
             fiber_connection->close();
             break;
           }

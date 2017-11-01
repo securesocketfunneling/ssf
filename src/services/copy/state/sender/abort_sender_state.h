@@ -27,7 +27,7 @@ class AbortSenderState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][abort_sender] enter";
+    SSF_LOG("microservice", trace, "[copy][abort_sender] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -35,14 +35,14 @@ class AbortSenderState : ICopyState {
     // update context error code
     context->error_code = error_code_;
 
-    SSF_LOG(kLogDebug) << "microservice[copy][abort_sender] send abort "
-                       << error_code_;
+    SSF_LOG("microservice", debug, "[copy][abort_sender] send abort {}",
+            error_code_);
     Abort abort(error_code_);
 
     PayloadToPacket(abort, packet, ec);
     if (ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][abort_receiver] cannot fill outbound packet";
+      SSF_LOG("microservice", debug,
+              "[copy][abort_receiver] cannot fill outbound packet");
       return false;
     }
 

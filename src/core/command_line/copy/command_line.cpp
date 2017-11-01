@@ -113,7 +113,7 @@ void CopyCommandLine::ParseOptions(const VariableMap& vm,
     check_file_integrity_ = vm["check-integrity"].as<bool>();
     max_parallel_copies_ = vm["max-parallel-copies"].as<uint32_t>();
     if (max_parallel_copies_ == 0) {
-      SSF_LOG(kLogError) << "[cli] max-parallel-copies must be > 0";
+      SSF_LOG("cli", error, "max-parallel-copies must be > 0");
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return;
     }
@@ -168,8 +168,9 @@ void CopyCommandLine::ParseSecondArgument(const std::string& second_arg,
                                           boost::system::error_code& parse_ec) {
   if (stdin_input_) {
     // No second arg should be provided with stdin option
-    SSF_LOG(kLogError) << "[cli] parsing failed: two args provided "
-                          "with stdin option, one expected";
+    SSF_LOG(
+        "cli", error,
+        "parsing failed: two args provided with stdin option, one expected");
     parse_ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
     return;

@@ -28,17 +28,18 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
   FiberEndpoint ep(this->get_demux(), local_port_);
   fiber_acceptor_.bind(ep, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "microservice[stream_forwarder]: cannot bind fiber "
-                          "acceptor to fiber port "
-                       << local_port_;
+    SSF_LOG("microservice", error,
+            "[stream_forwarder]: cannot bind fiber "
+            "acceptor to fiber port {}",
+            local_port_);
     return;
   }
 
   fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "microservice[stream_forwarder]: acceptor cannot listen on port "
-        << local_port_;
+    SSF_LOG("microservice", error,
+            "[stream_forwarder]: acceptor cannot listen on port {}",
+            local_port_);
     return;
   }
 
@@ -47,25 +48,25 @@ void FibersToSockets<Demux>::start(boost::system::error_code& ec) {
   Tcp::resolver::query query(ip_, std::to_string(remote_port_));
   Tcp::resolver::iterator iterator(resolver.resolve(query, ec));
   if (ec) {
-    SSF_LOG(kLogError) << "microservice[stream_forwarder]: cannot resolve "
-                          "remote TCP endpoint <"
-                       << ip_ << ":" << remote_port_ << ">";
+    SSF_LOG("microservice", error,
+            "[stream_forwarder]: cannot resolve remote TCP endpoint <{}:{}>",
+            ip_, remote_port_);
     return;
   }
 
   remote_endpoint_ = *iterator;
 
-  SSF_LOG(kLogInfo) << "microservice[stream_forwarder]: start "
-                       "forwarding stream fiber from fiber port "
-                    << local_port_ << " to TCP <" << ip_ << ":" << remote_port_
-                    << ">";
+  SSF_LOG("microservice", info,
+          "[stream_forwarder]: start "
+          "forwarding stream fiber from fiber port {} to {}:{}",
+          local_port_, ip_, remote_port_);
 
   this->AsyncAcceptFibers();
 }
 
 template <typename Demux>
 void FibersToSockets<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "microservice[stream_forwarder]: stop";
+  SSF_LOG("microservice", debug, "[stream_forwarder]: stop");
   ec.assign(::error::success, ::error::get_ssf_category());
 
   fiber_acceptor_.close();
@@ -85,8 +86,8 @@ void FibersToSockets<Demux>::StopSession(BaseSessionPtr session,
 
 template <typename Demux>
 void FibersToSockets<Demux>::AsyncAcceptFibers() {
-  SSF_LOG(kLogTrace)
-      << "microservice[stream_forwarder]: accept new fiber connections";
+  SSF_LOG("microservice", trace,
+          "[stream_forwarder]: accept new fiber connections");
 
   auto self = this->shared_from_this();
   FiberPtr new_connection = std::make_shared<Fiber>(
@@ -102,9 +103,9 @@ template <typename Demux>
 void FibersToSockets<Demux>::FiberAcceptHandler(
     FiberPtr fiber_connection, const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogDebug)
-        << "microservice[stream_forwarder]: error accepting new connection: "
-        << ec.message() << " " << ec.value();
+    SSF_LOG("microservice", debug,
+            "[stream_forwarder]: error accepting new connection: {} ({})",
+            ec.message(), ec.value());
     return;
   }
 
@@ -125,8 +126,8 @@ void FibersToSockets<Demux>::TcpSocketConnectHandler(
     std::shared_ptr<Tcp::socket> socket, FiberPtr fiber_connection,
     const boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogError)
-        << "microservice[stream_forwarder]: error connecting to remote socket";
+    SSF_LOG("microservice", error,
+            "[stream_forwarder]: error connecting to remote socket");
     fiber_connection->close();
     return;
   }
@@ -136,8 +137,7 @@ void FibersToSockets<Demux>::TcpSocketConnectHandler(
   boost::system::error_code start_ec;
   manager_.start(session, start_ec);
   if (start_ec) {
-    SSF_LOG(kLogError)
-        << "microservice[stream_forwarder]: cannot start session";
+    SSF_LOG("microservice", error, "[stream_forwarder]: cannot start session");
     start_ec.clear();
     session->stop(start_ec);
   }

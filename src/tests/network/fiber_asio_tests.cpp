@@ -952,7 +952,7 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
 
   std::function<bool(bool, boost::asio::ssl::verify_context&)> verify_callback =
       [](bool preverified, boost::asio::ssl::verify_context& ctx) {
-        SSF_LOG(kLogDebug) << "------------------------------";
+        SSF_LOG("test", debug, "------------------------------");
         X509_STORE_CTX* cts = ctx.native_handle();
         X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
 
@@ -960,20 +960,19 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
         auto err = X509_STORE_CTX_get_error(ctx.native_handle());
         auto depth_err = X509_STORE_CTX_get_error_depth(ctx.native_handle());
 
-        SSF_LOG(kLogDebug) << "Error " << X509_verify_cert_error_string(err)
-                           << std::endl;
-        SSF_LOG(kLogDebug) << "Depth " << depth_err;
+        SSF_LOG("test", debug, "Error {}", X509_verify_cert_error_string(err));
+        SSF_LOG("test", debug, "Depth {}", depth_err);
 
         X509* issuer = cts->current_issuer;
         if (issuer) {
           X509_NAME_oneline(X509_get_subject_name(issuer), subject_name, 256);
-          SSF_LOG(kLogDebug) << "Issuer " << subject_name;
+          SSF_LOG("test", debug, "Issuer {}", subject_name);
         }
 
         X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-        SSF_LOG(kLogDebug) << "Verifying " << subject_name;
+        SSF_LOG("test", debug, "Verifying {}", subject_name);
 
-        SSF_LOG(kLogDebug) << "------------------------------";
+        SSF_LOG("test", debug, "------------------------------");
 
         return preverified;
       };
@@ -1034,7 +1033,7 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
   auto sent = [this, &server_closed, &ssl_fiber_server, &buffer_s](
       const boost::system::error_code& ec, size_t length) {
     EXPECT_EQ(ec.value(), 0) << "Sent handler should not be in error";
-    SSF_LOG(kLogDebug) << "Server sent: " << buffer_s << std::endl;
+    SSF_LOG("test", debug, "Server sent: {}", buffer_s);
     server_closed.set_value(true);
   };
 
@@ -1061,7 +1060,7 @@ TEST_F(FiberTest, TLSConnectDisconnectFiberFromClient) {
     EXPECT_EQ(ec.value(), 0) << "Received handler should not be in error "
                              << ec.message();
     EXPECT_EQ(buffer_s, buffer_c);
-    SSF_LOG(kLogDebug) << "client received: " << buffer_c << std::endl;
+    SSF_LOG("test", debug, "client received: {}", buffer_c);
     ssl_fiber_client.next_layer().close();
     client_closed.set_value(true);
   };

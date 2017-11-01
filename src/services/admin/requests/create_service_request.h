@@ -64,8 +64,8 @@ class CreateServiceRequest {
       auto obj = obj_handle.get();
       obj.convert(request);
     } catch (const std::exception&) {
-      SSF_LOG(kLogWarning) << "microservice[admin]: create service[on "
-                              "receive]: cannot extract request";
+      SSF_LOG("microservice", warn,
+              "[admin] create service[on receive]: cannot extract request");
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return {};
     }
@@ -76,9 +76,8 @@ class CreateServiceRequest {
     auto id = p_service_factory->CreateRunNewService(request.service_id(),
                                                      request.parameters(), ec);
 
-    SSF_LOG(kLogDebug) << "microservice[admin]: create service: "
-                       << "service unique id " << id << " - error_code "
-                       << ec.value();
+    SSF_LOG("microservice", debug, "[admin] create service: {} - ec {}", id,
+            ec.value());
 
     std::stringstream ss;
     std::string result;
@@ -101,8 +100,8 @@ class CreateServiceRequest {
       auto obj = obj_handle.get();
       obj.convert(request);
     } catch (const std::exception&) {
-      SSF_LOG(kLogWarning) << "microservice[admin]: create service[on "
-                              "reply]: cannot extract request";
+      SSF_LOG("microservice", warn,
+              "[admin] create service[on reply]: cannot extract request");
       return {};
     }
 
@@ -111,8 +110,8 @@ class CreateServiceRequest {
       id = std::stoul(serialized_result);
     } catch (const std::exception&) {
       // TODO: ec?
-      SSF_LOG(kLogWarning) << "microservice[admin]: create service request: "
-                              "extract reply id failed";
+      SSF_LOG("microservice", warn,
+              "[admin] create service request: extract reply id failed");
       return {};
     }
 

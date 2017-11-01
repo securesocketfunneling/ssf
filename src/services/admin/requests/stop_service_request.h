@@ -61,8 +61,8 @@ class StopServiceRequest {
       auto obj = obj_handle.get();
       obj.convert(request);
     } catch (const std::exception&) {
-      SSF_LOG(kLogWarning) << "microservice[admin]: stop service[on receive]: "
-                              "cannot extract request";
+      SSF_LOG("microservice", warn,
+              "[admin] stop service[on receive]: cannot extract request");
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return {};
     }
@@ -72,9 +72,8 @@ class StopServiceRequest {
 
     p_service_factory->StopService(request.unique_id());
 
-    SSF_LOG(kLogDebug)
-        << "microservice[admin]: stop service request: service id "
-        << request.unique_id();
+    SSF_LOG("microservice", debug,
+            "[admin] stop service request: service id {}", request.unique_id());
 
     ec.assign(boost::system::errc::interrupted,
               boost::system::system_category());
@@ -101,8 +100,8 @@ class StopServiceRequest {
       obj.convert(request);
     } catch (const std::exception&) {
       // TODO: ec?
-      SSF_LOG(kLogWarning) << "microservice[admin]: stop service[on reply]: "
-                              "cannot extract request";
+      SSF_LOG("microservice", warn,
+              "[admin] stop service[on reply]: cannot extract request");
       return {};
     }
 
@@ -110,8 +109,8 @@ class StopServiceRequest {
     try {
       id = std::stoul(serialized_result);
     } catch (const std::exception&) {
-      SSF_LOG(kLogWarning) << "microservice[admin]: stop service "
-                              "request: extract reply id failed";
+      SSF_LOG("microservice", warn,
+              "[admin] stop service request: extract reply id failed");
       return std::string();
     }
     ServiceStatus<Demux> reply(id, 0, ec.value(), Parameters());

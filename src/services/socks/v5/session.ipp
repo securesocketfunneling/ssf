@@ -35,7 +35,8 @@ void Session<Demux>::stop(boost::system::error_code&) {
   boost::system::error_code ec;
   server_.close(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[socks v5]: stop error " << ec.message();
+    SSF_LOG("microservice", error, "[socks v5] session stop error {}",
+            ec.message());
   }
 }
 
@@ -51,8 +52,8 @@ template <typename Demux>
 void Session<Demux>::HandleRequestAuthDispatch(
     const boost::system::error_code& ec, std::size_t) {
   if (ec) {
-    SSF_LOG(kLogError) << "session[socks v5]: request auth failed "
-                       << ec.message();
+    SSF_LOG("microservice", error, "[socks v5] session request auth failed {}",
+            ec.message());
     HandleStop();
     return;
   }
@@ -118,7 +119,7 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       DoUDPRequest();
       break;
     default:
-      SSF_LOG(kLogError) << "session[socks v5]: invalid v5 command";
+      SSF_LOG("microservice", error, "[socks v5] session invalid v5 command");
       DoErrorCommand(CommandStatus::kCommandNotSupported);
       break;
   }
@@ -159,7 +160,8 @@ void Session<Demux>::DoConnectRequest() {
       break;
     }
     default:
-      SSF_LOG(kLogError) << "session[socks v5]: unsupported address type";
+      SSF_LOG("microservice", error,
+              "[socks v5] session unsupported address type");
       ec.assign(ssf::error::connection_refused, ssf::error::get_ssf_category());
       connect_handler(ec);
       break;
@@ -168,13 +170,13 @@ void Session<Demux>::DoConnectRequest() {
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  SSF_LOG(kLogError) << "session[socks v5]: Bind not implemented yet";
+  SSF_LOG("microservice", warn, "[socks v5] session Bind not implemented yet");
   DoErrorCommand(CommandStatus::kCommandNotSupported);
 }
 
 template <typename Demux>
 void Session<Demux>::DoUDPRequest() {
-  SSF_LOG(kLogError) << "session[socks v5]: UDP not implemented yet";
+  SSF_LOG("microservice", warn, "[socks v5] session UDP not implemented yet");
   DoErrorCommand(CommandStatus::kCommandNotSupported);
 }
 

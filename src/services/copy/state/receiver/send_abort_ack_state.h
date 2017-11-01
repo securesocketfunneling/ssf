@@ -31,7 +31,7 @@ class SendAbortAckState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][send_abort_ack] enter";
+    SSF_LOG("microservice", trace, "[copy][send_abort_ack] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -40,8 +40,8 @@ class SendAbortAckState : ICopyState {
 
     PayloadToPacket(ack, packet, ec);
     if (ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][send_abort_ack] cannot convert "
-                            "abort ack to packet";
+      SSF_LOG("microservice", debug,
+              "[copy][send_abort_ack] cannot convert abort ack to packet");
       return false;
     }
 

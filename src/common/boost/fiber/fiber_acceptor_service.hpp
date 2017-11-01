@@ -187,8 +187,8 @@ class fiber_acceptor_service
     fiber_impl->p_fib_demux = impl->p_fib_demux;
     fiber_impl->id.set_local_port(impl->id.local_port());
 
-    SSF_LOG(kLogDebug) << "fiber acceptor: local port set "
-                       << impl->id.local_port();
+    SSF_LOG("fiber_acceptor", debug, "local port set {}",
+            impl->id.local_port());
 
     typedef detail::pending_accept_operation<AcceptHandler,
                                              typename Protocol::socket_type> op;

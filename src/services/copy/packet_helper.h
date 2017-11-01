@@ -42,8 +42,8 @@ void AsyncReadHeader(Socket& socket, Packet& packet,
   auto on_header_received = [&socket, &packet, on_packet_read](
       const boost::system::error_code& ec, std::size_t length) {
     if (ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][packet_helper] cannot read packet header";
+      SSF_LOG("microservice", debug,
+              "[copy][packet_helper] cannot read packet header");
       on_packet_read(ec);
       return;
     }
@@ -64,8 +64,8 @@ void AsyncWritePayload(Socket& socket, const Payload& payload, PacketPtr packet,
   boost::system::error_code convert_ec;
   PayloadToPacket(payload, packet.get(), convert_ec);
   if (convert_ec) {
-    SSF_LOG(kLogDebug) << "microservice[copy][packet_helper] cannot convert "
-                          "payload into packet";
+    SSF_LOG("microservice", debug,
+            "[copy][packet_helper] cannot convert payload into packet");
     socket.get_io_service().post(
         [convert_ec, on_payload_sent]() { on_payload_sent(convert_ec); });
     return;
@@ -85,8 +85,9 @@ void PayloadToPacket(const Payload& payload, Packet* packet,
   msgpack::pack(req_buf, payload);
 
   if (req_buf.size() > Packet::kMaxPayloadSize) {
-    SSF_LOG(kLogDebug) << "microservice[copy][packet_helper] could not convert "
-                          "payload to packet (size error)";
+    SSF_LOG("microservice", debug,
+            "[copy][packet_helper] could not convert payload to packet (size "
+            "error)");
     ec.assign(::error::protocol_error, ::error::get_ssf_category());
     return;
   }
@@ -107,9 +108,11 @@ void PacketToPayload(const Packet& packet, Payload& payload,
     auto obj = obj_handle.get();
     obj.convert(payload);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogDebug) << "microservice[copy][packet_helper] could not convert "
-                          "packet to payload "
-                       << e.what();
+    (void)(e);
+    SSF_LOG("microservice", debug,
+            "[copy][packet_helper] could not convert "
+            "packet to payload {}",
+            e.what());
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return;
   }

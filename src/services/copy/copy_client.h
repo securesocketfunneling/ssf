@@ -72,7 +72,7 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
                               OnCopyFinished on_copy_finished,
                               boost::system::error_code& ec) {
     if (!session) {
-      SSF_LOG(kLogError) << "microservice[copy][client] invalid session";
+      SSF_LOG("microservice", error, "[copy][client] invalid session");
       ec.assign(::error::bad_file_descriptor, ::error::get_ssf_category());
       return nullptr;
     }
@@ -88,7 +88,7 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
   }
 
   ~CopyClient() {
-    SSF_LOG(kLogDebug) << "microservice[copy][client] destroy";
+    SSF_LOG("microservice", debug, "[copy][client] destroy");
     if (copy_request_.is_from_stdin) {
 // reset stdin in text mode
 #ifdef WIN32
@@ -120,8 +120,8 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
     auto on_connect = [this, self, req](const boost::system::error_code& ec) {
       if (ec) {
         on_copy_finished_(0, 0, ec);
-        SSF_LOG(kLogError)
-            << "microservice[copy][client] could not connect control channel";
+        SSF_LOG("microservice", error,
+                "[copy][client] could not connect control channel");
         return;
       }
       CopyToServer(req);
@@ -134,8 +134,8 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
     auto on_connect = [this, self, req](const boost::system::error_code& ec) {
       if (ec) {
         on_copy_finished_(0, 0, ec);
-        SSF_LOG(kLogError)
-            << "microservice[copy][client] could not connect control channel";
+        SSF_LOG("microservice", error,
+                "[copy][client] could not connect control channel");
         return;
       }
       CopyFromServer(req);
@@ -162,8 +162,8 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
 // set stdin in binary mode
 #ifdef WIN32
       if (_setmode(_fileno(stdin), _O_BINARY) == -1) {
-        SSF_LOG(kLogError)
-            << "microservice[copy][client] cannot set binary mode on stdin";
+        SSF_LOG("microservice", error,
+                "[copy][client] cannot set binary mode on stdin");
         ec.assign(::error::bad_file_descriptor, ::error::get_ssf_category());
         return;
       }
@@ -177,7 +177,7 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
   }
 
   void CopyToServer(const CopyRequest& req) {
-    SSF_LOG(kLogDebug) << "microservice[copy][client] copy data to server";
+    SSF_LOG("microservice", debug, "[copy][client] copy data to server");
 
     boost::system::error_code ec;
     auto self = this->shared_from_this();
@@ -186,8 +186,8 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
         session_->GetDemux(), std::move(control_fiber_), req, on_file_status_,
         on_file_copied_, on_copy_finished_, ec);
     if (ec) {
-      SSF_LOG(kLogError)
-          << "microservice[copy][client] cannot create file sender";
+      SSF_LOG("microservice", error,
+              "[copy][client] cannot create file sender");
       NotifyCopyFinished(0, 0, ErrorCode(ec.value()));
       return;
     }
@@ -195,7 +195,7 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
   }
 
   void CopyFromServer(const CopyRequest& req) {
-    SSF_LOG(kLogDebug) << "microservice[copy][client] copy data from server";
+    SSF_LOG("microservice", debug, "[copy][client] copy data from server");
 
     boost::system::error_code ec;
     auto self = this->shared_from_this();
@@ -203,60 +203,57 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
 
     file_acceptor_->Listen(session_->GetDemux(), ec);
     if (ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][client] cannot accept new files";
+      SSF_LOG("microservice", debug, "[copy][client] cannot accept new files");
       NotifyCopyFinished(0, 0, ErrorCode(ec.value()));
       return;
     }
 
     file_acceptor_->AsyncAccept(on_file_status_, on_file_copied_);
 
-    auto on_copy_request_ack =
-        [this, self, packet](const boost::system::error_code& ec) {
-          if (ec) {
-            SSF_LOG(kLogError)
-                << "microservice[copy][client] could not receive copy reply";
-            NotifyCopyFinished(0, 0, ErrorCode::kCopyRequestAckNotReceived);
-            return;
-          }
-          boost::system::error_code convert_ec;
-          CopyRequestAck req_ack;
-          PacketToPayload(*packet, req_ack, convert_ec);
-          if (convert_ec ||
-              req_ack.status != CopyRequestAck::kRequestReceived) {
-            SSF_LOG(kLogError)
-                << "microservice[copy][client] copy request not received";
-            NotifyCopyFinished(0, 0, ErrorCode::kCopyRequestCorrupted);
-            return;
-          }
+    auto on_copy_request_ack = [this, self,
+                                packet](const boost::system::error_code& ec) {
+      if (ec) {
+        SSF_LOG("microservice", error,
+                "[copy][client] could not receive copy reply");
+        NotifyCopyFinished(0, 0, ErrorCode::kCopyRequestAckNotReceived);
+        return;
+      }
+      boost::system::error_code convert_ec;
+      CopyRequestAck req_ack;
+      PacketToPayload(*packet, req_ack, convert_ec);
+      if (convert_ec || req_ack.status != CopyRequestAck::kRequestReceived) {
+        SSF_LOG("microservice", error,
+                "[copy][client] copy request not received");
+        NotifyCopyFinished(0, 0, ErrorCode::kCopyRequestCorrupted);
+        return;
+      }
 
-          file_acceptor_->AsyncAccept(on_file_status_, on_file_copied_);
-          AsyncReadControlRequest();
-        };
+      file_acceptor_->AsyncAccept(on_file_status_, on_file_copied_);
+      AsyncReadControlRequest();
+    };
 
-    auto on_copy_request_sent =
-        [this, self, packet,
-         on_copy_request_ack](const boost::system::error_code& ec) {
-          if (ec) {
-            NotifyCopyFinished(0, 0, ErrorCode::kClientCopyRequestNotSent);
-            SSF_LOG(kLogError)
-                << "microservice[copy][client] could not write copy request";
-            return;
-          }
-          AsyncReadPacket(control_fiber_, *packet, on_copy_request_ack);
-        };
+    auto on_copy_request_sent = [this, self, packet, on_copy_request_ack](
+        const boost::system::error_code& ec) {
+      if (ec) {
+        NotifyCopyFinished(0, 0, ErrorCode::kClientCopyRequestNotSent);
+        SSF_LOG("microservice", error,
+                "[copy][client] could not write copy request");
+        return;
+      }
+      AsyncReadPacket(control_fiber_, *packet, on_copy_request_ack);
+    };
     AsyncWritePayload(control_fiber_, req, packet, on_copy_request_sent);
   }
 
   void AsyncReadControlRequest() {
-    SSF_LOG(kLogDebug) << "microservice[copy][client] async read request";
+    SSF_LOG("microservice", debug, "[copy][client] async read request");
     auto self = this->shared_from_this();
     auto packet = std::make_shared<Packet>();
     auto on_packet_read = [this, self,
                            packet](const boost::system::error_code& ec) {
       if (ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][client] "
-                              "error while reading packet";
+        SSF_LOG("microservice", debug,
+                "[copy][client] error while reading packet");
         return;
       }
 
@@ -282,8 +279,9 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
     CopyFinishedNotification notification;
     PacketToPayload(*packet, notification, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][client] could not convert "
-                            "packet to CopyFinishedNotification";
+      SSF_LOG("microservice", debug,
+              "[copy][client] could not convert packet to "
+              "CopyFinishedNotification");
       NotifyCopyFinished(0, 0, ErrorCode::kUnknown);
     } else {
       NotifyCopyFinished(notification.files_count, notification.errors_count,

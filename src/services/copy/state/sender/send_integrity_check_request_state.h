@@ -34,8 +34,7 @@ class SendIntegrityCheckRequestState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace)
-        << "microservice[copy][send_integrity_check_request] enter";
+    SSF_LOG("microservice", trace, "[copy][send_integrity_check_request] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -45,8 +44,9 @@ class SendIntegrityCheckRequestState : ICopyState {
     auto digest = ssf::crypto::HashFile<CopyContext::Hash>(
         context->input_filepath, hash_ec);
     if (hash_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][send_integrity_check_request] "
-                            "cannot generate input file digest";
+      SSF_LOG("microservice", debug,
+              "[copy][send_integrity_check_request] "
+              "cannot generate input file digest");
       context->SetState(
           AbortSenderState::Create(ErrorCode::kInputFileDigestNotAvailable));
       return false;
@@ -56,8 +56,9 @@ class SendIntegrityCheckRequestState : ICopyState {
     boost::system::error_code convert_ec;
     PayloadToPacket(req, packet, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][send_integrity_check_request] "
-                            "cannot convert integrity check request to packet";
+      SSF_LOG("microservice", debug,
+              "[copy][send_integrity_check_request] "
+              "cannot convert integrity check request to packet");
       context->SetState(AbortSenderState::Create(
           ErrorCode::kIntegrityCheckRequestPacketNotGenerated));
       return false;
@@ -73,8 +74,9 @@ class SendIntegrityCheckRequestState : ICopyState {
       return OnSenderAbortPacket(context, packet, ec);
     }
 
-    SSF_LOG(kLogDebug) << "microservice[copy][send_integrity_check_request] "
-                          "cannot process inbound packet";
+    SSF_LOG("microservice", debug,
+            "[copy][send_integrity_check_request] "
+            "cannot process inbound packet");
     context->SetState(
         AbortSenderState::Create(ErrorCode::kInboundPacketNotSupported));
   }

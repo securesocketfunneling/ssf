@@ -59,7 +59,7 @@ class Server : public BaseService<Demux> {
   Server(const Server&) = delete;
   Server& operator=(const Server&) = delete;
 
-  ~Server() { SSF_LOG(kLogDebug) << "microservice[shell]: destroy"; }
+  ~Server() { SSF_LOG("microservice", debug, "[shell] destroy"); }
 
  public:
   // Create a new instance of the service
@@ -75,8 +75,7 @@ class Server : public BaseService<Demux> {
     try {
       local_port = std::stoul(parameters.at("local_port"));
     } catch (const std::exception&) {
-      SSF_LOG(kLogError)
-          << "microservice[shell]: cannot extract port parameter";
+      SSF_LOG("microservice", error, "[shell]: cannot extract port parameter");
       return ServerPtr(nullptr);
     }
 

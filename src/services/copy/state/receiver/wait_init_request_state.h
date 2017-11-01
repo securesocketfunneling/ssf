@@ -33,7 +33,7 @@ class WaitInitRequestState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][wait_init_request] enter";
+    SSF_LOG("microservice", trace, "[copy][wait_init_request] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -48,9 +48,10 @@ class WaitInitRequestState : ICopyState {
     }
 
     if (packet.type() != PacketType::kInitRequest) {
-      SSF_LOG(kLogDebug) << "microservice[copy][wait_init_request] cannot "
-                            "process inbound packet. "
-                            "not an InitRequest";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_request] cannot "
+              "process inbound packet. "
+              "not an InitRequest");
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kInboundPacketNotSupported));
       return;
@@ -61,8 +62,9 @@ class WaitInitRequestState : ICopyState {
     InitRequest init_req;
     PacketToPayload(packet, init_req, convert_ec);
     if (convert_ec) {
-      SSF_LOG(kLogDebug) << "microservice[copy][wait_init_request] cannot "
-                            "convert packet to init request";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_request] cannot "
+              "convert packet to init request");
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kInitRequestPacketCorrupted));
       return;
@@ -77,8 +79,10 @@ class WaitInitRequestState : ICopyState {
 
     boost::system::error_code fs_ec;
     if (!context->fs.IsDirectory(init_req.output_dir, fs_ec)) {
-      SSF_LOG(kLogDebug) << "microservice[copy][wait_init_request] output "
-                            "directory not found";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_request] output "
+              "directory {} not found",
+              init_req.output_dir);
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kOutputDirectoryNotFound));
       return;
@@ -88,8 +92,9 @@ class WaitInitRequestState : ICopyState {
     context->fs.MakeDirectories(output_path.GetParent(), fs_ec);
     fs_ec.clear();
     if (!context->fs.IsDirectory(output_path.GetParent(), fs_ec)) {
-      SSF_LOG(kLogDebug) << "microservice[copy][wait_init_request] output file "
-                            "directory not found";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_request] output file "
+              "directory not found");
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kOutputFileDirectoryNotFound));
     }
@@ -110,9 +115,9 @@ class WaitInitRequestState : ICopyState {
     }
     output_fh.open(output_path.GetString(), open_flags);
     if (!output_fh.is_open()) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][wait_init_request] cannot open output file "
-          << output_path.GetString();
+      SSF_LOG("microservice", debug,
+              "[copy][wait_init_request] cannot open output file {}",
+              output_path.GetString());
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kOutputFileNotAvailable));
       return;

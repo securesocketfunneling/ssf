@@ -41,19 +41,19 @@ Session<Demux>::Session(std::weak_ptr<ShellServer> server, Fiber client,
 
 template <typename Demux>
 Session<Demux>::~Session() {
-  SSF_LOG(kLogDebug) << "session[shell]: destroy";
+  SSF_LOG("microservice", debug, "[shell] session destroy");
 }
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "session[shell]: start";
+  SSF_LOG("microservice", debug, "[shell] session start");
   int master_tty;
   int slave_tty;
 
   InitMasterSlaveTty(&master_tty, &slave_tty, ec);
 
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: init tty failed";
+    SSF_LOG("microservice", error, "[shell] session init tty failed");
     close(master_tty);
     close(slave_tty);
     stop(ec);
@@ -62,8 +62,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
   signal_.add(SIGCHLD, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "session[shell]: init signal handler on SIGCHLD failed";
+    SSF_LOG("microservice", error, "[shell] session init signal handler on SIGCHLD failed");
     close(master_tty);
     close(slave_tty);
     stop(ec);
@@ -72,7 +71,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
   child_pid_ = fork();
   if (child_pid_ < 0) {
-    SSF_LOG(kLogError) << "session[shell]: fork failed";
+    SSF_LOG("microservice", error, "[shell] session fork failed");
     close(master_tty);
     close(slave_tty);
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
@@ -152,7 +151,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogDebug) << "session[shell]: stop";
+  SSF_LOG("microservice", debug, "[shell] session stop");
   
   client_.close();
   
@@ -268,7 +267,7 @@ void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
   // open an available pseudo terminal device (master/slave pair)
   *p_master_tty = posix_openpt(O_RDWR | O_NOCTTY);
   if (*p_master_tty < 0) {
-    SSF_LOG(kLogError) << "session[shell]: could not open master tty";
+    SSF_LOG("microservice", error, "[shell] session could not open master tty");
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
@@ -288,7 +287,7 @@ void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
   // open slave side
   *p_slave_tty = open(ptsname(*p_master_tty), O_RDWR | O_NOCTTY);
   if (*p_slave_tty < 0) {
-    SSF_LOG(kLogError) << "session[shell]: could not open slave tty";
+    SSF_LOG("microservice", error, "[shell] session could not open slave tty");
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     return;
   }
@@ -297,7 +296,7 @@ void Session<Demux>::InitMasterSlaveTty(int* p_master_tty, int* p_slave_tty,
 template <typename Demux>
 void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: could not initialize stream handle";
+    SSF_LOG("microservice", error, "[shell] session could not initialize stream handle");
     return;
   }
 

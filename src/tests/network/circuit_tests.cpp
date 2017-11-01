@@ -87,13 +87,13 @@ TEST(CircuitTests, Basics) {
     switch (status) {
       case ssf::Status::kEndpointNotResolvable:
       case ssf::Status::kServerUnreachable:
-        SSF_LOG(kLogCritical) << "Network initialization failed";
+        SSF_LOG("test", critical, "Network initialization failed");
         network_set.set_value(false);
         transport_set.set_value(false);
         service_set.set_value(false);
         break;
       case ssf::Status::kServerNotSupported:
-        SSF_LOG(kLogCritical) << "Transport initialization failed";
+        SSF_LOG("test", critical, "Transport initialization failed");
         transport_set.set_value(false);
         service_set.set_value(false);
         break;
@@ -101,7 +101,7 @@ TEST(CircuitTests, Basics) {
         network_set.set_value(true);
         break;
       case ssf::Status::kDisconnected:
-        SSF_LOG(kLogInfo) << "client: disconnected";
+        SSF_LOG("test", info, "client: disconnected");
         break;
       case ssf::Status::kRunning:
         transport_set.set_value(true);
@@ -114,8 +114,8 @@ TEST(CircuitTests, Basics) {
   auto on_client_user_service_status = [&service_set](
       UserServicePtr p_user_service, const boost::system::error_code& ec) {
     if (ec) {
-      SSF_LOG(kLogCritical) << "user_service[" << p_user_service->GetName()
-                            << "]: initialization failed";
+      SSF_LOG("test", critical, "user_service[{}] initialization failed",
+              p_user_service->GetName());
     }
     if (p_user_service->GetName() == PortForwardingService::GetParseName()) {
       service_set.set_value(!ec);

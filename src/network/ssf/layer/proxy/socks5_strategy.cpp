@@ -81,7 +81,7 @@ void Socks5Strategy::ProcessAuthResponse(const Buffer& response,
                            boost::asio::buffer(response));
 
   if (auth_reply.auth_method() != ToIntegral(AuthMethod::kNoAuth)) {
-    SSF_LOG(kLogError) << "network[socks5 proxy]: authentication not supported";
+    SSF_LOG("network_proxy", error, "SOCKSv5 authentication not supported");
     set_state(State::kError);
     ec.assign(ssf::error::connection_aborted, ssf::error::get_ssf_category());
     return;
@@ -132,10 +132,10 @@ void Socks5Strategy::ProcessConnectResponse(const Buffer& response,
 
   if (connect_reply_.IsComplete()) {
     if (connect_reply_.AccessGranted()) {
-      SSF_LOG(kLogDebug) << "network[socks5 proxy]: connected";
+      SSF_LOG("network_proxy", debug, "SOCKSv5 connected");
       set_state(State::kConnected);
     } else {
-      SSF_LOG(kLogError) << "network[socks5 proxy]: connection failed";
+      SSF_LOG("network_proxy", error, "SOCKSv5 connection failed");
       set_state(State::kError);
     }
   }

@@ -90,8 +90,7 @@ void StandardCommandLine::ParseOptions(const VariableMap& vm,
   } else {
     uint32_t max_attempts = vm["max-connection-attempts"].as<uint32_t>();
     if (max_attempts == 0) {
-      SSF_LOG(kLogError)
-          << "command line: option max-connection-attempts invalid";
+      SSF_LOG("cli", error, "invalid max-connection-attempts option");
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     } else {
       max_connection_attempts_ = max_attempts;

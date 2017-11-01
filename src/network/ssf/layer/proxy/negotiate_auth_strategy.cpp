@@ -21,8 +21,8 @@ NegotiateAuthStrategy::NegotiateAuthStrategy(const HttpProxy& proxy_ctx)
 #endif
   if (p_impl_.get() != nullptr) {
     if (!p_impl_->Init()) {
-      SSF_LOG(kLogDebug) << "network[proxy]: negotiate: could not initialize "
-                         << "platform impl";
+      SSF_LOG("network_proxy", debug,
+              "negotiate: could not initialize platform impl");
       status_ = Status::kAuthenticationFailure;
     }
   }
@@ -52,8 +52,8 @@ void NegotiateAuthStrategy::ProcessResponse(const HttpResponse& response) {
   auto server_token = Base64::Decode(ExtractAuthToken(response));
 
   if (!p_impl_->ProcessServerToken(server_token)) {
-    SSF_LOG(kLogDebug)
-        << "network[proxy]: negotiate: could not process server token";
+    SSF_LOG("network_proxy", debug,
+            "negotiate: could not process server token");
     status_ = Status::kAuthenticationFailure;
     return;
   }
@@ -67,7 +67,7 @@ void NegotiateAuthStrategy::PopulateRequest(HttpRequest* p_request) {
 
   auto auth_token = p_impl_->GetAuthToken();
   if (auth_token.empty()) {
-    SSF_LOG(kLogDebug) << "network[proxy]: negotiate: response token empty";
+    SSF_LOG("network_proxy", debug, "negotiate: response token empty");
     status_ = Status::kAuthenticationFailure;
     return;
   }

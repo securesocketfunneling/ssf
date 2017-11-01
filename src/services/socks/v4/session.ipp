@@ -37,7 +37,8 @@ void Session<Demux>::stop(boost::system::error_code&) {
   boost::system::error_code ec;
   server_.close(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[socks v4]: stop error " << ec.message();
+    SSF_LOG("microservice", error, "[socks v4] session stop error {}",
+            ec.message());
   }
 }
 
@@ -66,7 +67,7 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
       DoBindRequest();
       break;
     default:
-      SSF_LOG(kLogError) << "session[socks v4]: invalid v4 command";
+      SSF_LOG("microservice", error, "[socks v4] session invalid v4 command");
       break;
   }
 }
@@ -92,7 +93,7 @@ void Session<Demux>::DoConnectRequest() {
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  SSF_LOG(kLogError) << "session[socks v4]: Bind not implemented yet";
+  SSF_LOG("microservice", error, "[socks v4] session Bind not implemented yet");
   HandleStop();
 }
 

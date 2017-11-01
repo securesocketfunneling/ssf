@@ -18,8 +18,8 @@ void OnReceiverAbortPacket(CopyContext* context, const Packet& packet,
   Abort abort;
   PacketToPayload(packet, abort, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "microservice[copy][on_receiver_abort] cannot "
-                          "convert packet to abort message";
+    SSF_LOG("microservice", error,
+            "[copy][on_receiver_abort] cannot convert packet to abort message");
     return;
   }
   context->error_code = abort.error_code;
@@ -32,8 +32,8 @@ void OnSenderAbortPacket(CopyContext* context, const Packet& packet,
   Abort abort;
   PacketToPayload(packet, abort, ec);
   if (ec) {
-    SSF_LOG(kLogError) << "microservice[copy][on_sender_abort] cannot "
-                          "convert packet to abort message";
+    SSF_LOG("microservice", error,
+            "[copy][on_sender_abort] cannot convert packet to abort message");
     return;
   }
   context->error_code = abort.error_code;

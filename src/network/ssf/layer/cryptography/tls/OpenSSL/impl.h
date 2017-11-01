@@ -75,7 +75,7 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
     std::unique_lock<std::recursive_mutex> lock(pulling_mutex_);
     if (!pulling_) {
       pulling_ = true;
-      SSF_LOG(kLogDebug) << "network[crypto] pulling";
+      SSF_LOG("network_crypto", debug, "pulling");
       io_service_.post(std::bind(&TLSStreamBufferer::async_pull_packets,
                                  this->shared_from_this()));
     }
@@ -220,8 +220,8 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
         } else {
           data_queue_.consume(data_queue_.size());
           this->status_ = ec;
-          SSF_LOG(kLogDebug) << "network[crypto] TLS connection terminated ("
-                             << ec.value() << ": " << ec.message() << ")";
+          SSF_LOG("network_crypto", debug, "TLS connection terminated ({}: {})",
+                  ec.value(), ec.message());
         }
       }
 
@@ -241,7 +241,7 @@ class TLSStreamBufferer : public std::enable_shared_from_this<
         strand_.dispatch(async_read_some);
       } else {
         pulling_ = false;
-        SSF_LOG(kLogDebug) << "network[crypto] not pulling";
+        SSF_LOG("network_crypto", debug, "not pulling");
       }
     }
   }
@@ -362,7 +362,7 @@ class basic_buffered_tls_socket {
           if (!ec) {
             p_puller->start_pulling();
           } else {
-            SSF_LOG(kLogDebug) << "network[crypto] TLS handshake failed";
+            SSF_LOG("network_crypto", debug, "TLS handshake failed");
           }
           handler(ec);
         };
@@ -627,7 +627,7 @@ class basic_tls {
       boost::system::error_code& ec) {
     auto context = detail::make_tls_context(io_service, *parameters_it);
     if (!context) {
-      SSF_LOG(kLogError) << "network[crypto] could not generate context";
+      SSF_LOG("network_crypto", error, "could not generate context");
       ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
     }
 

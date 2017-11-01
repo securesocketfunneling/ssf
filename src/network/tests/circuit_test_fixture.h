@@ -13,11 +13,13 @@
 
 #include "ssf/layer/parameters.h"
 
-#include "ssf/layer/data_link/circuit_helpers.h"
 #include "ssf/layer/data_link/basic_circuit_protocol.h"
+#include "ssf/layer/data_link/circuit_helpers.h"
 #include "ssf/layer/data_link/simple_circuit_policy.h"
 #include "ssf/layer/physical/tcp.h"
 #include "ssf/layer/physical/tlsotcp.h"
+
+#include "ssf/log/log.h"
 
 #include "tests/virtual_network_helpers.h"
 
@@ -39,7 +41,7 @@ class CircuitTestFixture : public ::testing::Test {
   using Resolver = CircuitProtocol::resolver;
 
  protected:
-   CircuitTestFixture()
+  CircuitTestFixture()
       : io_service_(),
         ssl_circuit_acceptors_(),
         circuit_acceptors_(),
@@ -128,7 +130,9 @@ class CircuitTestFixture : public ::testing::Test {
         tests::virtual_network_helpers::GetServerTLSParametersAsBuffer());
 
     ssf::layer::ParameterStack default_parameters = {
-        {}, tests::virtual_network_helpers::GetServerTLSParametersAsBuffer(), {}};
+        {},
+        tests::virtual_network_helpers::GetServerTLSParametersAsBuffer(),
+        {}};
 
     ssf::layer::ParameterStack hop1_parameters(
         ssf::layer::data_link::make_forwarding_acceptor_parameter_stack(
@@ -136,7 +140,7 @@ class CircuitTestFixture : public ::testing::Test {
 
     auto hop1_endpoint_it = ssl_resolver_.resolve(hop1_parameters, ec1);
     if (ec1) {
-      SSF_LOG(kLogError) << "Fail resolving SSL hop1_endpoint";
+      SSF_LOG("test", error, "fail resolving SSL hop1_endpoint");
     }
 
     // TLS Circuit node listening on 8001
@@ -155,7 +159,7 @@ class CircuitTestFixture : public ::testing::Test {
 
     auto hop2_endpoint_it = ssl_resolver_.resolve(hop2_parameters, ec2);
     if (ec2) {
-      SSF_LOG(kLogError) << "Fail resolving SSL hop2_endpoint";
+      SSF_LOG("test", error, "fail resolving SSL hop2_endpoint");
     }
 
     if (!ec1) {
@@ -164,8 +168,8 @@ class CircuitTestFixture : public ::testing::Test {
           1, TLSCircuitProtocol::acceptor(io_service_));
       boost::system::error_code hop1_ec;
       hop1_it.first->second.open();
-      hop1_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
-                                       ec1);
+      hop1_it.first->second.set_option(
+          boost::asio::socket_base::reuse_address(true), ec1);
       hop1_it.first->second.bind(hop1_endpoint, hop1_ec);
       if (!hop1_ec) {
         hop1_it.first->second.listen(100, hop1_ec);
@@ -178,8 +182,8 @@ class CircuitTestFixture : public ::testing::Test {
           2, TLSCircuitProtocol::acceptor(io_service_));
       boost::system::error_code hop2_ec;
       hop2_it.first->second.open();
-      hop2_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
-                                       ec2);
+      hop2_it.first->second.set_option(
+          boost::asio::socket_base::reuse_address(true), ec2);
       if (!hop2_ec) {
         hop2_it.first->second.bind(hop2_endpoint, hop2_ec);
         hop2_it.first->second.listen(100, hop2_ec);
@@ -221,8 +225,8 @@ class CircuitTestFixture : public ::testing::Test {
         circuit_acceptors_.emplace(1, CircuitProtocol::acceptor(io_service_));
     boost::system::error_code hop1_ec;
     hop1_it.first->second.open();
-    hop1_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
-                                     ec);
+    hop1_it.first->second.set_option(
+        boost::asio::socket_base::reuse_address(true), ec);
     hop1_it.first->second.bind(hop1_endpoint, hop1_ec);
     hop1_it.first->second.listen(100, hop1_ec);
 
@@ -230,8 +234,8 @@ class CircuitTestFixture : public ::testing::Test {
         circuit_acceptors_.emplace(2, CircuitProtocol::acceptor(io_service_));
     boost::system::error_code hop2_ec;
     hop2_it.first->second.open();
-    hop2_it.first->second.set_option(boost::asio::socket_base::reuse_address(true),
-                                     ec);
+    hop2_it.first->second.set_option(
+        boost::asio::socket_base::reuse_address(true), ec);
     hop2_it.first->second.bind(hop2_endpoint, hop2_ec);
     hop2_it.first->second.listen(100, hop2_ec);
   }

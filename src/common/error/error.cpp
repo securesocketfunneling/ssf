@@ -1,7 +1,7 @@
 #include "common/error/error.h"
 
 const char* error::detail::ssf_category::name() const BOOST_SYSTEM_NOEXCEPT {
-  return "ssf";
+  return "error";
 }
 
 std::string error::detail::ssf_category::message(int value) const {
@@ -84,6 +84,6 @@ std::string error::detail::ssf_category::message(int value) const {
       return "file not found";
       break;
     default:
-      return "ssf error";
+      return "error";
   }
 }

@@ -110,8 +110,8 @@ void TestInterface(bool should_fail, const std::string& connect_filename,
       io_service, accept_pt,
       [&accept_mounted](const boost::system::error_code& ec,
                         const std::string& interface_name) {
-        SSF_LOG(kLogTrace) << " * Accept interface name : " << interface_name
-                           << " " << ec.message();
+        SSF_LOG("test", trace, " * Accept interface name {} ({})",
+                interface_name, ec.message());
         accept_mounted.set_value(ec.value() == 0);
       });
 
@@ -119,8 +119,8 @@ void TestInterface(bool should_fail, const std::string& connect_filename,
       io_service, connect_pt,
       [&connect_mounted](const boost::system::error_code& ec,
                          const std::string& interface_name) {
-        SSF_LOG(kLogTrace) << " * Connect interface name : " << interface_name
-                           << " " << ec.message();
+        SSF_LOG("test", trace, " * Connect interface name {} ({})",
+                interface_name, ec.message());
         connect_mounted.set_value(ec.value() == 0);
       });
 
@@ -248,8 +248,7 @@ TEST_F(SystemTestFixture, ImportHeterogeneousInterfaces) {
 
   auto interface_up_handler = [&nb_interface_ups, &finished, &ok](
       const boost::system::error_code& ec, const std::string& interface_name) {
-    SSF_LOG(kLogTrace) << "interface " << interface_name
-                       << " up : " << ec.message();
+    SSF_LOG("test", trace, "interface {} up ({})", interface_name, ec.message());
     ok = ok && !ec;
     ++nb_interface_ups;
     if (nb_interface_ups.load() == 8) {
@@ -303,8 +302,7 @@ TEST_F(SystemTestFixture, ImportHeterogeneousInterfaces) {
 
   auto interface_up_handler = [](const boost::system::error_code& ec,
                                  const std::string& interface_name) {
-    SSF_LOG(kLogTrace) << "interface " << interface_name
-                             << " up : " << ec.message();
+    SSF_LOG("test", trace, "interface {} up ({})", interface_name, ec.message());
     if (!ec) {
       auto socket_optional =
           InterfaceProtocol::get_interface_manager().Find(interface_name);

@@ -101,9 +101,9 @@ uint32_t SystemRouters::AsyncConfig(
 
   // If an error occured, stop all previous routers configured
   if (ec) {
-    SSF_LOG(kLogError) << "Error when configuring router";
+    SSF_LOG("network_router", error, "configure router failed");
     for (auto& router_name : added_routers) {
-      SSF_LOG(kLogError) << " * Remove router " << router_name;
+      SSF_LOG("network_router", error, "remove router {}", router_name);
       StopRouter(router_name);
     }
     added_routers.clear();
@@ -229,8 +229,8 @@ void SystemRouters::InterfaceUpHandler(
   auto& mount_info = mount_info_it->second;
 
   if (ec) {
-    SSF_LOG(kLogError) << " * Interface " << interface_name
-                       << " error : " << ec.message();
+    SSF_LOG("network_router", error, "interface {} error: {}", interface_name,
+            ec.message());
     mount_infos_.erase(interface_name);
     PostAllUpHandler(ec, all_up_handler);
     return;

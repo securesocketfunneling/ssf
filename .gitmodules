@@ -7,3 +7,6 @@
 [submodule "third_party/msgpack/msgpack-c"]
 	path = third_party/msgpack/msgpack-c
 	url = https://github.com/msgpack/msgpack-c.git
+[submodule "third_party/spdlog/spdlog"]
+	path = third_party/spdlog/spdlog
+	url = https://github.com/gabime/spdlog.git

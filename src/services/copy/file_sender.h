@@ -60,7 +60,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   }
 
   ~FileSender() {
-    SSF_LOG(kLogDebug) << "microservice[copy][file_sender] destroy";
+    SSF_LOG("microservice", debug, "[copy][file_sender] destroy");
   }
 
   void AsyncSend() {
@@ -72,17 +72,17 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   }
 
   void AsyncSendFiles() {
-    SSF_LOG(kLogDebug) << "microservice[copy][file_sender] async send files";
+    SSF_LOG("microservice", debug, "[copy][file_sender] async send files");
     RunFileSessions();
   }
 
   void AsyncSendStdin() {
-    SSF_LOG(kLogDebug) << "microservice[copy][file_sender] async send stdin";
+    SSF_LOG("microservice", debug, "[copy][file_sender] async send stdin");
     RunStdinSession();
   }
 
   void Stop() {
-    SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stop";
+    SSF_LOG("microservice", debug, "[copy][file_sender] stop");
     stopped_ = true;
 
     // stop all current sessions
@@ -135,8 +135,8 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     boost::system::error_code ec;
     ListInputFiles(ec);
     if (ec) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][file_sender] cannot list input files";
+      SSF_LOG("microservice", debug,
+              "[copy][file_sender] cannot list input files");
       NotifyCopyFinished(ErrorCode(ec.value()));
     }
 
@@ -163,8 +163,8 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       pending_input_files_.pop_front();
     }
 
-    SSF_LOG(kLogDebug) << "microservice[copy][file_sender] start copy "
-                       << input_file.GetString();
+    SSF_LOG("microservice", debug, "[copy][file_sender] start copy {}",
+            input_file.GetString());
 
     auto self = this->shared_from_this();
 
@@ -175,9 +175,10 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       boost::system::error_code session_ec;
       auto context = GenerateFileContext(input_file, session_ec);
       if (session_ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] could not "
-                              "generate copy context for "
-                           << input_file.GetString() << ": " << ec.message();
+        SSF_LOG("microservice", debug,
+                "[copy][file_sender] could not "
+                "generate copy context for {} ({})",
+                input_file.GetString(), ec.message());
         NotifyFileCopied(context.get(), ec);
         return;
       }
@@ -185,18 +186,19 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       if (ec) {
         boost::system::error_code copy_ec(ErrorCode::kNetworkError,
                                           get_copy_category());
-        SSF_LOG(kLogDebug)
-            << "microservice[copy][file_sender] could not connect file fiber "
-            << ec.message();
+        SSF_LOG("microservice", debug,
+                "[copy][file_sender] could not connect file fiber {}",
+                ec.message());
         NotifyFileCopied(context.get(), copy_ec);
         return;
       }
 
       StartSession(fiber, std::move(context), session_ec);
       if (session_ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] could not "
-                              "start copy session for "
-                           << input_file.GetString() << ": " << ec.message();
+        SSF_LOG("microservice", debug,
+                "[copy][file_sender] could not "
+                "start copy session for {} ({})",
+                input_file.GetString(), ec.message());
         return;
       }
     };
@@ -214,9 +216,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
 
     Endpoint ep(demux_, FileAcceptor<Demux>::kPort);
 
-    SSF_LOG(kLogDebug)
-        << "microservice[copy][file_sender] connect to file acceptor port "
-        << FileAcceptor<Demux>::kPort;
+    SSF_LOG("microservice", debug,
+            "[copy][file_sender] connect to file acceptor port {}",
+            FileAcceptor<Demux>::kPort);
     fiber->async_connect(ep, on_file_connected);
   }
 
@@ -224,25 +226,27 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     auto self = this->shared_from_this();
     FiberPtr fiber = std::make_shared<Fiber>(io_service_);
 
-    SSF_LOG(kLogDebug)
-        << "microservice[copy][file_sender] connect to file acceptor port "
-        << FileAcceptor<Demux>::kPort;
+    SSF_LOG("microservice", debug,
+            "[copy][file_sender] connect to file acceptor port {}",
+            FileAcceptor<Demux>::kPort);
 
     auto on_file_connected = [this, self,
                               fiber](const boost::system::error_code& ec) {
       boost::system::error_code session_ec;
       auto context = GenerateStdinContext(session_ec);
       if (session_ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] could not "
-                              "generate stdin copy context for: "
-                           << ec.message();
+        SSF_LOG("microservice", debug,
+                "[copy][file_sender] could not "
+                "generate stdin copy context ({})",
+                ec.message());
         return;
       }
       StartSession(fiber, std::move(context), session_ec);
       if (session_ec) {
-        SSF_LOG(kLogDebug) << "microservice[copy][file_sender] could not "
-                              "start stdin copy session for : "
-                           << ec.message();
+        SSF_LOG("microservice", debug,
+                "[copy][file_sender] could not "
+                "start stdin copy session ({})",
+                ec.message());
         return;
       }
     };
@@ -338,14 +342,13 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     };
 
     if (context->is_stdin_input) {
-      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] send stdin to "
-                         << context->output_dir << " "
-                         << context->output_filename;
+      SSF_LOG("microservice", debug, "[copy][file_sender] send stdin to {} {}",
+              context->output_dir, context->output_filename);
     } else {
-      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] send file "
-                         << context->input_filepath << " to "
-                         << context->output_dir << "/"
-                         << context->output_filename;
+      SSF_LOG("microservice", debug,
+              "[copy][file_sender] send file {} to {}/{}",
+              context->input_filepath, context->output_dir,
+              context->output_filename);
     }
 
     boost::system::error_code start_ec;
@@ -358,7 +361,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   void ListInputFiles(boost::system::error_code& ec) {
     std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
     boost::system::error_code fs_ec;
-    SSF_LOG(kLogTrace) << "microservice[copy][file_sender] list input files";
+    SSF_LOG("microservice", trace, "[copy][file_sender] list input files");
     std::list<Path> files;
     bool is_file = fs_.IsFile(copy_request_.input_pattern, fs_ec);
     if (is_file) {
@@ -368,8 +371,8 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       pending_input_files_ = fs_.ListFiles(copy_request_.input_pattern,
                                            copy_request_.is_recursive, fs_ec);
       if (fs_ec) {
-        SSF_LOG(kLogDebug)
-            << "microservice[copy][file_sender] could not list input files";
+        SSF_LOG("microservice", debug,
+                "[copy][file_sender] could not list input files");
         ec.assign(ErrorCode::kSenderInputFileListingFailed,
                   get_copy_category());
         return;
@@ -389,11 +392,11 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
                         const boost::system::error_code& ec) {
     auto is_copy_finished = true;
     if (context->is_stdin_input) {
-      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] stdin copied "
-                         << ec.message();
+      SSF_LOG("microservice", debug, "[copy][file_sender] stdin copied {}",
+              ec.message());
     } else {
-      SSF_LOG(kLogDebug) << "microservice[copy][file_sender] file copied "
-                         << context->input_filepath << " " << ec.message();
+      SSF_LOG("microservice", debug, "[copy][file_sender] file {} copied {}",
+              context->input_filepath, ec.message());
       std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
       input_files_.remove(context->input_filepath);
 
@@ -443,15 +446,12 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     AsyncWritePayload(
         control_fiber_, finished_notification, packet,
         [this, self, packet](const boost::system::error_code& ec) {
-          SSF_LOG(kLogDebug) << "microservice[copy][file_sender] send copy "
-                                "finished notification";
+          SSF_LOG("microservice", debug,
+                  "[copy][file_sender] send copy finished notification");
         });
-    io_service_.post(
-        [files_count, errors_count, error_code, on_copy_finished]() {
-          boost::system::error_code copy_finished_ec(error_code,
-                                                     get_copy_category());
-          on_copy_finished(files_count, errors_count, copy_finished_ec);
-        });
+
+    boost::system::error_code copy_finished_ec(error_code, get_copy_category());
+    on_copy_finished(files_count, errors_count, copy_finished_ec);
   }
 
  private:

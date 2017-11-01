@@ -103,7 +103,7 @@ std::list<Path> Filesystem::ListFilesImpl(const Path& input_dir,
 	                                               std::regex::optimize);
   }
   catch(const std::exception&) {
-    SSF_LOG(kLogDebug) << "[filesystem] cannot create filepattern regex";
+    SSF_LOG("filesystem", debug, "cannot create filepattern regex");
     return {};
   }
 

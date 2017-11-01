@@ -49,7 +49,7 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
   }
 
   ~FileAcceptor() {
-    SSF_LOG(kLogDebug) << "microservice[copy][file_acceptor] destroy";
+    SSF_LOG("microservice", debug, "[copy][file_acceptor] destroy");
   }
 
   void Listen(Demux& demux, boost::system::error_code& ec) {
@@ -58,13 +58,13 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
     fiber_acceptor_.bind(file_ep, ec);
     if (ec) {
       ec.assign(ErrorCode::kFileAcceptorNotBound, get_copy_category());
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][file_acceptor] cannot bind acceptor";
+      SSF_LOG("microservice", debug, "[copy][file_acceptor] cannot bind acceptor");
       return;
     }
-    SSF_LOG(kLogDebug) << "microservice[copy][file_acceptor]start accepting "
-                          "file transfer on fiber port "
-                       << kPort;
+    SSF_LOG(
+        "microservice", debug,
+        "[copy][file_acceptor]start accepting file transfer on fiber port {}",
+        kPort);
     fiber_acceptor_.listen(boost::asio::socket_base::max_connections, ec);
     if (ec) {
       ec.assign(ErrorCode::kFileAcceptorNotListening, get_copy_category());
@@ -85,8 +85,8 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
         [this, self, p_fiber, on_file_status,
          on_file_copied](const boost::system::error_code& ec) {
           if (ec) {
-            SSF_LOG(kLogDebug) << "microservice[copy][file_acceptor] could not "
-                                  "accept new file transfer";
+            SSF_LOG("microservice", debug,
+                    "[copy][file_acceptor] could not accept new file transfer");
             return;
           }
           AsyncAccept(on_file_status, on_file_copied);

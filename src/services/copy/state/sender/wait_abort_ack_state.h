@@ -22,7 +22,7 @@ class WaitAbortAckState : ICopyState {
  public:
   // ICopyState
   void Enter(CopyContext* context, boost::system::error_code& ec) {
-    SSF_LOG(kLogTrace) << "microservice[copy][wait_abort_ack] enter";
+    SSF_LOG("microservice", trace, "[copy][wait_abort_ack] enter");
   }
 
   bool FillOutboundPacket(CopyContext* context, Packet* packet,
@@ -33,8 +33,8 @@ class WaitAbortAckState : ICopyState {
   void ProcessInboundPacket(CopyContext* context, const Packet& packet,
                             boost::system::error_code& ec) override {
     if (packet.type() != PacketType::kAbortAck) {
-      SSF_LOG(kLogDebug)
-          << "microservice[copy][wait_abort_ack] cannot process inbound packet";
+      SSF_LOG("microservice", debug,
+              "[copy][wait_abort_ack] cannot process inbound packet");
       ec.assign(::error::protocol_error, ::error::get_ssf_category());
       return;
     }
