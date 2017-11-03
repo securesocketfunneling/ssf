@@ -18,7 +18,7 @@ set_property(TARGET socks_helpers PROPERTY FOLDER ${service_test_group_name})
 set(SERVICE_TEST_HEADERS
   datagram_fixture_test.h
   service_fixture_test.h
-  process_fixture_test.h
+  shell_fixture_test.h
   socks_fixture_test.h
   stream_fixture_test.h)
 
@@ -76,14 +76,14 @@ target_link_libraries(copy_tests ssf_framework tls_config_helper gtest)
 add_unit_test(copy_tests)
 set_property(TARGET copy_tests PROPERTY FOLDER ${service_test_group_name})
 
-# --- Process test
-add_executable(process_tests EXCLUDE_FROM_ALL process_tests.cpp ${SERVICE_TEST_HEADERS})
-target_link_libraries(process_tests ssf_framework tls_config_helper gtest)
-add_unit_test(process_tests)
-set_property(TARGET process_tests PROPERTY FOLDER ${service_test_group_name})
+# --- Shell test
+add_executable(shell_tests EXCLUDE_FROM_ALL shell_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(shell_tests ssf_framework tls_config_helper gtest)
+add_unit_test(shell_tests)
+set_property(TARGET shell_tests PROPERTY FOLDER ${service_test_group_name})
 
-# --- Remote process test
-add_executable(remote_process_tests EXCLUDE_FROM_ALL remote_process_tests.cpp ${SERVICE_TEST_HEADERS})
-target_link_libraries(remote_process_tests ssf_framework tls_config_helper gtest)
-add_unit_test(remote_process_tests)
-set_property(TARGET remote_process_tests PROPERTY FOLDER ${service_test_group_name})
+# --- Remote shell test
+add_executable(remote_shell_tests EXCLUDE_FROM_ALL remote_shell_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(remote_shell_tests ssf_framework tls_config_helper gtest)
+add_unit_test(remote_shell_tests)
+set_property(TARGET remote_shell_tests PROPERTY FOLDER ${service_test_group_name})
