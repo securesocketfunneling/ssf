@@ -19,17 +19,18 @@ namespace ssf {
 namespace services {
 
 template <typename Demux>
-class Process : public BaseUserService<Demux> {
+class Shell : public BaseUserService<Demux> {
  public:
-  static std::string GetFullParseName() { return "shell,X"; }
+  static std::string GetFullParseName() { return "X,shell"; }
 
   static std::string GetParseName() { return "shell"; }
 
-  static std::string GetValueName() { return "[[bind_address]:]port"; }
+  static std::string GetValueName() {
+    return "[bind_address:]port";
+  }
 
   static std::string GetParseDesc() {
-    return "Forward server shell I/O to the specified port on the local side. "
-           "Each connection creates a new shell process";
+    return "Enable client shell service";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(
@@ -46,26 +47,26 @@ class Process : public BaseUserService<Demux> {
     return {{"addr", listener.addr}, {"port", std::to_string(listener.port)}};
   }
 
-  static std::shared_ptr<Process> CreateUserService(
+  static std::shared_ptr<Shell> CreateUserService(
       const UserServiceParameterBag& parameters,
       boost::system::error_code& ec) {
     if (parameters.count("addr") == 0 || parameters.count("port") == 0) {
       SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-      return std::shared_ptr<Process>(nullptr);
+      return std::shared_ptr<Shell>(nullptr);
     }
 
     uint16_t port = OptionParser::ParsePort(parameters.at("port"), ec);
     if (ec) {
       SSF_LOG("user_service", error, "[{}] invalid port ({})", GetParseName(),
               ec.message());
-      return std::shared_ptr<Process>(nullptr);
+      return std::shared_ptr<Shell>(nullptr);
     }
-    return std::shared_ptr<Process>(new Process(parameters.at("addr"), port));
+    return std::shared_ptr<Shell>(new Shell(parameters.at("addr"), port));
   }
 
  public:
-  virtual ~Process() {}
+  ~Shell() {}
 
   std::string GetName() override { return "shell"; };
 
@@ -130,7 +131,7 @@ class Process : public BaseUserService<Demux> {
   };
 
  private:
-  Process(const std::string& local_addr, uint16_t local_port)
+  Shell(const std::string& local_addr, uint16_t local_port)
       : local_addr_(local_addr),
         local_port_(local_port),
         remoteServiceId_(0),

@@ -29,14 +29,10 @@ class CopyCommandLine : public Base {
   std::string output_pattern() const;
 
  protected:
-  void PopulateBasicOptions(OptionDescription& desc) override;
-  void PopulateLocalOptions(OptionDescription& desc) override;
-  void PopulatePositionalOptions(PosOptionDescription& desc) override;
-  void PopulateCommandLine(OptionDescription& command_line) override;
   bool IsServerCli() override;
-  void ParseOptions(const VariableMap& vm,
+  void ParseOptions(const Options& opts,
                     boost::system::error_code& ec) override;
-  std::string GetUsageDesc() override;
+  void InitOptions(Options& opts) override;
 
  private:
   void ParseFirstArgument(const std::string& first_arg,

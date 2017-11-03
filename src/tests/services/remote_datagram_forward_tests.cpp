@@ -3,7 +3,7 @@
 #include "tests/services/datagram_fixture_test.h"
 
 class RemoteUdpForwardTest
-    : public DatagramFixtureTest<ssf::services::UdpRemotePortForwarding> {
+    : public DatagramFixtureTest<ssf::services::RemoteUdpPortForwarding> {
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {{ServiceTested::GetParseName(),

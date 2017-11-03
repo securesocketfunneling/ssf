@@ -39,190 +39,118 @@ UserServiceParameters Base::Parse(
     exec_name_ = path.filename().string();
   }
 
-  // Basic options
-  OptionDescription basic_opts("Basic options");
-  InitBasicOptions(basic_opts);
-  PopulateBasicOptions(basic_opts);
+  Options opts(argv[0], "Secure Socket Funneling " SSF_VERSION_STRING);
+  opts.positional_help("");
 
-  // Local options
-  OptionDescription local_opts("Local options");
-  InitLocalOptions(local_opts);
-  PopulateLocalOptions(local_opts);
+  InitOptions(opts);
 
-  try {
-    OptionDescription cmd_line;
+  user_service_option_factory.InitOptions(opts);
 
-    cmd_line.add(basic_opts).add(local_opts);
+  opts.parse(argc, argv);
 
-    // Other options
-    PopulateCommandLine(cmd_line);
-
-    // Positional options
-    PosOptionDescription pos_opts;
-    PopulatePositionalOptions(pos_opts);
-
-    cmd_line.add(user_service_option_factory.GetOptions());
-
-    VariableMap vm;
-    boost::program_options::store(
-        boost::program_options::command_line_parser(argc, argv)
-            .options(cmd_line)
-            .positional(pos_opts)
-            .run(),
-        vm);
-
-    if (DisplayHelp(vm, cmd_line)) {
-      ec.assign(::error::operation_canceled, ::error::get_ssf_category());
-      return {};
-    }
-
-    boost::program_options::notify(vm);
-
-    return DoParse(user_service_option_factory, vm, ec);
-  } catch (const std::exception& e) {
-    (void)(e);
-    SSF_LOG("cli", error, "parsing failed: {}", e.what());
-    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+  if (DisplayHelp(opts)) {
+    ec.assign(::error::operation_canceled, ::error::get_ssf_category());
     return {};
   }
+
+  return DoParse(user_service_option_factory, opts, ec);
 }
 
-void Base::PopulateBasicOptions(OptionDescription& basic_opts) {}
-
-void Base::PopulateLocalOptions(OptionDescription& local_opts) {}
-
-void Base::PopulatePositionalOptions(PosOptionDescription& pos_opts) {}
-
-void Base::PopulateCommandLine(OptionDescription& command_line) {}
-
-void Base::ParseOptions(const VariableMap& value,
+void Base::ParseOptions(const Options& opts,
                         boost::system::error_code& ec) {}
 
 bool Base::IsServerCli() { return false; }
 
-bool Base::DisplayHelp(const VariableMap& vm, const OptionDescription& cli) {
-  if (!vm.count("help")) {
+bool Base::DisplayHelp(const Options& opts) {
+  if (!opts.count("help")) {
     return false;
   }
 
-  std::cout << "SSF " << ssf::versions::major << "." << ssf::versions::minor
-            << "." << ssf::versions::fix << std::endl
-            << std::endl;
+  std::cerr << opts.help(opts.groups()) << std::endl;
 
-  std::cout << "Usage: " << GetUsageDesc() << std::endl;
-
-  std::cout << cli << std::endl;
-
-  std::cout << "Using Boost " << ssf::versions::boost_version << " and OpenSSL "
+  std::cerr << "Using Boost " << ssf::versions::boost_version << " and OpenSSL "
             << ssf::versions::openssl_version << std::endl
             << std::endl;
 
   return true;
 }
 
-void Base::ParseBasicOptions(const VariableMap& vm,
+void Base::ParseBasicOptions(const Options& opts,
                              boost::system::error_code& ec) {
   log_level_ = spdlog::level::info;
   port_ = 0;
   port_set_ = false;
   config_file_ = "";
 
-  for (const auto& option : vm) {
-    if (option.first == "quiet") {
-      log_level_ = spdlog::level::off;
-    } else if (option.first == "verbosity") {
-      set_log_level(option.second.as<std::string>());
-    } else if (option.first == "port") {
-      int port = option.second.as<int>();
-      if (port > 0 && port < 65536) {
-        port_ = static_cast<uint16_t>(port);
-        port_set_ = true;
-      } else {
-        SSF_LOG("cli", error,
-                "parsing failed: port option is not between 1 - 65536");
-        ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-      }
-    } else if (option.first == "config") {
-      config_file_ = option.second.as<std::string>();
-    }
+  if (opts.count("quiet")) {
+    log_level_ = spdlog::level::off;
+  } else {
+    set_log_level(opts["verbosity"].as<std::string>());
   }
+
+  int port = opts["port"].as<int>();
+
+  if (port > 0 && port < 65536) {
+    port_ = static_cast<uint16_t>(port);
+    port_set_ = true;
+  } else {
+    SSF_LOG("cli", error, "parsing failed: port option is not "
+           "between 1 - 65536");
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+  }
+
+  try {
+    config_file_ = opts["config"].as<std::string>();
+  } catch (cxxopts::option_not_present_exception) { }
 }
 
 UserServiceParameters Base::DoParse(
     const UserServiceOptionFactory& user_service_option_factory,
-    const VariableMap& vm, boost::system::error_code& ec) {
+    const Options& opts, boost::system::error_code& ec) {
   UserServiceParameters result;
 
-  ParseBasicOptions(vm, ec);
+  ParseBasicOptions(opts, ec);
   if (ec) {
     return {};
   }
 
-  ParseOptions(vm, ec);
+  ParseOptions(opts, ec);
   if (ec) {
     return {};
   }
 
-  for (const auto& option : vm) {
-    if (!user_service_option_factory.HasService(option.first)) {
-      continue;
-    }
-
-    auto service_options = option.second.as<std::vector<std::string>>();
-    for (const auto& service_option : service_options) {
-      auto service_params =
-          user_service_option_factory.CreateUserServiceParameters(
-              option.first, service_option, ec);
-      if (ec) {
-        return {};
-      }
-      result[option.first].emplace_back(service_params);
-    }
-  }
-
-  ec.assign(::error::success, ::error::get_ssf_category());
-
-  return result;
+  return user_service_option_factory.CreateUserServiceParameters(opts, ec);
 }
 
-void Base::InitBasicOptions(OptionDescription& basic_opts) {
+void Base::InitOptions(Options& opts) {
   // clang-format off
-  basic_opts.add_options()
-    ("help,h", "Show help message");
+  opts.add_options()
+    ("h,help", "Show help message");
 
-  basic_opts.add_options()
-    ("verbosity,v",
-        boost::program_options::value<std::string>()
-          ->value_name("level")
-          ->default_value("info"),
-        "Verbosity:\n  critical|error|warning|info|debug|trace");
+  opts.add_options()
+    ("v,verbosity",
+        "Verbosity: critical|error|warning|info|debug|trace",
+        cxxopts::value<std::string>()->default_value("info"));
 
-  basic_opts.add_options()
-    ("quiet,q", "Do not print logs");
-  // clang-format on
-}
+  opts.add_options()
+    ("q,quiet", "Do not print logs");
 
-void Base::InitLocalOptions(OptionDescription& local_opts) {
-  // clang-format off
-  local_opts.add_options()
-    ("config,c",
-        boost::program_options::value<std::string>()
-          ->value_name("config_file_path"),
+  opts.add_options()
+    ("c,config",
         "Specify configuration file. If not set, 'config.json' is loaded"
-        " from the current working directory");
+        " from the current working directory",
+        cxxopts::value<std::string>());
 
   if (!IsServerCli()) {
-    local_opts.add_options()
-      ("port,p",
-          boost::program_options::value<int>()->default_value(8011)
-            ->value_name("port"),
-          "Remote port");
+    opts.add_options()
+      ("p,port",
+          "Remote port",
+          cxxopts::value<int>()->default_value("8011"));
   } else {
-    local_opts.add_options()
-      ("port,p",
-          boost::program_options::value<int>()->default_value(8011)
-            ->value_name("port"),
-          "Local port");
+    opts.add_options()
+      ("p,port",
+          "Local port",
+          cxxopts::value<int>()->default_value("8011"));
   }
   // clang-format on
 }

@@ -219,13 +219,13 @@ set(SSF_FRAMEWORK_FILES
   services/user_services/option_parser.h
   services/user_services/parameters.h
   services/user_services/port_forwarding.h
-  services/user_services/process.h
+  services/user_services/shell.h
   services/user_services/remote_port_forwarding.h
-  services/user_services/remote_process.h
+  services/user_services/remote_shell.h
   services/user_services/remote_socks.h
   services/user_services/socks.h
   services/user_services/udp_port_forwarding.h
-  services/user_services/udp_remote_port_forwarding.h
+  services/user_services/remote_udp_port_forwarding.h
   services/user_service_factory.h
 
   # client
@@ -267,7 +267,7 @@ add_subdirectory(compat)
 add_library(ssf_framework STATIC "")
 target_sources(ssf_framework PRIVATE ${SSF_FRAMEWORK_FILES})
 target_include_directories(ssf_framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_LIBS} ssf_network)
+target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_LIBS} ssf_network cxxopts)
 set_property(TARGET ssf_framework PROPERTY FOLDER Libraries)
 source_group_by_folder(ssf_framework)
 

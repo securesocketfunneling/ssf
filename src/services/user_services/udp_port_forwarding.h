@@ -31,17 +31,16 @@ class UdpPortForwarding : public BaseUserService<Demux> {
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  public:
-  static std::string GetFullParseName() { return "udp-forward,U"; }
+  static std::string GetFullParseName() { return "U,udp-forward"; }
 
   static std::string GetParseName() { return "udp-forward"; }
 
   static std::string GetValueName() {
-    return "[[bind_address]:]port:host:hostport";
+    return "[bind_address:]port:remote_host:remote_port";
   }
 
   static std::string GetParseDesc() {
-    return "Forward local UDP traffic on [[bind_address]:]port to "
-           " host:hostport on the server";
+    return "Enable client UDP port forwarding service";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(

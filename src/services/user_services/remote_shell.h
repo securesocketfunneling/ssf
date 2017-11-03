@@ -19,16 +19,18 @@ namespace ssf {
 namespace services {
 
 template <typename Demux>
-class RemoteProcess : public BaseUserService<Demux> {
+class RemoteShell : public BaseUserService<Demux> {
  public:
-  static std::string GetFullParseName() { return "remote-shell,Y"; }
+  static std::string GetFullParseName() { return "Y,remote-shell"; }
 
   static std::string GetParseName() { return "remote-shell"; }
 
-  static std::string GetValueName() { return "[[bind_address]:]port"; }
+  static std::string GetValueName() {
+    return "[bind_address:]port";
+  }
 
   static std::string GetParseDesc() {
-    return "Forward local shell I/O to the specified port on the server";
+    return "Enable remote shell service";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(
@@ -45,27 +47,27 @@ class RemoteProcess : public BaseUserService<Demux> {
     return {{"addr", listener.addr}, {"port", std::to_string(listener.port)}};
   }
 
-  static std::shared_ptr<RemoteProcess> CreateUserService(
+  static std::shared_ptr<RemoteShell> CreateUserService(
       const UserServiceParameterBag& parameters,
       boost::system::error_code& ec) {
     if (parameters.count("addr") == 0 || parameters.count("port") == 0) {
       SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-      return std::shared_ptr<RemoteProcess>(nullptr);
+      return std::shared_ptr<RemoteShell>(nullptr);
     }
 
     uint16_t port = OptionParser::ParsePort(parameters.at("port"), ec);
     if (ec) {
       SSF_LOG("user_service", error, "[{}] invalid port: {}", GetParseName(),
               ec.message());
-      return std::shared_ptr<RemoteProcess>(nullptr);
+      return std::shared_ptr<RemoteShell>(nullptr);
     }
-    return std::shared_ptr<RemoteProcess>(
-        new RemoteProcess(parameters.at("addr"), port));
+    return std::shared_ptr<RemoteShell>(
+        new RemoteShell(parameters.at("addr"), port));
   }
 
  public:
-  virtual ~RemoteProcess() {}
+  ~RemoteShell() {}
 
   std::string GetName() override { return "remote-shell"; };
 
@@ -131,7 +133,7 @@ class RemoteProcess : public BaseUserService<Demux> {
   };
 
  private:
-  RemoteProcess(const std::string& remote_addr, uint16_t remote_port)
+  RemoteShell(const std::string& remote_addr, uint16_t remote_port)
       : remote_addr_(remote_addr),
         remote_port_(remote_port),
         remoteServiceId_(0),

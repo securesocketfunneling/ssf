@@ -27,6 +27,12 @@ if (UNIX)
 option(ENABLE_SYSLOG "Use syslog collector" ON)
 endif (UNIX)
 
+# --- Set default CMAKE_BUILD_TYPE if none is provided
+# (Only relevant for single-configuration generators)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type." FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
+
 # --- Include CMake build system scripts
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -80,7 +86,6 @@ set(Boost_USE_STATIC_RUNTIME ${USE_STATIC_RUNTIME})
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED
              COMPONENTS system
-                        program_options
                         date_time
                         filesystem
                         regex
@@ -120,6 +125,9 @@ endif()
 add_subdirectory(third_party/http-parser)
 add_subdirectory(third_party/msgpack)
 add_subdirectory(third_party/spdlog)
+
+# --- cxxopts
+add_subdirectory(third_party/cxxopts EXCLUDE_FROM_ALL)
 
 # --- Test certs
 add_subdirectory(certs)

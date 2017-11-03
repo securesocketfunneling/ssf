@@ -3,7 +3,7 @@
 BOOST_VERSION=1_64_0
 BOOST_ARCHIVE=boost_${BOOST_VERSION}.tar.bz2
 BOOST_SOURCE=boost_${BOOST_VERSION}
-BOOST_LIBRARIES="system program_options date_time filesystem regex thread chrono"
+BOOST_LIBRARIES="system date_time filesystem regex thread chrono"
 
 if [ $# -lt 1 ]; then
   echo "Usage: $0 destination_dir" 1>&2

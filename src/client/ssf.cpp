@@ -14,13 +14,13 @@
 #include "services/user_services/base_user_service.h"
 #include "services/user_services/parameters.h"
 #include "services/user_services/port_forwarding.h"
-#include "services/user_services/process.h"
+#include "services/user_services/shell.h"
 #include "services/user_services/remote_port_forwarding.h"
-#include "services/user_services/remote_process.h"
+#include "services/user_services/remote_shell.h"
 #include "services/user_services/remote_socks.h"
 #include "services/user_services/socks.h"
 #include "services/user_services/udp_port_forwarding.h"
-#include "services/user_services/udp_remote_port_forwarding.h"
+#include "services/user_services/remote_udp_port_forwarding.h"
 
 using Demux = ssf::Client::Demux;
 
@@ -182,9 +182,9 @@ void RegisterUserServices(
   client->Register<ssf::services::Socks<Demux>>();
   client->Register<ssf::services::RemoteSocks<Demux>>();
   client->Register<ssf::services::UdpPortForwarding<Demux>>();
-  client->Register<ssf::services::UdpRemotePortForwarding<Demux>>();
-  client->Register<ssf::services::Process<Demux>>();
-  client->Register<ssf::services::RemoteProcess<Demux>>();
+  client->Register<ssf::services::RemoteUdpPortForwarding<Demux>>();
+  client->Register<ssf::services::Shell<Demux>>();
+  client->Register<ssf::services::RemoteShell<Demux>>();
 
   // user service CLI options
   user_service_option_factory->Register<ssf::services::PortForwarding<Demux>>();
@@ -195,7 +195,7 @@ void RegisterUserServices(
   user_service_option_factory
       ->Register<ssf::services::UdpPortForwarding<Demux>>();
   user_service_option_factory
-      ->Register<ssf::services::UdpRemotePortForwarding<Demux>>();
-  user_service_option_factory->Register<ssf::services::Process<Demux>>();
-  user_service_option_factory->Register<ssf::services::RemoteProcess<Demux>>();
+      ->Register<ssf::services::RemoteUdpPortForwarding<Demux>>();
+  user_service_option_factory->Register<ssf::services::Shell<Demux>>();
+  user_service_option_factory->Register<ssf::services::RemoteShell<Demux>>();
 }

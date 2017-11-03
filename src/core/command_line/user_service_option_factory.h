@@ -11,6 +11,8 @@
 #include "common/error/error.h"
 #include "services/user_services/parameters.h"
 
+#include "core/command_line/base.h"
+
 namespace ssf {
 
 class UserServiceOptionFactory {
@@ -32,8 +34,10 @@ class UserServiceOptionFactory {
   template <class UserService>
   bool Register() {
     return RegisterUserService(
-        UserService::GetParseName(), UserService::GetFullParseName(),
-        UserService::GetValueName(), UserService::GetParseDesc(),
+        UserService::GetParseName(),
+        UserService::GetFullParseName(),
+        UserService::GetValueName(),
+        UserService::GetParseDesc(),
         &UserService::CreateUserServiceParameters);
   }
 
@@ -65,32 +69,32 @@ class UserServiceOptionFactory {
     return service_options_.count(service_id) > 0;
   }
 
-  boost::program_options::options_description GetOptions() const {
-    boost::program_options::options_description desc(
-        "Supported service commands");
+  UserServiceParameters CreateUserServiceParameters(
+      const ssf::command_line::Base::Options& opts,
+      boost::system::error_code& ec) const {
+    UserServiceParameters result;
 
-    for (const auto& option : service_options_) {
-      desc.add_options()(
-          option.second.fullname.c_str(),
-          boost::program_options::value<std::vector<std::string>>()->value_name(
-              option.second.value_name.c_str()),
-          option.second.description.c_str());
+    for (const auto& service: service_options_) {
+        const std::string& option = service.first;
+        auto& params = opts[option].as<std::vector<std::string>>();
+
+        for (const auto& line: params) {
+          result[option].emplace_back(service.second.parser(line, ec));
+          if (ec) {
+            return {};
+          }
+        }
     }
 
-    return desc;
+    return result;
   }
 
-  UserServiceParameterBag CreateUserServiceParameters(
-      const std::string& index, const std::string& service_param,
-      boost::system::error_code& ec) const {
-    auto it = service_options_.find(index);
-
-    if (it == std::end(service_options_)) {
-      ec.assign(::error::service_not_found, ::error::get_ssf_category());
-      return {};
-    }
-
-    return it->second.parser(service_param, ec);
+  void InitOptions(ssf::command_line::Base::Options& opts) const {
+    for (const auto& it: service_options_)
+      opts.add_options("Services")
+        (it.second.fullname, it.second.description,
+            cxxopts::value<std::vector<std::string>>(),
+            it.second.value_name);
   }
 
  private:

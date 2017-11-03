@@ -10,3 +10,6 @@
 [submodule "third_party/spdlog/spdlog"]
 	path = third_party/spdlog/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "third_party/cxxopts"]
+	path = third_party/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
