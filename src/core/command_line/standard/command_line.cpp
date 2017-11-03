@@ -43,7 +43,7 @@ void StandardCommandLine::InitOptions(Options& opts) {
   }
 
   opts.add_options()
-    ("g,enable-gateway-ports", "Enable gateway ports")
+    ("g,gateway-ports", "Enable gateway ports")
     ("S,status", "Display microservices status");
 }
 
