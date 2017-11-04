@@ -69,7 +69,7 @@ class RemoteShell : public BaseUserService<Demux> {
  public:
   ~RemoteShell() {}
 
-  std::string GetName() override { return "remote-shell"; };
+  std::string GetName() override { return GetParseName(); };
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {

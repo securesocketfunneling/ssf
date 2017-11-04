@@ -71,7 +71,7 @@ class Socks : public BaseUserService<Demux> {
  public:
   ~Socks() {}
 
-  std::string GetName() override { return "socks"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {

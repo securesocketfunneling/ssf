@@ -92,7 +92,7 @@ class UdpPortForwarding : public BaseUserService<Demux> {
  public:
   virtual ~UdpPortForwarding() {}
 
-  std::string GetName() override { return "udp-forward"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {

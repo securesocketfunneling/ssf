@@ -68,7 +68,7 @@ class Shell : public BaseUserService<Demux> {
  public:
   ~Shell() {}
 
-  std::string GetName() override { return "shell"; };
+  std::string GetName() override { return GetParseName(); };
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {
