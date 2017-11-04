@@ -14,44 +14,48 @@ ForwardOptions::ForwardOptions() : from(), to() {}
 ForwardOptions OptionParser::ParseForwardOptions(
     const std::string& option, boost::system::error_code& ec) {
   ForwardOptions forward_options;
+  const char *p;
   char *end;
   unsigned long val;
-  std::string::size_type s, e;
+  std::string::size_type index, e;
 
-  s = option.rfind(':');
-  if (s == std::string::npos) {
+  index = option.rfind(':');
+  if (index == std::string::npos) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
 
   end = NULL;
-  val = std::strtoul(option.c_str() + s + 1, &end, 10);
-  if (*end != '\0' || val > 65535) {
+  p = option.c_str() + index + 1;
+  val = std::strtoul(p, &end, 10);
+  if (p == end || *end != '\0' || val > 65535) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
   forward_options.to.port = val;
 
-  e = s;
-  s = option.rfind(':', e - 1);
-  if (s == std::string::npos) {
+  e = index;
+  index = option.rfind(':', e - 1);
+  if (index == std::string::npos) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
-  forward_options.to.addr = std::string(option, s + 1, e - (s + 1));
+  forward_options.to.addr = std::string(option, index + 1, e - (index + 1));
 
-  e = s;
-  s = option.rfind(':', e - 1);
+  e = index;
+  index = option.rfind(':', e - 1);
 
   end = NULL;
-  if (s != std::string::npos) {
-    forward_options.from.addr = std::string(option, 0, s);
-    val = std::strtoul(option.c_str() + s + 1, &end, 10);
+  if (index != std::string::npos) {
+    auto s = std::string(option, 0, index);
+    forward_options.from.addr = (s == "") ? "*" : s;
+    p = option.c_str() + index + 1;
   } else {
     forward_options.from.addr = "";
-    val = std::strtoul(option.c_str(), &end, 10);
+    p = option.c_str();
   }
-  if (*end != ':' || val > 65535) {
+  val = std::strtoul(p, &end, 10);
+  if (p == end || *end != ':' || val > 65535) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
@@ -64,17 +68,20 @@ Endpoint OptionParser::ParseListeningOption(const std::string& option,
                                             boost::system::error_code& ec) {
   Endpoint listening_option;
   unsigned long val;
+  const char *p;
   char *end = NULL;
-  std::string::size_type s = option.find(':');
+  std::string::size_type index = option.find(':');
 
-  if (s != std::string::npos) {
-    listening_option.addr = std::string(option, 0, s);
-    val = std::strtoul(option.c_str() + s + 1, &end, 10);
+  if (index != std::string::npos) {
+    auto s = std::string(option, 0, index);
+    listening_option.addr = (s == "") ? "*" : s;
+    p = option.c_str() + index + 1;
   } else {
     listening_option.addr = "";
-    val = std::strtoul(option.c_str(), &end, 10);
+    p = option.c_str();
   }
-  if (*end != '\0' || val > 65535) {
+  val = std::strtoul(p, &end, 10);
+  if (p == end || *end != '\0' || val > 65535) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
