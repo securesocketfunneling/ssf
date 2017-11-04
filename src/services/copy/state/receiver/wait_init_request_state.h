@@ -70,7 +70,10 @@ class WaitInitRequestState : ICopyState {
       return;
     }
 
-    context->Init(init_req.input_filepath, init_req.check_file_integrity,
+    Path p(init_req.input_filepath);
+
+    context->Init(p.GetParent().GetString(), p.GetFilename().GetString(),
+                  init_req.check_file_integrity,
                   init_req.stdin_input, 0, init_req.resume, init_req.filesize,
                   init_req.output_dir, init_req.output_filename);
 

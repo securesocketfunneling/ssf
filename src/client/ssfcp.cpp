@@ -234,7 +234,8 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
       uint64_t offset = context->input.tellg();
       percent = (offset == -1) ? 100 : (100 * offset / context->filesize);
 
-      SSF_LOG("ssfcp", debug, "sending: {} {}% / {}b", context->input_filepath,
+      SSF_LOG("ssfcp", debug, "sending: {} {}% / {}b",
+              context->GetInputFilepath().GetString(),
               percent, context->filesize);
     }
   };
@@ -247,12 +248,12 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
                        ssf::services::copy::get_copy_category());
       }
       SSF_LOG("ssfcp", info, "data copied from {} to {} ({})",
-              (context->is_stdin_input ? "stdin" : context->input_filepath),
+              (context->is_stdin_input ? "stdin" : context->GetInputFilepath().GetString()),
               context->GetOutputFilepath().GetString(), ec.message());
     } else {
       if (!session->is_stopped()) {
         SSF_LOG("ssfcp", warn, "data copied from {} to {} ({})",
-                (context->is_stdin_input ? "stdin" : context->input_filepath),
+                (context->is_stdin_input ? "stdin" : context->GetInputFilepath().GetString()),
                 context->GetOutputFilepath().GetString(), ec.message());
       }
     }

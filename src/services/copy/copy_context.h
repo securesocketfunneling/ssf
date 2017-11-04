@@ -34,7 +34,8 @@ class CopyContext {
 
   ~CopyContext();
 
-  void Init(const std::string& i_input_filepath, bool check_file_integrity,
+  void Init(const std::string& i_input_dir, const std::string& i_input_filename,
+            bool check_file_integrity,
             bool i_is_stdin_input, uint64_t i_start_offset, bool i_resume,
             uint64_t i_filesize, const std::string& i_output_dir,
             const std::string& i_output_filename);
@@ -47,7 +48,7 @@ class CopyContext {
 
   ssf::Path GetOutputFilepath();
 
-
+  ssf::Path GetInputFilepath();
 
   void AsyncFillOutboundPacket(Packet* packet, OnOutboundPacketFilled on_filled,
                                boost::system::error_code& ec);
@@ -71,7 +72,8 @@ class CopyContext {
   boost::asio::io_service& io_service_;
   std::ifstream input;
   std::ofstream output;
-  std::string input_filepath;
+  std::string input_dir;
+  std::string input_filename;
   Hash::Digest input_file_digest;
   bool check_file_integrity;
   bool is_stdin_input;

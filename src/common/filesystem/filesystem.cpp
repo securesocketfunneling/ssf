@@ -1,7 +1,5 @@
 #include "common/filesystem/filesystem.h"
 
-#include <regex>
-
 #include <boost/algorithm/string/replace.hpp>
 
 #include <ssf/log/log.h>
@@ -55,47 +53,22 @@ bool Filesystem::RemoveAll(const Path& path,
 
 std::list<Path> Filesystem::ListFiles(const Path& filepath_pattern, bool recursive,
                                       boost::system::error_code& ec) const {
+  std::list<Path> result;
+
   ssf::Path input_dir(filepath_pattern);
   if (!IsDirectory(input_dir, ec)) {
     input_dir = filepath_pattern.GetParent();
   }
   ec.clear();
-  if (recursive) {
-    return ListFilesImpl<boost::filesystem::recursive_directory_iterator>(
-        input_dir, filepath_pattern.GetString(), ec);
-  } else {
-    return ListFilesImpl<boost::filesystem::directory_iterator>(
-        input_dir, filepath_pattern.GetString(), ec);
-  }
-}
-
-template <class DirectoryIterator>
-std::list<Path> Filesystem::ListFilesImpl(const Path& input_dir,
-                                          const std::string& filepath_pattern,
-                                          boost::system::error_code& ec) const {
-  std::list<Path> files;
-
-  if (!IsDirectory(input_dir, ec)) {
-    return {};
-  }
-
-  DirectoryIterator directory_it(input_dir.GetString(), ec);
-  if (ec) {
-    return {};
-  }
-
-  if (directory_it == DirectoryIterator()) {
-    return {};
-  }
 
   // convert pattern to regex
   std::regex filepath_regex;
   try {
     std::regex special_chars_regex("[.^$\\[\\]{}+\\\\]");
     std::string filepath_filter = std::regex_replace(
-      filepath_pattern, special_chars_regex, "[&]",
+      filepath_pattern.GetString(), special_chars_regex, "[&]",
       std::regex_constants::match_default | std::regex_constants::format_sed);
-    
+
     boost::replace_all(filepath_filter, "?", "*");
     boost::replace_all(filepath_filter, "*", ".*");
 
@@ -107,17 +80,34 @@ std::list<Path> Filesystem::ListFilesImpl(const Path& input_dir,
     return {};
   }
 
-  while (directory_it != DirectoryIterator()) {
-    if (IsFile(directory_it->path(), ec)) {
-      if (std::regex_search(directory_it->path().generic_string(),
-                            filepath_regex)) {
-        files.emplace_back(directory_it->path());
-      }
+  ListFilesRec(input_dir, Path(""), recursive, filepath_regex, result,  ec);
+
+  return result;
+}
+
+void Filesystem::ListFilesRec(const Path& input_dir,
+                              const Path& base_dir,
+                              bool recursive,
+                              const std::regex& filepath_regex,
+                              std::list<Path>& files,
+                              boost::system::error_code& ec) const {
+  Path cur_dir = input_dir / base_dir;
+
+  boost::filesystem::directory_iterator directory_it(cur_dir.GetString(), ec);
+  if (ec)
+    return;
+
+  while (directory_it != boost::filesystem::directory_iterator()) {
+    Path p = directory_it->path();
+
+    if (IsFile(p, ec) && std::regex_search(p.GetString(), filepath_regex)) {
+      files.emplace_back(base_dir / p.GetFilename());
+    } else if (recursive && IsDirectory(directory_it->path(), ec)) {
+      ListFilesRec(input_dir, base_dir / p.GetFilename(), recursive, filepath_regex, files, ec);
     }
+
     ++directory_it;
   }
-
-  return files;
 }
 
 }  // ssf

@@ -42,7 +42,7 @@ class SendIntegrityCheckRequestState : ICopyState {
     boost::system::error_code hash_ec;
 
     auto digest = ssf::crypto::HashFile<CopyContext::Hash>(
-        context->input_filepath, hash_ec);
+        context->GetInputFilepath(), hash_ec);
     if (hash_ec) {
       SSF_LOG("microservice", debug,
               "[copy][send_integrity_check_request] "

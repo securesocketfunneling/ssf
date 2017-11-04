@@ -102,7 +102,7 @@ class CopyServer : public BaseService<Demux> {
                 context->GetOutputFilepath().GetString());
       } else {
         SSF_LOG("microservice", debug, "[copy][server] receive {} into {}",
-                context->input_filepath,
+                context->GetInputFilepath().GetString(),
                 context->GetOutputFilepath().GetString());
       }
     };
@@ -113,7 +113,7 @@ class CopyServer : public BaseService<Demux> {
                 context->GetOutputFilepath().GetString());
       } else {
         SSF_LOG("microservice", debug, "[copy][server] copied {} into {}",
-                context->input_filepath,
+                context->GetInputFilepath().GetString(),
                 context->GetOutputFilepath().GetString());
       }
     };
@@ -247,13 +247,14 @@ class CopyServer : public BaseService<Demux> {
     auto on_file_status = [](CopyContext* context,
                              const boost::system::error_code& ec) {
       SSF_LOG("microservice", debug, "[copy][server] send {} into {}",
-              context->input_filepath,
+              context->GetInputFilepath().GetString(),
               context->GetOutputFilepath().GetString());
     };
     auto on_file_copied = [](CopyContext* context,
                              const boost::system::error_code& ec) {
       SSF_LOG("microservice", debug, "[copy][server] send {} into {} ({})",
-              context->input_filepath, context->GetOutputFilepath().GetString(),
+              context->GetInputFilepath().GetString(),
+              context->GetOutputFilepath().GetString(),
               ec.message());
     };
     auto self = this->shared_from_this();
