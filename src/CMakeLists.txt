@@ -271,11 +271,19 @@ target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_LIBS} ssf_networ
 set_property(TARGET ssf_framework PROPERTY FOLDER Libraries)
 source_group_by_folder(ssf_framework)
 
+set(SSF_FRAMEWORK_DEFINITIONS "")
+
 if(DISABLE_TLS)
-  target_compile_definitions(ssf_framework PUBLIC TCP_ONLY_LINK)
+  list(APPEND SSF_FRAMEWORK_DEFINITIONS TCP_ONLY_LINK)
 else()
-  target_compile_definitions(ssf_framework PUBLIC TLS_OVER_TCP_LINK)
-endif()
+  list(APPEND SSF_FRAMEWORK_DEFINITIONS TLS_OVER_TCP_LINK)
+endif(DISABLE_TLS)
+
+if (DISABLE_RTTI)
+  list(APPEND SSF_FRAMEWORK_DEFINITIONS CXXOPTS_NO_RTTI)
+endif(DISABLE_RTTI)
+
+target_compile_definitions(ssf_framework PUBLIC ${SSF_FRAMEWORK_DEFINITIONS})
 
 add_subdirectory(client)
 add_subdirectory(server)
