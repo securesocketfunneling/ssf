@@ -39,7 +39,7 @@ void CopyCommandLine::InitOptions(Options& opts) {
     ("args", "", cxxopts::value<std::vector<std::string>>());
 
   opts.parse_positional("args");
-  opts.positional_help("[host@]source_path [host:]destination_path");
+  opts.positional_help("[host@]source_path [host@]destination_path");
 
   // clang-format on
 }
