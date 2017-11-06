@@ -70,34 +70,47 @@ class WaitInitRequestState : ICopyState {
       return;
     }
 
-    Path p(init_req.input_filepath);
-
-    context->Init(p.GetParent().GetString(), p.GetFilename().GetString(),
-                  init_req.check_file_integrity,
-                  init_req.stdin_input, 0, init_req.resume, init_req.filesize,
-                  init_req.output_dir, init_req.output_filename);
-
-    ssf::Path output_path(init_req.output_dir);
-    output_path /= init_req.output_filename;
-
     boost::system::error_code fs_ec;
+
     if (!context->fs.IsDirectory(init_req.output_dir, fs_ec)) {
       SSF_LOG("microservice", debug,
               "[copy][wait_init_request] output "
               "directory {} not found",
-              init_req.output_dir);
+              context->GetOutputFilepath().GetParent().GetString());
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kOutputDirectoryNotFound));
       return;
     }
+    fs_ec.clear();
+
+    Path input_filepath(init_req.input_filepath);
+    ssf::Path output_path(init_req.output_dir);
+    output_path /= init_req.output_filename;
+    if (context->fs.IsDirectory(output_path, fs_ec)) {
+      // use output_path as output_dir and input filename as output filename
+      context->Init(input_filepath.GetParent().GetString(),
+                    input_filepath.GetFilename().GetString(),
+                    init_req.check_file_integrity, init_req.stdin_input, 0,
+                    init_req.resume, init_req.filesize, output_path.GetString(),
+                    input_filepath.GetFilename().GetString());
+    } else {
+      context->Init(input_filepath.GetParent().GetString(),
+                    input_filepath.GetFilename().GetString(),
+                    init_req.check_file_integrity, init_req.stdin_input, 0,
+                    init_req.resume, init_req.filesize, init_req.output_dir,
+                    init_req.output_filename);
+    }
+    fs_ec.clear();
 
     // try to create output directory
-    context->fs.MakeDirectories(output_path.GetParent(), fs_ec);
+    context->fs.MakeDirectories(context->GetOutputFilepath().GetParent(),
+                                fs_ec);
     fs_ec.clear();
-    if (!context->fs.IsDirectory(output_path.GetParent(), fs_ec)) {
+
+    if (!context->fs.IsDirectory(context->GetOutputFilepath().GetParent(),
+                                 fs_ec)) {
       SSF_LOG("microservice", debug,
-              "[copy][wait_init_request] output file "
-              "directory not found");
+              "[copy][wait_init_request] output file directory not found");
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kOutputFileDirectoryNotFound));
     }
@@ -106,7 +119,7 @@ class WaitInitRequestState : ICopyState {
 
     std::ios_base::openmode open_flags =
         std::ofstream::out | std::ofstream::binary;
-    if (context->fs.IsFile(output_path, fs_ec)) {
+    if (context->fs.IsFile(context->GetOutputFilepath(), fs_ec)) {
       open_flags |= std::ofstream::in;
     }
     if (!context->resume) {
@@ -116,11 +129,11 @@ class WaitInitRequestState : ICopyState {
       // seek to the end of stream
       open_flags |= std::ofstream::ate;
     }
-    output_fh.open(output_path.GetString(), open_flags);
+    output_fh.open(context->GetOutputFilepath().GetString(), open_flags);
     if (!output_fh.is_open()) {
       SSF_LOG("microservice", debug,
               "[copy][wait_init_request] cannot open output file {}",
-              output_path.GetString());
+              context->GetOutputFilepath().GetString());
       context->SetState(
           AbortReceiverState::Create(ErrorCode::kOutputFileNotAvailable));
       return;

@@ -83,7 +83,7 @@ class CopyServer : public BaseService<Demux> {
   }
 
  public:
-  ~CopyServer() { SSF_LOG("microservice", debug, "[copy][server] destroy"); }
+  ~CopyServer() { SSF_LOG("microservice", trace, "[copy][server] destroy"); }
 
   // Start service
   void start(boost::system::error_code& ec) override {
@@ -98,10 +98,10 @@ class CopyServer : public BaseService<Demux> {
     auto on_file_status = [](CopyContext* context,
                              const boost::system::error_code& ec) {
       if (context->is_stdin_input) {
-        SSF_LOG("microservice", debug, "[copy][server] receive stdin into {}",
+        SSF_LOG("microservice", trace, "[copy][server] receive stdin into {}",
                 context->GetOutputFilepath().GetString());
       } else {
-        SSF_LOG("microservice", debug, "[copy][server] receive {} into {}",
+        SSF_LOG("microservice", trace, "[copy][server] receive {} into {}",
                 context->GetInputFilepath().GetString(),
                 context->GetOutputFilepath().GetString());
       }

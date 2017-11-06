@@ -210,6 +210,8 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
                         const CopyRequest& req,
                         boost::system::error_code& copy_ec,
                         boost::system::error_code& start_ec) {
+  copy_ec.assign(ssf::services::copy::ErrorCode::kFailure,
+                 ssf::services::copy::get_copy_category());
   CopyClientPtr copy_client;
   auto session = client.GetSession(start_ec);
   if (start_ec) {
@@ -243,7 +245,8 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
       ssf::services::copy::CopyContext* context,
       const boost::system::error_code& ec) {
     if (!ec) {
-      if (!session->is_stopped()) {
+      if (!session->is_stopped() &&
+          copy_ec.value() != ssf::services::copy::ErrorCode::kSuccess) {
         copy_ec.assign(ssf::services::copy::ErrorCode::kFilesPartiallyCopied,
                        ssf::services::copy::get_copy_category());
       }

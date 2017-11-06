@@ -79,6 +79,8 @@ class WaitInitReplyState : ICopyState {
     // update context from receiver
     // if resume requested, check file base integrity before sending file
     context->start_offset = 0;
+    context->output_dir = init_rep.req.output_dir;
+    context->output_filename = init_rep.req.output_filename;
     if (init_rep.req.resume && init_rep.start_offset > 0) {
       boost::system::error_code hash_ec;
       auto digest = ssf::crypto::HashFile<CopyContext::Hash>(
@@ -106,7 +108,7 @@ class WaitInitReplyState : ICopyState {
 
     if (!context->is_stdin_input) {
       context->input.open(context->GetInputFilepath().GetString(),
-                      std::ifstream::binary | std::ifstream::in);
+                          std::ifstream::binary | std::ifstream::in);
       if (!context->input.is_open() || !context->input.good()) {
         SSF_LOG("microservice", debug,
                 "[copy][wait_init_reply] cannot open input file {}",

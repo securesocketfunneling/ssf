@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 
@@ -44,9 +45,7 @@ class CopySession : public ssf::BaseSession {
     return session;
   }
 
-  ~CopySession() {
-    SSF_LOG("microservice", debug, "[copy][session] destroy");
-  }
+  ~CopySession() { SSF_LOG("microservice", trace, "[copy][session] destroy"); }
 
   void start(boost::system::error_code&) {
     AsyncWrite();
@@ -55,17 +54,16 @@ class CopySession : public ssf::BaseSession {
 
   void stop(boost::system::error_code& ec) {
     SSF_LOG("microservice", debug, "[copy][session] stop");
+
     socket_.close(ec);
     context_->Deinit();
-    on_file_status_ = [](CopyContext*, const boost::system::error_code&) {};
-    on_file_copied_ = [](BaseSessionPtr, CopyContext*,
-                         const boost::system::error_code&) {};
   }
 
  private:
   CopySession(SocketStream socket, CopyContextUPtr context,
               OnFileStatus on_file_status, OnFileCopied on_file_copied)
-      : socket_(std::move(socket)),
+      : stopped_(false),
+        socket_(std::move(socket)),
         context_(std::move(context)),
         on_file_status_(on_file_status),
         on_file_copied_(on_file_copied) {}
@@ -180,15 +178,33 @@ class CopySession : public ssf::BaseSession {
   }
 
   void StopSession() {
+    {
+      std::lock_guard<std::mutex> lock_stopped(stopped_mutex_);
+      if (stopped_) {
+        return;
+      }
+      stopped_ = true;
+    }
+
     boost::system::error_code ec(ssf::services::copy::ErrorCode::kInterrupted,
                                  ssf::services::copy::get_copy_category());
     if (context_->IsTerminal()) {
       ec = context_->GetErrorCode();
     }
-    on_file_copied_(this->shared_from_this(), context_.get(), ec);
+    auto self = this->shared_from_this();
+    on_file_copied_(self, context_.get(), ec);
+
+    auto clean_callbacks = [this, self]() {
+      on_file_status_ = [](CopyContext*, const boost::system::error_code&) {};
+      on_file_copied_ = [](BaseSessionPtr, CopyContext*,
+                           const boost::system::error_code&) {};
+    };
+    socket_.get_io_service().post(clean_callbacks);
   }
 
  private:
+  std::mutex stopped_mutex_;
+  bool stopped_;
   SocketStream socket_;
   CopyContextUPtr context_;
   Packet inbound_packet_;
