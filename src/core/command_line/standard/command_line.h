@@ -25,14 +25,10 @@ class StandardCommandLine : public Base {
   bool no_reconnection() const { return no_reconnection_; }
 
  protected:
-  void PopulateBasicOptions(OptionDescription& desc) override;
-  void PopulateLocalOptions(OptionDescription& desc) override;
-  void PopulatePositionalOptions(PosOptionDescription& desc) override;
-  void PopulateCommandLine(OptionDescription& command_line) override;
+  void InitOptions(Options& opts) override;
   bool IsServerCli() override;
-  void ParseOptions(const VariableMap& vm,
+  void ParseOptions(const Options& opts,
                     boost::system::error_code& ec) override;
-  std::string GetUsageDesc() override;
 
  private:
   bool is_server_;

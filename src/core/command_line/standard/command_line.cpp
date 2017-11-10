@@ -16,103 +16,78 @@ StandardCommandLine::StandardCommandLine(bool is_server)
       max_connection_attempts_(1),
       reconnection_timeout_(60) {}
 
-void StandardCommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
-
-void StandardCommandLine::PopulateLocalOptions(OptionDescription& local_opts) {
-  auto* p_host_arg =
-      boost::program_options::value<std::string>(&host_)->value_name("host");
+void StandardCommandLine::InitOptions(Options& opts) {
+  Base::InitOptions(opts);
 
   if (IsServerCli()) {
     // server cli
-    local_opts.add_options()("relay-only,R",
-                             boost::program_options::bool_switch()
-                                 ->value_name("relay-only")
-                                 ->default_value(false),
-                             "The server will only relay connections");
+    opts.add_options()
+      ("R,relay-only", "The server will only relay connections")
+      ("l,bind-address", "Server bind address", cxxopts::value<std::string>());
   } else {
     // client cli
-    local_opts.add_options()("max-connection-attempts,m",
-                             boost::program_options::value<uint32_t>()
-                                 ->value_name("max-connection-attempts")
-                                 ->default_value(1),
-                             "Max connection attempts before stopping client");
+    opts.add_options()
+      ("m,max-connect-attempts",
+       "Number of unsuccessful connection attempts before stopping",
+       cxxopts::value<uint32_t>()->default_value("1"))
+      ("t,reconnect-delay",
+       "Time to wait before attempting to reconnect",
+        cxxopts::value<uint32_t>()->default_value("60"))
+      ("n,no-reconnect",
+       "Do not attempt to reconnect after loosing a connection")
+      ("server-address", "", cxxopts::value<std::vector<std::string>>());
 
-    local_opts.add_options()("reconnection-timeout,t",
-                             boost::program_options::value<uint32_t>()
-                                 ->value_name("reconnection-timeout")
-                                 ->default_value(60),
-                             "Timeout between connection attempts in seconds");
+    opts.parse_positional("server-address");
 
-    local_opts.add_options()(
-        "no-reconnection,n", boost::program_options::bool_switch()
-                                 ->value_name("no-reconnection")
-                                 ->default_value(false),
-        "Do not try to reconnect client if connection is interrupted");
+    opts.positional_help("server_address");
   }
 
-  local_opts.add_options()("host,H", p_host_arg, "Set server host");
-
-  local_opts.add_options()(
-      "gateway-ports,g", boost::program_options::bool_switch()
-                             ->value_name("gateway-ports")
-                             ->default_value(false),
-      "Allow gateway ports. Allow client to bind local sockets for a service to"
-      " a specific address rather than \"localhost\"");
-
-  local_opts.add_options()("status,S", boost::program_options::bool_switch()
-                                           ->value_name("status")
-                                           ->default_value(false),
-                           "Display microservices status (on/off)");
-}
-
-void StandardCommandLine::PopulatePositionalOptions(
-    PosOptionDescription& pos_opts) {
-  pos_opts.add("host", 1);
-}
-
-void StandardCommandLine::PopulateCommandLine(OptionDescription& command_line) {
+  opts.add_options()
+    ("g,gateway-ports", "Enable gateway ports")
+    ("S,status", "Display microservices status");
 }
 
 bool StandardCommandLine::IsServerCli() { return is_server_; }
 
-void StandardCommandLine::ParseOptions(const VariableMap& vm,
+void StandardCommandLine::ParseOptions(const Options& opts,
                                        boost::system::error_code& ec) {
-  if (vm.count("host") && !vm["host"].empty()) {
-    host_ = vm["host"].as<std::string>();
+  if (IsServerCli()) {
+    try {
+      host_ = opts["bind-address"].as<std::string>();
+    } catch (cxxopts::option_not_present_exception) {
+      host_ = "";
+    }
   } else {
-    host_ = "";
+    auto& server_address = opts["server-address"].as<std::vector<std::string>>();
+
+    if (server_address.size() > 1) {
+      SSF_LOG("cli", error, "too many arguments");
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    } else if (!server_address.size()) {
+      SSF_LOG("cli", error, "missing arguments");
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    } else
+      host_ = server_address[0];
   }
 
-  show_status_ = vm["status"].as<bool>();
+  show_status_ = opts.count("status");
 
   if (IsServerCli()) {
-    relay_only_ = vm["relay-only"].as<bool>();
+    relay_only_ = opts.count("relay-only");
   } else {
-    uint32_t max_attempts = vm["max-connection-attempts"].as<uint32_t>();
+    uint32_t max_attempts = opts["max-connect-attempts"].as<uint32_t>();
     if (max_attempts == 0) {
-      SSF_LOG("cli", error, "invalid max-connection-attempts option");
+      SSF_LOG("cli", error, "option max-connect-attempts must be > 0");
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     } else {
       max_connection_attempts_ = max_attempts;
     }
 
-    reconnection_timeout_ = vm["reconnection-timeout"].as<uint32_t>();
-    no_reconnection_ = vm["no-reconnection"].as<bool>();
+    reconnection_timeout_ = opts["reconnect-delay"].as<uint32_t>();
+    no_reconnection_ = opts.count("no-reconnect");
   }
 
-  gateway_ports_ = vm["gateway-ports"].as<bool>();
-}
-
-std::string StandardCommandLine::GetUsageDesc() {
-  std::stringstream ss_desc;
-
-  if (IsServerCli()) {
-    ss_desc << exec_name_ << " [options] bind_address";
-  } else {
-    ss_desc << exec_name_ << " [options] server_address";
-  }
-
-  return ss_desc.str();
+  gateway_ports_ = opts.count("gateway-ports");
 }
 
 }  // command_line

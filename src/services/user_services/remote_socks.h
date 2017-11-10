@@ -25,15 +25,16 @@ namespace services {
 template <typename Demux>
 class RemoteSocks : public BaseUserService<Demux> {
  public:
-  static std::string GetFullParseName() { return "remote-socks,F"; }
+  static std::string GetFullParseName() { return "F,remote-socks"; }
 
   static std::string GetParseName() { return "remote-socks"; }
 
-  static std::string GetValueName() { return "[[bind_address]:]port"; }
+  static std::string GetValueName() {
+    return "[bind_address:]port";
+  }
 
   static std::string GetParseDesc() {
-    return "Run a SOCKS proxy on the local host accessible from the server "
-           "on [[bind_address]:]port";
+    return "Enable remote SOCKS service";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(
@@ -70,9 +71,9 @@ class RemoteSocks : public BaseUserService<Demux> {
   }
 
  public:
-  virtual ~RemoteSocks() {}
+  ~RemoteSocks() {}
 
-  std::string GetName() override { return "remote-socks"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {

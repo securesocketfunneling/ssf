@@ -119,40 +119,99 @@ void DigestAuthStrategy::PopulateRequest(HttpRequest* p_request) {
   request_populated_ = true;
 }
 
+static void eat_lws(const std::string& str, std::string::size_type& pos) {
+  while (pos < str.length() && (str[pos] == ' ' || str[pos] == '\t'))
+    pos++;
+}
+
+static void eat_quoted(const std::string& str, std::string::size_type& pos) {
+  while (pos < str.length() && str[pos] != '\"')
+    pos++;
+}
+
+static void eat_token(const std::string& str, std::string::size_type& pos) {
+  while (pos < str.length() &&
+         str[pos] != '(' &&
+         str[pos] != ')' &&
+         str[pos] != '<' &&
+         str[pos] != '>' &&
+         str[pos] != '@' &&
+         str[pos] != ',' &&
+         str[pos] != ';' &&
+         str[pos] != ':' &&
+         str[pos] != '\\' &&
+         str[pos] != '"' &&
+         str[pos] != '/' &&
+         str[pos] != '[' &&
+         str[pos] != ']' &&
+         str[pos] != '?' &&
+         str[pos] != '=' &&
+         str[pos] != '{' &&
+         str[pos] != '}' &&
+         str[pos] != '=' &&
+         str[pos] != ' ' &&
+         str[pos] != '\t')
+    pos++;
+}
+
+static std::string lower(const std::string& str) {
+  std::string result(str);
+  std::string::size_type index = 0;
+
+  while (index < result.length()) {
+    result[index] = std::tolower(result[index]);
+    index++;
+  }
+
+  return result;
+}
+
 void DigestAuthStrategy::ParseDigestChallenge(const HttpResponse& response) {
-  using boost::spirit::qi::int_;
-  using boost::spirit::qi::alnum;
-  using boost::spirit::qi::char_;
-  using boost::spirit::qi::string;
-  using boost::spirit::qi::lexeme;
-  using boost::spirit::ascii::space_type;
+  const std::string& challenge_str = ExtractAuthToken(response);
+  std::string token, value;
 
-  using boost::spirit::qi::rule;
-  using str_it = std::string::const_iterator;
+  std::string::size_type i = 0;
+  while (i < challenge_str.length()) {
+    std::string::size_type s = i;
 
-  auto challenge_str = ExtractAuthToken(response);
+    eat_token(challenge_str, i);
 
-  std::map<std::string, std::string> result;
+    token = lower({challenge_str, s, i - s});
 
-  rule<str_it, std::string(), space_type> option_pattern =
-      (string("realm") | string("domain") | string("nonce") | string("opaque") |
-       string("stale") | string("algorithm") | string("qop") |
-       lexeme[*(~char_('"'))]);
+    eat_lws(challenge_str, i);
 
-  rule<str_it, std::string()> str_pattern = *(~char_('"'));
+    if (challenge_str[i++] != '=') {
+      status_ = Status::kAuthenticationFailure;
+      return;
+    }
 
-  rule<str_it, std::string()> quoted_str_pattern =
-      '"' >> lexeme[*(~char_('"'))] >> '"';
-  rule<str_it, std::pair<std::string, std::string>(), space_type> item =
-      option_pattern >> '=' >> (quoted_str_pattern | str_pattern);
+    eat_lws(challenge_str, i);
 
-  str_it begin = challenge_str.begin(), end = challenge_str.end();
-  bool parsed = boost::spirit::qi::phrase_parse(
-      begin, end, item % ',', boost::spirit::qi::ascii::space, challenge_);
+    if (challenge_str[i] == '"' ) {
+      s = ++i;
+      eat_quoted(challenge_str, i);
+      if (i < challenge_str.length() &&
+          challenge_str[i++] != '"') {
+        status_ = Status::kAuthenticationFailure;
+        return;
+      }
+      value = {challenge_str, s, (i - 1) - s};
+    } else {
+      s = i;
+      eat_token(challenge_str, i);
+      value = {challenge_str, s, i - s};
+    }
 
-  if (!parsed) {
-    status_ = Status::kAuthenticationFailure;
-    return;
+    eat_lws(challenge_str, i);
+    if (i < challenge_str.length() &&
+        challenge_str[i++] != ',') {
+      status_ = Status::kAuthenticationFailure;
+      return;
+    }
+
+    eat_lws(challenge_str, i);
+
+    challenge_[token] = value;
   }
 }
 

@@ -44,18 +44,16 @@ class PortForwarding : public BaseUserService<Demux> {
   }
 
  public:
-  static std::string GetFullParseName() { return "tcp-forward,L"; }
+  static std::string GetFullParseName() { return "L,tcp-forward"; }
 
   static std::string GetParseName() { return "tcp-forward"; }
 
   static std::string GetValueName() {
-    return "[[bind_address]:]port:host:hostport";
+    return "[bind_address:]port:remote_host:remote_port";
   }
 
   static std::string GetParseDesc() {
-    return "Forward TCP connections to [[bind_address]:]port on the local host "
-           "to "
-           " host:hostport on the server";
+    return "Enable client TCP port forwarding service";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(
@@ -105,9 +103,9 @@ class PortForwarding : public BaseUserService<Demux> {
   }
 
  public:
-  virtual ~PortForwarding() {}
+  ~PortForwarding() {}
 
-  std::string GetName() override { return "tcp-forward"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {

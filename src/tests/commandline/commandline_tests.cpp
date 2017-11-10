@@ -25,7 +25,7 @@ TEST(StandardCommandLineTests, ServerTest) {
 
   std::vector<const char*> argv = {"test_exec", "-p", "8012", "-c",
                              "config_file.json", "-v", "critical", "-S", "-R",
-                             "-g", "127.0.0.1"};
+                             "-g", "-l", "127.0.0.1"};
 
   cmd.Parse(static_cast<int>(argv.size()), const_cast<char**>(argv.data()), ec);
 

@@ -1,20 +1,18 @@
-#include "services/user_services/remote_process.h"
+#include "services/user_services/shell.h"
 
-#include "tests/services/process_fixture_test.h"
+#include "tests/services/shell_fixture_test.h"
 
-class RemoteProcessTest
-    : public ProcessFixtureTest<ssf::services::RemoteProcess> {
+class ShellTest : public ShellFixtureTest<ssf::services::Shell> {
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9081"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9071"}}}}};
   }
 };
 
-TEST_F(RemoteProcessTest, ExecuteCmdTest) { ExecuteCmd("9081"); }
+TEST_F(ShellTest, ExecuteCmdTest) { ExecuteCmd("9071"); }
 
-class RemoteProcessWildcardTest : public RemoteProcessTest {
- protected:
+class ShellWildcardTest : public ShellTest {
   void SetServerConfig(ssf::config::Config& config) override {
     const char* new_config = R"RAWSTRING(
 {
@@ -54,8 +52,8 @@ class RemoteProcessWildcardTest : public RemoteProcessTest {
   ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
     return {
-        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9082"}}}}};
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9072"}}}}};
   }
 };
 
-TEST_F(RemoteProcessWildcardTest, ExecuteCmdTest) { ExecuteCmd("9082"); }
+TEST_F(ShellWildcardTest, ExecuteCmdTest) { ExecuteCmd("9072"); }

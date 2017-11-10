@@ -164,17 +164,17 @@ bool CopyFixtureTest::StartCopy(const ssf::services::copy::CopyRequest& req,
       percent =
           (file_offset == -1) ? 100 : (100 * file_offset / context->filesize);
       SSF_LOG("test", debug, "[copy_tests] Sending: {} {}% / {}b",
-              context->input_filepath, percent, context->filesize);
+              context->GetInputFilepath().GetString(), percent, context->filesize);
     }
   };
   auto on_file_copied = [this](ssf::services::copy::CopyContext* context,
                                const boost::system::error_code& ec) {
     if (context->is_stdin_input) {
-      SSF_LOG("test", info, "[copy_tests] stdin copied in {} {} {}",
-              context->output_dir, context->output_filename, ec.message());
+      SSF_LOG("test", info, "[copy_tests] stdin copied in {} {}",
+              context->GetOutputFilepath().GetString(), ec.message());
     } else {
       SSF_LOG("test", info, "[copy_tests] file copied from {} to {} {}",
-              context->input_filepath, context->GetOutputFilepath().GetString(),
+              context->GetInputFilepath().GetString(), context->GetOutputFilepath().GetString(),
               ec.message());
     }
   };

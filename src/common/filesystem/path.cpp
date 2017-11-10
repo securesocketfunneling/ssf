@@ -77,10 +77,6 @@ bool Path::IsAbsolute() const { return path_.is_absolute(); }
 
 bool Path::HasExtension() const { return path_.has_extension(); }
 
-Path Path::MakeRelative(const Path& base, boost::system::error_code& ec) const {
-  return Path(boost::filesystem::relative(path_, base.path_, ec));
-}
-
 std::string Path::GetString() const { return path_.generic_string(); }
 
 }  // ssf

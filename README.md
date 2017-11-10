@@ -28,15 +28,24 @@ Usage: `ssf [options] server_address`
 
 Options:
 
+* `-v verbose_level`:
+Verbosity: critical|error|warning|info|debug|trace (default: info)
+
+* `-q`:
+Quiet mode. Do not print logs
+
+* `-p port`:
+Remote port (default: 8011)
+
 * `-c config_file_path`:
 Specify configuration file. If not set, 'config.json' is loaded from the
 current working directory
 
-* `-m max-connection-attempts`:
-Max connection attempts before stopping client
+* `-m max-connect-attempts`:
+Number of unsuccessful connection attempts before stopping (default: 1)
 
-* `-t reconnection-timeout`:
-Timeout between connection attempts in seconds
+* `-t reconnect-delay`:
+Time to wait before attempting to reconnect in seconds (default: 60)
 
 * `-n`:
 Do not try to reconnect client if connection is interrupted
@@ -48,8 +57,9 @@ specific address rather than "localhost"
 * `-S`:
 Display microservices status (on/off)
 
-* `-Y [[bind_address]:]port`:
-Forward local shell I/O to the specified port on the server
+* `-D [[bind_address]:]port`:
+Run a SOCKS proxy on the server accessible on `[[bind_address]:]port` on the
+local side
 
 * `-F [[bind_address]:]port`:
 Run a SOCKS proxy on the local host accessible from the server on
@@ -59,9 +69,8 @@ Run a SOCKS proxy on the local host accessible from the server on
 Forward server shell I/O to the specified port on the local side. Each
 connection creates a new shell process
 
-* `-D [[bind_address]:]port`:
-Run a SOCKS proxy on the server accessible on `[[bind_address]:]port` on the
-local side
+* `-Y [[bind_address]:]port`:
+Forward local shell I/O to the specified port on the server
 
 * `-L [[bind_address]:]port:host:hostport`:
 Forward TCP connections to `[[bind_address]:]port` on the local host to
@@ -80,22 +89,28 @@ on the local side
 
 #### Server
 
-Usage: `ssfd [options] [bind_address]`
+Usage: `ssfd [options]`
 
 Options:
+
+* `-v verbose_level`:
+Verbosity: critical|error|warning|info|debug|trace (default: info)
+
+* `-q`:
+Quiet mode. Do not print logs
 
 * `-c config_file_path`:
 Specify configuration file. If not set, 'config.json' is loaded from the current
 working directory
 
 * `-p port`:
-Local port
+Local port (default: 8011)
 
 * `-R`:
 The server will only relay connections
 
-* `-H host`:
-Set server host
+* `-l host`:
+Set server bind address
 
 * `-g`:
 Allow gateway ports. Allow client to bind local sockets for a service to a
@@ -122,15 +137,33 @@ Usage: `ssfcp [options] [host@]/absolute/path/file [[host@]/absolute/path/file]`
 
 Options:
 
+* `-v verbose_level`:
+Verbosity: critical|error|warning|info|debug|trace (default: info)
+
+* `-q`:
+Quiet mode. Do not print logs
+
 * `-c config_file_path`:
 Specify configuration file. If not set, 'config.json' is loaded from the
 current working directory
 
 * `-p port`:
-Remote port
+Remote port (default: 8011)
 
 * `-t`:
-Input will be stdin
+Use stdin as input
+
+* `--resume`:
+Attempt to resume file transfer if the destination file exists
+
+* `--check-integrity`:
+Check file integrity at the end of the transfer
+
+* `-r`:
+Copy files recursively
+
+* `--max-transfers`:
+Number of transfers in parallel (default: 1)
 
 ### Examples
 
@@ -145,16 +178,16 @@ ssf -D 9000 -c config.json -p 8000 192.168.0.1
 
 #### Server
 
-The server will bind to port **8011** on all the network interfaces
+The server will be bound to port **8011** on all the network interfaces
 
 ```plaintext
 ssfd
 ```
 
-The server will bind to **192.168.0.1:9000**
+The server will be bound to **192.168.0.1:9000**
 
 ```plaintext
-ssfd -p 9000 192.168.0.1
+ssfd -p 9000 -l 192.168.0.1
 ```
 
 #### Copy local file to remote filesystem
@@ -165,6 +198,10 @@ ssfcp [-c config_file] [-p port] path/to/file host@absolute/path/directory_desti
 
 ```plaintext
 ssfcp [-c config_file] [-p port] path/to/file* host@absolute/path/directory_destination
+```
+
+```plaintext
+ssfcp [-c config_file] [-p port] -r path/to/dir host@absolute/path/directory_destination
 ```
 
 #### Pipe file from standard input to remote filesystem
@@ -181,6 +218,10 @@ ssfcp [-c config_file] [-p port] remote_host@path/to/file absolute/path/director
 
 ```plaintext
 ssfcp [-c config_file] [-p port] remote_host@path/to/file* absolute/path/directory_destination
+```
+
+```plaintext
+ssfcp [-c config_file] [-p port] -r remote_host@path/to/dir absolute/path/directory_destination
 ```
 
 ### Configuration file

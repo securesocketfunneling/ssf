@@ -19,12 +19,13 @@ CopyContext::~CopyContext() {
   SSF_LOG("microservice", debug, "[copy][context] destroy");
 }
 
-void CopyContext::Init(const std::string& i_input_filepath,
+void CopyContext::Init(const std::string& i_input_dir, const std::string& i_input_filename,
                        bool i_check_file_integrity, bool i_is_stdin_input,
                        uint64_t i_start_offset, bool i_resume,
                        uint64_t i_filesize, const std::string& i_output_dir,
                        const std::string& i_output_filename) {
-  input_filepath = i_input_filepath;
+  input_dir = i_input_dir;
+  input_filename = i_input_filename;
   check_file_integrity = i_check_file_integrity;
   is_stdin_input = i_is_stdin_input;
   start_offset = i_start_offset;
@@ -37,6 +38,12 @@ void CopyContext::Init(const std::string& i_input_filepath,
 ssf::Path CopyContext::GetOutputFilepath() {
   ssf::Path result(output_dir);
   result /= output_filename;
+  return result;
+}
+
+ssf::Path CopyContext::GetInputFilepath() {
+  ssf::Path result(input_dir);
+  result /= input_filename;
   return result;
 }
 

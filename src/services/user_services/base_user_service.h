@@ -10,6 +10,8 @@
 
 #include "services/user_services/parameters.h"
 
+#include "core/command_line/base.h"
+
 namespace ssf {
 namespace services {
 
@@ -18,6 +20,9 @@ class BaseUserService
     : public std::enable_shared_from_this<BaseUserService<Demux>> {
  public:
   typedef typename std::shared_ptr<BaseUserService<Demux>> BaseUserServicePtr;
+
+  BaseUserService() {}
+  virtual ~BaseUserService() {}
 
   virtual std::vector<admin::CreateServiceRequest<Demux>>
   GetRemoteServiceCreateVector() = 0;
@@ -29,9 +34,6 @@ class BaseUserService
 
   virtual bool StartLocalServices(Demux& demux) = 0;
   virtual void StopLocalServices(Demux& demux) = 0;
-
-  BaseUserService() {}
-  virtual ~BaseUserService() {}
 
  private:
   BaseUserService(const BaseService<Demux>&) = delete;

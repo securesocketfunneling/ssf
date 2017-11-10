@@ -2,6 +2,7 @@
 #define SSF_COMMON_FILESYSTEM_FILESYSTEM_H_
 
 #include <list>
+#include <regex>
 
 #include <boost/system/error_code.hpp>
 
@@ -33,10 +34,12 @@ class Filesystem {
                             boost::system::error_code& ec) const;
 
  private:
-  template <class DirectoryIterator>
-  std::list<Path> ListFilesImpl(const Path& path,
-                                const std::string& filepath_pattern,
-                                boost::system::error_code& ec) const;
+  void ListFilesRec(const Path& input_dir,
+                    const Path& base_dir,
+                    bool recursive,
+                    const std::regex& filepath_regex,
+                    std::list<Path>& files,
+                    boost::system::error_code& ec) const;
 };
 
 }  // ssf

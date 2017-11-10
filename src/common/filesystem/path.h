@@ -31,6 +31,11 @@ class Path {
 
   bool operator==(const Path& path);
 
+  friend Path operator/(Path lhs, const Path& rhs) {
+    lhs /= rhs;
+    return lhs;
+  }
+
   Path GetParent() const;
   Path GetFilename() const;
   Path GetExtension() const;

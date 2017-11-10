@@ -7,22 +7,22 @@
 #include <string>
 #include <vector>
 
-#include <boost/program_options.hpp>
+#include <cxxopts.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
 
-#include "core/command_line/user_service_option_factory.h"
+#include "services/user_services/parameters.h"
 
 namespace ssf {
+
+class UserServiceOptionFactory;
+
 namespace command_line {
 
 class Base {
  public:
-  using OptionDescription = boost::program_options::options_description;
-  using PosOptionDescription =
-      boost::program_options::positional_options_description;
-  using VariableMap = boost::program_options::variables_map;
+  using Options = cxxopts::Options;
 
  public:
   virtual ~Base() {}
@@ -50,34 +50,22 @@ class Base {
  protected:
   Base();
 
-  // Populate CLI with basic options
-  virtual void PopulateBasicOptions(OptionDescription& basic_opts);
-  // Populate CLI with local options
-  virtual void PopulateLocalOptions(OptionDescription& local_opts);
-  // Populate CLI with positional options
-  virtual void PopulatePositionalOptions(PosOptionDescription& pos_opts);
-  // Populate CLI with custom categories and options
-  virtual void PopulateCommandLine(OptionDescription& command_line);
-  // Parse custom options
-  virtual void ParseOptions(const VariableMap& value,
+  virtual void ParseOptions(const Options& opts,
                             boost::system::error_code& ec);
-  // Return usage description for help message
-  virtual std::string GetUsageDesc() = 0;
 
   // Return true for server CLI
   virtual bool IsServerCli();
 
+  virtual void InitOptions(Options& opts);
+
  private:
-  void InitBasicOptions(OptionDescription& basic_opts);
-  void InitLocalOptions(OptionDescription& local_opts);
+  bool DisplayHelp(const Options& opts);
 
-  bool DisplayHelp(const VariableMap& vm, const OptionDescription& cli);
-
-  void ParseBasicOptions(const VariableMap& vm, boost::system::error_code& ec);
+  void ParseBasicOptions(const Options& opts, boost::system::error_code& ec);
 
   UserServiceParameters DoParse(
       const UserServiceOptionFactory& user_service_option_factory,
-      const VariableMap& vm, boost::system::error_code& ec);
+      const Options& opts, boost::system::error_code& ec);
 
   void set_log_level(const std::string& level);
 

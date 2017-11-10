@@ -1,5 +1,5 @@
-#ifndef TESTS_SERVICES_PROCESS_FIXTURE_TEST_H_
-#define TESTS_SERVICES_PROCESS_FIXTURE_TEST_H_
+#ifndef TESTS_SERVICES_SHELL_FIXTURE_TEST_H_
+#define TESTS_SERVICES_SHELL_FIXTURE_TEST_H_
 
 #include <array>
 #include <iostream>
@@ -15,7 +15,7 @@
 #include "tests/services/service_fixture_test.h"
 
 template <template <typename> class TServiceTested>
-class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
+class ShellFixtureTest : public ServiceFixtureTest<TServiceTested> {
   void SetServerConfig(ssf::config::Config& config) override {
     boost::system::error_code ec;
 
@@ -53,7 +53,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
   }
 
  protected:
-  void ExecuteCmd(const std::string& process_port) {
+  void ExecuteCmd(const std::string& shell_port) {
     ASSERT_TRUE(this->Wait());
 
     boost::asio::io_service io_service;
@@ -62,7 +62,7 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
     boost::asio::ip::tcp::socket socket(io_service);
 
     boost::asio::ip::tcp::resolver r(io_service);
-    boost::asio::ip::tcp::resolver::query q("127.0.0.1", process_port);
+    boost::asio::ip::tcp::resolver::query q("127.0.0.1", shell_port);
     boost::system::error_code ec;
 
     boost::asio::connect(socket, r.resolve(q), ec);
@@ -106,4 +106,4 @@ class ProcessFixtureTest : public ServiceFixtureTest<TServiceTested> {
   }
 };
 
-#endif  // TESTS_SERVICES_PROCESS_FIXTURE_TEST_H_
+#endif  // TESTS_SERVICES_SHELL_FIXTURE_TEST_H_

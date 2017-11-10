@@ -15,7 +15,6 @@ namespace ssf {
 namespace command_line {
 
 static const char kHostDirectorySeparator = '@';
-static const uint32_t kMaxParallelCopies = 1;
 
 CopyCommandLine::CopyCommandLine()
     : Base(),
@@ -24,59 +23,25 @@ CopyCommandLine::CopyCommandLine()
       resume_(false),
       recursive_(false),
       check_file_integrity_(false),
-      max_parallel_copies_(kMaxParallelCopies) {}
+      max_parallel_copies_() {}
 
-void CopyCommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
-
-void CopyCommandLine::PopulateLocalOptions(OptionDescription& local_opts) {}
-
-void CopyCommandLine::PopulatePositionalOptions(
-    PosOptionDescription& pos_opts) {
-  pos_opts.add("arg1", 1);
-  pos_opts.add("arg2", 1);
-}
-
-void CopyCommandLine::PopulateCommandLine(OptionDescription& command_line) {
+void CopyCommandLine::InitOptions(Options& opts) {
   // clang-format off
-  boost::program_options::options_description copy_options("Copy options");
-  copy_options.add_options()
-    ("stdin-input,t",
-        boost::program_options::bool_switch()
-          ->value_name("stdin-input")
-          ->default_value(false),
-          "File input will be stdin")
-    ("resume",
-        boost::program_options::bool_switch()
-          ->value_name("resume")
-          ->default_value(false),
-          "If the output file exists, this option will try to resume the copy")
-    ("check-integrity",
-        boost::program_options::bool_switch()
-          ->default_value(false),
-          "Check file integrity after copy")
-    ("recursive,r",
-        boost::program_options::bool_switch()
-          ->value_name("recursive")
-          ->default_value(false),
-          "Copy files recursively. Not available")
-    ("max-parallel-copies",
-        boost::program_options::value<uint32_t>()
-          ->value_name("max-parallel-copies")
-          ->default_value(kMaxParallelCopies),
-          "Max copies in parallel")
-    ("arg1",
-        boost::program_options::value<std::string>()
-          ->value_name("[host@]/absolute/path/file"),
-          "[host@]/absolute/path/file if host is present, " \
-          "the file will be copied from server to client")
-    ("arg2",
-        boost::program_options::value<std::string>()
-          ->value_name("[host@]/absolute/path/file"),
-          "[host@]/absolute/path/file if host is present, " \
-          "the file will be copied from client to server");
-  // clang-format on
+  Base::InitOptions(opts);
 
-  command_line.add(copy_options);
+  opts.add_options("Copy")
+    ("t,stdin-input", "Use stdin as input")
+    ("resume", "Attempt to resume operation if the destination file exists")
+    ("check-integrity", "Check file integrity")
+    ("r,recursive", "Copy files recursively")
+    ("max-transfers", "Number of transfers in parallel",
+        cxxopts::value<uint32_t>()->default_value("1"))
+    ("args", "", cxxopts::value<std::vector<std::string>>());
+
+  opts.parse_positional("args");
+  opts.positional_help("[host@]source_path [host@]destination_path");
+
+  // clang-format on
 }
 
 bool CopyCommandLine::IsServerCli() { return false; }
@@ -103,43 +68,49 @@ std::string CopyCommandLine::input_pattern() const { return input_pattern_; }
 
 std::string CopyCommandLine::output_pattern() const { return output_pattern_; }
 
-void CopyCommandLine::ParseOptions(const VariableMap& vm,
+void CopyCommandLine::ParseOptions(const Options& opts,
                                    boost::system::error_code& ec) {
-  auto vm_end_it = vm.end();
-  stdin_input_ = vm["stdin-input"].as<bool>();
+  stdin_input_ = opts.count("stdin-input");
+
   if (!stdin_input_) {
-    resume_ = vm["resume"].as<bool>();
-    recursive_ = vm["recursive"].as<bool>();
-    check_file_integrity_ = vm["check-integrity"].as<bool>();
-    max_parallel_copies_ = vm["max-parallel-copies"].as<uint32_t>();
+    resume_ = opts.count("resume");
+    recursive_ = opts.count("recursive");
+    check_file_integrity_ = opts.count("check-integrity");
+    max_parallel_copies_ = opts["max-transfers"].as<uint32_t>();
     if (max_parallel_copies_ == 0) {
-      SSF_LOG("cli", error, "max-parallel-copies must be > 0");
+      SSF_LOG("cli", error, "max-transfers must be > 0");
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return;
     }
   }
 
-  auto arg1_it = vm.find("arg1");
-  if (arg1_it == vm_end_it) {
+  auto& args = opts["args"].as<std::vector<std::string>>();
+
+  switch (args.size()) {
+  case 0:
+    SSF_LOG("cli", error, "missing arguments");
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return;
+  case 1:
+    ParseFirstArgument(args[0], ec);
+    if (ec) {
+      return;
+    }
+    break;
+  case 2:
+    ParseFirstArgument(args[0], ec);
+    if (ec) {
+      return;
+    }
+    ParseSecondArgument(args[1], ec);
+    if (ec)
+      return;
+    break;
+  default:
+    SSF_LOG("cli", error, "too many arguments");
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return;
   }
-
-  ParseFirstArgument(arg1_it->second.as<std::string>(), ec);
-  if (ec) {
-    return;
-  }
-
-  auto arg2_it = vm.find("arg2");
-  if (arg2_it != vm_end_it) {
-    ParseSecondArgument(arg2_it->second.as<std::string>(), ec);
-  }
-}
-
-std::string CopyCommandLine::GetUsageDesc() {
-  std::stringstream ss_desc;
-  ss_desc << exec_name_ << " [options] [host@]/absolute/path/file"
-                           " [[host@]/absolute/path/file]";
-  return ss_desc.str();
 }
 
 void CopyCommandLine::ParseFirstArgument(const std::string& first_arg,

@@ -210,6 +210,8 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
                         const CopyRequest& req,
                         boost::system::error_code& copy_ec,
                         boost::system::error_code& start_ec) {
+  copy_ec.assign(ssf::services::copy::ErrorCode::kFailure,
+                 ssf::services::copy::get_copy_category());
   CopyClientPtr copy_client;
   auto session = client.GetSession(start_ec);
   if (start_ec) {
@@ -234,7 +236,8 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
       uint64_t offset = context->input.tellg();
       percent = (offset == -1) ? 100 : (100 * offset / context->filesize);
 
-      SSF_LOG("ssfcp", debug, "sending: {} {}% / {}b", context->input_filepath,
+      SSF_LOG("ssfcp", debug, "sending: {} {}% / {}b",
+              context->GetInputFilepath().GetString(),
               percent, context->filesize);
     }
   };
@@ -242,17 +245,18 @@ CopyClientPtr StartCopy(ssf::Client& client, bool from_client_to_server,
       ssf::services::copy::CopyContext* context,
       const boost::system::error_code& ec) {
     if (!ec) {
-      if (!session->is_stopped()) {
+      if (!session->is_stopped() &&
+          copy_ec.value() != ssf::services::copy::ErrorCode::kSuccess) {
         copy_ec.assign(ssf::services::copy::ErrorCode::kFilesPartiallyCopied,
                        ssf::services::copy::get_copy_category());
       }
       SSF_LOG("ssfcp", info, "data copied from {} to {} ({})",
-              (context->is_stdin_input ? "stdin" : context->input_filepath),
+              (context->is_stdin_input ? "stdin" : context->GetInputFilepath().GetString()),
               context->GetOutputFilepath().GetString(), ec.message());
     } else {
       if (!session->is_stopped()) {
         SSF_LOG("ssfcp", warn, "data copied from {} to {} ({})",
-                (context->is_stdin_input ? "stdin" : context->input_filepath),
+                (context->is_stdin_input ? "stdin" : context->GetInputFilepath().GetString()),
                 context->GetOutputFilepath().GetString(), ec.message());
       }
     }

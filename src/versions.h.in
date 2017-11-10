@@ -5,7 +5,13 @@
 
 #include <string>
 
-namespace ssf { 
+#define SSF_VERSION_MAJOR @SSF_VERSION_MAJOR@
+#define SSF_VERSION_MINOR @SSF_VERSION_MINOR@
+#define SSF_VERSION_FIX @SSF_VERSION_FIX@
+
+#define SSF_VERSION_STRING "@SSF_VERSION_MAJOR@.@SSF_VERSION_MINOR@.@SSF_VERSION_FIX@"
+
+namespace ssf {
 namespace versions {
 
 enum Versions : uint8_t {
@@ -16,7 +22,7 @@ enum Versions : uint8_t {
   transport = @SSF_VERSION_TRANSPORT@
 };
 
-const std::string boost_version = "@Boost_VERSION@";
+const std::string boost_version = "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@.@Boost_SUBMINOR_VERSION@";
 const std::string openssl_version = "@OPENSSL_VERSION@";
 
 }  // versions

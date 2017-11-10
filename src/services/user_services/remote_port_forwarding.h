@@ -31,17 +31,16 @@ class RemotePortForwarding : public BaseUserService<Demux> {
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  public:
-  static std::string GetFullParseName() { return "tcp-remote-forward,R"; }
+  static std::string GetFullParseName() { return "R,remote-tcp-forward"; }
 
-  static std::string GetParseName() { return "tcp-remote-forward"; }
+  static std::string GetParseName() { return "remote-tcp-forward"; }
 
   static std::string GetValueName() {
-    return "[[bind_address]:]port:host:hostport";
+    return "[bind_address:]port:remote_host:remote_port";
   }
 
   static std::string GetParseDesc() {
-    return "Forward TCP connections to [[bind_address]:]port on the server to "
-           " host:hostport on the local side";
+    return "Enable remote TCP port forwarding service";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(
@@ -91,9 +90,9 @@ class RemotePortForwarding : public BaseUserService<Demux> {
   }
 
  public:
-  virtual ~RemotePortForwarding() {}
+  ~RemotePortForwarding() {}
 
-  std::string GetName() override { return "tcp-remote-forward"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {

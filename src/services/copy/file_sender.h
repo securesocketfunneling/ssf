@@ -274,16 +274,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       input_dir = input_dir.GetParent();
     }
 
-    Path relative_input_filepath = input_filepath.MakeRelative(input_dir, ec);
-    if (ec || relative_input_filepath == "") {
-      ec.assign(ssf::services::copy::ErrorCode::kInputFileNotAvailable,
-                ssf::services::copy::get_copy_category());
-      return context;
-    }
-
     Path output_path(copy_request_.output_pattern);
     Path output_directory = output_path;
-    Path output_filename = relative_input_filepath;
+    Path output_filename = input_filepath;
     if (fs_.IsFile(copy_request_.input_pattern, ec)) {
       // output_pattern should be a file path instead of a directory path
       output_directory = output_path.GetParent();
@@ -294,13 +287,14 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
     context->SetState(std::move(send_init_request_state));
     boost::system::error_code fs_ec;
-    auto filesize = context->fs.GetFilesize(input_filepath, fs_ec);
+    auto filesize = context->fs.GetFilesize(input_dir / input_filepath, fs_ec);
     if (fs_ec) {
       filesize = 0;
     }
 
     context->Init(
-        input_filepath.GetString(), copy_request_.check_file_integrity,
+        input_dir.GetString(), input_filepath.GetString(),
+        copy_request_.check_file_integrity,
         copy_request_.is_from_stdin, 0, copy_request_.is_resume, filesize,
         output_directory.GetString(), output_filename.GetString());
 
@@ -317,7 +311,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     ICopyStateUPtr send_init_request_state = SendInitRequestState::Create();
     context->SetState(std::move(send_init_request_state));
 
-    context->Init("", false, copy_request_.is_from_stdin, 0,
+    context->Init("", "", false, copy_request_.is_from_stdin, 0,
                   copy_request_.is_resume, 0, output_directory.GetString(),
                   output_filename.GetString());
 
@@ -342,13 +336,13 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     };
 
     if (context->is_stdin_input) {
-      SSF_LOG("microservice", debug, "[copy][file_sender] send stdin to {} {}",
-              context->output_dir, context->output_filename);
+      SSF_LOG("microservice", debug, "[copy][file_sender] send stdin to {}",
+              context->GetOutputFilepath().GetString());
     } else {
       SSF_LOG("microservice", debug,
-              "[copy][file_sender] send file {} to {}/{}",
-              context->input_filepath, context->output_dir,
-              context->output_filename);
+              "[copy][file_sender] send file {} to {}",
+              context->GetInputFilepath().GetString(),
+              context->GetOutputFilepath().GetString());
     }
 
     boost::system::error_code start_ec;
@@ -365,7 +359,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
     std::list<Path> files;
     bool is_file = fs_.IsFile(copy_request_.input_pattern, fs_ec);
     if (is_file) {
-      pending_input_files_.emplace_back(copy_request_.input_pattern);
+      pending_input_files_.emplace_back(Path(copy_request_.input_pattern).GetFilename());
     } else {
       fs_ec.clear();
       pending_input_files_ = fs_.ListFiles(copy_request_.input_pattern,
@@ -396,9 +390,9 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
               ec.message());
     } else {
       SSF_LOG("microservice", debug, "[copy][file_sender] file {} copied {}",
-              context->input_filepath, ec.message());
+              context->GetInputFilepath().GetString(), ec.message());
       std::lock_guard<std::recursive_mutex> lock(input_files_mutex_);
-      input_files_.remove(context->input_filepath);
+      input_files_.remove(context->input_filename);
 
       if (ec) {
         ++copy_errors_count_;

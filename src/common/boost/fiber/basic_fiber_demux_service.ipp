@@ -468,7 +468,7 @@ void basic_fiber_demux_service<S>::async_send_ack(implementation_type impl,
       SSF_LOG("demux", debug, "error send ack {} {}", ec.message(), ec.value());
       op->complete(ec, 0);
     } else {
-      auto handler = [=](const boost::system::error_code& ec, std::size_t) {
+      auto handler = [impl, fib_impl, op](const boost::system::error_code& ec, std::size_t) {
         if (ec) {
           SSF_LOG("demux", debug, "error send ack handler {}", ec.message());
         } else {
@@ -529,7 +529,7 @@ template <typename Handler>
 void basic_fiber_demux_service<S>::async_send_rst(
     implementation_type impl, fiber_id id, const Handler& close_handler) {
   SSF_LOG("demux", trace, "async send rst");
-  auto handler = [this, id, close_handler](const boost::system::error_code& ec,
+  auto handler = [this, impl, id, close_handler](const boost::system::error_code& ec,
                                            std::size_t) {
     if (ec) {
       SSF_LOG("demux", debug, "async send rst error {}: {}", ec.value(),
@@ -687,7 +687,7 @@ void basic_fiber_demux_service<S>::close_fiber(implementation_type impl,
     if (!fib_impl->disconnecting && !fib_impl->disconnected) {
       if (fib_impl->connecting || fib_impl->connected) {
         fib_impl->set_disconnecting();
-        async_send_rst(impl, fib_impl->id, [on_close] { on_close(); });
+        async_send_rst(impl, fib_impl->id, [impl, fib_impl, on_close] { on_close(); });
       }
     }
   }

@@ -26,22 +26,21 @@ namespace ssf {
 namespace services {
 
 template <typename Demux>
-class UdpRemotePortForwarding : public BaseUserService<Demux> {
+class RemoteUdpPortForwarding : public BaseUserService<Demux> {
  private:
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  public:
-  static std::string GetFullParseName() { return "udp-remote-forward,V"; }
+  static std::string GetFullParseName() { return "V,remote-udp-forward"; }
 
-  static std::string GetParseName() { return "udp-remote-forward"; }
+  static std::string GetParseName() { return "remote-udp-forward"; }
 
   static std::string GetValueName() {
-    return "[[bind_address]:]port:host:hostport";
+    return "[bind_address:]port:remote_host:remote_port";
   }
 
   static std::string GetParseDesc() {
-    return "Forward UDP traffic on [[bind_address]:]port on the server"
-           " to host:hostport on the local side";
+    return "Enable remote UDP port forwarding service";
   }
 
   static UserServiceParameterBag CreateUserServiceParameters(
@@ -61,7 +60,7 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
             {"to_port", std::to_string(forward_options.to.port)}};
   }
 
-  static std::shared_ptr<UdpRemotePortForwarding> CreateUserService(
+  static std::shared_ptr<RemoteUdpPortForwarding> CreateUserService(
       const UserServiceParameterBag& parameters,
       boost::system::error_code& ec) {
     if (parameters.count("from_addr") == 0 ||
@@ -69,7 +68,7 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
         parameters.count("to_addr") == 0 || parameters.count("to_port") == 0) {
       SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
-      return std::shared_ptr<UdpRemotePortForwarding>(nullptr);
+      return std::shared_ptr<RemoteUdpPortForwarding>(nullptr);
     }
 
     uint16_t from_port =
@@ -77,23 +76,23 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
     if (ec) {
       SSF_LOG("user_service", error, "[{}] invalid local port {}",
               GetParseName(), ec.message());
-      return std::shared_ptr<UdpRemotePortForwarding>(nullptr);
+      return std::shared_ptr<RemoteUdpPortForwarding>(nullptr);
     }
     uint16_t to_port = OptionParser::ParsePort(parameters.at("to_port"), ec);
     if (ec) {
       SSF_LOG("user_service", error, "[{}] invalid remote port: {}",
               GetParseName(), ec.message());
-      return std::shared_ptr<UdpRemotePortForwarding>(nullptr);
+      return std::shared_ptr<RemoteUdpPortForwarding>(nullptr);
     }
-    return std::shared_ptr<UdpRemotePortForwarding>(
-        new UdpRemotePortForwarding(parameters.at("from_addr"), from_port,
+    return std::shared_ptr<RemoteUdpPortForwarding>(
+        new RemoteUdpPortForwarding(parameters.at("from_addr"), from_port,
                                     parameters.at("to_addr"), to_port));
   }
 
  public:
-  virtual ~UdpRemotePortForwarding() {}
+  virtual ~RemoteUdpPortForwarding() {}
 
-  std::string GetName() override { return "udp-remote-forward"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {
@@ -164,7 +163,7 @@ class UdpRemotePortForwarding : public BaseUserService<Demux> {
   }
 
  private:
-  UdpRemotePortForwarding(const std::string& remote_addr, uint16_t remote_port,
+  RemoteUdpPortForwarding(const std::string& remote_addr, uint16_t remote_port,
                           const std::string& local_addr, uint16_t local_port)
       : local_port_(local_port),
         local_addr_(local_addr),
