@@ -54,7 +54,7 @@ class FibersToDatagrams : public BaseService<Demux> {
   FibersToDatagrams(const FibersToDatagrams&) = delete;
 
   ~FibersToDatagrams() {
-    SSF_LOG("microservice", debug, "[datagram_forwarder]: destroy");
+    SSF_LOG("microservice", trace, "[datagram_forwarder]: destroy");
   }
 
  public:

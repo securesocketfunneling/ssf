@@ -50,7 +50,7 @@ class FibersToSockets : public BaseService<Demux> {
   FibersToSockets(const FibersToSockets&) = delete;
 
   ~FibersToSockets() {
-    SSF_LOG("microservice", debug, "[stream_forwarder]: destroy");
+    SSF_LOG("microservice", trace, "[stream_forwarder]: destroy");
   }
 
  public:

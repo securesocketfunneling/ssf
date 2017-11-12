@@ -88,7 +88,7 @@ class CopyClient : public std::enable_shared_from_this<CopyClient> {
   }
 
   ~CopyClient() {
-    SSF_LOG("microservice", debug, "[copy][client] destroy");
+    SSF_LOG("microservice", trace, "[copy][client] destroy");
     if (copy_request_.is_from_stdin) {
 // reset stdin in text mode
 #ifdef WIN32

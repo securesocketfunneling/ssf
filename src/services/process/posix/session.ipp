@@ -41,7 +41,7 @@ Session<Demux>::Session(std::weak_ptr<ShellServer> server, Fiber client,
 
 template <typename Demux>
 Session<Demux>::~Session() {
-  SSF_LOG("microservice", debug, "[shell] session destroy");
+  SSF_LOG("microservice", trace, "[shell] session destroy");
 }
 
 template <typename Demux>

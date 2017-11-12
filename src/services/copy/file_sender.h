@@ -60,7 +60,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
   }
 
   ~FileSender() {
-    SSF_LOG("microservice", debug, "[copy][file_sender] destroy");
+    SSF_LOG("microservice", trace, "[copy][file_sender] destroy");
   }
 
   void AsyncSend() {

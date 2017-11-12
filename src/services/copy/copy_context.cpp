@@ -16,7 +16,7 @@ CopyContext::CopyContext(boost::asio::io_service& io_service)
       on_state_changed_([]() {}) {}
 
 CopyContext::~CopyContext() {
-  SSF_LOG("microservice", debug, "[copy][context] destroy");
+  SSF_LOG("microservice", trace, "[copy][context] destroy");
 }
 
 void CopyContext::Init(const std::string& i_input_dir, const std::string& i_input_filename,

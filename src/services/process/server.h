@@ -59,7 +59,7 @@ class Server : public BaseService<Demux> {
   Server(const Server&) = delete;
   Server& operator=(const Server&) = delete;
 
-  ~Server() { SSF_LOG("microservice", debug, "[shell] destroy"); }
+  ~Server() { SSF_LOG("microservice", trace, "[shell] destroy"); }
 
  public:
   // Create a new instance of the service

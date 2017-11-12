@@ -50,7 +50,7 @@ class SocksServer : public BaseService<Demux> {
   SocksServer(const SocksServer&) = delete;
   SocksServer& operator=(const SocksServer&) = delete;
 
-  ~SocksServer() { SSF_LOG("microservice", debug, "[socks]: destroy"); }
+  ~SocksServer() { SSF_LOG("microservice", trace, "[socks]: destroy"); }
 
   // Create a new instance of the service
   static SocksServerPtr Create(boost::asio::io_service& io_service,

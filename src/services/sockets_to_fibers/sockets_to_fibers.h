@@ -52,7 +52,7 @@ class SocketsToFibers : public BaseService<Demux> {
   SocketsToFibers(const SocketsToFibers&) = delete;
 
   ~SocketsToFibers() {
-    SSF_LOG("microservice", debug, "[stream_listener] destroy");
+    SSF_LOG("microservice", trace, "[stream_listener] destroy");
   }
 
  public:

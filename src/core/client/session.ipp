@@ -53,7 +53,7 @@ Session<N, T>::Session(boost::asio::io_service& io_service,
 
 template <class N, template <class> class T>
 Session<N, T>::~Session() {
-  SSF_LOG("client_session", debug, "destroy");
+  SSF_LOG("client_session", trace, "destroy");
 }
 
 template <class N, template <class> class T>

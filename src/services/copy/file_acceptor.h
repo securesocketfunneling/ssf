@@ -49,7 +49,7 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
   }
 
   ~FileAcceptor() {
-    SSF_LOG("microservice", debug, "[copy][file_acceptor] destroy");
+    SSF_LOG("microservice", trace, "[copy][file_acceptor] destroy");
   }
 
   void Listen(Demux& demux, boost::system::error_code& ec) {
