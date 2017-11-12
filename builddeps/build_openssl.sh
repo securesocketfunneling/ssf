@@ -1,15 +1,14 @@
 #!/bin/sh
 
-OPENSSL_VERSION=1.0.2k
-OPENSSL_ARCHIVE=openssl-${OPENSSL_VERSION}.tar.gz
-OPENSSL_SOURCE=openssl-${OPENSSL_VERSION}
-
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 destination_dir" 1>&2
+if [ $# -lt 3 ]; then
+  echo "Usage: $0 openssl_archive openssl_version destination_dir" 1>&2
   exit 1
 fi
 
-DIST_DIR=$(realpath $1)
+OPENSSL_ARCHIVE=$(realpath $1)
+OPENSSL_VERSION=$2
+OPENSSL_SOURCE=openssl-${OPENSSL_VERSION}
+DIST_DIR=$(realpath $3)
 
 if [ ! -d ${OPENSSL_SOURCE} ]; then
   echo "[*] Decompressing ${OPENSSL_ARCHIVE}"

@@ -1,19 +1,19 @@
 #!/bin/sh
 
-BOOST_VERSION=1_64_0
-BOOST_ARCHIVE=boost_${BOOST_VERSION}.tar.bz2
-BOOST_SOURCE=boost_${BOOST_VERSION}
 BOOST_LIBRARIES="system date_time filesystem regex thread chrono"
 
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 destination_dir" 1>&2
+if [ $# -lt 3 ]; then
+  echo "Usage: $0 boost_archive boost_version destination_dir" 1>&2
   exit 1
 fi
 
 variant=${VARIANT:-debug}
 arch=$(${CROSS_PREFIX}g++ -dumpmachine | cut -d '-' -f 1)
 
-DIST_DIR=$(realpath $1)
+BOOST_ARCHIVE=$(realpath $1)
+BOOST_VERSION=$2
+BOOST_SOURCE=boost_${BOOST_VERSION}
+DIST_DIR=$(realpath $3)
 BOOST_BUILD_DIR=$(realpath .)/boost.build-${arch}-${variant}
 BOOST_STAGE_DIR=$(realpath .)/boost.stage-${arch}-${variant}
 

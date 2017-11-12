@@ -762,9 +762,7 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
     received += s;
     ++count;
 
-    if (count == 4) {
-      ASSERT_EQ(received, 5) << "Not received all data";
-      ASSERT_EQ(fib_server.is_open(), false) << "Server fiber not closed";
+    if (!fib_server.is_open() && received == 5) {
       server_closed.set_value(true);
     }
   };

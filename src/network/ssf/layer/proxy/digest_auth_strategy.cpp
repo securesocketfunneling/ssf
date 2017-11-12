@@ -12,13 +12,6 @@
 
 #include "ssf/layer/proxy/digest_auth_strategy.h"
 
-#ifndef BOOST_SPIRIT_USE_PHOENIX_V3
-#define BOOST_SPIRIT_USE_PHOENIX_V3 1
-#endif
-#include <boost/fusion/include/std_pair.hpp>
-#include <boost/spirit/include/classic.hpp>
-#include <boost/spirit/include/qi.hpp>
-
 namespace ssf {
 namespace layer {
 namespace proxy {
@@ -120,13 +113,15 @@ void DigestAuthStrategy::PopulateRequest(HttpRequest* p_request) {
 }
 
 static void eat_lws(const std::string& str, std::string::size_type& pos) {
-  while (pos < str.length() && (str[pos] == ' ' || str[pos] == '\t'))
+  while (pos < str.length() && (str[pos] == ' ' || str[pos] == '\t')) {
     pos++;
+  }
 }
 
 static void eat_quoted(const std::string& str, std::string::size_type& pos) {
-  while (pos < str.length() && str[pos] != '\"')
+  while (pos < str.length() && str[pos] != '\"') {
     pos++;
+  }
 }
 
 static void eat_token(const std::string& str, std::string::size_type& pos) {
@@ -150,8 +145,9 @@ static void eat_token(const std::string& str, std::string::size_type& pos) {
          str[pos] != '}' &&
          str[pos] != '=' &&
          str[pos] != ' ' &&
-         str[pos] != '\t')
+         str[pos] != '\t') {
     pos++;
+  }
 }
 
 static std::string lower(const std::string& str) {

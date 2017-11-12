@@ -2,29 +2,30 @@
 
 setlocal enabledelayedexpansion
 
-set BOOST_VERSION=1_64_0
-set BOOST_ARCHIVE=boost_%BOOST_VERSION%.tar.bz2
-set BOOST_SOURCE=boost_%BOOST_VERSION%
 set BOOST_LIBRARIES=system,date_time,filesystem,regex,thread,chrono
 
-if "%1"=="32" (
+if "%3"=="32" (
   set ARCH=32
 )
-if "%1"=="64" (
+if "%3"=="64" (
   set ARCH=64
 )
 
 if not "%ARCH%"=="" (
-  if not "%2"=="" goto start
+  if not "%4"=="" goto start
 )
 
-echo Usage: %0 [32^|64] destination_dir 1>&2
+echo Usage: %0 boost_archive_path boost_version [32^|64] destination_dir 1>&2
 exit /B 1
 
 :start
-
-set DIST_DIR=%~f2
-echo %DIST_DIR%
+set WORKING_DIR=%cd%
+set BOOST_ARCHIVE=%~f1
+set BOOST_VERSION=%2
+set BOOST_SOURCE=%cd%\boost_%BOOST_VERSION%
+echo Using Boost archive %BOOST_ARCHIVE% (%BOOST_VERSION%) into %BOOST_SOURCE%
+set DIST_DIR=%~f4
+echo Destination dir: %DIST_DIR%
 set BASE_DIR=%~dp0
 set BOOST_BUILD_DIR=%cd%\boost.build%ARCH%
 set BOOST_STAGE_DIR=%cd%\boost.stage%ARCH%
@@ -38,9 +39,8 @@ if not exist %BOOST_SOURCE% (
 
 if not exist %BOOST_SOURCE%/b2.exe (
   echo [*] Bootstrapping Boost
-  pushd %BOOST_SOURCE%
+  cd /D %BOOST_SOURCE%
   call bootstrap.bat
-  popd
 )
 
 echo [*] Building Boost
@@ -54,7 +54,8 @@ if "%ARCH%"=="32" (
   set B2_ARGS=!B2_ARGS! asmflags=\safeseh
 )
 
-pushd %BOOST_SOURCE%
+cd /D %BOOST_SOURCE%
 mkdir %BOOST_BUILD_DIR% 2> NUL
 b2.exe %B2_ARGS% --prefix=%DIST_DIR% stage install
-popd
+
+cd /D %WORKING_DIR%
