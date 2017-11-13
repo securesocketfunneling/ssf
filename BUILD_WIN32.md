@@ -21,9 +21,9 @@ Replace `msvc-14.1` with your version of Visual Studio.
 You will then need to point the cmake `BOOST_ROOT` variable to the location
 of the boost install (By default: `C:\local\boost_1_65_1`).
 
-* OpenSSL 1.0.2l:
+* OpenSSL 1.0.2m:
 
-Install `Win32OpenSSL-1_0_2L.exe` (32-bit) or `Win64OpenSSL-1_0_2L.exe` (64-bit)
+Install `Win32OpenSSL-1_0_2m.exe` (32-bit) or `Win64OpenSSL-1_0_2m.exe` (64-bit)
 from https://slproweb.com/products/Win32OpenSSL.html
 
 *NOTE*: OpenSSL versions 1.1 is currently incompatible with Boost.
@@ -45,19 +45,19 @@ First prepare a build directory, download boost and openssl source and place
 them inside the build directory:
 
 ```
-C:\Users\you>mkdir C:\build
-C:\Users\you>cd C:\build
+C:\Users\user> mkdir C:\build
+C:\Users\user> cd C:\build
 ```
 
 Boost 1.65.1 can be downloaded from https://dl.bintray.com/boostorg/release/1.65.1/source/boost_1_65_1.tar.bz2
-and OpenSSL 1.0.2l from https://www.openssl.org/source/openssl-1.0.2l.tar.gz
+and OpenSSL 1.0.2m from https://www.openssl.org/source/openssl-1.0.2m.tar.gz
 
 ### Building boost
 
 Build Boost using `build_boost.bat`
 
 ```
-C:\build>C:\path_to_ssf_source\builddeps\build_boost.bat 32 C:\boost
+C:\build> C:\path_to_ssf_source\builddeps\build_boost.bat C:\Users\user\Downloads\boost_1_65_1.tar.bz2 1_65_1 32 C:\boost
 ```
 
 Pass `32` for 32-bit or `64` for 64-bit builds. Boost headers and
@@ -82,7 +82,7 @@ Make sure `perl.exe` and `nasm.exe` can be found in your environment before
 running the following commands (adjust `Path` if needed).
 
 ```
-C:\build>C:\path_to_ssf_source\builddeps\build_openssl.bat 32 C:\openssl
+C:\build> C:\path_to_ssf_source\builddeps\build_openssl.bat C:\Users\user\Downloads\openssl-1.0.2m.tar.gz 1.0.2m 32 C:\openssl
 ```
 
 Pass `32` for 32-bit or `64` for 64-bit builds. OpenSSL headers and
@@ -100,13 +100,7 @@ If you obtained the source for the git repository, make sure the submodules
 are checked out:
 
 ```
-C:\path_to_ssf_source>git submodule update --init third_party/http-parser/http-parser third_party/msgpack/msgpack-c
-```
-
-`third_party/googletest` is only required if you intend to run unit tests.
-
-```
-C:\path_to_ssf_source>git submodule update --init third_party/googletest
+C:\path_to_ssf_source> git submodule update --init
 ```
 
 Generate the project files with CMake in your build directory. Point the
@@ -114,7 +108,7 @@ Generate the project files with CMake in your build directory. Point the
 (or leave empty for default settings).
 
 ```
-C:\build>cmake C:\path_to_ssf_source -DBOOST_ROOT=C:\local\boost_1_65_1 -DUSE_STATIC_LIBS=ON
+C:\build> cmake C:\path_to_ssf_source -DBOOST_ROOT=C:\local\boost_1_65_1  -DOPENSSL_ROOT_DIR=C:\OpenSSL-Win32 -DUSE_STATIC_LIBS=ON
 ```
 
 Various parameters can be customized when generating the project files:
@@ -134,7 +128,7 @@ use raw TCP and be left unsecured. Provided for testing purpose only.
 Proceed to build SSF:
 
 ```
-C:\build>cmake . --config Release
+C:\build> cmake --build . --config Release
 ```
 
 Binaries are located in: `src\client\Release\ssf.exe`, `src\client\Release\ssfcp.exe`

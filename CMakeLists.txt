@@ -5,8 +5,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SSF_VERSION_MAJOR 2)
-set(SSF_VERSION_MINOR 2)
+set(SSF_VERSION_MAJOR 3)
+set(SSF_VERSION_MINOR 0)
 set(SSF_VERSION_FIX 0)
 set(SSF_VERSION_CIRCUIT 2)
 set(SSF_VERSION_TRANSPORT 2)
@@ -120,6 +120,7 @@ if(OPENSSL_USE_STATIC_LIBS AND MSVC_VERSION)
     target_link_libraries(ssl INTERFACE iob_func)
   endif(NOT HAVE_IOB_FUNC)
 endif()
+message(STATUS "OpenSSL version: ${OPENSSL_VERSION}")
 
 # --- http-parser components
 add_subdirectory(third_party/http-parser)

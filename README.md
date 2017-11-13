@@ -11,6 +11,7 @@ Features:
 * Local and remote UDP port forwarding
 * Local and remote SOCKS server
 * Local and remote shell through sockets
+* File copy
 * Native relay protocol
 * TLS connection with the strongest cipher-suites
 
@@ -18,13 +19,19 @@ Features:
 
 [Documentation](https://securesocketfunneling.github.io/ssf/)
 
+[Build on Windows](BUILD_WIN32.md)
+
+[Build on Unix/Linux](BUILD_UNIX.md)
+
+[Cross compiling SSF (e.g. Raspberry Pi)](BUILD_CROSS.md)
+
 ## How to use
 
 ### Command line
 
 #### Client
 
-Usage: `ssf [options] server_address`
+Usage: `ssf[.exe] [options] server_address`
 
 Options:
 
@@ -41,10 +48,10 @@ Remote port (default: 8011)
 Specify configuration file. If not set, 'config.json' is loaded from the
 current working directory
 
-* `-m max-connect-attempts`:
-Number of unsuccessful connection attempts before stopping (default: 1)
+* `-m attempts`:
+Max unsuccessful connection attempts before stopping (default: 1)
 
-* `-t reconnect-delay`:
+* `-t delay`:
 Time to wait before attempting to reconnect in seconds (default: 60)
 
 * `-n`:
@@ -56,6 +63,8 @@ specific address rather than "localhost"
 
 * `-S`:
 Display microservices status (on/off)
+
+Services options:
 
 * `-D [[bind_address]:]port`:
 Run a SOCKS proxy on the server accessible on `[[bind_address]:]port` on the
@@ -89,7 +98,7 @@ on the local side
 
 #### Server
 
-Usage: `ssfd [options]`
+Usage: `ssfd[.exe] [options]`
 
 Options:
 
@@ -133,7 +142,7 @@ The copy feature must be enabled on both client and server configuration file:
 }
 ```
 
-Usage: `ssfcp [options] [host@]/absolute/path/file [[host@]/absolute/path/file]`
+Usage: `ssfcp[.exe] [options] [host@]/absolute/path/file [[host@]/absolute/path/file]`
 
 Options:
 
@@ -162,8 +171,8 @@ Check file integrity at the end of the transfer
 * `-r`:
 Copy files recursively
 
-* `--max-transfers`:
-Number of transfers in parallel (default: 1)
+* `--max-transfers arg`:
+Max transfers in parallel (default: 1)
 
 ### Examples
 
@@ -234,6 +243,7 @@ ssfcp [-c config_file] [-p port] -r remote_host@path/to/dir absolute/path/direct
     "http_proxy": {
       "host": "",
       "port": "",
+      "user_agent": "",
       "credentials": {
         "username": "",
         "password": "",
@@ -345,6 +355,7 @@ SSF supports connection through:
 |:----------------------------------|:----------------------------------------------------------------------------------------------------------|
 | http_proxy.host                   | HTTP proxy host                                                                                           |
 | http_proxy.port                   | HTTP proxy port                                                                                           |
+| http_proxy.user_agent             | User-Agent header value in HTTP CONNECT request                                                           |
 | http_proxy.credentials.username   | proxy username credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)  |
 | http_proxy.credentials.password   | proxy password credentials (all platform: Basic or Digest, Windows: NTLM and Negotiate if reuse = false)  |
 | http_proxy.credentials.domain     | user domain (NTLM and Negotiate auth on Windows only)                                                     |
@@ -456,7 +467,7 @@ There are 7 microservices:
 * stream_listener
 * datagram_forwarder
 * datagram_listener
-* file_copy
+* copy
 * socks
 * shell
 
@@ -489,7 +500,7 @@ Here is the default microservices configuration:
       "stream_forwarder": { "enable": true },
       "stream_listener": { "enable": true },
       "socks": { "enable": true },
-      "file_copy": { "enable": false },
+      "copy": { "enable": false },
       "shell": { "enable": false }
     }
   }

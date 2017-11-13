@@ -66,11 +66,13 @@ bool Base::DisplayHelp(const Options& opts) {
     return false;
   }
 
+#ifndef SSF_DISABLE_LOGS
   std::cerr << opts.help(opts.groups()) << std::endl;
 
   std::cerr << "Using Boost " << ssf::versions::boost_version << " and OpenSSL "
             << ssf::versions::openssl_version << std::endl
             << std::endl;
+#endif  // SSF_DISABLE_LOGS
 
   return true;
 }

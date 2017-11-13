@@ -34,12 +34,12 @@ void CopyCommandLine::InitOptions(Options& opts) {
     ("resume", "Attempt to resume operation if the destination file exists")
     ("check-integrity", "Check file integrity")
     ("r,recursive", "Copy files recursively")
-    ("max-transfers", "Number of transfers in parallel",
+    ("max-transfers", "Max transfers in parallel",
         cxxopts::value<uint32_t>()->default_value("1"))
     ("args", "", cxxopts::value<std::vector<std::string>>());
 
   opts.parse_positional("args");
-  opts.positional_help("[host@]source_path [host@]destination_path");
+  opts.positional_help("[host@]source_path [[host@]destination_path]");
 
   // clang-format on
 }

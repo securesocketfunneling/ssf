@@ -12,7 +12,7 @@ which can be used to cross-compile applications for the Raspberry Pi 2/3
 platform. On Debian/Ubuntu you can install it using the package manager.
 
 ```
-apt-get install g++-arm-linux-gnueabihf
+# apt-get install g++-arm-linux-gnueabihf
 ```
 
 Building dependencies
@@ -22,8 +22,8 @@ SSF depends on Boost and OpenSSL, these need to be cross-compiled separately.
 To make your life easier, use the scripts provided in `builddeps/`.
 
 ```
-CROSS_PREFIX=arm-linux-gnueabihf- /path/to/ssf/source/builddeps/build_openssl.sh /path/to/openssl/prefix/
-CROSS_PREFIX=arm-linux-gnueabihf- /path/to/ssf/source/builddeps/build_boost.sh /path/to/boost/prefix
+$ CROSS_PREFIX=arm-linux-gnueabihf- /path/to/ssf/source/builddeps/build_openssl.sh /path/to/openssl-1.0.2m.tar.gz 1.0.2m /path/to/openssl/prefix/
+$ CROSS_PREFIX=arm-linux-gnueabihf- /path/to/ssf/source/builddeps/build_boost.sh /path/to/boost_1_65_1.tar.bz2 1_65_1 /path/to/boost/prefix
 ```
 
 Building SSF
@@ -50,18 +50,18 @@ variable. You might want to add the following line to the toolchain
 configuration file:
 
 ```
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
 ```
 
 Then, from the build directory, invoke `cmake` specifying your toolchain
 configuration file using the `-DCMAKE_TOOLCHAIN_FILE` parameter:
 
 ```
-cmake -DUSE_STATIC_LIBS=ON -DCMAKE_TOOLCHAIN_FILE=arm-linux-gnueabihf.cmake -DBOOST_ROOT=/path/to/boost/prefix -DOPENSSL_ROOT_DIR=/path/to/openssl/prefix /path/to/ssf/source
+$ cmake /path/to/ssf/source -DUSE_STATIC_LIBS=ON -DCMAKE_TOOLCHAIN_FILE=arm-linux-gnueabihf.cmake -DBOOST_ROOT=/path/to/boost/prefix -DOPENSSL_ROOT_DIR=/path/to/openssl/prefix
 ```
 
 Then proceed to build SSF:
 
 ```
-make
+$ make
 ```

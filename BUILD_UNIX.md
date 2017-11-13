@@ -36,13 +36,7 @@ are checked out:
 
 ```
 $ git clone https://github.com/securesocketfunnelling/ssf.git
-$ git submodule update --init third_party/http-parser/http-parser third_party/msgpack/msgpack-c
-```
-
-`third_party/googletest` is only required if you intend to run unit tests.
-
-```
-$ git submodule update --init third_party/googletest
+$ git submodule update --init
 ```
 
 Create a build directory and generate the projet makefiles in it.
@@ -79,5 +73,5 @@ You can install SSF on your system using `make install`. The full install
 directory is the content of `CMAKE_INSTALL_PREFIX` prepended to `DESTDIR`.
 
 ```
-make install DESTDIR=/install_path
+$ make install DESTDIR=/install_path
 ```

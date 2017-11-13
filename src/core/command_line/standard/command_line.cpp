@@ -28,7 +28,7 @@ void StandardCommandLine::InitOptions(Options& opts) {
     // client cli
     opts.add_options()
       ("m,max-connect-attempts",
-       "Number of unsuccessful connection attempts before stopping",
+       "Max unsuccessful connection attempts before stopping",
        cxxopts::value<uint32_t>()->default_value("1"))
       ("t,reconnect-delay",
        "Time to wait before attempting to reconnect",
