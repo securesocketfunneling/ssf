@@ -29,7 +29,7 @@ class Path {
   Path& operator+=(const std::string& other);
   Path& operator+=(const char* other);
 
-  bool operator==(const Path& path);
+  bool operator==(const Path& path) const;
 
   friend Path operator/(Path lhs, const Path& rhs) {
     lhs /= rhs;

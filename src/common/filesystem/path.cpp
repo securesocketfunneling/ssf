@@ -59,7 +59,7 @@ Path& Path::operator/=(const char* other) {
   return *this;
 }
 
-bool Path::operator==(const Path& path) {
+bool Path::operator==(const Path& path) const {
   return GetString() == path.GetString();
 }
 

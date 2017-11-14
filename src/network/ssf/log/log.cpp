@@ -8,7 +8,7 @@ void SetLogLevel(spdlog::level::level_enum level) {}
 
 #if defined(_MSC_VER)
 #include "spdlog/sinks/msvc_sink.h"
-#elif defined(__unix__)
+#elif defined(__unix__) || defined(__APPLE__)
 #include "spdlog/sinks/ansicolor_sink.h"
 #ifdef SSF_ENABLE_SYSLOG
 #define SPDLOG_ENABLE_SYSLOG
@@ -52,7 +52,7 @@ std::shared_ptr<spdlog::logger> Manager::CreateChannel(
 #if defined(_MSC_VER)
   sinks.push_back(std::make_shared<spdlog::sinks::wincolor_stderr_sink_mt>());
   sinks.push_back(std::make_shared<spdlog::sinks::msvc_sink_mt>());
-#elif defined(__unix__)
+#elif defined(__unix__) || defined(__APPLE__)
   sinks.push_back(std::make_shared<spdlog::sinks::ansicolor_stderr_sink_mt>());
 #if defined(SSF_ENABLE_SYSLOG)
   sinks.push_back(std::make_shared<spdlog::sinks::syslog_sink>());
