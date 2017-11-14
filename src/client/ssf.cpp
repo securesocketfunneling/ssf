@@ -117,13 +117,20 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
       case ssf::Status::kServerUnreachable:
         exit_ec.assign(::error::host_unreachable, ::error::get_ssf_category());
         break;
+      case ssf::Status::kServerNotSupported:
+        exit_ec.assign(::error::protocol_error,
+                       ::error::get_ssf_category());
+        break;
       case ssf::Status::kConnected:
+      case ssf::Status::kRunning:
         exit_ec.assign(::error::success, ::error::get_ssf_category());
         break;
       case ssf::Status::kDisconnected:
         if (exit_ec.value() != ::error::interrupted) {
           exit_ec.assign(::error::broken_pipe, ::error::get_ssf_category());
         }
+        break;
+      default:
         break;
     }
   };

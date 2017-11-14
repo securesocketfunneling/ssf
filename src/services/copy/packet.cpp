@@ -19,19 +19,19 @@ const Packet::Buffer& Packet::buffer() const { return buffer_; }
 Packet::Buffer& Packet::buffer() { return buffer_; }
 
 Packet::ConstBufSeq Packet::GetConstBuf() const {
-  return {boost::asio::buffer(&type_, sizeof(type_)),
+  return {{boost::asio::buffer(&type_, sizeof(type_)),
           boost::asio::buffer(&payload_size_, sizeof(payload_size_)),
-          boost::asio::buffer(buffer_, payload_size_)};
+          boost::asio::buffer(buffer_, payload_size_)}};
 }
 
 Packet::HeaderConstBufSeq Packet::GetHeaderConstBuf() const {
-  return {boost::asio::buffer(&type_, sizeof(type_)),
-          boost::asio::buffer(&payload_size_, sizeof(payload_size_))};
+  return {{boost::asio::buffer(&type_, sizeof(type_)),
+          boost::asio::buffer(&payload_size_, sizeof(payload_size_))}};
 }
 
 Packet::HeaderMutBufSeq Packet::GetHeaderMutBuf() {
-  return {boost::asio::buffer(&type_, sizeof(type_)),
-          boost::asio::buffer(&payload_size_, sizeof(payload_size_))};
+  return {{boost::asio::buffer(&type_, sizeof(type_)),
+          boost::asio::buffer(&payload_size_, sizeof(payload_size_))}};
 }
 
 boost::asio::mutable_buffers_1 Packet::GetPayloadMutBuf() {

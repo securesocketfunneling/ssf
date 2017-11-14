@@ -11,8 +11,8 @@ namespace copy {
 CopyContext::CopyContext(boost::asio::io_service& io_service)
     : io_service_(io_service),
       error_code(ErrorCode::kFailure),
-      outbound_packet_(nullptr),
       state_(nullptr),
+      outbound_packet_(nullptr),
       on_state_changed_([]() {}) {}
 
 CopyContext::~CopyContext() {

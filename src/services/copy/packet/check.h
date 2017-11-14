@@ -22,7 +22,7 @@ struct CheckIntegrityRequest {
   static const PacketType kType = PacketType::kCheckIntegrityRequest;
   using Digest = typename Hash::Digest;
 
-  CheckIntegrityRequest() : input_file_digest({0}) {}
+  CheckIntegrityRequest() : input_file_digest({{0}}) {}
   CheckIntegrityRequest(const Digest& i_input_file_digest)
       : input_file_digest(i_input_file_digest) {}
 
@@ -37,7 +37,7 @@ struct CheckIntegrityReply {
   using Digest = typename Hash::Digest;
 
   CheckIntegrityReply()
-      : req(), output_file_digest({0}), status(kCheckIntegrityFailed) {}
+      : req(), output_file_digest({{0}}), status(kCheckIntegrityFailed) {}
 
   CheckIntegrityReply(const CheckIntegrityRequest<Hash>& i_req,
                       const Digest& i_output_file_digest,
