@@ -30,7 +30,7 @@ class SendInitReplyState : ICopyState {
 
  public:
   // ICopyState
-  void Enter(CopyContext* context, boost::system::error_code& ec) {
+  void Enter(CopyContext* context, boost::system::error_code& ec) override {
     SSF_LOG("microservice", trace, "[copy][send_init_reply] enter");
   }
 
