@@ -106,6 +106,9 @@ void SSFFixtureTest::WaitNotification() {
 void SSFFixtureTest::SendNotification(bool success) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
+    if (stopped_) {
+      return;
+    }
     stopped_ = true;
     success_ = success;
   }

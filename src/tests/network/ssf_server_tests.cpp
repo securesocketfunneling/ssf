@@ -61,15 +61,16 @@ TEST_F(SSFFixtureTest, buggyConnectionTest) {
         SendNotification(false);
         break;
       case ssf::Status::kConnected:
-        SendNotification(true);
         break;
       case ssf::Status::kDisconnected:
         SSF_LOG("test", info, "client: disconnected");
+        SendNotification(true);
         break;
       case ssf::Status::kRunning:
-        SendNotification(false);
+        SendNotification(true);
         break;
       default:
+        SendNotification(false);
         break;
     }
   };

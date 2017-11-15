@@ -101,7 +101,8 @@ void Socks5Strategy::GenConnectRequest(const std::string& host, uint16_t port,
     // no expected request, only fill current connect reply
     auto dyn_buffers = connect_reply_.MutDynamicBuffers();
     p_request->resize(0);
-    *p_expected_response_size = boost::asio::buffer_size(dyn_buffers);
+    *p_expected_response_size =
+        static_cast<uint32_t>(boost::asio::buffer_size(dyn_buffers));
     return;
   }
 
@@ -114,8 +115,8 @@ void Socks5Strategy::GenConnectRequest(const std::string& host, uint16_t port,
   auto req_buf = req.ConstBuffers();
   p_request->resize(boost::asio::buffer_size(req_buf));
   boost::asio::buffer_copy(boost::asio::buffer(*p_request), req_buf);
-  *p_expected_response_size = boost::asio::buffer_size(
-      connect_reply_.MutBaseBuffers());  // response until addr type
+  *p_expected_response_size = static_cast<uint32_t>(boost::asio::buffer_size(
+      connect_reply_.MutBaseBuffers()));  // response until addr type
 }
 
 void Socks5Strategy::ProcessConnectResponse(const Buffer& response,

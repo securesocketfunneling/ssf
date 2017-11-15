@@ -92,7 +92,7 @@ void PayloadToPacket(const Payload& payload, Packet* packet,
     return;
   }
 
-  packet->set_payload_size(req_buf.size());
+  packet->set_payload_size(static_cast<uint32_t>(req_buf.size()));
   std::copy(req_buf.data(), req_buf.data() + req_buf.size(),
             packet->buffer().begin());
 

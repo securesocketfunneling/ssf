@@ -756,13 +756,14 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
   std::promise<bool> client_closed;
   std::promise<bool> server_closed;
 
-  auto void_handler_receive = [&](const boost::system::error_code& ec,
-                                  size_t s) {
+  auto void_handler_receive = [&received_mutex, &received, &count,
+                               &server_closed](
+      const boost::system::error_code& ec, size_t s) {
     std::unique_lock<std::recursive_mutex> lock(received_mutex);
     received += s;
     ++count;
 
-    if (!fib_server.is_open() && received == 5) {
+    if (received == 5) {
       server_closed.set_value(true);
     }
   };
@@ -829,10 +830,9 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
   client_closed.get_future().wait();
   server_closed.get_future().wait();
 
-  { std::unique_lock<std::recursive_mutex> lock(received_mutex); }
-
   EXPECT_EQ(received, 5);
   EXPECT_EQ(sent, 5);
+  fib_server.close();
   boost::system::error_code close_fib_acceptor_ec;
   fib_acceptor.close(close_fib_acceptor_ec);
 }

@@ -121,7 +121,7 @@ class Config {
   const Circuit& circuit() const { return circuit_; }
   Circuit& circuit() { return circuit_; }
 
-  uint32_t GetArgc() const { return argv_.size(); };
+  uint32_t GetArgc() const { return static_cast<uint32_t>(argv_.size()); };
   std::vector<char*> GetArgv() const;
 
  private:

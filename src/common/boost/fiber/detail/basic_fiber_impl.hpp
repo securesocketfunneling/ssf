@@ -331,32 +331,31 @@ class basic_fiber_impl
     std::unique_lock<std::recursive_mutex> lock1(accept_op_queue_mutex);
     std::unique_lock<std::recursive_mutex> lock2(port_queue_mutex);
 
-    if (!ec) {
-      if (!accept_op_queue.empty() && !port_queue.empty()) {
-        auto remote_port = port_queue.front();
-        port_queue.pop();
+    if (ec) {
+      while (!accept_op_queue.empty()) {
         auto op = accept_op_queue.front();
         accept_op_queue.pop();
-        op->set_remote_port(remote_port);
-
-        op->get_p_fib()->init_accept_in_out();
-
-        p_fib_demux->async_send_ack(op->get_p_fib(), op);
-
-        SSF_LOG("fiber_impl", debug,
-                "fiber impl: new connection from remote port: {}", remote_port);
-
-        p_fib_demux->get_io_service().dispatch(std::bind(
-            &basic_fiber_impl::a_queues_handler, this->shared_from_this(), ec));
-      }
-    } else {
-      if (!accept_op_queue.empty()) {
-        auto op = accept_op_queue.front();
-        accept_op_queue.pop();
-
         op->complete(ec, 0);
-        a_queues_handler(ec);
       }
+      return;
+    }
+
+    if (!accept_op_queue.empty() && !port_queue.empty()) {
+      auto remote_port = port_queue.front();
+      port_queue.pop();
+      auto op = accept_op_queue.front();
+      accept_op_queue.pop();
+      op->set_remote_port(remote_port);
+
+      op->get_p_fib()->init_accept_in_out();
+
+      p_fib_demux->async_send_ack(op->get_p_fib(), op);
+
+      SSF_LOG("fiber_impl", debug,
+              "fiber impl: new connection from remote port: {}", remote_port);
+
+      p_fib_demux->get_io_service().dispatch(std::bind(
+          &basic_fiber_impl::a_queues_handler, this->shared_from_this(), ec));
     }
   }
 
@@ -380,11 +379,16 @@ class basic_fiber_impl
     SSF_LOG("fiber_impl", trace, "queue empty: {} | queue size {} | ec {}",
             read_op_queue.empty(), data_queue.size(), ec.value());
     if (ec) {
-      if (!read_op_queue.empty()) {
+      while (!read_op_queue.empty()) {
         auto op = read_op_queue.front();
         read_op_queue.pop();
-        op->complete(ec, 0);
-        r_queues_handler(ec);
+
+        if (data_queue.size()) {
+          size_t copied = op->fill_buffers(data_queue);
+          op->complete(boost::system::error_code(), copied);
+        } else {
+          op->complete(ec, 0);
+        }
       }
       return;
     }
@@ -395,7 +399,7 @@ class basic_fiber_impl
 
       size_t copied = op->fill_buffers(data_queue);
 
-      auto do_complete = [=]() {
+      auto do_complete = [op, copied]() {
         op->complete(boost::system::error_code(), copied);
       };
       p_fib_demux->get_io_service().post(do_complete);
@@ -419,16 +423,25 @@ class basic_fiber_impl
             read_op_queue.empty(), port_queue.empty(), data_queue.size(),
             dgr_data_queue_.size(), ec.value());
     if (ec) {
-      if (!read_dgr_op_queue.empty()) {
+      while (!read_dgr_op_queue.empty()) {
         auto op = read_dgr_op_queue.front();
         read_dgr_op_queue.pop();
 
-        auto do_complete = [=]() { op->complete(ec, 0); };
-        p_fib_demux->get_io_service().post(do_complete);
+        if (!port_queue.empty() && !dgr_data_queue_.empty()) {
+          auto remote_port = port_queue.front();
+          port_queue.pop();
 
-        p_fib_demux->get_io_service().dispatch(
-            std::bind(&basic_fiber_impl::r_dgr_queues_handler,
-                      this->shared_from_this(), ec));
+          auto data = dgr_data_queue_.front();
+          dgr_data_queue_.pop();
+
+          size_t copied = op->fill_buffers(data);
+
+          op->set_remote_port(remote_port);
+
+          op->complete(boost::system::error_code(), copied);
+        } else {
+          op->complete(ec, 0);
+        }
       }
       return;
     }
