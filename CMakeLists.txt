@@ -144,6 +144,9 @@ add_subdirectory(img)
 # --- Add sources
 add_subdirectory(src)
 
+install(FILES ${TEST_CERT_FILES} DESTINATION bin/certs)
+install(FILES ${TEST_CERT_TRUSTED_FILES} DESTINATION bin/certs/trusted)
+
 # --- Print summary
 message(STATUS "Build configuration:")
 message(STATUS "  Version: ${SSF_VERSION}")
