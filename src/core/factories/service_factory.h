@@ -6,9 +6,9 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "common/error/error.h"
@@ -26,8 +26,8 @@ class ServiceFactory
  private:
   using Parameters = std::map<std::string, std::string>;
   using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
-  using ServiceCreator = std::function<BaseServicePtr(boost::asio::io_service&,
-                                                      Demux&, Parameters)>;
+  using ServiceCreator = std::function<BaseServicePtr(
+      boost::asio::io_service&, Demux&, const Parameters&)>;
   using ServiceCreatorMap = std::map<uint32_t, ServiceCreator>;
   using ServiceManagerPtr = std::shared_ptr<ServiceManager<Demux>>;
 
@@ -49,7 +49,7 @@ class ServiceFactory
   ~ServiceFactory() {}
 
   bool RegisterServiceCreator(uint32_t index, ServiceCreator creator) {
-    boost::recursive_mutex::scoped_lock lock(service_creators_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(service_creators_mutex_);
     if (service_creators_.count(index)) {
       return false;
     } else {
@@ -60,7 +60,7 @@ class ServiceFactory
 
   uint32_t CreateRunNewService(uint32_t index, Parameters parameters,
                                boost::system::error_code& ec) {
-    boost::recursive_mutex::scoped_lock lock(service_creators_mutex_);
+    std::unique_lock<std::recursive_mutex> lock(service_creators_mutex_);
 
     auto it = service_creators_.find(index);
 
@@ -70,7 +70,6 @@ class ServiceFactory
       if (p_service) {
         auto service_id = p_service_manager_->start(p_service, ec);
         p_service->set_local_id(service_id);
-
         return service_id;
       } else {
         ec.assign(::error::service_not_started, error::get_ssf_category());
@@ -128,7 +127,7 @@ class ServiceFactory
   Demux& demux_;
   ServiceManagerPtr p_service_manager_;
 
-  boost::recursive_mutex service_creators_mutex_;
+  std::recursive_mutex service_creators_mutex_;
   ServiceCreatorMap service_creators_;
 };
 

@@ -1,151 +1,39 @@
-cmake_minimum_required(VERSION 2.8)
-
-set(network_tests_group_name "Unit Tests/Network")
-
-set(project_BINARY_NETWORK_TESTS_DIR "${project_BINARY_DIR}/src/tests/network")
-
-# --- Copy test certs for tests
-set(project_BINARY_NETWORK_TESTS_CERT_DIR ${project_BINARY_NETWORK_TESTS_DIR}/certs)
-
-file(MAKE_DIRECTORY ${project_BINARY_NETWORK_TESTS_CERT_DIR})
-file(MAKE_DIRECTORY ${project_BINARY_NETWORK_TESTS_CERT_DIR}/trusted)
-
-file(COPY ${SSF_CERT_TEST_ROOT_FILES}
-     DESTINATION ${project_BINARY_NETWORK_TESTS_CERT_DIR})
-file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
-     DESTINATION ${project_BINARY_NETWORK_TESTS_CERT_DIR}/trusted)
-
-# --- Network tests
-
-set(ssf_fixture_test_file
-  "ssf_fixture_test.h"
-  "ssf_fixture_test.cpp"
-)
+add_library(fixture_test STATIC EXCLUDE_FROM_ALL ssf_fixture_test.h ssf_fixture_test.cpp)
+target_link_libraries(fixture_test gtest ssf_framework)
+set_property(TARGET fixture_test PROPERTY FOLDER "Unit Tests/Network")
 
 # --- Fiber asio tests
-set(fiber_asio_test_source_files
-  "fiber_asio_tests.cpp"
-  ${SSF_SOURCES}
-)
-
-add_target("fiber_asio_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${fiber_asio_test_source_files}
-)
-project_group(${network_tests_group_name} fiber_asio_tests)
+add_executable(fiber_asio_tests EXCLUDE_FROM_ALL fiber_asio_tests.cpp)
+target_link_libraries(fiber_asio_tests ssf_framework tls_config_helper)
+add_unit_test(fiber_asio_tests)
+set_property(TARGET fiber_asio_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Client Server tests
-set(ssf_client_server_source_files
-  "ssf_client_server_tests.cpp"
-  ${SSF_SOURCES}
-)
-
-add_target("ssf_client_server_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${ssf_client_server_source_files}
-)
-project_group(${network_tests_group_name} ssf_client_server_tests)
+add_executable(ssf_client_server_tests EXCLUDE_FROM_ALL ssf_client_server_tests.cpp)
+target_link_libraries(ssf_client_server_tests ssf_framework tls_config_helper)
+add_unit_test(ssf_client_server_tests)
+set_property(TARGET ssf_client_server_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Client Server cipher suites tests
-set(ssf_client_server_cipher_suites_source_files
-  "ssf_client_server_cipher_suites_tests.cpp"
-  ${SSF_SOURCES}
-)
-
-add_target("ssf_client_server_cipher_suites_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${ssf_client_server_cipher_suites_source_files}
-)
-project_group(${network_tests_group_name} ssf_client_server_cipher_suites_tests)
+add_executable(ssf_client_server_cipher_suites_tests EXCLUDE_FROM_ALL ssf_client_server_cipher_suites_tests.cpp)
+target_link_libraries(ssf_client_server_cipher_suites_tests ssf_framework tls_config_helper)
+add_unit_test(ssf_client_server_cipher_suites_tests)
+set_property(TARGET ssf_client_server_cipher_suites_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Client tests
-set(ssf_client_source_files
-  "ssf_client_tests.cpp"
-  ${SSF_SOURCES}
-  ${ssf_fixture_test_file}
-)
-
-add_target("ssf_client_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${ssf_client_source_files}
-)
-project_group(${network_tests_group_name} ssf_client_tests)
+add_executable(ssf_client_tests EXCLUDE_FROM_ALL ssf_client_tests.cpp)
+target_link_libraries(ssf_client_tests ssf_framework fixture_test tls_config_helper)
+add_unit_test(ssf_client_tests)
+set_property(TARGET ssf_client_tests PROPERTY FOLDER "Unit Tests/Network")
 
 # --- SSF Server tests
-set(ssf_server_source_files
-  "ssf_server_tests.cpp"
-  ${SSF_SOURCES}
-  ${ssf_fixture_test_file}
-)
+add_executable(ssf_server_tests EXCLUDE_FROM_ALL ssf_server_tests.cpp)
+target_link_libraries(ssf_server_tests ssf_framework fixture_test tls_config_helper)
+add_unit_test(ssf_server_tests)
+set_property(TARGET ssf_server_tests PROPERTY FOLDER "Unit Tests/Network")
 
-add_target("ssf_server_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${ssf_server_source_files}
-)
-project_group(${network_tests_group_name} ssf_server_tests)
-
-# --- Bouncing chain test
-set(bouncing_test_source_files
-  "bouncing_tests.cpp"
-  ${SSF_SOURCES}
-)
-
-add_target("bouncing_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${bouncing_test_source_files}
-)
-project_group(${network_tests_group_name} bouncing_tests)
+# --- Circuit tests
+add_executable(circuit_tests EXCLUDE_FROM_ALL circuit_tests.cpp)
+target_link_libraries(circuit_tests ssf_framework tls_config_helper)
+add_unit_test(circuit_tests)
+set_property(TARGET circuit_tests PROPERTY FOLDER "Unit Tests/Network")

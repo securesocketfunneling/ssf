@@ -17,18 +17,18 @@ namespace process {
 namespace windows {
 
 template <typename Demux>
-Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
+Session<Demux>::Session(std::weak_ptr<ShellServer> server, Fiber client,
                         const std::string& binary_path,
                         const std::string& binary_args)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
-      p_session_manager_(p_session_manager),
+      p_server_(server),
       client_(std::move(client)),
       binary_path_(binary_path),
       binary_args_(binary_args),
-      out_pipe_name_("\\\\.\\pipe\\ssf_out_pipe_"),
-      err_pipe_name_("\\\\.\\pipe\\ssf_err_pipe_"),
-      in_pipe_name_("\\\\.\\pipe\\ssf_in_pipe_"),
+      out_pipe_name_("\\\\.\\pipe\\out_pipe_"),
+      err_pipe_name_("\\\\.\\pipe\\err_pipe_"),
+      in_pipe_name_("\\\\.\\pipe\\in_pipe_"),
       data_in_(INVALID_HANDLE_VALUE),
       data_out_(INVALID_HANDLE_VALUE),
       data_err_(INVALID_HANDLE_VALUE),
@@ -45,26 +45,27 @@ Session<Demux>::Session(SessionManager* p_session_manager, fiber client,
 
 template <typename Demux>
 void Session<Demux>::start(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[shell]: start";
+  SSF_LOG("microservice", debug, "[shell] session start");
 
   InitPipes(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: pipes initialization failed";
+    SSF_LOG("microservice", error,
+            "[shell] session pipes initialization failed");
     stop(ec);
     return;
   }
 
   StartProcess(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: start process failed";
+    SSF_LOG("microservice", error, "[shell] session start process failed");
     stop(ec);
     return;
   }
 
   StartForwarding(ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "session[shell]: forwarding data from process to client failed";
+    SSF_LOG("microservice", error,
+            "[shell] session forwarding data from process to client failed");
     stop(ec);
     return;
   }
@@ -72,7 +73,7 @@ void Session<Demux>::start(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
-  SSF_LOG(kLogInfo) << "session[shell]: stop";
+  SSF_LOG("microservice", debug, "[shell] session stop");
 
   if (process_info_.hProcess != INVALID_HANDLE_VALUE) {
     ::TerminateProcess(process_info_.hProcess, 0);
@@ -111,14 +112,17 @@ void Session<Demux>::stop(boost::system::error_code& ec) {
   client_.close();
 
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: stop error " << ec.message();
+    SSF_LOG("microservice", error, "[shell] session stop error {}",
+            ec.message());
   }
 }
 
 template <typename Demux>
 void Session<Demux>::StopHandler(const boost::system::error_code& ec) {
-  boost::system::error_code e;
-  p_session_manager_->stop(this->SelfFromThis(), e);
+  boost::system::error_code stop_err;
+  if (auto server = p_server_.lock()) {
+    server->StopSession(this->SelfFromThis(), stop_err);
+  }
 }
 
 template <typename Demux>
@@ -130,38 +134,41 @@ template <typename Demux>
 void Session<Demux>::StartForwarding(boost::system::error_code& ec) {
   h_out_.assign(data_out_, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "session[shell]: could not initialize out stream handle";
+    SSF_LOG("microservice", error,
+            "[shell] session could not initialize out stream handle");
     return;
   }
   data_out_ = INVALID_HANDLE_VALUE;
   h_err_.assign(data_err_, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "session[shell]: could not initialize err stream handle";
+    SSF_LOG("microservice", error,
+            "[shell] session could not initialize err stream handle");
     return;
   }
   data_err_ = INVALID_HANDLE_VALUE;
   h_in_.assign(data_in_, ec);
   if (ec) {
-    SSF_LOG(kLogError)
-        << "session[shell]: could not initialize in stream handle";
+    SSF_LOG("microservice", error,
+            "[shell] session could not initialize in stream handle");
     return;
   }
   data_in_ = INVALID_HANDLE_VALUE;
 
   // pipe process stdout to socket output
-  AsyncEstablishHDLink(
-      ReadFrom(h_out_), WriteTo(client_), boost::asio::buffer(downstream_out_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(h_out_), WriteTo(client_),
+                       boost::asio::buffer(downstream_out_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
   // pipe process stderr to socket output
-  AsyncEstablishHDLink(
-      ReadFrom(h_err_), WriteTo(client_), boost::asio::buffer(downstream_err_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(h_err_), WriteTo(client_),
+                       boost::asio::buffer(downstream_err_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
   // pipe socket input to process stdin
-  AsyncEstablishHDLink(
-      ReadFrom(client_), WriteTo(h_in_), boost::asio::buffer(upstream_),
-      boost::bind(&Session::StopHandler, this->SelfFromThis(), _1));
+  AsyncEstablishHDLink(ReadFrom(client_), WriteTo(h_in_),
+                       boost::asio::buffer(upstream_),
+                       std::bind(&Session::StopHandler, this->SelfFromThis(),
+                                 std::placeholders::_1));
 }
 
 template <typename Demux>
@@ -188,8 +195,8 @@ void Session<Demux>::StartProcess(boost::system::error_code& ec) {
                         NULL, TRUE, CREATE_NEW_CONSOLE, NULL,
                         (home_dir_set ? home_dir : NULL), &startup_info,
                         &process_info_)) {
-    SSF_LOG(kLogError) << "session[shell]: create process <" << command_line
-                       << "> failed";
+    SSF_LOG("microservice", error, "[shell] session create process <{}> failed",
+            command_line);
     ec.assign(::error::process_not_created, ::error::get_ssf_category());
   }
 
@@ -204,16 +211,25 @@ void Session<Demux>::StartProcess(boost::system::error_code& ec) {
 
 template <typename Demux>
 void Session<Demux>::InitPipes(boost::system::error_code& ec) {
-  auto local_fib_ep = client_.remote_endpoint(ec);
+  auto fib_remote_ep = client_.remote_endpoint(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: could not get fiber local endpoint";
+    SSF_LOG("microservice", error,
+            "[shell] session could not get fiber remote endpoint");
+    return;
+  }
+  auto fib_local_ep = client_.local_endpoint(ec);
+  if (ec) {
+    SSF_LOG("microservice", error,
+            "[shell] session could not get fiber local endpoint");
     return;
   }
 
-  std::string remote_port(std::to_string(local_fib_ep.port()));
-  out_pipe_name_ += remote_port;
-  err_pipe_name_ += remote_port;
-  in_pipe_name_ += remote_port;
+  std::string local_port(std::to_string(fib_remote_ep.port()));
+  std::string remote_port(std::to_string(fib_remote_ep.port()));
+  std::string pipe_id = local_port + "_" + remote_port;
+  out_pipe_name_ += pipe_id;
+  err_pipe_name_ += pipe_id;
+  in_pipe_name_ += pipe_id;
 
   DWORD pipe_size = 4096;
   SECURITY_ATTRIBUTES sec_attr;
@@ -224,21 +240,21 @@ void Session<Demux>::InitPipes(boost::system::error_code& ec) {
   InitOutNamedPipe(out_pipe_name_, &data_out_, &proc_out_, &sec_attr, pipe_size,
                    ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: init out pipe failed";
+    SSF_LOG("microservice", error, "[shell] session init out pipe failed");
     return;
   }
 
   InitOutNamedPipe(err_pipe_name_, &data_err_, &proc_err_, &sec_attr, pipe_size,
                    ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: init err pipe failed";
+    SSF_LOG("microservice", error, "[shell] session init err pipe failed");
     return;
   }
 
   InitInNamedPipe(in_pipe_name_, &proc_in_, &data_in_, &sec_attr, pipe_size,
                   ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[shell]: init in pipe failed";
+    SSF_LOG("microservice", error, "[shell] session init in pipe failed");
     return;
   }
 }
@@ -255,8 +271,9 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
       0, p_pipe_attributes);
 
   if (read_pipe_tmp == INVALID_HANDLE_VALUE) {
-    SSF_LOG(kLogError) << "session[shell]: create read side of named pipe <"
-                       << pipe_name << "> failed";
+    SSF_LOG("microservice", error,
+            "[shell] session create read side of named pipe <{}> failed",
+            pipe_name);
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
   }
@@ -267,16 +284,18 @@ void Session<Demux>::InitOutNamedPipe(const std::string& pipe_name,
 
   if (*p_write_pipe == INVALID_HANDLE_VALUE) {
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
-    SSF_LOG(kLogError) << "session[shell]: create write side of named pipe <"
-                       << pipe_name << "> failed";
+    SSF_LOG("microservice", error,
+            "[shell] session create write side of named pipe <{}> failed",
+            pipe_name);
     goto cleanup;
   }
 
   if (!::DuplicateHandle(GetCurrentProcess(), read_pipe_tmp,
                          GetCurrentProcess(), p_read_pipe, 0, FALSE,
                          DUPLICATE_SAME_ACCESS)) {
-    SSF_LOG(kLogError) << "session[shell]: duplicate read side of named pipe <"
-                       << pipe_name << "> failed";
+    SSF_LOG("microservice", error,
+            "[shell] session duplicate read side of named pipe <{}> failed",
+            pipe_name);
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
   }
@@ -299,8 +318,9 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
       0, p_pipe_attributes);
 
   if (write_pipe_tmp == INVALID_HANDLE_VALUE) {
-    SSF_LOG(kLogError) << "session[shell]: create write side of named pipe <"
-                       << pipe_name << "> failed";
+    SSF_LOG("microservice", error,
+            "[shell] session create write side of named pipe <{}> failed",
+            pipe_name);
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
   }
@@ -310,8 +330,9 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, 0);
 
   if (*p_read_pipe == INVALID_HANDLE_VALUE) {
-    SSF_LOG(kLogError) << "session[shell]: create read side of named pipe <"
-                       << pipe_name << "> failed";
+    SSF_LOG("microservice", error,
+            "[shell] session create read side of named pipe <{}> failed",
+            pipe_name);
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
   }
@@ -319,8 +340,9 @@ void Session<Demux>::InitInNamedPipe(const std::string& pipe_name,
   if (!::DuplicateHandle(::GetCurrentProcess(), write_pipe_tmp,
                          ::GetCurrentProcess(), p_write_pipe, 0, FALSE,
                          DUPLICATE_SAME_ACCESS)) {
-    SSF_LOG(kLogError) << "session[shell]: duplicate write side of named pipe <"
-                       << pipe_name << "> failed";
+    SSF_LOG("microservice", error,
+            "[shell] session duplicate write side of named pipe <{}> failed",
+            pipe_name);
     ec.assign(::error::broken_pipe, ::error::get_ssf_category());
     goto cleanup;
   }

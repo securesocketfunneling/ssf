@@ -67,7 +67,8 @@ class basic_fiber_demux : private boost::noncopyable {
 
  private:
   typedef boost::asio::fiber::detail::basic_pending_accept_operation<
-      StreamSocket> accept_op;
+      StreamSocket>
+      accept_op;
   typedef std::function<void()> close_handler_type;
 
  public:
@@ -82,6 +83,8 @@ class basic_fiber_demux : private boost::noncopyable {
   explicit basic_fiber_demux(boost::asio::io_service& io_service)
       : service_(boost::asio::use_service<service_type>(io_service)),
         impl_(nullptr) {}
+
+  ~basic_fiber_demux() { SSF_LOG("demux", trace, "destroy"); }
 
   /// Return the io_service managing the fiber demux.
   /**
@@ -106,8 +109,7 @@ class basic_fiber_demux : private boost::noncopyable {
   void fiberize(StreamSocket socket, close_handler_type close = []() {},
                 size_t mtu = 60 * 1024) {
     if (mtu > 60 * 1024) {
-      SSF_LOG(kLogWarning)
-          << "fiber demux: MTU too big, replaced with MAX_VALUE";
+      SSF_LOG("demux", warn, "MTU too big, replaced with MAX_VALUE");
       mtu = 60 * 1024;
     }
 

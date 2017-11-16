@@ -1,37 +1,33 @@
-#include <vector>
-#include <functional>
 #include <array>
+#include <functional>
 #include <future>
 #include <list>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
 
 #include "common/config/config.h"
 
-#include "core/network_protocol.h"
 #include "core/client/client.h"
+#include "core/network_protocol.h"
 #include "core/server/server.h"
 
 #include "core/transport_virtual_layer_policies/transport_protocol_policy.h"
 
-#include "services/initialisation.h"
 #include "services/user_services/udp_port_forwarding.h"
+
+#include "tests/tls_config_helper.h"
 
 using NetworkProtocol = ssf::network::NetworkProtocol;
 
 class SSFClientServerCipherSuitesTest : public ::testing::Test {
  public:
-  using Client = ssf::SSFClient<NetworkProtocol::FullTLSProtocol,
-                                ssf::TransportProtocolPolicy>;
+  using Client = ssf::Client;
   using Server = ssf::SSFServer<NetworkProtocol::FullTLSProtocol,
                                 ssf::TransportProtocolPolicy>;
-  using demux = Client::Demux;
-  using BaseUserServicePtr =
-      ssf::services::BaseUserService<demux>::BaseUserServicePtr;
-  typedef boost::function<void(
-      ssf::services::initialisation::type, BaseUserServicePtr,
-      const boost::system::error_code&)> ClientCallback;
+  using Demux = Client::Demux;
+  using UserServicePtr = Client::UserServicePtr;
 
  public:
   SSFClientServerCipherSuitesTest()
@@ -40,7 +36,9 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
   ~SSFClientServerCipherSuitesTest() {}
 
   virtual void TearDown() {
-    p_ssf_client_->Stop();
+    boost::system::error_code ec;
+    p_ssf_client_->Stop(ec);
+    p_ssf_client_->Deinit();
     p_ssf_server_->Stop();
   }
 
@@ -57,17 +55,24 @@ class SSFClientServerCipherSuitesTest : public ::testing::Test {
 
   void StartClient(const std::string& server_port,
                    const ssf::config::Config& config,
-                   const ClientCallback& callback) {
-    std::vector<BaseUserServicePtr> client_options;
-
+                   const Client::OnStatusCb& on_status) {
+    boost::system::error_code ec;
     auto endpoint_query = NetworkProtocol::GenerateClientTLSQuery(
         "127.0.0.1", server_port, config, {});
+    auto on_user_service_status = [](UserServicePtr p_user_service,
+                                     const boost::system::error_code& ec) {};
+    p_ssf_client_.reset(new Client());
+    p_ssf_client_->Init(endpoint_query, 1, 0, false, {}, config.services(),
+                        on_status, on_user_service_status, ec);
+    if (ec) {
+      return;
+    }
 
-    p_ssf_client_.reset(
-        new Client(client_options, config.services(), callback));
-
-    boost::system::error_code run_ec;
-    p_ssf_client_->Run(endpoint_query, run_ec);
+    p_ssf_client_->Run(ec);
+    if (ec) {
+      SSF_LOG("test", error, "Could not run client");
+      return;
+    }
   }
 
  protected:
@@ -81,29 +86,45 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectDifferentSuite) {
 
   auto network_set_future = network_set.get_future();
   auto transport_set_future = transport_set.get_future();
-  auto callback = [&network_set, &transport_set](
-      ssf::services::initialisation::type type,
-      SSFClientServerCipherSuitesTest::BaseUserServicePtr p_user_service,
-      const boost::system::error_code& ec) {
-    if (type == ssf::services::initialisation::NETWORK) {
-      EXPECT_TRUE(!!ec);
-      network_set.set_value(!ec);
-      transport_set.set_value(false);
-
-      return;
+  auto callback = [&network_set, &transport_set](ssf::Status status) {
+    switch (status) {
+      case ssf::Status::kEndpointNotResolvable:
+      case ssf::Status::kServerUnreachable:
+        SSF_LOG("test", critical, "Network initialization failed");
+        network_set.set_value(false);
+        transport_set.set_value(false);
+        break;
+      case ssf::Status::kServerNotSupported:
+        SSF_LOG("test", critical, "Transport initialization failed");
+        transport_set.set_value(false);
+        break;
+      case ssf::Status::kConnected:
+        network_set.set_value(true);
+        break;
+      case ssf::Status::kDisconnected:
+        SSF_LOG("test", info, "client: disconnected");
+        break;
+      case ssf::Status::kRunning:
+        transport_set.set_value(true);
+        break;
+      default:
+        break;
     }
   };
+
   ssf::config::Config client_config;
   client_config.Init();
+  ssf::tests::SetClientTlsConfig(&client_config);
   ssf::config::Config server_config;
   server_config.Init();
+  ssf::tests::SetServerTlsConfig(&server_config);
   boost::system::error_code ec;
 
   const char* new_config = R"RAWSTRING(
 {
     "ssf": {
         "tls" : {
-            "cipher_alg": "DHE-RSA-AES256-GCM-SHA256"
+            "cipher_alg": "DHE-RSA-AES256-SHA256"
         }
     }
 }
@@ -128,26 +149,38 @@ TEST_F(SSFClientServerCipherSuitesTest, connectDisconnectTwoSuites) {
   auto network_set_future = network_set.get_future();
   auto transport_set_future = transport_set.get_future();
 
-  auto callback = [&network_set, &transport_set](
-      ssf::services::initialisation::type type,
-      SSFClientServerCipherSuitesTest::BaseUserServicePtr p_user_service,
-      const boost::system::error_code& ec) {
-    if (type == ssf::services::initialisation::NETWORK) {
-      EXPECT_TRUE(!ec);
-      network_set.set_value(!ec);
-
-      return;
-    } else if (type == ssf::services::initialisation::TRANSPORT) {
-      EXPECT_TRUE(!ec);
-      transport_set.set_value(!ec);
-
-      return;
+  auto callback = [&network_set, &transport_set](ssf::Status status) {
+    switch (status) {
+      case ssf::Status::kEndpointNotResolvable:
+      case ssf::Status::kServerUnreachable:
+        SSF_LOG("test", critical, "Network initialization failed");
+        network_set.set_value(false);
+        transport_set.set_value(false);
+        break;
+      case ssf::Status::kServerNotSupported:
+        SSF_LOG("test", critical, "Transport initialization failed");
+        transport_set.set_value(false);
+        break;
+      case ssf::Status::kConnected:
+        network_set.set_value(true);
+        break;
+      case ssf::Status::kDisconnected:
+        SSF_LOG("test", info, "client: disconnected");
+        break;
+      case ssf::Status::kRunning:
+        transport_set.set_value(true);
+        break;
+      default:
+        break;
     }
   };
+
   ssf::config::Config client_config;
   client_config.Init();
+  ssf::tests::SetClientTlsConfig(&client_config);
   ssf::config::Config server_config;
   server_config.Init();
+  ssf::tests::SetServerTlsConfig(&server_config);
   boost::system::error_code ec;
   const char* new_client_config = R"RAWSTRING(
 {

@@ -4,13 +4,17 @@
 
 class StreamForwardTest
     : public StreamFixtureTest<ssf::services::PortForwarding> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("7474:127.0.0.1:7575", ec);
+    return {{ServiceTested::GetParseName(),
+             {{{"from_addr", ""},
+               {"from_port", "7474"},
+               {"to_addr", "127.0.0.1"},
+               {"to_port", "7575"}}}}};
   }
 };
 
-TEST_F(StreamForwardTest, transferOnesOverStream) {
+TEST_F(StreamForwardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("7474", "7575");
@@ -51,13 +55,17 @@ class StreamForwardWildcardTest : public StreamForwardTest {
                              << new_config;
   }
 
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":7676:127.0.0.1:7777", ec);
+    return {{ServiceTested::GetParseName(),
+             {{{"from_addr", "*"},
+               {"from_port", "7676"},
+               {"to_addr", "127.0.0.1"},
+               {"to_port", "7777"}}}}};
   }
 };
 
-TEST_F(StreamForwardWildcardTest, transferOnesOverStream) {
+TEST_F(StreamForwardWildcardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("7676", "7777");

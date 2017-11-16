@@ -17,8 +17,6 @@
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 
-#include "core/factories/service_option_factory.h"
-
 #include "common/boost/fiber/detail/fiber_id.hpp"
 
 #include "services/sockets_to_fibers/sockets_to_fibers.h"
@@ -33,43 +31,68 @@ class RemotePortForwarding : public BaseUserService<Demux> {
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  public:
-  static std::string GetFullParseName() { return "tcp-remote-forward,R"; }
+  static std::string GetFullParseName() { return "R,remote-tcp-forward"; }
 
-  static std::string GetParseName() { return "tcp-remote-forward"; }
+  static std::string GetParseName() { return "remote-tcp-forward"; }
 
   static std::string GetValueName() {
-    return "[[rem_ip]:]rem_port:dest_ip:dest_port";
+    return "[bind_address:]port:remote_host:remote_port";
   }
 
   static std::string GetParseDesc() {
-    return "Forward TCP server [[rem_ip]:]rem_port to target dest_ip:dest_port "
-           "from client";
+    return "Enable remote TCP port forwarding service";
   }
 
-  static std::shared_ptr<RemotePortForwarding> CreateServiceOptions(
-      std::string line, boost::system::error_code& ec) {
+  static UserServiceParameterBag CreateUserServiceParameters(
+      const std::string& line, boost::system::error_code& ec) {
     auto forward_options = OptionParser::ParseForwardOptions(line, ec);
 
     if (ec) {
+      SSF_LOG("user_service", error, "[{}] cannot parse {}", GetParseName(),
+              line);
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
+    }
+
+    return {{"from_addr", forward_options.from.addr},
+            {"from_port", std::to_string(forward_options.from.port)},
+            {"to_addr", forward_options.to.addr},
+            {"to_port", std::to_string(forward_options.to.port)}};
+  }
+
+  static std::shared_ptr<RemotePortForwarding> CreateUserService(
+      const UserServiceParameterBag& parameters,
+      boost::system::error_code& ec) {
+    if (parameters.count("from_addr") == 0 ||
+        parameters.count("from_port") == 0 ||
+        parameters.count("to_addr") == 0 || parameters.count("to_port") == 0) {
+      SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<RemotePortForwarding>(nullptr);
     }
 
-    return std::shared_ptr<RemotePortForwarding>(new RemotePortForwarding(
-        forward_options.from.addr, forward_options.from.port,
-        forward_options.to.addr, forward_options.to.port));
-  }
-
-  static void RegisterToServiceOptionFactory() {
-    ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
-        &RemotePortForwarding::CreateServiceOptions);
+    uint16_t from_port =
+        OptionParser::ParsePort(parameters.at("from_port"), ec);
+    if (ec) {
+      SSF_LOG("user_service", error, "[{}] invalid local port {}",
+              GetParseName(), ec.message());
+      return std::shared_ptr<RemotePortForwarding>(nullptr);
+    }
+    uint16_t to_port = OptionParser::ParsePort(parameters.at("to_port"), ec);
+    if (ec) {
+      SSF_LOG("user_service", error, "[{}] invalid remote port: {}",
+              GetParseName(), ec.message());
+      return std::shared_ptr<RemotePortForwarding>(nullptr);
+    }
+    return std::shared_ptr<RemotePortForwarding>(
+        new RemotePortForwarding(parameters.at("from_addr"), from_port,
+                                 parameters.at("to_addr"), to_port));
   }
 
  public:
-  virtual ~RemotePortForwarding() {}
+  ~RemotePortForwarding() {}
 
-  std::string GetName() override { return "tcp-remote-forward"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {
@@ -108,9 +131,9 @@ class RemotePortForwarding : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[tcp-remote-forward]: "
-                         << "local_service[fibers to sockets]: start failed: "
-                         << ec.message();
+      SSF_LOG("user_service", error,
+              "[{}] local_service[fibers to sockets]: start failed: {}",
+              GetParseName(), ec.message());
     }
     return !ec;
   }

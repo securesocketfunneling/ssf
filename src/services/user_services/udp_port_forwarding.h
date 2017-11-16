@@ -17,8 +17,6 @@
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
 
-#include "core/factories/service_option_factory.h"
-
 #include "common/boost/fiber/detail/fiber_id.hpp"
 
 #include "services/datagrams_to_fibers/datagrams_to_fibers.h"
@@ -33,43 +31,68 @@ class UdpPortForwarding : public BaseUserService<Demux> {
   typedef boost::asio::fiber::detail::fiber_id::local_port_type local_port_type;
 
  public:
-  static std::string GetFullParseName() { return "udp-forward,U"; }
+  static std::string GetFullParseName() { return "U,udp-forward"; }
 
   static std::string GetParseName() { return "udp-forward"; }
 
   static std::string GetValueName() {
-    return "[[loc_ip]:]loc_port:dest_ip:dest_port";
+    return "[bind_address:]port:remote_host:remote_port";
   }
 
   static std::string GetParseDesc() {
-    return "Forward UDP client [[loc_ip]:]loc_port to target dest_ip:dest_port "
-           "from server";
+    return "Enable client UDP port forwarding service";
   }
 
-  static std::shared_ptr<UdpPortForwarding> CreateServiceOptions(
-      std::string line, boost::system::error_code& ec) {
+  static UserServiceParameterBag CreateUserServiceParameters(
+      const std::string& line, boost::system::error_code& ec) {
     auto forward_options = OptionParser::ParseForwardOptions(line, ec);
 
     if (ec) {
+      SSF_LOG("user_service", error, "[{}] cannot parse {}", GetParseName(),
+              line);
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
+    }
+
+    return {{"from_addr", forward_options.from.addr},
+            {"from_port", std::to_string(forward_options.from.port)},
+            {"to_addr", forward_options.to.addr},
+            {"to_port", std::to_string(forward_options.to.port)}};
+  }
+
+  static std::shared_ptr<UdpPortForwarding> CreateUserService(
+      const UserServiceParameterBag& parameters,
+      boost::system::error_code& ec) {
+    if (parameters.count("from_addr") == 0 ||
+        parameters.count("from_port") == 0 ||
+        parameters.count("to_addr") == 0 || parameters.count("to_port") == 0) {
+      SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<UdpPortForwarding>(nullptr);
     }
 
-    return std::shared_ptr<UdpPortForwarding>(new UdpPortForwarding(
-        forward_options.from.addr, forward_options.from.port,
-        forward_options.to.addr, forward_options.to.port));
-  }
-
-  static void RegisterToServiceOptionFactory() {
-    ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
-        &UdpPortForwarding::CreateServiceOptions);
+    uint16_t from_port =
+        OptionParser::ParsePort(parameters.at("from_port"), ec);
+    if (ec) {
+      SSF_LOG("user_service", error, "[{}] invalid local port {}",
+              GetParseName(), ec.message());
+      return std::shared_ptr<UdpPortForwarding>(nullptr);
+    }
+    uint16_t to_port = OptionParser::ParsePort(parameters.at("to_port"), ec);
+    if (ec) {
+      SSF_LOG("user_service", error, "[{}] invalid remote port: {}",
+              GetParseName(), ec.message());
+      return std::shared_ptr<UdpPortForwarding>(nullptr);
+    }
+    return std::shared_ptr<UdpPortForwarding>(
+        new UdpPortForwarding(parameters.at("from_addr"), from_port,
+                              parameters.at("to_addr"), to_port));
   }
 
  public:
   virtual ~UdpPortForwarding() {}
 
-  std::string GetName() override { return "udp-forward"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {
@@ -111,9 +134,9 @@ class UdpPortForwarding : public BaseUserService<Demux> {
         l_forward.service_id(), l_forward.parameters(), ec);
 
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[udp forward]: "
-                         << "local_service[datagrams to fibers]: start failed: "
-                         << ec.message();
+      SSF_LOG("user_service", error,
+              "[{}] local_service[datagrams to fibers]: start failed: {}",
+              GetParseName(), ec.message());
     }
 
     return !ec;

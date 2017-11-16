@@ -7,74 +7,65 @@
 #include <string>
 #include <vector>
 
-#include <boost/program_options.hpp>
+#include <cxxopts.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <ssf/log/log.h>
+
+#include "services/user_services/parameters.h"
+
 namespace ssf {
+
+class UserServiceOptionFactory;
+
 namespace command_line {
 
-class BaseCommandLine {
+class Base {
  public:
-  using OptionDescription = boost::program_options::options_description;
-  using PosOptionDescription =
-      boost::program_options::positional_options_description;
-  using VariableMap = boost::program_options::variables_map;
-  using ParsedParameters = std::map<std::string, std::vector<std::string>>;
+  using Options = cxxopts::Options;
 
  public:
-  virtual ~BaseCommandLine() {}
+  virtual ~Base() {}
 
-  ParsedParameters Parse(int argc, char* argv[], boost::system::error_code& ec);
+  UserServiceParameters Parse(int argc, char* argv[],
+                              boost::system::error_code& ec);
 
-  ParsedParameters Parse(int ac, char* av[], const OptionDescription& services,
-                         boost::system::error_code& ec);
+  UserServiceParameters Parse(
+      int argc, char* argv[],
+      const UserServiceOptionFactory& user_service_option_factory,
+      boost::system::error_code& ec);
 
   inline std::string host() const { return host_; }
 
   inline uint16_t port() const { return port_; };
 
-  inline std::string circuit_file() const { return circuit_file_; }
-
   inline std::string config_file() const { return config_file_; }
 
-  inline ssf::log::LogLevel log_level() const { return log_level_; }
+  inline spdlog::level::level_enum log_level() const { return log_level_; }
 
-  inline bool host_set() const { return host_set_; }
+  inline bool host_set() const { return !host_.empty(); }
 
   inline bool port_set() const { return port_set_; }
 
  protected:
-  BaseCommandLine();
+  Base();
 
-  // Populate CLI with basic options
-  virtual void PopulateBasicOptions(OptionDescription& basic_opts);
-  // Populate CLI with local options
-  virtual void PopulateLocalOptions(OptionDescription& local_opts);
-  // Populate CLI with positional options
-  virtual void PopulatePositionalOptions(PosOptionDescription& pos_opts);
-  // Populate CLI with custom categories and options
-  virtual void PopulateCommandLine(OptionDescription& command_line);
-  // Parse custom options
-  virtual void ParseOptions(const VariableMap& value,
-                            ParsedParameters& parsed_params,
+  virtual void ParseOptions(const Options& opts,
                             boost::system::error_code& ec);
-  // Return usage description for help message
-  virtual std::string GetUsageDesc() = 0;
 
   // Return true for server CLI
   virtual bool IsServerCli();
 
+  virtual void InitOptions(Options& opts);
+
  private:
-  void InitBasicOptions(OptionDescription& basic_opts);
-  void InitLocalOptions(OptionDescription& local_opts);
+  bool DisplayHelp(const Options& opts);
 
-  bool DisplayHelp(const VariableMap& vm, const OptionDescription& cli);
+  void ParseBasicOptions(const Options& opts, boost::system::error_code& ec);
 
-  void ParseBasicOptions(const VariableMap& vm, boost::system::error_code& ec);
-
-  ParsedParameters DoParse(const OptionDescription& services,
-                           const VariableMap& vm,
-                           boost::system::error_code& ec);
+  UserServiceParameters DoParse(
+      const UserServiceOptionFactory& user_service_option_factory,
+      const Options& opts, boost::system::error_code& ec);
 
   void set_log_level(const std::string& level);
 
@@ -83,9 +74,7 @@ class BaseCommandLine {
   std::string host_;
   uint16_t port_;
   std::string config_file_;
-  std::string circuit_file_;
-  ssf::log::LogLevel log_level_;
-  bool host_set_;
+  spdlog::level::level_enum log_level_;
   bool port_set_;
 };
 

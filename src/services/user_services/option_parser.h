@@ -38,6 +38,9 @@ class OptionParser {
   // Set ec if parsing failed
   static Endpoint ParseListeningOption(const std::string& option,
                                        boost::system::error_code& ec);
+
+  static uint16_t ParsePort(const std::string& port,
+                            boost::system::error_code& ec);
 };
 
 }  // services

@@ -23,13 +23,12 @@ using NetworkProtocol = ssf::network::NetworkProtocol;
 
 class SSFFixtureTest : public ::testing::Test {
  public:
-  using Client =
-      ssf::SSFClient<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
+  using Client = ssf::Client;
   using Server =
       ssf::SSFServer<NetworkProtocol::Protocol, ssf::TransportProtocolPolicy>;
-  using ClientCallback = Client::ClientCallback;
-  using BaseUserServicePtr = Client::BaseUserServicePtr;
+  using ClientCallback = Client::OnStatusCb;
   using TimerCallback = std::function<void(const boost::system::error_code&)>;
+  using UserServicePtr = Client::UserServicePtr;
 
  public:
   void SetUp() override;

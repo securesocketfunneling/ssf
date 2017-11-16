@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
-#include <vector>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 #include <boost/system/error_code.hpp>
 
@@ -18,47 +18,60 @@
 #include "services/user_services/base_user_service.h"
 #include "services/user_services/option_parser.h"
 
-#include "core/factories/service_option_factory.h"
-
 namespace ssf {
 namespace services {
 
 template <typename Demux>
 class Socks : public BaseUserService<Demux> {
  public:
-  static std::string GetFullParseName() { return "socks,D"; }
+  static std::string GetFullParseName() { return "D,socks"; }
 
   static std::string GetParseName() { return "socks"; }
 
-  static std::string GetValueName() { return "[[loc_ip]:]loc_port"; }
-
-  static std::string GetParseDesc() {
-    return "Run a SOCKS proxy on remote host accessible from client "
-           "[[loc_ip]:]loc_port";
+  static std::string GetValueName() {
+    return "[bind_address:]port";
   }
 
-  static std::shared_ptr<Socks> CreateServiceOptions(
-      std::string line, boost::system::error_code& ec) {
+  static std::string GetParseDesc() {
+    return "Enable client SOCKS service";
+  }
+
+  static UserServiceParameterBag CreateUserServiceParameters(
+      const std::string& line, boost::system::error_code& ec) {
     auto listener = OptionParser::ParseListeningOption(line, ec);
 
     if (ec) {
+      SSF_LOG("user_service", error, "[{}] cannot parse {}", GetParseName(),
+              line);
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
+    }
+
+    return {{"addr", listener.addr}, {"port", std::to_string(listener.port)}};
+  }
+
+  static std::shared_ptr<Socks> CreateUserService(
+      const UserServiceParameterBag& parameters,
+      boost::system::error_code& ec) {
+    if (parameters.count("addr") == 0 || parameters.count("port") == 0) {
+      SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<Socks>(nullptr);
     }
 
-    return std::shared_ptr<Socks>(new Socks(listener.addr, listener.port));
-  }
-
-  static void RegisterToServiceOptionFactory() {
-    ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
-        &Socks::CreateServiceOptions);
+    uint16_t port = OptionParser::ParsePort(parameters.at("port"), ec);
+    if (ec) {
+      SSF_LOG("user_service", error, "[{}] invalid port: {}", GetParseName(),
+              ec.message());
+      return std::shared_ptr<Socks>(nullptr);
+    }
+    return std::shared_ptr<Socks>(new Socks(parameters.at("addr"), port));
   }
 
  public:
-  virtual ~Socks() {}
+  ~Socks() {}
 
-  std::string GetName() override { return "socks"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {
@@ -97,9 +110,9 @@ class Socks : public BaseUserService<Demux> {
         l_forward.service_id(), l_forward.parameters(), ec);
 
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[socks]: "
-                         << "local_service[sockets to fibers]: start failed: "
-                         << ec.message();
+      SSF_LOG("user_service", error,
+              "[{}] local_service[sockets to fibers]: start failed: {}",
+              GetParseName(), ec.message());
     }
     return !ec;
   }

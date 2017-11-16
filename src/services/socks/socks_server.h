@@ -1,19 +1,21 @@
 #ifndef SSF_SERVICES_SOCKS_SOCKS_SERVER_H_
 #define SSF_SERVICES_SOCKS_SOCKS_SERVER_H_
 
-#include <string>
+#include <functional>
 #include <map>
+#include <string>
 
+#include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/asio.hpp>  // NOLINT
 
-#include <ssf/network/manager.h>
+#include <ssf/log/log.h>
 #include <ssf/network/base_session.h>
+#include <ssf/network/manager.h>
+
+#include "common/utils/to_underlying.h"
 
 #include "services/base_service.h"
-
-#include "common/boost/fiber/stream_fiber.hpp"
-#include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "services/service_id.h"
 
 #include "core/factories/service_factory.h"
 
@@ -28,89 +30,99 @@ namespace socks {
 template <typename Demux>
 class SocksServer : public BaseService<Demux> {
  private:
-  typedef typename Demux::local_port_type local_port_type;
+  using LocalPortType = typename Demux::local_port_type;
 
-  typedef std::shared_ptr<SocksServer> SocksServerPtr;
-  typedef ItemManager<BaseSessionPtr> SessionManager;
-  typedef typename ssf::BaseService<Demux>::Parameters Parameters;
-  typedef typename ssf::BaseService<Demux>::demux demux;
-  typedef typename ssf::BaseService<Demux>::fiber fiber;
-  typedef typename ssf::BaseService<Demux>::fiber_acceptor fiber_acceptor;
-  typedef typename ssf::BaseService<Demux>::endpoint endpoint;
+  using SocksServerPtr = std::shared_ptr<SocksServer>;
+  using SessionManager = ItemManager<BaseSessionPtr>;
+
+  using BaseServicePtr = std::shared_ptr<BaseService<Demux>>;
+  using Parameters = typename ssf::BaseService<Demux>::Parameters;
+  using Fiber = typename ssf::BaseService<Demux>::fiber;
+  using FiberPtr = std::shared_ptr<Fiber>;
+  using FiberAcceptor = typename ssf::BaseService<Demux>::fiber_acceptor;
+  using FiberEndpoint = typename ssf::BaseService<Demux>::endpoint;
 
  public:
-  // SSF service ID for identification in the service factory
-  enum { factory_id = 2 };
+  // Service ID in the service factory
+  enum { kFactoryId = to_underlying(MicroserviceId::kSocksServer) };
 
  public:
   SocksServer(const SocksServer&) = delete;
   SocksServer& operator=(const SocksServer&) = delete;
 
-  /// Create a new instance of the service
-  static SocksServerPtr create(boost::asio::io_service& io_service,
-                               demux& fiber_demux, Parameters parameters) {
+  ~SocksServer() { SSF_LOG("microservice", trace, "[socks]: destroy"); }
+
+  // Create a new instance of the service
+  static SocksServerPtr Create(boost::asio::io_service& io_service,
+                               Demux& fiber_demux,
+                               const Parameters& parameters) {
     if (!parameters.count("local_port")) {
       return SocksServerPtr(nullptr);
-    } else {
-      return std::shared_ptr<SocksServer>(new SocksServer(
-          io_service, fiber_demux, std::stoul(parameters["local_port"])));
+    }
+
+    try {
+      uint32_t local_port = std::stoul(parameters.at("local_port"));
+      return SocksServerPtr(
+          new SocksServer(io_service, fiber_demux, local_port));
+    } catch (const std::exception&) {
+      SSF_LOG("microservice", error, "[socks]: cannot extract port parameter");
+      return SocksServerPtr(nullptr);
     }
   }
 
-  /// Function used to register the micro service to the given factory
+  // Register the microservice to the given factory
   static void RegisterToServiceFactory(
-      std::shared_ptr<ServiceFactory<demux>> p_factory, const Config& config) {
+      std::shared_ptr<ServiceFactory<Demux>> p_factory, const Config& config) {
     if (!config.enabled()) {
       // service factory is not enabled
       return;
     }
 
-    p_factory->RegisterServiceCreator(factory_id, &SocksServer::create);
+    auto creator = [](boost::asio::io_service& io_service, Demux& fiber_demux,
+                      const Parameters& parameters) {
+      return SocksServer::Create(io_service, fiber_demux, parameters);
+    };
+    p_factory->RegisterServiceCreator(kFactoryId, creator);
   }
 
-  /// Function used to generate create service request
-  static ssf::services::admin::CreateServiceRequest<demux> GetCreateRequest(
-      uint16_t local_port) {
-    ssf::services::admin::CreateServiceRequest<demux> create(factory_id);
+  // Generate create service request
+  static ssf::services::admin::CreateServiceRequest<Demux> GetCreateRequest(
+      LocalPortType local_port) {
+    ssf::services::admin::CreateServiceRequest<Demux> create(kFactoryId);
     create.add_parameter("local_port", std::to_string(local_port));
 
     return std::move(create);
   }
 
  public:
-  /// Start the service instance
+  // BaseService
   void start(boost::system::error_code& ec) override;
 
-  /// Stop the service instance
   void stop(boost::system::error_code& ec) override;
 
-  /// Return the type of the service
   uint32_t service_type_id() override;
 
- private:
-  SocksServer(boost::asio::io_service& io_service, demux& fiber_demux,
-              const local_port_type& port);
+ public:
+  void StopSession(BaseSessionPtr session, boost::system::error_code& ec);
 
-  void StartAccept();
-  void HandleAccept(const boost::system::error_code& e);
+ private:
+  SocksServer(boost::asio::io_service& io_service, Demux& fiber_demux,
+              const LocalPortType& port);
+
+  void AsyncAcceptFiber();
+  void FiberAcceptHandler(FiberPtr fiber_connection,
+                          const boost::system::error_code& e);
   void HandleStop();
 
-  template <typename Handler, typename This>
-  auto Then(Handler handler,
-            This me) -> decltype(boost::bind(handler, me->SelfFromThis(), _1)) {
-    return boost::bind(handler, me->SelfFromThis(), _1);
-  }
-
-  std::shared_ptr<SocksServer> SelfFromThis() {
+  SocksServerPtr SelfFromThis() {
     return std::static_pointer_cast<SocksServer>(this->shared_from_this());
   }
 
  private:
-  fiber_acceptor fiber_acceptor_;
+  FiberAcceptor fiber_acceptor_;
   SessionManager session_manager_;
-  fiber new_connection_;
   boost::system::error_code init_ec_;
-  local_port_type local_port_;
+  LocalPortType local_port_;
 };
 
 }  // socks

@@ -16,31 +16,32 @@
 #include <ssf/network/manager.h>
 #include <ssf/network/base_session.h>
 
-#include "services/socks/v4/request.h"
-
 #include "common/boost/fiber/stream_fiber.hpp"
 
 namespace ssf {
 namespace services {
 namespace process {
+
+template<typename Demux>
+class Server;
+
 namespace posix {
 
 template <typename Demux>
 class Session : public ssf::BaseSession {
  private:
-  typedef std::array<char, 50 * 1024> StreamBuff;
-
-  typedef boost::asio::ip::tcp::socket socket;
-  typedef typename boost::asio::fiber::stream_fiber<
-      typename Demux::socket_type>::socket fiber;
-
-  typedef ItemManager<BaseSessionPtr> SessionManager;
+  using StreamBuf = std::array<char, 50 * 1024>;
+  using Fiber = typename boost::asio::fiber::stream_fiber<
+      typename Demux::socket_type>::socket;
+  using ShellServer = Server<Demux>;
 
   enum { kInvalidProcessId = -1, kInvalidTtyDescriptor = -1 };
 
  public:
-  Session(SessionManager* sm, fiber client, const std::string& binary_path,
-          const std::string& binary_args);
+  Session(std::weak_ptr<ShellServer> server, Fiber client,
+          const std::string& binary_path, const std::string& binary_args);
+
+  ~Session();
 
  public:
   void start(boost::system::error_code&) override;
@@ -69,9 +70,9 @@ class Session : public ssf::BaseSession {
 
  private:
   boost::asio::io_service& io_service_;
-  SessionManager* p_session_manager_;
+  std::weak_ptr<ShellServer> p_server_;
 
-  fiber client_;
+  Fiber client_;
   boost::asio::signal_set signal_;
 
   std::string binary_path_;
@@ -83,8 +84,8 @@ class Session : public ssf::BaseSession {
 
   boost::asio::posix::stream_descriptor sd_;
 
-  StreamBuff upstream_;
-  StreamBuff downstream_;
+  StreamBuf upstream_;
+  StreamBuf downstream_;
 };
 
 }  // posix

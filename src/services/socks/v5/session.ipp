@@ -1,42 +1,42 @@
 #ifndef SSF_SERVICES_SOCKS_V5_SESSION_IPP_
 #define SSF_SERVICES_SOCKS_V5_SESSION_IPP_
 
-#include <boost/bind.hpp>
-#include <boost/bind/protect.hpp>
-#include <boost/asio/spawn.hpp>
-
-#include "services/socks/v5/request.h"
-#include "services/socks/v5/request_auth.h"
-#include "services/socks/v5/reply.h"
-#include "services/socks/v5/reply_auth.h"
+#include <functional>
 
 #include <boost/asio/basic_stream_socket.hpp>
 
+#include <ssf/utils/enum.h>
+
 namespace ssf {
+namespace services {
 namespace socks {
 namespace v5 {
 
 template <typename Demux>
-Session<Demux>::Session(SessionManager* p_session_manager, fiber client)
+Session<Demux>::Session(SocksServerWPtr socks_server, Fiber client)
     : ssf::BaseSession(),
       io_service_(client.get_io_service()),
-      p_session_manager_(p_session_manager),
+      socks_server_(socks_server),
       client_(std::move(client)),
-      app_server_(client.get_io_service()) {}
+      server_(io_service_),
+      server_resolver_(io_service_) {}
 
 template <typename Demux>
 void Session<Demux>::HandleStop() {
-  boost::system::error_code ec;
-  p_session_manager_->stop(shared_from_this(), ec);
+  boost::system::error_code stop_err;
+  if (auto p_socks_server = socks_server_.lock()) {
+    p_socks_server->StopSession(this->SelfFromThis(), stop_err);
+  }
 }
 
 template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code&) {
   client_.close();
   boost::system::error_code ec;
-  app_server_.close(ec);
+  server_.close(ec);
   if (ec) {
-    SSF_LOG(kLogError) << "session[socks]: stop error " << ec.message();
+    SSF_LOG("microservice", error, "[socks v5] session stop error {}",
+            ec.message());
   }
 }
 
@@ -44,21 +44,22 @@ template <typename Demux>
 void Session<Demux>::start(boost::system::error_code&) {
   AsyncReadRequestAuth(
       client_, &request_auth_,
-      boost::bind(&Session::HandleRequestAuthDispatch, self_shared_from_this(),
-                  boost::asio::placeholders::error,
-                  boost::asio::placeholders::bytes_transferred));
+      std::bind(&Session::HandleRequestAuthDispatch, SelfFromThis(),
+                std::placeholders::_1, std::placeholders::_2));
 }
 
 template <typename Demux>
 void Session<Demux>::HandleRequestAuthDispatch(
     const boost::system::error_code& ec, std::size_t) {
   if (ec) {
+    SSF_LOG("microservice", error, "[socks v5] session request auth failed {}",
+            ec.message());
     HandleStop();
     return;
   }
 
   // Check for compatible authentications
-  if (request_auth_.is_no_auth_present()) {
+  if (request_auth_.IsNoAuthPresent()) {
     DoNoAuth();
   } else {
     DoErrorAuth();
@@ -67,8 +68,8 @@ void Session<Demux>::HandleRequestAuthDispatch(
 
 template <typename Demux>
 void Session<Demux>::DoNoAuth() {
-  auto self = self_shared_from_this();
-  auto p_reply = std::make_shared<AuthReply>(0x00);
+  auto self = SelfFromThis();
+  auto p_reply = std::make_shared<ReplyAuth>(AuthMethod::kNoAuth);
 
   AsyncSendAuthReply(client_, *p_reply,
                      [this, self, p_reply](boost::system::error_code ec,
@@ -83,8 +84,8 @@ void Session<Demux>::DoNoAuth() {
 
 template <typename Demux>
 void Session<Demux>::DoErrorAuth() {
-  auto self = self_shared_from_this();
-  auto p_reply = std::make_shared<AuthReply>(0xFF);
+  auto self = SelfFromThis();
+  auto p_reply = std::make_shared<ReplyAuth>(AuthMethod::kUnsupportedAuth);
 
   AsyncSendAuthReply(client_, *p_reply,
                      [this, self, p_reply](boost::system::error_code,
@@ -93,11 +94,9 @@ void Session<Demux>::DoErrorAuth() {
 
 template <typename Demux>
 void Session<Demux>::HandleReplyAuthSent() {
-  AsyncReadRequest(
-      client_, &request_,
-      boost::bind(&Session::HandleRequestDispatch, self_shared_from_this(),
-                  boost::asio::placeholders::error,
-                  boost::asio::placeholders::bytes_transferred));
+  AsyncReadRequest(client_, &request_,
+                   std::bind(&Session::HandleRequestDispatch, SelfFromThis(),
+                             std::placeholders::_1, std::placeholders::_2));
 }
 
 template <typename Demux>
@@ -110,112 +109,151 @@ void Session<Demux>::HandleRequestDispatch(const boost::system::error_code& ec,
 
   // Check command asked
   switch (request_.command()) {
-    case Request::kConnect:
+    case static_cast<uint8_t>(CommandType::kConnect):
       DoConnectRequest();
       break;
-    case Request::kBind:
+    case static_cast<uint8_t>(CommandType::kBind):
       DoBindRequest();
       break;
-    case Request::kUDP:
+    case static_cast<uint8_t>(CommandType::kUDP):
       DoUDPRequest();
       break;
     default:
-      SSF_LOG(kLogError) << "session[socks]: invalid v5 command";
-      HandleStop();
+      SSF_LOG("microservice", error, "[socks v5] session invalid v5 command");
+      DoErrorCommand(CommandStatus::kCommandNotSupported);
       break;
   }
 }
 
 template <typename Demux>
 void Session<Demux>::DoConnectRequest() {
-  auto handler =
-      boost::bind(&Session::HandleApplicationServerConnect,
-                  self_shared_from_this(), boost::asio::placeholders::error);
+  auto connect_handler =
+      std::bind(&Session<Demux>::HandleApplicationServerConnect, SelfFromThis(),
+                std::placeholders::_1);
+
   boost::system::error_code ec;
   uint16_t port = request_.port();
 
-  if (request_.addressType() == Request::kIPv4) {
-    boost::asio::ip::address_v4 address(request_.ipv4());
-    app_server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
-                              handler);
-  } else if (request_.addressType() == Request::kDNS) {
-    boost::asio::ip::tcp::resolver resolver(io_service_);
-    boost::asio::ip::tcp::resolver::query query(
-        std::string(request_.domain().data(), request_.domain().size()),
-        std::to_string(port));
-    boost::asio::ip::tcp::resolver::iterator iterator(
-        resolver.resolve(query, ec));
-    if (ec) {
-      handler(ec);
-    } else {
-      app_server_.async_connect(*iterator, handler);
+  switch (request_.address_type()) {
+    case static_cast<uint8_t>(AddressType::kIPv4): {
+      boost::asio::ip::address_v4 address(request_.ipv4());
+      server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
+                            connect_handler);
+      break;
     }
-  } else if (request_.addressType() == Request::kIPv6) {
-    boost::asio::ip::address_v6 address(request_.ipv6());
-    app_server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
-                              handler);
-  } else {
-    boost::asio::ip::tcp::resolver resolver(io_service_);
-    boost::asio::ip::tcp::resolver::query query(
-        std::string(request_.domain().data(), request_.domain().size()),
-        std::to_string(port));
-    boost::asio::ip::tcp::resolver::iterator iterator(
-        resolver.resolve(query, ec));
-    if (ec) {
-      handler(ec);
-    } else {
-      app_server_.async_connect(*iterator, handler);
+    case static_cast<uint8_t>(AddressType::kIPv6): {
+      boost::asio::ip::address_v6 address(request_.ipv6());
+      server_.async_connect(boost::asio::ip::tcp::endpoint(address, port),
+                            connect_handler);
+      break;
     }
-  }
+    case static_cast<uint8_t>(AddressType::kDNS): {
+      auto resolve_handler = std::bind(
+          &Session<Demux>::HandleResolveServerEndpoint, SelfFromThis(),
+          std::placeholders::_1, std::placeholders::_2);
+
+      boost::asio::ip::tcp::resolver::query query(
+          std::string(request_.domain().data(), request_.domain().size()),
+          std::to_string(port));
+
+      server_resolver_.async_resolve(query, resolve_handler);
+      break;
+    }
+    default:
+      SSF_LOG("microservice", error,
+              "[socks v5] session unsupported address type");
+      ec.assign(ssf::error::connection_refused, ssf::error::get_ssf_category());
+      connect_handler(ec);
+      break;
+  };
 }
 
 template <typename Demux>
 void Session<Demux>::DoBindRequest() {
-  SSF_LOG(kLogError) << "session[socks]: Bind not implemented yet";
-  HandleStop();
+  SSF_LOG("microservice", warn, "[socks v5] session Bind not implemented yet");
+  DoErrorCommand(CommandStatus::kCommandNotSupported);
 }
 
 template <typename Demux>
 void Session<Demux>::DoUDPRequest() {
-  SSF_LOG(kLogError) << "session[socks]: UDP not implemented yet";
-  HandleStop();
+  SSF_LOG("microservice", warn, "[socks v5] session UDP not implemented yet");
+  DoErrorCommand(CommandStatus::kCommandNotSupported);
+}
+
+template <typename Demux>
+void Session<Demux>::DoErrorCommand(CommandStatus err_status) {
+  auto self = SelfFromThis();
+  auto p_reply = std::make_shared<Reply>(err_status);
+
+  AsyncSendReply(client_, *p_reply,
+                 [this, self, p_reply](boost::system::error_code, std::size_t) {
+                   HandleStop();
+                 });
+}
+
+template <typename Demux>
+void Session<Demux>::HandleResolveServerEndpoint(
+    const boost::system::error_code& ec, Tcp::resolver::iterator ep_it) {
+  auto connect_handler =
+      std::bind(&Session<Demux>::HandleApplicationServerConnect, SelfFromThis(),
+                std::placeholders::_1);
+  if (ec) {
+    connect_handler(ec);
+    return;
+  }
+
+  server_.async_connect(*ep_it, connect_handler);
 }
 
 template <typename Demux>
 void Session<Demux>::HandleApplicationServerConnect(
     const boost::system::error_code& err) {
-  auto self = self_shared_from_this();
-  auto p_reply = std::make_shared<Reply>(err);
+  auto self = SelfFromThis();
+  auto p_reply = std::make_shared<Reply>(
+      !err ? CommandStatus::kSucceeded : CommandStatus::kConnectionRefused);
 
-  switch (request_.addressType()) {
-    case Request::kIPv4:
-      p_reply->set_ipv4(request_.ipv4());
-      break;
-    case Request::kDNS:
-      p_reply->set_domain(request_.domain());
-      break;
-    case Request::kIPv6:
-      p_reply->set_ipv6(request_.ipv6());
-      break;
-    default:
-      HandleStop();
-      break;
+  boost::system::error_code ep_err;
+  boost::asio::ip::tcp::endpoint local_ep;
+  if (!err) {
+    local_ep = server_.local_endpoint(ep_err);
   }
 
-  p_reply->set_port(request_.port());
+  if (!err && !ep_err) {
+    auto address = local_ep.address();
+    if (address.is_v4()) {
+      p_reply->set_ipv4(address.to_v4().to_bytes());
+    } else {
+      p_reply->set_ipv6(address.to_v6().to_bytes());
+    }
+    p_reply->set_port(local_ep.port());
+  } else {
+    // copy request data into reply in case of failure
+    switch (request_.address_type()) {
+      case static_cast<uint8_t>(AddressType::kIPv4):
+        p_reply->set_ipv4(request_.ipv4());
+        break;
+      case static_cast<uint8_t>(AddressType::kDNS):
+        p_reply->set_domain(request_.domain());
+        break;
+      case static_cast<uint8_t>(AddressType::kIPv6):
+        p_reply->set_ipv6(request_.ipv6());
+        break;
+    };
+    p_reply->set_port(request_.port());
+  }
 
-  if (err) {  // Error connecting to the server, informing client and stopping
+  if (err) {  // error connecting to the server, notify client and stop
     AsyncSendReply(client_, *p_reply,
                    [this, self, p_reply](boost::system::error_code,
                                          std::size_t) { HandleStop(); });
-  } else {  // We successfully connect to application server
+  } else {  // we successfully connect to application server
     AsyncSendReply(
         client_, *p_reply,
         [this, self, p_reply](boost::system::error_code ec, std::size_t) {
           if (ec) {
             HandleStop();
             return;
-          }  // reply successfully sent, Establishing link
+          }  // reply successfully sent, establish link
           EstablishLink();
         });
   }
@@ -223,21 +261,22 @@ void Session<Demux>::HandleApplicationServerConnect(
 
 template <typename Demux>
 void Session<Demux>::EstablishLink() {
-  auto self = self_shared_from_this();
+  auto self = SelfFromThis();
 
-  upstream_.reset(new StreamBuff);
-  downstream_.reset(new StreamBuff);
+  upstream_.reset(new StreamBuf());
+  downstream_.reset(new StreamBuf());
 
-  AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(app_server_),
+  AsyncEstablishHDLink(ssf::ReadFrom(client_), ssf::WriteTo(server_),
                        boost::asio::buffer(*upstream_),
-                       boost::bind(&Session::HandleStop, self));
+                       std::bind(&Session<Demux>::HandleStop, self));
 
-  AsyncEstablishHDLink(ssf::ReadFrom(app_server_), ssf::WriteTo(client_),
+  AsyncEstablishHDLink(ssf::ReadFrom(server_), ssf::WriteTo(client_),
                        boost::asio::buffer(*downstream_),
-                       boost::bind(&Session::HandleStop, self));
+                       std::bind(&Session<Demux>::HandleStop, self));
 }
 }  // v5
 }  // socks
+}  // services
 }  // ssf
 
 #endif  // SSF_SERVICES_SOCKS_V5_SESSION_IPP_

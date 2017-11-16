@@ -1,7 +1,9 @@
 #include <fstream>
+#include <regex>
 #include <sstream>
 #include <string>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/asio/detail/config.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/system/error_code.hpp>
@@ -25,6 +27,9 @@ Config::Config() : tls_(), http_proxy_(), services_() {}
 
 void Config::Init() {
   boost::system::error_code ec;
+
+  SSF_LOG("config", debug, "default configuration: {}", default_config_);
+
   UpdateFromString(default_config_, ec);
 }
 
@@ -41,16 +46,20 @@ void Config::UpdateFromFile(const std::string& filepath,
     conf_file = filepath;
   }
 
-  SSF_LOG(kLogInfo) << "config[ssf]: loading file <" << conf_file << ">";
+  SSF_LOG("config", info, "loading file <{}>", conf_file);
 
   try {
     boost::property_tree::ptree pt;
     boost::property_tree::read_json(conf_file, pt);
 
+    std::stringstream ss_loaded_config;
+    boost::property_tree::write_json(ss_loaded_config, pt);
+    SSF_LOG("config", debug, "custom configuration: {}", ss_loaded_config.str());
+
     UpdateFromPTree(pt);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "config[ssf]: error reading SSF config file: "
-                       << e.what();
+    (void)(e);
+    SSF_LOG("config", error, "error parsing SSF config file: {}", e.what());
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
 }
@@ -60,38 +69,52 @@ void Config::UpdateFromString(const std::string& config_string,
   std::stringstream ss_config;
   ss_config << config_string;
 
-  SSF_LOG(kLogDebug) << "config[ssf]: update config from string:"
-                     << default_config_;
-
   try {
     boost::property_tree::ptree pt;
     boost::property_tree::read_json(ss_config, pt);
 
     UpdateFromPTree(pt);
   } catch (const std::exception& e) {
-    SSF_LOG(kLogError) << "config[ssf]: error reading config string: "
-                       << e.what();
+    (void)(e);
+    SSF_LOG("config", error, "error parsing config string: {}", e.what());
   }
 }
 
 void Config::Log() const {
   tls_.Log();
   http_proxy_.Log();
+  socks_proxy_.Log();
   services_.Log();
+  circuit_.Log();
 }
 
 void Config::LogStatus() const { services_.LogServiceStatus(); }
 
+std::vector<char*> Config::GetArgv() const {
+  std::vector<char*> res_argv(argv_.size() + 1);
+  auto res_arg_it = res_argv.begin();
+  for (const auto& arg : argv_) {
+    *res_arg_it = const_cast<char*>(arg.data());
+    ++res_arg_it;
+  }
+  // last element is nullptr
+  *res_arg_it = nullptr;
+  return res_argv;
+}
+
 void Config::UpdateFromPTree(const PTree& pt) {
   UpdateTls(pt);
   UpdateHttpProxy(pt);
+  UpdateSocksProxy(pt);
   UpdateServices(pt);
+  UpdateCircuit(pt);
+  UpdateArguments(pt);
 }
 
 void Config::UpdateTls(const PTree& pt) {
   auto tls_optional = pt.get_child_optional("ssf.tls");
   if (!tls_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: TLS configuration not found";
+    SSF_LOG("config", debug, "update TLS: configuration not found");
     return;
   }
 
@@ -101,27 +124,77 @@ void Config::UpdateTls(const PTree& pt) {
 void Config::UpdateHttpProxy(const PTree& pt) {
   auto proxy_optional = pt.get_child_optional("ssf.http_proxy");
   if (!proxy_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: proxy configuration not found";
+    SSF_LOG("config", debug, "update HTTP proxy: configuration not found");
     return;
   }
 
   http_proxy_.Update(proxy_optional.get());
 }
 
+void Config::UpdateSocksProxy(const PTree& pt) {
+  auto proxy_optional = pt.get_child_optional("ssf.socks_proxy");
+  if (!proxy_optional) {
+    SSF_LOG("config", debug, "update SOCKS proxy: configuration not found");
+    return;
+  }
+
+  socks_proxy_.Update(proxy_optional.get());
+}
+
 void Config::UpdateServices(const PTree& pt) {
   auto services_optional = pt.get_child_optional("ssf.services");
   if (!services_optional) {
-    SSF_LOG(kLogDebug) << "config[update]: services configuration not found";
+    SSF_LOG("config", debug, "update services: configuration not found");
     return;
   }
 
   services_.Update(services_optional.get());
 }
 
+void Config::UpdateCircuit(const PTree& pt) {
+  auto circuit_optional = pt.get_child_optional("ssf.circuit");
+  if (!circuit_optional) {
+    SSF_LOG("config", debug, "update circuit: configuration not found");
+    return;
+  }
+
+  circuit_.Update(circuit_optional.get());
+}
+
+void Config::UpdateArguments(const PTree& pt) {
+  auto arguments_optional = pt.get_child_optional("ssf.arguments");
+  if (!arguments_optional) {
+    SSF_LOG("config", debug, "update arguments: configuration not found");
+    return;
+  }
+
+  // basic arguments parsing
+  std::string arguments(arguments_optional.get().data());
+  if (arguments.empty()) {
+    return;
+  }
+  argv_.clear();
+
+  argv_.push_back("ssf");
+  // quoted arg or arg between space
+  std::regex argv_regex("(\"[^\"]+\"|[^\\s\"]+)");
+  auto argv_it =
+      std::sregex_iterator(arguments.begin(), arguments.end(), argv_regex);
+  auto argv_end = std::sregex_iterator();
+  while (argv_it != argv_end) {
+    auto argv = argv_it->str();
+    // trim double quotes
+    boost::trim_if(argv, boost::is_any_of("\""));
+    boost::trim(argv);
+    argv_.push_back(argv);
+    ++argv_it;
+  }
+}
+
 const char* Config::default_config_ = R"RAWSTRING(
 {
   "ssf": {
-    "tls" : {
+    "tls": {
       "ca_cert_path": "./certs/trusted/ca.crt",
       "cert_path": "./certs/certificate.crt",
       "key_path": "./certs/private.key",
@@ -129,9 +202,10 @@ const char* Config::default_config_ = R"RAWSTRING(
       "dh_path": "./certs/dh4096.pem",
       "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
     },
-    "http_proxy" : {
+    "http_proxy": {
       "host": "",
       "port": "",
+      "user_agent": "",
       "credentials": {
         "username": "",
         "password": "",
@@ -139,6 +213,11 @@ const char* Config::default_config_ = R"RAWSTRING(
         "reuse_ntlm": true,
         "reuse_nego": true
       }
+    },
+    "socks_proxy": {
+      "version": 5,
+      "host": "",
+      "port": "1080"
     },
     "services": {
       "datagram_forwarder": { "enable": true },
@@ -151,14 +230,16 @@ const char* Config::default_config_ = R"RAWSTRING(
         "enable": true,
         "gateway_ports": false
       },
-      "file_copy": { "enable": false },
+      "copy": { "enable": false },
       "shell": {
         "enable": false,
         "path": )RAWSTRING" SSF_PROCESS_SERVICE_BINARY_PATH R"RAWSTRING(,
         "args": ""
       },
       "socks": { "enable": true }
-    }
+    },
+    "circuit": [],
+    "arguments": ""
   }
 }
 )RAWSTRING";

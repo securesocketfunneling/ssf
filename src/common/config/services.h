@@ -4,7 +4,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
-#include "services/copy_file/config.h"
+#include "services/copy/config.h"
 #include "services/datagrams_to_fibers/config.h"
 #include "services/fibers_to_sockets/config.h"
 #include "services/fibers_to_datagrams/config.h"
@@ -21,7 +21,7 @@ class Services {
 
   using DatagramForwarderConfig = ssf::services::fibers_to_datagrams::Config;
   using DatagramListenerConfig = ssf::services::datagrams_to_fibers::Config;
-  using FileCopyConfig = ssf::services::copy_file::Config;
+  using CopyConfig = ssf::services::copy::Config;
   using ShellConfig = ssf::services::process::Config;
   using SocksConfig = ssf::services::socks::Config;
   using StreamForwarderConfig = ssf::services::fibers_to_sockets::Config;
@@ -31,27 +31,47 @@ class Services {
   Services();
   Services(const Services& services);
 
-  inline const DatagramForwarderConfig datagram_forwarder() const {
+  const DatagramForwarderConfig& datagram_forwarder() const {
     return datagram_forwarder_;
   }
 
-  inline const DatagramListenerConfig datagram_listener() const {
+  DatagramForwarderConfig* mutable_datagram_forwarder() {
+    return &datagram_forwarder_;
+  }
+
+  const DatagramListenerConfig& datagram_listener() const {
     return datagram_listener_;
   }
 
-  inline const ShellConfig& process() const { return shell_; }
+  DatagramListenerConfig* mutable_datagram_listener() {
+    return &datagram_listener_;
+  }
 
-  inline const SocksConfig& socks() const { return socks_; }
+  const ShellConfig& process() const { return shell_; }
 
-  inline const FileCopyConfig& file_copy() const { return file_copy_; }
+  ShellConfig* mutable_process() { return &shell_; }
 
-  inline const StreamForwarderConfig& stream_forwarder() const {
+  const SocksConfig& socks() const { return socks_; }
+
+  SocksConfig* mutable_socks() { return &socks_; }
+
+  const CopyConfig& copy() const { return copy_; }
+
+  CopyConfig* mutable_copy() { return &copy_; }
+
+  const StreamForwarderConfig& stream_forwarder() const {
     return stream_forwarder_;
   }
 
-  inline const StreamListenerConfig& stream_listener() const {
+  StreamForwarderConfig* mutable_stream_forwarder() {
+    return &stream_forwarder_;
+  }
+
+  const StreamListenerConfig& stream_listener() const {
     return stream_listener_;
   }
+
+  StreamListenerConfig* mutable_stream_listener() { return &stream_listener_; }
 
   void Update(const PTree& pt);
 
@@ -65,18 +85,18 @@ class Services {
  private:
   void UpdateDatagramForwarder(const PTree& pt);
   void UpdateDatagramListener(const PTree& pt);
-  void UpdateFileCopy(const PTree& pt);
+  void UpdateCopy(const PTree& pt);
   void UpdateShell(const PTree& pt);
   void UpdateSocks(const PTree& pt);
   void UpdateStreamForwarder(const PTree& pt);
   void UpdateStreamListener(const PTree& pt);
 
-  static bool ServiceEnabled(const PTree& service, bool default_value);
+  static bool IsServiceEnabled(const PTree& service, bool default_value);
 
  private:
   DatagramForwarderConfig datagram_forwarder_;
   DatagramListenerConfig datagram_listener_;
-  FileCopyConfig file_copy_;
+  CopyConfig copy_;
   ShellConfig shell_;
   SocksConfig socks_;
   StreamForwarderConfig stream_forwarder_;

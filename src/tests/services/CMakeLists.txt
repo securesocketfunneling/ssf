@@ -1,272 +1,89 @@
-cmake_minimum_required(VERSION 2.8)
+set(service_test_group_name "Unit Tests/Services")
 
-set(services_tests_group_name "Unit Tests/Services")
+add_library(tcp_helpers STATIC EXCLUDE_FROM_ALL
+  tcp_helpers.h tcp_helpers.cpp)
+target_link_libraries(tcp_helpers ssf_framework)
+set_property(TARGET tcp_helpers PROPERTY FOLDER ${service_test_group_name})
 
-set(project_BINARY_SERVICES_TESTS_DIR "${project_BINARY_DIR}/src/tests/services")
+add_library(udp_helpers STATIC EXCLUDE_FROM_ALL
+  udp_helpers.h udp_helpers.cpp)
+target_link_libraries(udp_helpers ssf_framework)
+set_property(TARGET udp_helpers PROPERTY FOLDER ${service_test_group_name})
 
-# --- Copy test certs for tests
-set(project_BINARY_SERVICES_TESTS_CERT_DIR ${project_BINARY_SERVICES_TESTS_DIR}/certs)
+add_library(socks_helpers STATIC EXCLUDE_FROM_ALL
+  socks_helpers.h socks_helpers.cpp)
+target_link_libraries(socks_helpers ssf_framework)
+set_property(TARGET socks_helpers PROPERTY FOLDER ${service_test_group_name})
 
-file(MAKE_DIRECTORY ${project_BINARY_SERVICES_TESTS_CERT_DIR})
-file(MAKE_DIRECTORY ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
-
-file(COPY ${SSF_CERT_TEST_ROOT_FILES}
-     DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR})
-file(COPY ${SSF_CERT_TEST_TRUSTED_FILES}
-     DESTINATION ${project_BINARY_SERVICES_TESTS_CERT_DIR}/trusted)
-
-set(TCP_HELPERS_FILES
-  "tcp_helpers.h"
-  "tcp_helpers.cpp")
-
-set(UDP_HELPERS_FILES
-  "udp_helpers.h"
-  "udp_helpers.cpp")
-
-set(SOCKS_HELPERS_FILES
-  "socks_helpers.h"
-  "socks_helpers.cpp")
-
-set(SERVICE_TESTS_FILES
-  "datagram_fixture_test.h"
-  "service_fixture_test.h"
-  "process_fixture_test.h"
-  "socks_fixture_test.h"
-  "stream_fixture_test.h"
-)
+set(SERVICE_TEST_HEADERS
+  datagram_fixture_test.h
+  service_fixture_test.h
+  shell_fixture_test.h
+  socks_fixture_test.h
+  stream_fixture_test.h)
 
 # --- Service tests
 
 # --- Option parser
 
-add_target("option_parser_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    "option_parser_tests.cpp"
-    ${USER_SERVICE_FILES}
-    ${COMMON_ERROR_FILES}
-)
-project_group(${services_tests_group_name} option_parser_tests)
+add_executable(option_parser_tests EXCLUDE_FROM_ALL option_parser_tests.cpp)
+target_link_libraries(option_parser_tests ssf_framework gtest)
+add_unit_test(option_parser_tests)
+set_property(TARGET option_parser_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- Socks test
-set(socks_test_source_files
-  "socks_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SOCKS_HELPERS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("socks_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${socks_test_source_files}
-)
-project_group(${services_tests_group_name} socks_tests)
+add_executable(socks_tests EXCLUDE_FROM_ALL socks_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(socks_tests ssf_framework tls_config_helper socks_helpers tcp_helpers gtest)
+add_unit_test(socks_tests)
+set_property(TARGET socks_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- Remote socks test
-set(remote_socks_test_source_files
-  "remote_socks_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SOCKS_HELPERS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_socks_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${remote_socks_test_source_files}
-)
-project_group(${services_tests_group_name} remote_socks_tests)
+add_executable(remote_socks_tests EXCLUDE_FROM_ALL remote_socks_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(remote_socks_tests ssf_framework tls_config_helper socks_helpers tcp_helpers gtest)
+add_unit_test(remote_socks_tests)
+set_property(TARGET remote_socks_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- Stream forward test
-set(stream_forwarding_test_source_files
-  "stream_forwarding_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("stream_forward_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${stream_forwarding_test_source_files}
-)
-project_group(${services_tests_group_name} stream_forward_tests)
+add_executable(stream_forward_tests EXCLUDE_FROM_ALL stream_forwarding_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(stream_forward_tests ssf_framework tls_config_helper tcp_helpers gtest)
+add_unit_test(stream_forward_tests)
+set_property(TARGET stream_forward_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- Remote stream forward test
-set(remote_stream_forwarding_test_source_files
-  "remote_stream_forwarding_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${TCP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_stream_forward_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${remote_stream_forwarding_test_source_files}
-)
-project_group(${services_tests_group_name} remote_stream_forward_tests)
+add_executable(remote_stream_forward_tests EXCLUDE_FROM_ALL remote_stream_forwarding_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(remote_stream_forward_tests ssf_framework tls_config_helper tcp_helpers gtest)
+add_unit_test(remote_stream_forward_tests)
+set_property(TARGET remote_stream_forward_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- UDP forward test
-set(udp_test_source_files
-  "udp_forwarding_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${UDP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("udp_forward_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${udp_test_source_files}
-)
-project_group(${services_tests_group_name} udp_forward_tests)
+add_executable(datagram_forward_tests EXCLUDE_FROM_ALL datagram_forward_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(datagram_forward_tests ssf_framework tls_config_helper udp_helpers gtest)
+add_unit_test(datagram_forward_tests)
+set_property(TARGET datagram_forward_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- Remote UDP forward test
-set(remote_udp_test_source_files
-  "remote_udp_forwarding_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${UDP_HELPERS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_udp_forward_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${remote_udp_test_source_files}
-)
-project_group(${services_tests_group_name} remote_udp_forward_tests)
+add_executable(remote_datagram_forward_tests EXCLUDE_FROM_ALL remote_datagram_forward_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(remote_datagram_forward_tests ssf_framework tls_config_helper udp_helpers gtest)
+add_unit_test(remote_datagram_forward_tests)
+set_property(TARGET remote_datagram_forward_tests PROPERTY FOLDER ${service_test_group_name})
 
 # --- File copy from client test
-file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_to_copy)
-file(MAKE_DIRECTORY ${project_BINARY_DIR}/src/tests/services/files_copied)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/files_to_copy)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/files_copied)
 
-FILE(GLOB_RECURSE TEST_FILES_TO_COPY
-  "${project_SRC_DIR}/tests/services/files_to_copy/*"
-)
+add_executable(copy_tests EXCLUDE_FROM_ALL copy_tests.cpp copy_fixture_test.h copy_fixture_test.cpp)
+target_link_libraries(copy_tests ssf_framework tls_config_helper gtest)
+add_unit_test(copy_tests)
+set_property(TARGET copy_tests PROPERTY FOLDER ${service_test_group_name})
 
-file(COPY ${TEST_FILES_TO_COPY} DESTINATION ${project_BINARY_DIR}/src/tests/services/files_to_copy)
+# --- Shell test
+add_executable(shell_tests EXCLUDE_FROM_ALL shell_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(shell_tests ssf_framework tls_config_helper gtest)
+add_unit_test(shell_tests)
+set_property(TARGET shell_tests PROPERTY FOLDER ${service_test_group_name})
 
-set(file_copy_from_client_files
-  "file_copy_from_client_tests.cpp"
-  "file_copy_fixture_test.h"
-  "file_copy_fixture_test.cpp"
-  ${SSF_SOURCES}
-)
-
-add_target("file_copy_from_client_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${file_copy_from_client_files}
-)
-project_group(${services_tests_group_name} file_copy_from_client_tests)
-
-# --- Process test
-set(process_test_source_files
-  "process_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("process_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${process_test_source_files}
-)
-project_group(${services_tests_group_name} process_tests)
-
-# --- Remote process test
-set(remote_process_test_source_files
-  "remote_process_tests.cpp"
-  ${SERVICE_TESTS_FILES}
-  ${SSF_SOURCES}
-)
-
-add_target("remote_process_tests"
-  TYPE
-    executable ${EXEC_FLAG} TEST
-  LINKS
-    ${OpenSSL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${PLATFORM_SPECIFIC_LIB_DEP}
-    lib_ssf_network
-  PREFIX_SKIP     .*/src
-  HEADER_FILTER   "\\.h(h|m|pp|xx|\\+\\+)?"
-  FILES
-    ${remote_process_test_source_files}
-)
-project_group(${services_tests_group_name} remote_process_tests)
+# --- Remote shell test
+add_executable(remote_shell_tests EXCLUDE_FROM_ALL remote_shell_tests.cpp ${SERVICE_TEST_HEADERS})
+target_link_libraries(remote_shell_tests ssf_framework tls_config_helper gtest)
+add_unit_test(remote_shell_tests)
+set_property(TARGET remote_shell_tests PROPERTY FOLDER ${service_test_group_name})

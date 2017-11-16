@@ -1,11 +1,4 @@
-#ifndef BOOST_SPIRIT_USE_PHOENIX_V3
-#define BOOST_SPIRIT_USE_PHOENIX_V3 1
-#endif
-#include <boost/fusion/include/std_pair.hpp>
-#include <boost/fusion/include/vector.hpp>
-#include <boost/optional.hpp>
-#include <boost/spirit/include/qi.hpp>
-#include <boost/spirit/include/classic.hpp>
+#include <ssf/log/log.h>
 
 #include "common/error/error.h"
 
@@ -20,93 +13,95 @@ ForwardOptions::ForwardOptions() : from(), to() {}
 
 ForwardOptions OptionParser::ParseForwardOptions(
     const std::string& option, boost::system::error_code& ec) {
-  using boost::spirit::qi::ushort_;
-  using boost::spirit::qi::alnum;
-  using boost::spirit::qi::char_;
-  using boost::spirit::qi::lit;
-  using boost::spirit::qi::rule;
-  typedef std::string::const_iterator str_it;
-
   ForwardOptions forward_options;
+  const char* p;
+  char* end;
+  unsigned long val;
+  std::string::size_type index, e;
 
-  rule<str_it, std::string()> local_addr_pattern = *char_("0-9a-zA-Z.-");
-  rule<str_it, std::string()> target_pattern = +char_("0-9a-zA-Z.-");
-
-  str_it begin = option.begin(), end = option.end();
-
-  // basic format
-  if (boost::spirit::qi::parse(
-          begin, end, ushort_ >> ":" >> target_pattern >> ":" >> ushort_,
-          forward_options.from.port, forward_options.to.addr,
-          forward_options.to.port) &&
-      begin == end) {
-    ec.assign(::error::success, ::error::get_ssf_category());
-    return forward_options;
+  index = option.rfind(':');
+  if (index == std::string::npos) {
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return {};
   }
 
-  begin = option.begin(), end = option.end();
-  // extended format
-  if (boost::spirit::qi::parse(
-          begin, end, local_addr_pattern >> ":" >> ushort_ >> ":" >>
-                          target_pattern >> ":" >> ushort_,
-          forward_options.from.addr, forward_options.from.port,
-          forward_options.to.addr, forward_options.to.port) &&
-      begin == end) {
-    if (forward_options.from.addr.empty()) {
-      // empty value means all network interfaces
-      forward_options.from.addr = "*";
-    }
-
-    // not found
-    ec.assign(::error::success, ::error::get_ssf_category());
-    return forward_options;
+  end = NULL;
+  p = option.c_str() + index + 1;
+  val = std::strtoul(p, &end, 10);
+  if (p == end || *end != '\0' || val > 65535) {
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return {};
   }
+  forward_options.to.port = static_cast<uint16_t>(val);
 
-  ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+  e = index;
+  index = option.rfind(':', e - 1);
+  if (index == std::string::npos) {
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return {};
+  }
+  forward_options.to.addr = std::string(option, index + 1, e - (index + 1));
+
+  e = index;
+  index = option.rfind(':', e - 1);
+
+  end = NULL;
+  if (index != std::string::npos) {
+    auto s = std::string(option, 0, index);
+    forward_options.from.addr = (s == "") ? "*" : s;
+    p = option.c_str() + index + 1;
+  } else {
+    forward_options.from.addr = "";
+    p = option.c_str();
+  }
+  val = std::strtoul(p, &end, 10);
+  if (p == end || *end != ':' || val > 65535) {
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return {};
+  }
+  forward_options.from.port = static_cast<uint16_t>(val);
 
   return forward_options;
 }
 
 Endpoint OptionParser::ParseListeningOption(const std::string& option,
                                             boost::system::error_code& ec) {
-  using boost::spirit::qi::ushort_;
-  using boost::spirit::qi::alnum;
-  using boost::spirit::qi::char_;
-  using boost::spirit::qi::lit;
-  using boost::spirit::qi::rule;
-  typedef std::string::const_iterator str_it;
-
   Endpoint listening_option;
+  unsigned long val;
+  const char* p;
+  char* end = NULL;
+  std::string::size_type index = option.find(':');
 
-  rule<str_it, std::string()> local_addr_pattern = *char_("0-9a-zA-Z.-");
-
-  str_it begin = option.begin(), end = option.end();
-
-  // basic format
-  if (boost::spirit::qi::parse(begin, end, ushort_, listening_option.port) &&
-      begin == end) {
+  if (index != std::string::npos) {
+    auto s = std::string(option, 0, index);
+    listening_option.addr = (s == "") ? "*" : s;
+    p = option.c_str() + index + 1;
+  } else {
     listening_option.addr = "";
-    ec.assign(::error::success, ::error::get_ssf_category());
-    return listening_option;
+    p = option.c_str();
   }
-
-  begin = option.begin(), end = option.end();
-  // extended format
-  if (boost::spirit::qi::parse(begin, end, local_addr_pattern >> ":" >> ushort_,
-                               listening_option.addr, listening_option.port) &&
-      begin == end) {
-    if (listening_option.addr.empty()) {
-      // empty value means all network interfaces
-      listening_option.addr = "*";
-    }
-    ec.assign(::error::success, ::error::get_ssf_category());
-    return listening_option;
+  val = std::strtoul(p, &end, 10);
+  if (p == end || *end != '\0' || val > 65535) {
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return {};
   }
-
-  // not found
-  ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+  listening_option.port = static_cast<uint16_t>(val);
 
   return listening_option;
+}
+
+uint16_t OptionParser::ParsePort(const std::string& port,
+                                 boost::system::error_code& ec) {
+  unsigned long val;
+  char* end = NULL;
+
+  val = std::strtoul(port.c_str(), &end, 10);
+  if (*end != '\0' || val > 65535) {
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return 0;
+  }
+
+  return static_cast<uint16_t>(val);
 }
 
 }  // services

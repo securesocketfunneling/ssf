@@ -5,20 +5,25 @@
 
 #include <string>
 
-namespace ssf { 
+#define SSF_VERSION_MAJOR @SSF_VERSION_MAJOR@
+#define SSF_VERSION_MINOR @SSF_VERSION_MINOR@
+#define SSF_VERSION_FIX @SSF_VERSION_FIX@
+
+#define SSF_VERSION_STRING "@SSF_VERSION_MAJOR@.@SSF_VERSION_MINOR@.@SSF_VERSION_FIX@"
+
+namespace ssf {
 namespace versions {
 
 enum Versions : uint8_t {
   major = @SSF_VERSION_MAJOR@,
   minor = @SSF_VERSION_MINOR@,
   fix = @SSF_VERSION_FIX@,
-  security = @SSF_VERSION_SECURITY@,
-  bounce = @SSF_VERSION_BOUNCE@,
+  circuit = @SSF_VERSION_CIRCUIT@,
   transport = @SSF_VERSION_TRANSPORT@
 };
 
-const std::string boost_version = "@SSF_VERSION_BOOST@";
-const std::string openssl_version = "@SSF_VERSION_OPENSSL@";
+const std::string boost_version = "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@.@Boost_SUBMINOR_VERSION@";
+const std::string openssl_version = "@OPENSSL_VERSION@";
 
 }  // versions
 }  // ssf

@@ -3,10 +3,10 @@
 
 #include <cstdint>
 
-#include <vector>
-#include <string>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include <boost/system/error_code.hpp>
 
@@ -14,16 +14,14 @@
 
 #include "services/user_services/option_parser.h"
 
-#include "services/user_services/base_user_service.h"
 #include "services/admin/requests/create_service_request.h"
 #include "services/admin/requests/stop_service_request.h"
-
-#include "core/factories/service_option_factory.h"
+#include "services/user_services/base_user_service.h"
 
 #include "common/boost/fiber/detail/fiber_id.hpp"
 
-#include "services/sockets_to_fibers/sockets_to_fibers.h"
 #include "services/fibers_to_sockets/fibers_to_sockets.h"
+#include "services/sockets_to_fibers/sockets_to_fibers.h"
 
 namespace ssf {
 namespace services {
@@ -46,43 +44,68 @@ class PortForwarding : public BaseUserService<Demux> {
   }
 
  public:
-  static std::string GetFullParseName() { return "tcp-forward,L"; }
+  static std::string GetFullParseName() { return "L,tcp-forward"; }
 
   static std::string GetParseName() { return "tcp-forward"; }
 
   static std::string GetValueName() {
-    return "[[loc_ip]:]loc_port:dest_ip:dest_port";
+    return "[bind_address:]port:remote_host:remote_port";
   }
 
   static std::string GetParseDesc() {
-    return "Forward TCP client [[loc_ip]:]port to dest_ip:dest_port from "
-           "server";
+    return "Enable client TCP port forwarding service";
   }
 
-  static std::shared_ptr<PortForwarding> CreateServiceOptions(
-      std::string line, boost::system::error_code& ec) {
+  static UserServiceParameterBag CreateUserServiceParameters(
+      const std::string& line, boost::system::error_code& ec) {
     auto forward_options = OptionParser::ParseForwardOptions(line, ec);
 
     if (ec) {
+      SSF_LOG("user_service", error, "[{}] cannot parse {}", GetParseName(),
+              line);
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return {};
+    }
+
+    return {{"from_addr", forward_options.from.addr},
+            {"from_port", std::to_string(forward_options.from.port)},
+            {"to_addr", forward_options.to.addr},
+            {"to_port", std::to_string(forward_options.to.port)}};
+  }
+
+  static std::shared_ptr<PortForwarding> CreateUserService(
+      const UserServiceParameterBag& parameters,
+      boost::system::error_code& ec) {
+    if (parameters.count("from_addr") == 0 ||
+        parameters.count("from_port") == 0 ||
+        parameters.count("to_addr") == 0 || parameters.count("to_port") == 0) {
+      SSF_LOG("user_service", error, "[{}] missing parameters", GetParseName());
       ec.assign(::error::invalid_argument, ::error::get_ssf_category());
       return std::shared_ptr<PortForwarding>(nullptr);
     }
 
+    uint16_t from_port =
+        OptionParser::ParsePort(parameters.at("from_port"), ec);
+    if (ec) {
+      SSF_LOG("user_service", error, "[{}] invalid local port ({})",
+              GetParseName(), ec.message());
+      return std::shared_ptr<PortForwarding>(nullptr);
+    }
+    uint16_t to_port = OptionParser::ParsePort(parameters.at("to_port"), ec);
+    if (ec) {
+      SSF_LOG("user_service", error, "[{}] invalid remote port ({})",
+              GetParseName(), ec.message());
+      return std::shared_ptr<PortForwarding>(nullptr);
+    }
     return std::shared_ptr<PortForwarding>(
-        new PortForwarding(forward_options.from.addr, forward_options.from.port,
-                           forward_options.to.addr, forward_options.to.port));
-  }
-
-  static void RegisterToServiceOptionFactory() {
-    ServiceOptionFactory<Demux>::RegisterUserServiceParser(
-        GetParseName(), GetFullParseName(), GetValueName(), GetParseDesc(),
-        &PortForwarding::CreateServiceOptions);
+        new PortForwarding(parameters.at("from_addr"), from_port,
+                           parameters.at("to_addr"), to_port));
   }
 
  public:
-  virtual ~PortForwarding() {}
+  ~PortForwarding() {}
 
-  std::string GetName() override { return "tcp-forward"; }
+  std::string GetName() override { return GetParseName(); }
 
   std::vector<admin::CreateServiceRequest<Demux>> GetRemoteServiceCreateVector()
       override {
@@ -121,9 +144,9 @@ class PortForwarding : public BaseUserService<Demux> {
     localServiceId_ = p_service_factory->CreateRunNewService(
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
-      SSF_LOG(kLogError) << "user_service[tcp-forward]: "
-                         << "local_service[sockets to fibers]: start failed: "
-                         << ec.message();
+      SSF_LOG("user_service", error,
+              "[{}] local_service[sockets to fibers]: start failed: ",
+              GetParseName(), ec.message());
     }
     return !ec;
   }

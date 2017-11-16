@@ -2,19 +2,7 @@
 
 #include "services/user_services/remote_socks.h"
 
-class RemoteSocksTest : public SocksFixtureTest<ssf::services::RemoteSocks> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
-      boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9061", ec);
-  }
-};
-
-TEST_F(RemoteSocksTest, startStopTransmitSSFRemoteSocks) {
-  ASSERT_TRUE(Wait());
-
-  Run("9061", "9062");
-}
-
+template <class RemoteSocksTest>
 class RemoteSocksWildcardTest : public RemoteSocksTest {
   void SetServerConfig(ssf::config::Config& config) override {
     const char* new_config = R"RAWSTRING(
@@ -49,15 +37,92 @@ class RemoteSocksWildcardTest : public RemoteSocksTest {
     ASSERT_EQ(ec.value(), 0) << "Could not update client config from string "
                              << new_config;
   }
+};
 
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+class RemoteSocks4Test
+    : public SocksFixtureTest<ssf::services::RemoteSocks,
+                              tests::socks::Socks4DummyClient> {
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":9063", ec);
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9151"}}}}};
   }
 };
 
-TEST_F(RemoteSocksWildcardTest, startStopTransmitSSFSocks) {
-  ASSERT_TRUE(Wait());
+class RemoteSocks4aTest
+    : public SocksFixtureTest<ssf::services::RemoteSocks,
+                              tests::socks::Socks4DummyClient> {
+  ssf::UserServiceParameters CreateUserServiceParameters(
+      boost::system::error_code& ec) override {
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9153"}}}}};
+  }
+};
 
-  Run("9063", "9064");
+class RemoteSocks4WildcardTest
+    : public RemoteSocksWildcardTest<RemoteSocks4Test> {
+  ssf::UserServiceParameters CreateUserServiceParameters(
+      boost::system::error_code& ec) override {
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9155"}}}}};
+  }
+};
+
+TEST_F(RemoteSocks4Test, Socks4) {
+  ASSERT_TRUE(Wait());
+  Run("9151", "127.0.0.1", "9152");
+}
+
+TEST_F(RemoteSocks4aTest, Socks4a) {
+  ASSERT_TRUE(Wait());
+  Run("9153", "localhost", "9154");
+}
+
+TEST_F(RemoteSocks4WildcardTest, Socks4) {
+  ASSERT_TRUE(Wait());
+  Run("9155", "127.0.0.1", "9156");
+}
+
+class RemoteSocks5Test
+    : public SocksFixtureTest<ssf::services::RemoteSocks,
+                              tests::socks::Socks5DummyClient> {
+  ssf::UserServiceParameters CreateUserServiceParameters(
+      boost::system::error_code& ec) override {
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9157"}}}}};
+  }
+};
+
+class RemoteSocks5hTest
+    : public SocksFixtureTest<ssf::services::RemoteSocks,
+                              tests::socks::Socks5DummyClient> {
+  ssf::UserServiceParameters CreateUserServiceParameters(
+      boost::system::error_code& ec) override {
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", ""}, {"port", "9159"}}}}};
+  }
+};
+
+class RemoteSocks5WildcardTest
+    : public RemoteSocksWildcardTest<RemoteSocks5Test> {
+  ssf::UserServiceParameters CreateUserServiceParameters(
+      boost::system::error_code& ec) override {
+    return {
+        {ServiceTested::GetParseName(), {{{"addr", "*"}, {"port", "9161"}}}}};
+  }
+};
+
+TEST_F(RemoteSocks5Test, Socks5) {
+  ASSERT_TRUE(Wait());
+  Run("9157", "127.0.0.1", "9158");
+}
+
+TEST_F(RemoteSocks5hTest, Socks5h) {
+  ASSERT_TRUE(Wait());
+  Run("9159", "localhost", "9160");
+}
+
+TEST_F(RemoteSocks5WildcardTest, Socks5) {
+  ASSERT_TRUE(Wait());
+  Run("9161", "127.0.0.1", "9162");
 }

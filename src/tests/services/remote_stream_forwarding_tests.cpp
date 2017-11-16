@@ -4,13 +4,17 @@
 
 class RemoteStreamForwardTest
     : public StreamFixtureTest<ssf::services::RemotePortForwarding> {
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions("5454:127.0.0.1:5555", ec);
+    return {{ServiceTested::GetParseName(),
+             {{{"from_addr", ""},
+               {"from_port", "5454"},
+               {"to_addr", "127.0.0.1"},
+               {"to_port", "5555"}}}}};
   }
 };
 
-TEST_F(RemoteStreamForwardTest, transferOnesOverStream) {
+TEST_F(RemoteStreamForwardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("5454", "5555");
@@ -51,13 +55,17 @@ class RemoteStreamForwardWildcardTest : public RemoteStreamForwardTest {
                              << new_config;
   }
 
-  std::shared_ptr<ServiceTested> ServiceCreateServiceOptions(
+  ssf::UserServiceParameters CreateUserServiceParameters(
       boost::system::error_code& ec) override {
-    return ServiceTested::CreateServiceOptions(":5656:127.0.0.1:5757", ec);
+    return {{ServiceTested::GetParseName(),
+             {{{"from_addr", "*"},
+               {"from_port", "5656"},
+               {"to_addr", "127.0.0.1"},
+               {"to_port", "5757"}}}}};
   }
 };
 
-TEST_F(RemoteStreamForwardWildcardTest, transferOnesOverStream) {
+TEST_F(RemoteStreamForwardWildcardTest, MultiStreams) {
   ASSERT_TRUE(Wait());
 
   Run("5656", "5757");

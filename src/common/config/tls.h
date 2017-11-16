@@ -8,6 +8,22 @@
 namespace ssf {
 namespace config {
 
+class TlsParam {
+ public:
+  enum class Type { kFile = 0, kBuffer };
+  TlsParam(Type param_type, const std::string& param_value);
+
+  void Set(Type param_type, const std::string& param_value);
+
+  std::string ToString() const;
+  bool IsBuffer() const;
+  std::string value() const { return value_; }
+
+ private:
+  Type type_;
+  std::string value_;
+};
+
 class Tls {
  public:
   using PTree = boost::property_tree::ptree;
@@ -20,30 +36,29 @@ class Tls {
 
   void Log() const;
 
-  inline std::string ca_cert_path() const { return ca_cert_path_; }
-
-  inline std::string cert_path() const { return cert_path_; }
-
-  inline std::string key_path() const { return key_path_; }
-
-  inline std::string key_password() const { return key_password_; }
-
-  inline std::string dh_path() const { return dh_path_; }
-
-  inline std::string cipher_alg() const { return cipher_alg_; }
+  const TlsParam& ca_cert() const { return ca_cert_; }
+  TlsParam* mutable_ca_cert() { return &ca_cert_; }
+  const TlsParam& cert() const { return cert_; }
+  TlsParam* mutable_cert() { return &cert_; }
+  const TlsParam& key() const { return key_; }
+  TlsParam* mutable_key() { return &key_; }
+  const std::string& key_password() const { return key_password_; }
+  const TlsParam& dh() const { return dh_; }
+  TlsParam* mutable_dh() { return &dh_; }
+  const std::string& cipher_alg() const { return cipher_alg_; }
 
  private:
-  // CA certificate filepath
-  std::string ca_cert_path_;
-  // Client certificate filepath
-  std::string cert_path_;
-  // Client key filepath
-  std::string key_path_;
-  // Client key password
+  // CA certificate
+  TlsParam ca_cert_;
+  // Certificate
+  TlsParam cert_;
+  // Certificate key
+  TlsParam key_;
+  // Key password
   std::string key_password_;
-  // Diffie-Hellman ephemeral parameters filepath
-  std::string dh_path_;
-  // Allowed cipher suite algorithms
+  // Diffie-Hellman ephemeral parameters
+  TlsParam dh_;
+  // Cipher suite algorithms
   std::string cipher_alg_;
 };
 

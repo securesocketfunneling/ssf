@@ -1,8 +1,15 @@
-#include "tests/network/ssf_fixture_test.h"
+#include "ssf_fixture_test.h"
+
+#include <ssf/log/log.h>
+
+#include "tests/tls_config_helper.h"
 
 SSFFixtureTest::SSFFixtureTest() : success_(false), stopped_(false) {}
 
-void SSFFixtureTest::SetUp() { StartAsyncEngine(); }
+void SSFFixtureTest::SetUp() {
+  SetLogLevel(spdlog::level::info);
+  StartAsyncEngine();
+}
 
 void SSFFixtureTest::TearDown() { StopAsyncEngine(); }
 
@@ -17,26 +24,39 @@ void SSFFixtureTest::StopAsyncEngine() { async_engine_.Stop(); }
 void SSFFixtureTest::StartClient(const std::string& server_port,
                                  ClientCallback callback,
                                  boost::system::error_code& ec) {
-  std::vector<BaseUserServicePtr> client_options;
+  std::vector<UserServicePtr> client_options;
 
   ssf::config::Config ssf_config;
 
   ssf_config.Init();
+  ssf::tests::SetClientTlsConfig(&ssf_config);
 
   auto endpoint_query = NetworkProtocol::GenerateClientQuery(
       "127.0.0.1", server_port, ssf_config, {});
 
-  p_ssf_client_.reset(
-      new Client(client_options, ssf_config.services(), callback));
+  auto on_user_service_status =
+      [](UserServicePtr p_user_service, const boost::system::error_code& ec) {};
+  p_ssf_client_.reset(new Client());
+  p_ssf_client_->Init(endpoint_query, 1, 0, false, {}, ssf_config.services(),
+                      callback, on_user_service_status, ec);
+  if (ec) {
+    return;
+  }
 
-  p_ssf_client_->Run(endpoint_query, ec);
+  p_ssf_client_->Run(ec);
+  if (ec) {
+    SSF_LOG("test", error, "Could not run client");
+    return;
+  }
 }
 
 void SSFFixtureTest::StopClient() {
   if (!p_ssf_client_.get()) {
     return;
   }
-  p_ssf_client_->Stop();
+  boost::system::error_code stop_ec;
+  p_ssf_client_->Stop(stop_ec);
+  p_ssf_client_->Deinit();
 }
 
 void SSFFixtureTest::StartServer(const std::string& addr,
@@ -45,6 +65,7 @@ void SSFFixtureTest::StartServer(const std::string& addr,
   ssf::config::Config ssf_config;
 
   ssf_config.Init();
+  ssf::tests::SetServerTlsConfig(&ssf_config);
 
   auto endpoint_query =
       NetworkProtocol::GenerateServerQuery(addr, server_port, ssf_config);
@@ -84,7 +105,10 @@ void SSFFixtureTest::WaitNotification() {
 
 void SSFFixtureTest::SendNotification(bool success) {
   {
-    boost::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (stopped_) {
+      return;
+    }
     stopped_ = true;
     success_ = success;
   }

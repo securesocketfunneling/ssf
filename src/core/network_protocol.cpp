@@ -1,3 +1,5 @@
+#include <ssf/utils/enum.h>
+
 #include "common/config/config.h"
 
 #include "core/network_protocol.h"
@@ -8,12 +10,13 @@ namespace network {
 NetworkProtocol::Query NetworkProtocol::GenerateClientQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const ssf::circuit::NodeList& circuit_nodes) {
+    const ssf::config::NodeList& circuit_nodes) {
 #ifdef TLS_OVER_TCP_LINK
   return GenerateClientTLSQuery(remote_addr, remote_port, ssf_config,
                                 circuit_nodes);
 #elif TCP_ONLY_LINK
-  return GenerateClientTCPQuery(remote_addr, remote_port, circuit_nodes);
+  return GenerateClientTCPQuery(remote_addr, remote_port, ssf_config,
+                                circuit_nodes);
 #endif
 }
 
@@ -23,14 +26,14 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerQuery(
 #ifdef TLS_OVER_TCP_LINK
   return GenerateServerTLSQuery(remote_addr, remote_port, ssf_config);
 #elif TCP_ONLY_LINK
-  return NetworkProtocol::GenerateServerTCPQuery(remote_addr, remote_port);
+  return GenerateServerTCPQuery(remote_addr, remote_port, ssf_config);
 #endif
 }
 
 NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const ssf::circuit::NodeList& circuit_nodes) {
+    const ssf::config::NodeList& circuit_nodes) {
   ssf::layer::LayerParameters proxy_param_layer =
       ProxyConfigToLayerParameters(ssf_config, false);
 
@@ -42,7 +45,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
   nodes.AddTopLayerToBackNode({{"addr", remote_addr}, {"port", remote_port}});
   nodes.AddTopLayerToBackNode(proxy_param_layer);
 
-  for (auto& circuit_node : circuit_nodes) {
+  for (const auto& circuit_node : circuit_nodes) {
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode(
         {{"addr", circuit_node.addr()}, {"port", circuit_node.port()}});
@@ -56,7 +59,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTCPQuery(
 NetworkProtocol::Query NetworkProtocol::GenerateClientTLSQuery(
     const std::string& remote_addr, const std::string& remote_port,
     const ssf::config::Config& ssf_config,
-    const ssf::circuit::NodeList& circuit_nodes) {
+    const ssf::config::NodeList& circuit_nodes) {
   ssf::layer::LayerParameters tls_param_layer =
       TlsConfigToLayerParameters(ssf_config);
 
@@ -72,7 +75,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateClientTLSQuery(
   nodes.AddTopLayerToBackNode(proxy_param_layer);
   nodes.AddTopLayerToBackNode(tls_param_layer);
 
-  for (auto& circuit_node : circuit_nodes) {
+  for (const auto& circuit_node : circuit_nodes) {
     nodes.PushBackNode();
     nodes.AddTopLayerToBackNode(
         {{"addr", circuit_node.addr()}, {"port", circuit_node.port()}});
@@ -106,6 +109,7 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerTCPQuery(
 
   ssf::layer::ParameterStack layer_parameters;
   layer_parameters.push_front(physical_parameters);
+  layer_parameters.push_front(proxy_param_layer);
 
   ssf::layer::ParameterStack default_parameters = {default_proxy_param_layer,
                                                    {}};
@@ -150,32 +154,35 @@ NetworkProtocol::Query NetworkProtocol::GenerateServerTLSQuery(
 
 ssf::layer::LayerParameters NetworkProtocol::TlsConfigToLayerParameters(
     const ssf::config::Config& ssf_config) {
-  return {{"ca_src", "file"},
-          {"crt_src", "file"},
-          {"key_src", "file"},
-          {"dhparam_src", "file"},
-          {"ca_file", ssf_config.tls().ca_cert_path()},
-          {"crt_file", ssf_config.tls().cert_path()},
-          {"key_file", ssf_config.tls().key_path()},
-          {"password", ssf_config.tls().key_password()},
-          {"dhparam_file", ssf_config.tls().dh_path()},
-          {"set_cipher_suit", ssf_config.tls().cipher_alg()}};
+  return {{ssf_config.tls().ca_cert().IsBuffer() ? "ca_buffer" : "ca_file",
+           ssf_config.tls().ca_cert().value()},
+          {ssf_config.tls().cert().IsBuffer() ? "crt_buffer" : "crt_file",
+           ssf_config.tls().cert().value()},
+          {ssf_config.tls().key().IsBuffer() ? "key_buffer" : "key_file",
+           ssf_config.tls().key().value()},
+          {"key_password", ssf_config.tls().key_password()},
+          {ssf_config.tls().dh().IsBuffer() ? "dhparam_buffer" : "dhparam_file",
+           ssf_config.tls().dh().value()},
+          {"cipher_suit", ssf_config.tls().cipher_alg()}};
 }
 
 ssf::layer::LayerParameters NetworkProtocol::ProxyConfigToLayerParameters(
     const ssf::config::Config& ssf_config, bool acceptor_endpoint) {
-  return {
-      {"acceptor_endpoint", acceptor_endpoint ? "true" : "false"},
-      {"http_host", ssf_config.http_proxy().host()},
-      {"http_port", ssf_config.http_proxy().port()},
-      {"http_username", ssf_config.http_proxy().username()},
-      {"http_domain", ssf_config.http_proxy().domain()},
-      {"http_password", ssf_config.http_proxy().password()},
-      {"http_reuse_ntlm",
-       ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
-      {"http_reuse_kerb",
-       ssf_config.http_proxy().reuse_kerb() ? "true" : "false"},
-  };
+  return {{"acceptor_endpoint", acceptor_endpoint ? "true" : "false"},
+          {"http_host", ssf_config.http_proxy().host()},
+          {"http_port", ssf_config.http_proxy().port()},
+          {"http_username", ssf_config.http_proxy().username()},
+          {"http_domain", ssf_config.http_proxy().domain()},
+          {"http_password", ssf_config.http_proxy().password()},
+          {"http_user_agent", ssf_config.http_proxy().user_agent()},
+          {"http_reuse_ntlm",
+           ssf_config.http_proxy().reuse_ntlm() ? "true" : "false"},
+          {"http_reuse_kerb",
+           ssf_config.http_proxy().reuse_kerb() ? "true" : "false"},
+          {"socks_version",
+           std::to_string(ToIntegral(ssf_config.socks_proxy().version()))},
+          {"socks_host", ssf_config.socks_proxy().host()},
+          {"socks_port", ssf_config.socks_proxy().port()}};
 }
 
 }  // network

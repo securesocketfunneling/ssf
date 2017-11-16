@@ -13,140 +13,159 @@
 
 namespace ssf {
 namespace command_line {
-namespace copy {
 
-CommandLine::CommandLine() : BaseCommandLine(), from_stdin_(false) {}
+static const char kHostDirectorySeparator = '@';
 
-CommandLine::~CommandLine() {}
+CopyCommandLine::CopyCommandLine()
+    : Base(),
+      from_client_to_server_(true),
+      stdin_input_(false),
+      resume_(false),
+      recursive_(false),
+      check_file_integrity_(false),
+      max_parallel_copies_() {}
 
-void CommandLine::PopulateBasicOptions(OptionDescription& basic_opts) {}
-
-void CommandLine::PopulateLocalOptions(OptionDescription& local_opts) {}
-
-void CommandLine::PopulatePositionalOptions(PosOptionDescription& pos_opts) {
-  pos_opts.add("arg1", 1);
-  pos_opts.add("arg2", 1);
-}
-
-void CommandLine::PopulateCommandLine(OptionDescription& command_line) {
+void CopyCommandLine::InitOptions(Options& opts) {
   // clang-format off
-  boost::program_options::options_description copy_options("Copy options");
-  copy_options.add_options()
-    ("stdin,t",
-        boost::program_options::bool_switch()->default_value(false),
-        "Input will be stdin")
-    ("arg1",
-        boost::program_options::value<std::string>()->required()
-          ->value_name("[host@]/absolute/path/file"),
-        "[host@]/absolute/path/file if host is present, " \
-        "the file will be copied from the remote host to local")
-    ("arg2",
-        boost::program_options::value<std::string>()
-          ->value_name("[host@]/absolute/path/file"),
-        "[host@]/absolute/path/file if host is present, " \
-        "the file will be copied from local to host");
+  Base::InitOptions(opts);
+
+  opts.add_options("Copy")
+    ("t,stdin-input", "Use stdin as input")
+    ("resume", "Attempt to resume operation if the destination file exists")
+    ("check-integrity", "Check file integrity")
+    ("r,recursive", "Copy files recursively")
+    ("max-transfers", "Max transfers in parallel",
+        cxxopts::value<uint32_t>()->default_value("1"))
+    ("args", "", cxxopts::value<std::vector<std::string>>());
+
+  opts.parse_positional("args");
+  opts.positional_help("[host@]source_path [[host@]destination_path]");
+
   // clang-format on
-
-  command_line.add(copy_options);
 }
 
-bool CommandLine::IsServerCli() { return false; }
+bool CopyCommandLine::IsServerCli() { return false; }
 
-bool CommandLine::from_stdin() const { return from_stdin_; }
+bool CopyCommandLine::stdin_input() const { return stdin_input_; }
 
-bool CommandLine::from_local_to_remote() const { return from_local_to_remote_; }
+bool CopyCommandLine::from_client_to_server() const {
+  return from_client_to_server_;
+}
 
-std::string CommandLine::input_pattern() const { return input_pattern_; }
+bool CopyCommandLine::resume() const { return resume_; }
 
-std::string CommandLine::output_pattern() const { return output_pattern_; }
+bool CopyCommandLine::recursive() const { return recursive_; }
 
-void CommandLine::ParseOptions(const VariableMap& vm,
-                               ParsedParameters& parsed_params,
-                               boost::system::error_code& ec) {
-  const auto& stdin_it = vm.find("stdin");
-  const auto& vm_end_it = vm.end();
+bool CopyCommandLine::check_file_integrity() const {
+  return check_file_integrity_;
+}
 
-  if (stdin_it != vm_end_it) {
-    from_stdin_ = stdin_it->second.as<bool>();
+uint32_t CopyCommandLine::max_parallel_copies() const {
+  return max_parallel_copies_;
+}
+
+std::string CopyCommandLine::input_pattern() const { return input_pattern_; }
+
+std::string CopyCommandLine::output_pattern() const { return output_pattern_; }
+
+void CopyCommandLine::ParseOptions(const Options& opts,
+                                   boost::system::error_code& ec) {
+  stdin_input_ = opts.count("stdin-input");
+
+  if (!stdin_input_) {
+    resume_ = opts.count("resume");
+    recursive_ = opts.count("recursive");
+    check_file_integrity_ = opts.count("check-integrity");
+    max_parallel_copies_ = opts["max-transfers"].as<uint32_t>();
+    if (max_parallel_copies_ == 0) {
+      SSF_LOG("cli", error, "max-transfers must be > 0");
+      ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+      return;
+    }
   }
 
-  ParseFirstArgument(vm["arg1"].as<std::string>(), ec);
+  auto& args = opts["args"].as<std::vector<std::string>>();
 
-  const auto& arg2_it = vm.find("arg2");
-  if (arg2_it != vm_end_it) {
-    ParseSecondArgument(arg2_it->second.as<std::string>(), ec);
+  switch (args.size()) {
+  case 0:
+    SSF_LOG("cli", error, "missing arguments");
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return;
+  case 1:
+    ParseFirstArgument(args[0], ec);
+    if (ec) {
+      return;
+    }
+    break;
+  case 2:
+    ParseFirstArgument(args[0], ec);
+    if (ec) {
+      return;
+    }
+    ParseSecondArgument(args[1], ec);
+    if (ec)
+      return;
+    break;
+  default:
+    SSF_LOG("cli", error, "too many arguments");
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
+    return;
   }
 }
 
-std::string CommandLine::GetUsageDesc() {
-  std::stringstream ss_desc;
-  ss_desc << exec_name_ << " [options] [host@]/absolute/path/file"
-                           " [[host@]/absolute/path/file]";
-  return ss_desc.str();
-}
-
-void CommandLine::ParseFirstArgument(const std::string& first_arg,
-                                     boost::system::error_code& parse_ec) {
-  if (from_stdin_) {
+void CopyCommandLine::ParseFirstArgument(const std::string& first_arg,
+                                         boost::system::error_code& parse_ec) {
+  if (stdin_input_) {
     // Expecting host:filepath syntax
     ExtractHostPattern(first_arg, &host_, &output_pattern_, parse_ec);
     if (!parse_ec) {
-      host_set_ = true;
-      from_local_to_remote_ = true;
+      from_client_to_server_ = true;
     }
   } else {
     // Expecting host:dirpath or filepath syntax
     boost::system::error_code extract_ec;
     ExtractHostPattern(first_arg, &host_, &input_pattern_, extract_ec);
     if (!extract_ec) {
-      host_set_ = true;
-      from_local_to_remote_ = false;
+      from_client_to_server_ = false;
     } else {
       // Not host:dirpath syntax so it is filepath syntax
       input_pattern_ = first_arg;
-      from_local_to_remote_ = true;
+      from_client_to_server_ = true;
     }
   }
 }
 
-void CommandLine::ParseSecondArgument(const std::string& second_arg,
-                                      boost::system::error_code& parse_ec) {
-  if (from_stdin_) {
+void CopyCommandLine::ParseSecondArgument(const std::string& second_arg,
+                                          boost::system::error_code& parse_ec) {
+  if (stdin_input_) {
     // No second arg should be provided with stdin option
-    SSF_LOG(kLogError) << "command line: parsing failed: two args provided "
-                          "with stdin option, expecting one";
+    SSF_LOG(
+        "cli", error,
+        "parsing failed: two args provided with stdin option, one expected");
     parse_ec.assign(::error::invalid_argument, ::error::get_ssf_category());
 
     return;
   }
 
   // Expecting host:filepath or filepath syntax
-  if (from_local_to_remote_) {
+  if (from_client_to_server_) {
     // Expecting host:dirpath
     ExtractHostPattern(second_arg, &host_, &output_pattern_, parse_ec);
     if (parse_ec) {
-      host_set_ = false;
       return;
     }
 
-    host_set_ = true;
   } else {
     // Expecting dirpath
     output_pattern_ = second_arg;
   }
-
-  // Insert trailing slash if not present
-  auto last_slash_pos = output_pattern_.find_last_of('/');
-  if (last_slash_pos != output_pattern_.size() - 1) {
-    output_pattern_.append("/");
-  }
 }
 
-void CommandLine::ExtractHostPattern(const std::string& string,
-                                     std::string* p_host,
-                                     std::string* p_pattern,
-                                     boost::system::error_code& ec) const {
-  std::size_t found = string.find_first_of(GetHostDirectorySeparator());
+void CopyCommandLine::ExtractHostPattern(const std::string& string,
+                                         std::string* p_host,
+                                         std::string* p_pattern,
+                                         boost::system::error_code& ec) const {
+  std::size_t found = string.find_first_of(kHostDirectorySeparator);
   if (found == std::string::npos || string.empty()) {
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return;
@@ -157,8 +176,5 @@ void CommandLine::ExtractHostPattern(const std::string& string,
   ec.assign(::error::success, ::error::get_ssf_category());
 }
 
-char CommandLine::GetHostDirectorySeparator() const { return '@'; }
-
-}  // copy
 }  // command_line
 }  // ssf
