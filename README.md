@@ -136,7 +136,7 @@ The copy feature must be enabled on both client and server configuration file:
 {
   "ssf": {
     "services": {
-      "file_copy": { "enable": true }
+      "copy": { "enable": true }
     }
   }
 }
@@ -276,7 +276,7 @@ ssfcp [-c config_file] [-p port] -r remote_host@path/to/dir absolute/path/direct
         "enable": true,
         "gateway_ports": false
       },
-      "file_copy": { "enable": false },
+      "copy": { "enable": false },
       "shell": {
         "enable": false,
         "path": "/bin/bash|C:\\windows\\system32\\cmd.exe",
