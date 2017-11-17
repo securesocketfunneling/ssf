@@ -8,8 +8,8 @@
         <meta name="author" content="">
         <link rel="icon" href="./logo/favicon.png">
 
-        <title>SSF - Secure Socket Funneling - Network tool - TCP and UDP port forwarding, SOCKS, Cross platform shell, Native Relay protocol, Standalone</title>
-        <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet"/>
+        <title>SSF - Secure Socket Funneling - Network tool - TCP and UDP port forwarding, SOCKS proxy, Remote shell, Native Relay protocol, Standalone</title>
+        <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
         <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.4/sandstone/bootstrap.min.css" rel="stylesheet"/>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
         <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
@@ -58,13 +58,13 @@
                         <li role="presentation" class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">Build<span class="caret"></span></a>
                             <ul class="dropdown-menu" role="menu">
-                                <li><a aria-controls="how-to-build-windows" data-toggle="tab" href="#how-to-build-windows"><i class="fa fa-windows fa-fw"></i> on Windows</a></li>
-                                <li><a aria-controls="how-to-build-linux" data-toggle="tab" href="#how-to-build-linux"><i class="fa fa-linux fa-fw"></i> on Linux</a></li>
-                                <li><a aria-controls="how-to-build-mac" data-toggle="tab" href="#how-to-build-mac"><i class="fa fa-apple fa-fw"></i> on Mac OS X</a></li>
+                                <li><a aria-controls="how-to-build-windows" href="https://github.com/securesocketfunneling/ssf/blob/develop/BUILD_WIN32.md"target="_blank"><i class="fa fa-windows fa-fw"></i> on Windows</a></li>
+                                <li><a aria-controls="how-to-build-linux" href="https://github.com/securesocketfunneling/ssf/blob/develop/BUILD_UNIX.md" target="_blank"><i class="fa fa-linux fa-fw"></i> on Unix / Linux</a></li>
+                                <li><a aria-controls="how-to-build-cross" href="https://github.com/securesocketfunneling/ssf/blob/develop/BUILD_CROSS.md" target="_blank"><i class="fa fa-random fa-fw"></i>Cross compile</a></li>
                             </ul>
                         </li>
                         <li role="presentation"><a aria-controls="download" data-toggle="tab" href="#download">Download</a></li>
-                        <li role="presentation"><a aria-controls="changelog" data-toggle="tab" href="#changelog">Changelog</a></li>
+                        <li role="presentation"><a aria-controls="changelog" href="https://github.com/securesocketfunneling/ssf/blob/develop/CHANGELOG.md" target="_blank">Changelog</a></li>
                         <li role="presentation"><a aria-controls="faq" data-toggle="tab" href="#faq">FAQ</a></li>
                         <li role="presentation" class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">More<span class="caret"></span></a>
@@ -125,7 +125,7 @@
                                         Download  binaries<br/>
                                         <i class="fa fa-windows fa-2x"></i>
                                         <i class="fa fa-linux fa-2x"></i>
-                                        <!--<i class="fa fa-apple fa-2x"></i>-->
+                                        <i class="fa fa-microchip fa-2x"></i>
                                     </a>
                                     <a href="https://github.com/securesocketfunneling/ssf" class="btn btn-success btn-lg ssf-action-button">Build your own <br/><i class="fa fa-github fa-2x"></i></a>
                                 </p>
@@ -133,10 +133,9 @@
 
                             <div class="col-md-12">
                                 <p class="text-center">
-                                    <a href="#changelog" title="Go to changelog">Version <strong>2.2.0</strong></a>
+                                    <a href="https://github.com/securesocketfunneling/ssf/releases/tag/3.0.0" title="Go to changelog" target="_blank">Version <strong>3.0.0</strong></a>
                                 </p>
                             </div>
-
                         </div>
 
                         <h3>Motivations</h3>
@@ -144,8 +143,8 @@
                             <p>The initial aim of SSF was to provide an <strong>easy way for users and developers to multiplex and demultiplex</strong> various network data flows.
                             It was designed to:</p>
                                 <ul>
-                                    <li>be <strong>cross platform</strong></li>
-                                    <li>be <strong>lightweight</strong> (preferably standalone)</li>
+                                    <li>be <strong>cross platform</strong> (Windows XP-10, Linux, OS X, Raspberry Pi)</li>
+                                    <li>be <strong>lightweight</strong> and standalone</li>
                                     <li>be easily <strong><a href="#developer-corner">extensible</a></strong></li>
                                     <li>provide modern (TLS 1.2) <strong>secure</strong> point-to-point communication with the strongest cipher-suites</li>
                                     <li>provide <strong>high performance</strong> communications using the benefits of modern multi-core / multi-threaded architecture</li>
@@ -169,10 +168,10 @@
                                 </li>
                                 <li>
                                     <p><a href="#how-to-use-shell">Basic shell support</a> on Windows (cmd or Powershell), Linux and OS X. This feature must be activated on client or server prior to use.
-                                       This is the first draft and we plan to improve it over time. Feel free to contribute!</p>
+                                    This is the first draft and we plan to improve it over time. Feel free to contribute!</p>
                                 </li>
                                 <li>
-                                    <p>The <strong>bouncing feature</strong> simply allows to forward the traffic from one point to another, <strong>through a list of intermediary</strong> relay servers</p>
+                                    <p>The <a href="how-to-use-relay-servers">circuit feature</a> simply allows to forward the traffic from one point to another, <strong>through a list of intermediary</strong> relay servers</p>
                                 </li>
                             </ul>
                         </div>
@@ -237,6 +236,8 @@
 
 <pre>{
   "ssf": {
+    "arguments": "",
+    "circuit": [],
     "tls" : {
       "ca_cert_path": "./certs/trusted/ca.crt",
       "cert_path": "./certs/certificate.crt",
@@ -248,6 +249,7 @@
     "http_proxy" : {
       "host": "",
       "port": "",
+      "user_agent": "",
       "credentials": {
         "username": "",
         "password": "",
@@ -267,7 +269,7 @@
         "enable": true,
         "gateway_ports": false
       },
-      "file_copy": { "enable": false },
+      "copy": { "enable": false },
       "shell": {
         "enable": false,
         "path": "/bin/bash|C:\\windows\\system32\\cmd.exe",
@@ -278,6 +280,12 @@
   }
 }</pre>
                                 <dl class="dl-horizontal">
+                                    <dt>arguments</dt>
+                                    <dd>use configuration arguments instead of given CLI arguments</dd>
+
+                                    <dt>circuit</dt>
+                                    <dd>relay chain servers used to establish the connection to the remote server</dd>
+
                                     <dt>tls.ca_cert_path</dt>
                                     <dd>relative or absolute path to the CA certificate file</dd>
 
@@ -301,6 +309,9 @@
 
                                     <dt>http_proxy.port</dt>
                                     <dd>HTTP proxy port</dd>
+
+                                    <dt>http_proxy.user_agent</dt>
+                                    <dd>User agent in CONNECT request</dd>
 
                                     <dt>http_proxy.credentials.username</dt>
                                     <dd>proxy username credentials</dd>
@@ -350,7 +361,7 @@
                                         <li>stream_listener</li>
                                         <li>datagram_forwarder</li>
                                         <li>datagram_listener</li>
-                                        <li>file_copy</li>
+                                        <li>copy</li>
                                         <li>socks</li>
                                         <li>shell</li>
                                     </ul>
@@ -360,7 +371,7 @@
                                 </p>
                                 <table class="table table-bordered table-striped">
                                   <tr>
-                                    <th>ssfc feature</th>
+                                    <th>ssf feature</th>
                                     <th>microservice client side</th>
                                     <th>microservice server side</th>
                                   </tr>
@@ -408,7 +419,7 @@
 
                                 <p>
                                     This architecture makes it easier to build remote features: they use the same microservices but on the opposite side.<br/>
-                                     <code>ssfc</code> and <code>ssfs</code> come with pre-enabled microservices.
+                                     <code>ssf</code> and <code>ssfd</code> come with pre-enabled microservices.
                                      Here is the default microservices configuration:
                                 </p>
 
@@ -420,7 +431,7 @@
     "stream_forwarder": { "enable": true },
     "stream_listener": { "enable": true },
     "socks": { "enable": true },
-    "file_copy": { "enable": false },
+    "copy": { "enable": false },
     "shell": { "enable": false }
   }
 }
@@ -445,76 +456,71 @@
                                 <h3>Client command line</h3>
                                 <div class="col-md-12">
 <pre>
-ssfc[.exe] [options] host
+  ssf[.exe] [OPTION...] server_address
 
-Basic options:
-  -h [ --help ]                         Produce help message
-  -v [ --verbosity ] level (=info)      Verbosity:
-                                          critical|error|warning|info|debug|trace
-  -q [ --quiet ]                        Do not display log
+  -h, --help                    Show help message
+  -v, --verbosity arg           Verbosity:
+                                critical|error|warning|info|debug|trace (default: info)
+  -q, --quiet                   Do not print logs
+  -c, --config arg              Specify configuration file. If not set,
+                                'config.json' is loaded from the current working
+                                directory
+  -p, --port arg                Remote port (default: 8011)
+  -m, --max-connect-attempts arg
+                                Max unsuccessful connection attempts before
+                                stopping (default: 1)
+  -t, --reconnect-delay arg     Time to wait before attempting to reconnect
+                                (default: 60)
+  -n, --no-reconnect            Do not attempt to reconnect after loosing a
+                                connection
+  -g, --gateway-ports           Enable gateway ports
+  -S, --status                  Display microservices status
 
-Local options:
-  -c [ --config ] config_file_path      Set config file. If option empty, try to load 'config.json' file from working
-                                        directory
-  -b [ --circuit ] circuit_file_path    Set circuit file. If option empty, try to load 'circuit.txt' file from working
-                                        directory
-  -p [ --port ] port (=8011)            Set remote SSF server port
-  -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify
-                                        listening network interface on every services
-  -S [ --status ]                       Display microservices status (on/off)
-
-Supported service commands:
-  -Y [ --remote-shell ] [[rem_ip]:]rem_port
-                                        Open a port server side, each connection to that port launches a
-                                        shell client side with I/O forwarded from/to the socket (shell microservice
-                                        must be enabled client side prior to use)
-  -F [ --remote-socks ] [[rem_ip]:]rem_port
-                                        Run a SOCKS proxy on localhost accessible from server [[rem_ip]:]rem_port
-  -X [ --shell ] [[loc_ip]:]loc_port
-                                        Open a port on the client side, each connection to that port launches a
-                                        shell server side with I/O forwarded to/from the socket (shell microservice
-                                        must be enabled server side prior to use)
-  -D [ --socks ] [[loc_ip]:]loc_port
-                                        Run a SOCKS proxy on remote host accessible from client [[loc_ip]:]loc_port
-  -L [ --tcp-forward ] [[loc_ip]:]loc_port:dest_ip:dest_port
-                                        Forward TCP client [[loc_ip]:]loc_port to dest_ip:dest_port from server
-  -R [ --tcp-remote-forward ] [[rem_ip]:]rem_port:dest_ip:dest_port
-                                        Forward TCP server [[rem_ip]:]rem_port to target dest_ip:dest_port from client
-  -U [ --udp-forward ] [[loc_ip]:]loc_port:dest_ip:dest_port
-                                        Forward UDP client [[loc_ip]:]loc_port to target dest_ip:dest_port from server
-  -V [ --udp-remote-forward ] [[rem_ip]:]rem_port:dest_ip:dest_port
-                                        Forward UDP server [[rem_ip]:]rem_port to dest_ip:dest_port from client
+ Services options:
+  -Y, --remote-shell [bind_address:]port
+                                Enable remote shell service
+  -F, --remote-socks [bind_address:]port
+                                Enable remote SOCKS service
+  -R, --remote-tcp-forward [bind_address:]port:remote_host:remote_port
+                                Enable remote TCP port forwarding service
+  -V, --remote-udp-forward [bind_address:]port:remote_host:remote_port
+                                Enable remote UDP port forwarding service
+  -X, --shell [bind_address:]port
+                                Enable client shell service
+  -D, --socks [bind_address:]port
+                                Enable client SOCKS service
+  -L, --tcp-forward [bind_address:]port:remote_host:remote_port
+                                Enable client TCP port forwarding service
+  -U, --udp-forward [bind_address:]port:remote_host:remote_port
+                                Enable client UDP port forwarding service
 </pre>
                                 </div>
 
                                 <h3>Server command line</h3>
                                 <div class="col-md-12">
 <pre>
-ssfs[.exe] [options] [host]
+  ssfd[.exe] [OPTION...]
 
-Basic options:
-  -h [ --help ]                         Produce help message
-  -v [ --verbosity ] level (=info)      Verbosity:
-                                          critical|error|warning|info|debug|trace
-  -q [ --quiet ]                        Do not display log
-
-Local options:
-  -c [ --config ] config_file_path      Set config file. If option empty, try to load 'config.json' file from working
-                                        directory
-  -p [ --port ] port (=8011)            Set local SSF server port
-  -R [ --relay-only ]                   Server will only relay connections
-  -g [ --gateway-ports ]                Allow gateway ports. At connection, client will be allowed to specify listening
-                                        network interface on every services
-  -S [ --status ]                       Display microservices status (on/off)
+  -h, --help              Show help message
+  -v, --verbosity arg     Verbosity: critical|error|warning|info|debug|trace
+                          (default: info)
+  -q, --quiet             Do not print logs
+  -c, --config arg        Specify configuration file. If not set,
+                          'config.json' is loaded from the current working directory
+  -p, --port arg          Local port (default: 8011)
+  -R, --relay-only        The server will only relay connections
+  -l, --bind-address arg  Server bind address
+  -g, --gateway-ports     Enable gateway ports
+  -S, --status            Display microservices status
 </pre>
                                 </div>
 
                                 <h3>Examples</h3>
                                 <div class="col-md-12">
                                     <p>For instance, this command line will start SSF as a server on default port 8011:</p>
-                                    <pre>./ssfs</pre>
+                                    <pre>./ssfd</pre>
                                     <p>And this command will connect SSF client to the server listening on localhost and port 8011 and start a SOCKS server listening on port 10000 of the client side: </p>
-                                    <pre>./ssfc -D 10000 127.0.0.1</pre>
+                                    <pre>./ssf -D 10000 127.0.0.1</pre>
                                 </div>
                         </div>
 
@@ -522,34 +528,24 @@ Local options:
                             <h2>Copy command line options</h2>
                             <div class="col-md-12">
 <pre>
-ssfcp[.exe] [options] [host@]/absolute/path/file [[host@]/absolute/path/file]
+  ssfcp[.exe] [options] [host@]/absolute/path/file [[host@]/absolute/path/file]
 
-Basic options:
-  -h [ --help ]                       Produce help message
-  -v [ --verbosity ] level (=info)    Verbosity:
-                                        critical|error|warning|info|debug|trace
-  -q [ --quiet ]                      Do not display log
+  -h, --help           Show help message
+  -v, --verbosity arg  Verbosity: critical|error|warning|info|debug|trace
+                       (default: info)
+  -q, --quiet          Do not print logs
+  -c, --config arg     Specify configuration file. If not set, 'config.json'
+                       is loaded from the current working directory
+  -p, --port arg       Remote port (default: 8011)
 
-Local options:
-  -c [ --config ] config_file_path    Set config file. If option empty, try to load 'config.json' file from working
-                                      directory
-  -b [ --circuit ] circuit_file_path  Set circuit file. If option empty, try to load 'circuit.txt' file from working
-                                      directory
-  -p [ --port ] port (=8011)          Set remote SSF server port
-
-Copy options:
-  -t [ --stdin ]                      Input will be stdin
+ Copy options:
+  -t, --stdin-input        Use stdin as input
+      --resume             Attempt to resume operation if the destination
+                           file exists
+      --check-integrity    Check file integrity
+  -r, --recursive          Copy files recursively
+      --max-transfers arg  Max transfers in parallel (default: 1)
 </pre>
-                                <dl class="dl-horizontal">
-                                    <dt>-b</dt>
-                                    <dd><code>bounce_file</code> is the file containing the list of relays to use</dd>
-
-                                    <dt>-c</dt>
-                                    <dd><code>config_file</code> is the file containing configuration for SSF (TLS configuration)</dd>
-
-                                    <dt>-t</dt>
-                                    <dd>input data from stdin</dd>
-                                </dl>
                             </div>
 
                             <h3>Examples</h3>
@@ -557,23 +553,23 @@ Copy options:
                                 <h4>Copy local files to remote directory</h4>
                                 <div class="col-md-12">
                                     <p>This command will copy the file <strong>/tmp/test.txt</strong> in the remote directory <strong>D:\test</strong> of server 10.0.0.1</p>
-                                    <pre>ssfcp /tmp/test.txt 10.0.0.1@D:\\test</pre>
+                                    <pre>ssfcp /tmp/test.txt 10.0.0.1@D:/test</pre>
                                     <p>This command will copy all local files matching the pattern <strong>/tmp/test*.txt</strong> in the remote directory <strong>D:\test</strong> of 10.0.0.1</p>
-                                    <pre>ssfcp /tmp/test*.txt 10.0.0.1@D:\\test</pre>
+                                    <pre>ssfcp /tmp/test*.txt 10.0.0.1@D:/test</pre>
                                 </div>
 
                                 <h4>Copy client stdin into remote file</h4>
                                 <div class="col-md-12">
                                     <p>This command will pipe the resulting archive into the file <strong>D:\test\test.tar</strong> of 10.0.0.1</p>
-                                    <pre>tar cf - /tmp/test | ssfcp -t 10.0.0.1@D:\\test\\test.tar</pre>
+                                    <pre>tar cf - /tmp/test | ssfcp -t 10.0.0.1@D:/test/test.tar</pre>
                                 </div>
 
                                 <h4>Copy remote files to local directory</h4>
                                 <div class="col-md-12">
-                                    <p>This command will copy the file <strong>D:\test\test.txt</strong> of 10.0.0.1 into the local directory <strong>/tmp</strong></p>
-                                    <pre>ssfcp 10.0.0.1@D:\\test\\test.txt /tmp</pre>
-                                    <p>This command will copy all files of 10.0.0.1 matching <strong>D:\test\test*.txt</strong> into the local directory <strong>/tmp</strong></p>
-                                    <pre>ssfcp 10.0.0.1@D:\\test\\test*.txt /tmp</pre>
+                                    <p>This command will copy the file <strong>D:/test/test.txt</strong> of 10.0.0.1 into the local directory <strong>/tmp</strong></p>
+                                    <pre>ssfcp 10.0.0.1@D:\test\test.txt /tmp</pre>
+                                    <p>This command will copy all files of 10.0.0.1 matching <strong>D:/test/test*.txt</strong> into the local directory <strong>/tmp</strong></p>
+                                    <pre>ssfcp 10.0.0.1@D:/test/test*.txt /tmp</pre>
                                 </div>
                             </div>
                         </div>
@@ -586,7 +582,7 @@ Copy options:
                         <h1 id="bouncing">How to use the relay servers (the bouncing feature)</h1>
 
                         <div class="col-md-12">
-                            <p>SSF provides a simple way to route an SSF connection between a client and a server through a list of SSF relay servers without protocol or cryptographic overhead.
+                            <p>SSF provides a simple way to route SSF connection between a client and a server through a list of SSF relay servers without protocol or cryptographic overhead.
                                At this point, the traffic is decrypted as it is received by a relay and re-encrypted to be sent to the next relay or final destination.</p>
 
                             <p><span class="label label-info">New 2.1.0</span><br/>
@@ -603,15 +599,21 @@ Copy options:
                               </div>
                             </div>
 
-                            <h2>The bounce file</h2>
+                            <h2>Circuit configuration</h2>
                             <div class="col-md-12">
-                                <p>In order to route an SSF client connection through a list of relay servers, the option <strong>-b</strong> must be added to the command line to specify the bounce file.
-                                   This file must contain one relay server per line: IP address or domain name and port on which SSF is listening. For instance:</p>
+                                <p>The circuit is a JSON array containing the circuit servers and ports which will be used to establish the connection. They are listed as follow:</p>
 <pre>
-SERVER1:PORT1
-SERVER2:PORT2
-SERVER3:PORT3</pre>
-                                <p>For the file above, the relay chain will be CLIENT <-> SERVER1:PORT1 <-> SERVER2:PORT2 <-> SERVER3:PORT3 <-> DESTINATION</p>
+{
+  "ssf": {
+    "circuit": [
+      {"host": "SERVER1", "port":"PORT1"},
+      {"host": "SERVER2", "port":"PORT2"},
+      {"host": "SERVER3", "port":"PORT3"}
+    ]
+  }
+}
+</pre>
+                                <p>For the configuration above, the relay chain will be CLIENT <-> SERVER1:PORT1 <-> SERVER2:PORT2 <-> SERVER3:PORT3 <-> DESTINATION</p>
                             </div>
 
                             <h2>Example</h2>
@@ -621,19 +623,25 @@ SERVER3:PORT3</pre>
                                    For instance, in a subnet <mark>A.B.C.*</mark>, only <mark>A.B.C.1</mark> can communicate with <mark>A.B.C-1.*</mark> and <mark>A.B.C+1.*</mark>.
                                    Therefore, to reach <mark>10.0.6.1</mark>, the client has to go through <mark>10.0.1.1</mark>, <mark>10.0.2.1</mark>, ... and <mark>10.0.6.1</mark>.</p>
                                 <ul>
-                                  <li>It is expected that an SSF server is running on each of the six addresses on port <mark>5000</mark> using a command line similar to:
-                                  <pre>./ssfs -p 5000</pre>
+                                  <li>It is expected that a server is running on each of the six addresses on port <mark>5000</mark> using a command line similar to:
+                                  <pre>./ssfd -p 5000</pre>
                                   </li>
-                                  <li>Use the following bounce.txt file:
+                                  <li>Use the following configuration file <mark>config.json</mark>:
 <pre>
-10.0.1.1:5000
-10.0.2.1:5000
-10.0.3.1:5000
-10.0.4.1:5000
-10.0.5.1:5000</pre>
+{
+  "ssf": {
+    "circuit": [
+      {"host": "10.0.1.1", "port":"5000"},
+      {"host": "10.0.2.1", "port":"5000"},
+      {"host": "10.0.3.1", "port":"5000"},
+      {"host": "10.0.4.1", "port":"5000"},
+      {"host": "10.0.5.1", "port":"5000"}
+    ]
+  }
+}</pre>
                                   </li>
-                                  <li>Connect the SSF client to <mark>10.0.6.1:5000</mark> through all the relay servers using the following command line:
-                                      <pre>./ssfc -b bounce.txt -p 5000 10.0.6.1</pre>
+                                  <li>Connect the client to <mark>10.0.6.1:5000</mark> through all the relay servers using the following command line:
+                                      <pre>./ssf -c config.json -p 5000 10.0.6.1</pre>
                                   </li>
                               </ul>
                             </div>
@@ -648,8 +656,8 @@ SERVER3:PORT3</pre>
                           <h2>Local SOCKS</h2>
                             <div class="col-md-12">
                               <p class="col-md-12">
-                                The SSF Client <strong>-D <mark>port</mark></strong> option opens the given <mark>port</mark> on the SSF Client machine and forward SOCKS requests to the target SSF Server.<br/>
-                                The SSF Server will act as the SOCKS server.
+                                The SSF client <strong>-D <mark>port</mark></strong> option opens the given <mark>port</mark> on the SSF client machine and forward SOCKS requests to the SSF target server.<br/>
+                                The SSF server will act as the SOCKS server.
                               </p>
                               <div class="col-md-offset-2 col-md-8">
                                 <p>
@@ -663,8 +671,8 @@ SERVER3:PORT3</pre>
                             <h2>Remote SOCKS</h2>
                             <div class="col-md-12">
                               <p class="col-md-12">
-                                The SSF Client <strong>-F <mark>port</mark></strong> option opens the given <mark>port</mark> on the target SSF Server machine and forward SOCKS requests to the SSF Client.<br/>
-                                The SSF Client will act as the SOCKS server.
+                                The SSF client <strong>-F <mark>port</mark></strong> option opens the given <mark>port</mark> on the SSF target server machine and forward SOCKS requests to the SSF client.<br/>
+                                The SSF client will act as the SOCKS server.
                               </p>
                               <div class="col-md-offset-2 col-md-8">
                                 <p>
@@ -678,35 +686,43 @@ SERVER3:PORT3</pre>
                             <h2>Command line</h2>
 
                             <div class="col-md-12">
-                              <h3>No bounce feature</h3>
+                              <h3>No circuit feature</h3>
                               <div class="col-md-12">
                                   <ul>
                                       <li>Launch SSF_SERVER on a port (10000 in this example)
-                                          <pre>./ssfs -p 10000</pre>
+                                          <pre>./ssfd -p 10000</pre>
                                       </li>
-                                      <li>Connect SSF_CLIENT to SSF_SERVER, initialize a SOCKS server on SSF_SERVER side and open port 9000 on SSF_CLIENT side to communicate to SOCKS server
-                                          <pre>./ssfc -D 9000 -p 10000 127.0.0.1</pre>
-                                          Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER side
+                                      <li>Connect the SSF client to the SSF server, initialize a SOCKS server on the SSF server side and open port 9000 on  the SSF client side to communicate to the SOCKS server
+                                          <pre>./ssf -D 9000 -p 10000 127.0.0.1</pre>
+                                          Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on the SSF client side and open the port 9000 on the SSF server side
                                       </li>
                                   </ul>
                               </div>
 
-                              <h3>With bounce feature</h3>
+                              <h3>With circuit feature</h3>
                               <div class="col-md-12">
                                   <ul>
                                       <li>Launch SSF_SERVER_1 on a port (10000 in this example)
-                                          <pre>./ssfs -p 10000</pre>
+                                          <pre>./ssfd -p 10000</pre>
                                       </li>
                                       <li>Launch SSF_SERVER_2 on a port (10001 in this example)
-                                          <pre>./ssfs -p 10001</pre>
+                                          <pre>./ssfd -p 10001</pre>
                                       </li>
-                                      <li>Create the bounce file bounce.txt
-                                          <pre>127.0.0.1:10000</pre>
-                                          The client will connect to SSF_SERVER_2 with a bounce on SSF_SERVER_1
+                                      <li>Create the configuration file config.json
+<pre>
+{
+  "ssf": {
+    "circuit": [
+      {"host": "10.0.0.1", "port":"10000"}
+    }
+  }
+}
+</pre>
+                                          The client will connect to SSF_SERVER_2 with one hop on SSF_SERVER_1
                                       </li>
-                                      <li>Connect SSF_CLIENT to SSF_SERVER_2 with one bounce, initialize a SOCKS server on SSF_SERVER_2 and open port 9000 on client side to communicate to SOCKS server
-                                          <pre>./ssfc -b bounce.txt -D 9000 -p 10001 127.0.0.1</pre>
-                                          Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
+                                      <li>Connect the SSF client to SSF_SERVER_2 with one hop, initialize a SOCKS server on SSF_SERVER_2 and open port 9000 on SSF client side to communicate to SOCKS server
+                                          <pre>./ssf -c config.json -D 9000 -p 10001 127.0.0.1</pre>
+                                          Use <strong>-F</strong> instead of <strong>-D</strong> to have the SOCKS server on the SSF client side and open the port 9000 on the SSF_SERVER_2 side
                                       </li>
                                   </ul>
                               </div>
@@ -719,35 +735,43 @@ SERVER3:PORT3</pre>
                     <div role="tabpanel" id="how-to-use-tcp-forwarding" class="tab-pane fade">
                         <h1 id="tcp-port-forwarding">How to use the TCP port forwarding feature</h1>
                         <div class="col-md-12">
-                            <h2>No bounce feature</h2>
+                            <h2>No circuit feature</h2>
                             <div class="col-md-12">
                                 <ul>
-                                    <li>Launch  SSF_SERVER on a port (10000 in this example)
-                                        <pre>./ssfs -p 10000</pre>
+                                    <li>Launch the SSF server on a port (10000 in this example)
+                                        <pre>./ssfd -p 10000</pre>
                                     </li>
-                                    <li>Connect SSF_CLIENT to SSF_SERVER
-                                        <pre>./ssfc -L 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
-                                        Use <strong>-R</strong> instead of <strong>-L</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER side
+                                    <li>Connect the SSF client to the SSF server
+                                        <pre>./ssf -L 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
+                                        Use <strong>-R</strong> instead of <strong>-L</strong> to forward to the the SSF client side and open the port 9000 on the SSF server side
                                     </li>
                                 </ul>
                             </div>
 
-                            <h2>With bounce feature</h2>
+                            <h2>With circuit feature</h2>
                             <div class="col-md-12">
                                 <ul>
                                     <li>Launch SSF_SERVER_1 on a port (10000 in this example)
-                                        <pre>./ssfs -p 10000</pre>
+                                        <pre>./ssfd -p 10000</pre>
                                     </li>
                                     <li>Launch SSF_SERVER_2 on a port (10001 in this example)
-                                        <pre>./ssfs -p 10001</pre>
+                                        <pre>./ssfd -p 10001</pre>
                                     </li>
-                                    <li>Create the bounce file bounce.txt
-                                        <pre>127.0.0.1:10000</pre>
-                                        The SSF_CLIENT will connect to  SSF_SERVER_2 with a bounce on SSF_SERVER_1
+                                    <li>Create the configuration file config.json
+<pre>
+{
+  "ssf": {
+    "circuit": [
+      {"host": "127.0.0.1", "port":"10000"}
+    }
+  }
+}
+</pre>
+                                        The SSF client will connect to SSF_SERVER_2 with one hop on SSF_SERVER_1
                                     </li>
                                     <li>
-                                        <pre>./ssfc -b bounce.txt -L 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
-                                        Use <strong>-R</strong> instead of <strong>-L</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
+                                        <pre>./ssf -c config.json -L 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
+                                        Use <strong>-R</strong> instead of <strong>-L</strong> to forward to the SSF client side and open the port 9000 on the SSF_SERVER_2 side
                                     </li>
                                 </ul>
                             </div>
@@ -759,35 +783,43 @@ SERVER3:PORT3</pre>
                     <div role="tabpanel" id="how-to-use-udp-forwarding" class="tab-pane fade">
                         <h1 id="udp-port-forwarding">How to use the UDP port forwarding feature</h1>
                         <div class="col-md-12">
-                            <h2>No bounce feature</h2>
+                            <h2>No circuit feature</h2>
                             <div class="col-md-12">
                                 <ul>
-                                    <li>Launch SSF_SERVER on a port (10000 in this example)
-                                        <pre>./ssfs -p 10000</pre>
+                                    <li>Launch the SSF server on a port (10000 in this example)
+                                        <pre>./ssfd -p 10000</pre>
                                     </li>
-                                    <li>Connect SSF_CLIENT to SSF_SERVER
-                                        <pre>./ssfc -U 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
-                                        Use <strong>-V</strong> instead of <strong>-U</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER side
+                                    <li>Connect the SSF client to the SSF server
+                                        <pre>./ssf -U 9000:127.0.0.1:80 -p 10000 127.0.0.1</pre>
+                                        Use <strong>-V</strong> instead of <strong>-U</strong> to forward to the SSF client side and open the port 9000 on the SSF server side
                                     </li>
                                 </ul>
                             </div>
 
-                            <h2>With bounce feature</h2>
+                            <h2>With circuit feature</h2>
                             <div class="col-md-12">
                                 <ul>
                                     <li>Launch SSF_SERVER_1 on a port (10000 in this example)
-                                        <pre>./ssfs -p 10000</pre>
+                                        <pre>./ssfd -p 10000</pre>
                                     </li>
                                     <li>Launch SSF_SERVER_2 on a port (10001 in this example)
-                                        <pre>./ssfs -p 10001</pre>
+                                        <pre>./ssfd -p 10001</pre>
                                     </li>
-                                    <li>Create the bounce file bounce.txt
-                                        <pre>127.0.0.1:10000</pre>
-                                        The SSF_CLIENT will connect to  SSF_SERVER_2 with a bounce on SSF_SERVER_1
+                                    <li>Create the configuration config.json
+<pre>
+{
+  "ssf": {
+    "circuit": [
+      {"host": "127.0.0.1", "port":"10000"}
+    }
+  }
+}
+</pre>
+                                        The SSF client will connect to SSF_SERVER_2 with one hop on SSF_SERVER_1
                                     </li>
                                     <li>
-                                        <pre>./ssfc -b bounce.txt -U 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
-                                        Use <strong>-V</strong> instead of <strong>-U</strong> to forward to the SSF_CLIENT side and open the port 9000 on SSF_SERVER_2 side
+                                        <pre>./ssf -c config.json -U 9000:127.0.0.1:80 -p 10001 127.0.0.1</pre>
+                                        Use <strong>-V</strong> instead of <strong>-U</strong> to forward to the SSF client side and open the port 9000 on the SSF_SERVER_2 side
                                     </li>
                                 </ul>
                             </div>
@@ -837,10 +869,10 @@ SERVER3:PORT3</pre>
                             <div class="col-md-12">
                                 <ul>
                                     <li>Launch server on <em>ssf.example.com</em>
-                                        <pre>./ssfs</pre>
+                                        <pre>./ssfd</pre>
                                     </li>
                                     <li>Connect client to server
-                                        <pre>./ssfc -X 10000 -Y 11000 ssf.example.com</pre>
+                                        <pre>./ssf -X 10000 -Y 11000 ssf.example.com</pre>
                                         <strong>-X</strong>: client opens a listening socket on the given port (10000). Each connection to that socket (using <em>netcat</em> for example) will launch a shell on the server side.<br/>
                                         <strong>-Y</strong>: client orders the server to open a listening socket on the given port (11000). Each connection to that socket (using <em>netcat</em> for example) will launch a shell on the client side.<br/>
                                          I/O are forwarded through the SSF tunnel from/to the shell instance.
@@ -937,19 +969,28 @@ SERVER3:PORT3</pre>
                             <div class="col-md-12">
                                 <h2>Command line</h2>
                                 <div class="col-md-12">
-                                    <pre>ssfcp[.exe] [-b bounce_file] [-c config_file] [-p port] [-t] [host@]path [[host@]path]</pre>
+                                    <pre>ssfcp[.exe] [-c config_file] [-p port] [-t] [-r] [--resume] [--check-integrity] [--max-transfers arg] [host@]/absolute/path/file [[host@]/absolute/path/file]</pre>
                                     <dl class="dl-horizontal">
-                                        <dt>-b</dt>
-                                        <dd><code>bounce_file</code> is the file containing the list of relays to use</dd>
-
-                                        <dt>-c</dt>
+                                        <dt>-c config_file</dt>
                                         <dd><code>config_file</code> is the file containing configuration for SSF (TLS configuration)</dd>
 
-                                        <dt>-p</dt>
+                                        <dt>-p port</dt>
                                         <dd><code>port</code> is the port of the remote SSF server</dd>
 
                                         <dt>-t</dt>
                                         <dd>input data from stdin</dd>
+
+                                        <dt>-r</dt>
+                                        <dd>recursive copy</dd>
+
+                                        <dt>--resume</dt>
+                                        <dd>try to resume file copy</dd>
+
+                                        <dt>--check-integrity</dt>
+                                        <dd>check file integrity after copy</dd>
+
+                                        <dt>--max-transfers arg</dt>
+                                        <dd>Max transfers in parallel (default: 1)</dd>
                                     </dl>
 
                                     <p>
@@ -988,19 +1029,19 @@ SERVER3:PORT3</pre>
                                 <div class="col-md-12">
                                     <h3>Local to remote</h3>
                                     <p>This command will copy the file <code>D:\test.txt</code> into the remote directory <code>/tmp/test_dir</code> of server 10.0.0.1</p>
-                                    <pre>ssfcp.exe D:\\test.txt 10.0.0.1@/tmp/test_dir</pre>
+                                    <pre>ssfcp.exe D:/test.txt 10.0.0.1@/tmp/test_dir</pre>
 
                                     <h3>Local globbing to remote</h3>
                                     <p>This command will copy all local files matching <code>D:\*.txt</code> into the remote directory <code>/tmp/test_dir</code> of server 10.0.0.1</p>
-                                    <pre>ssfcp.exe D:\\test.txt 10.0.0.1@/tmp/test_dir</pre>
+                                    <pre>ssfcp.exe D:/test.txt 10.0.0.1@/tmp/test_dir</pre>
 
                                     <h3>stdin to remote</h3>
                                     <p>This command will send the tar archive of <code>D:\test</code> through client stdin into the remote file <code>/tmp/test_dir/test.tar</code> of server 10.0.0.1</p>
-                                    <pre>tar.exe cf - D:\\test | ssfcp.exe 10.0.0.1@/tmp/test_dir/test.tar</pre>
+                                    <pre>tar.exe cf - D:/test | ssfcp.exe 10.0.0.1@/tmp/test_dir/test.tar</pre>
 
                                     <h3>Remote to local</h3>
                                     <p>This command will copy the remote file <code>D:\test.txt</code> of 10.0.0.1 into the local directory <code>/tmp/test_dir</code></p>
-                                    <pre>ssfcp 10.0.0.1@D:\\test.txt /tmp/test_dir</pre>
+                                    <pre>ssfcp 10.0.0.1@D:/test.txt /tmp/test_dir</pre>
                                 </div>
                             </div>
 
@@ -1010,19 +1051,19 @@ SERVER3:PORT3</pre>
                                 <div class="col-md-12">
                                     <h3>Local to remote</h3>
                                     <p>This command will copy the file <code>D:\test.txt</code> into the remote directory <code>E:\test_dir</code> of server 10.0.0.1</p>
-                                    <pre>ssfcp.exe D:\\test.txt 10.0.0.1@E:\\test_dir</pre>
+                                    <pre>ssfcp.exe D:/test.txt 10.0.0.1@E:/test_dir</pre>
 
                                     <h3>Local globbing to remote</h3>
                                     <p>This command will copy all local files matching <code>D:\*.txt</code> into the remote directory <code>E:\test_dir</code> of server 10.0.0.1</p>
-                                    <pre>ssfcp.exe D:\\*.txt 10.0.0.1@E:\\test_dir</pre>
+                                    <pre>ssfcp.exe D:/*.txt 10.0.0.1@E:/test_dir</pre>
 
                                     <h3>stdin to remote</h3>
-                                    <p>This command will send the tar archive of <code>D:\test</code> through client stdin into the remote file <code>E:\test_dir\test.tar</code> of server 10.0.0.1</p>
-                                    <pre>tar.exe cf - D:\\test | ssfcp.exe 10.0.0.1@E:\\test_dir\\test.tar</pre>
+                                    <p>This command will send the tar archive of <code>D:/test</code> through client stdin into the remote file <code>E:/test_dir/test.tar</code> of server 10.0.0.1</p>
+                                    <pre>tar.exe cf - D:/test | ssfcp.exe 10.0.0.1@E:/test_dir/test.tar</pre>
 
                                     <h3>Remote to local</h3>
-                                    <p>This command will copy the remote file <code>D:\test.txt</code> of 10.0.0.1 into the local directory <code>E:\test_dir</code></p>
-                                    <pre>ssfcp.exe 10.0.0.1@D:\\test.txt E:\\test_dir</pre>
+                                    <p>This command will copy the remote file <code>D:/test.txt</code> of 10.0.0.1 into the local directory <code>E:/test_dir</code></p>
+                                    <pre>ssfcp.exe 10.0.0.1@D:/test.txt E:/test_dir</pre>
                                 </div>
                             </div>
                         </div>
@@ -1043,7 +1084,6 @@ SERVER3:PORT3</pre>
                                     <li>the client side: running on your laptop when you want to browse Internet while being locally connected to an untrusted network (e.g. public wifi networks)</li>
                                 </ul>
 
-
                                 <div class="row">
                                   <div class="col-md-offset-2 col-md-8">
                                     <p>
@@ -1056,13 +1096,13 @@ SERVER3:PORT3</pre>
 
                                 <h3>Configuring the server side (e.g. your home machine, up and running, connected to internet, even when you are not at home)</h3>
                                 <div class="col-md-12">
-                                    <pre>./ssfs -p port 10000</pre>
+                                    <pre>./ssfd -p port 10000</pre>
                                     <p>Now, your home server is listening on port 10000, and is waiting for an authenticated client. For this example, let's say that the public IP address of your server is "SERVER_IP"</p>
                                 </div>
 
                                 <h3>Configuring the client side (e.g. your laptop): the simple way</h3>
                                 <div class="col-md-12">
-                                    <pre>./ssfc -D 9000 -p 10000 SERVER_IP</pre>
+                                    <pre>./ssf -D 9000 -p 10000 SERVER_IP</pre>
                                     <p>Simply run this command, and configure your browser (firefox, IE, Chrome, Safari...), to use a socks server on address 127.0.0.1 port 9000</p>
                                     <div class="bs-callout bs-callout-info">
                                         <p>This command uses <strong>-D</strong> (server side socks resolution) option.</p>
@@ -1071,7 +1111,7 @@ SERVER3:PORT3</pre>
 
                                 <h3>Advanced : Secure DNS resolution</h3>
                                 <div class="col-md-12">
-                                    <pre>./ssfc -D 9000 -U 53:208.67.222.222:53 -p 10000 SERVER_IP</pre>
+                                    <pre>./ssf -D 9000 -U 53:208.67.222.222:53 -p 10000 SERVER_IP</pre>
                                     <p>Someone in the wifi network could fake DNS resolution, and redirect you to malicious websites.</p>
                                     <p>Change your DNS interface settings to 127.0.0.1, and, thanks to this command, every DNS request will go througt the secure SSF funnel, and public OpenDNS DNS server (208.67.222.222) will resolve them.<br/>
                                        No DNS request will leak on the network (wifi) you're connected to, and from DNS server view (OpenDNS provider for this example), it's your Server (SERVER_IP) that is making the DNS request.</p>
@@ -1087,7 +1127,7 @@ SERVER3:PORT3</pre>
                                     <p>To comply with these restrictions and be able to browse securely using SSF, you should setup the SSF <strong>server</strong> to listen on port 80 or 443 (instead of 10000 in the basic example)</p>
 
                                     <div class="bs-callout bs-callout-info">
-                                        <p>Binding SSF on a port below 1024 (e.g. 53, 80 or 443) will require administrative privileges. But as long as the SSF run on a machine that you control, this should not be an issue.</p>
+                                        <p>Binding SSF on a port below 1024 (e.g. 53, 80 or 443) will require administrative privileges. But as long as SSF runs on a machine that you control, this should not be an issue.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1095,246 +1135,17 @@ SERVER3:PORT3</pre>
                     </div>
                     <!-- End how to browse privately  -->
 
-                    <!-- How to build windows -->
-                    <div role="tabpanel" id="how-to-build-windows" class="tab-pane fade">
-                        <h1>How to build on Windows</h1>
-
-                        <div class="col-md-12">
-                            <h2>Requirements</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Winrar &gt;= 5.2.1
-                                    <li>Boost &gt;= 1.61.0</li>
-                                    <li>OpenSSL &gt;= 1.0.2</li>
-                                    <li>Google Test = 1.7.0</li>
-                                    <li>CMake &gt;= 2.8.11</li>
-                                    <li>nasm (required by OpenSSL build)</li>
-                                    <li>Active Perl &gt;= 5.20 (required by OpenSSL build)</li>
-                                    <li>C++11 compiler (Visual Studio 2013, Clang, g++, etc.)</li>
-                                </ul>
-                            </div>
-
-                            <h2>SSF_SECURITY</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li><strong>STANDARD</strong>: the project will be build with standard security features</li>
-                                    <li><strong>FORCE_TCP_ONLY</strong>: the project will be built without security features to facilitate debugging</li>
-                                </ul>
-                            </div>
-
-                            <h2>Process</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Go in project directory
-                                        <pre>cd PROJECT_PATH</pre></li>
-                                    <li>Copy <a href="http://www.boost.org/users/download/">Boost archive</a> in <code>third_party/boost</code>
-                                        <pre>cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost</pre>
-                                    </li>
-                                    <li>Copy <a href="https://www.openssl.org/source/">OpenSSL archive</a> in <code>third_party/openssl</code>
-                                        <pre>cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl</pre>
-                                    </li>
-
-                                    <li>Copy <a href="https://github.com/google/googletest/archive/release-1.7.0.zip">GTest archive</a> in <code>third_party/gtest</code>
-                                        <pre>cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest</pre>
-                                    </li>
-                                    <li>Generate project
-
-<pre>git submodule update --init --recursive
-mkdir PROJECT_PATH/build
-cd PROJECT_PATH/build
-</pre>
-                                        <ul>
-                                            <li>Visual Studio 2013: 32 bits
-<pre>cmake .. -G "Visual Studio 12 2013" -DCMAKE_BUILD_TYPE="Release" -DSSF_SECURITY="STANDARD"</pre>
-                                            </li>
-                                            <li>Visual Studio 2013: 64 bits
-<pre>cmake .. -G "Visual Studio 12 2013 Win64" -DCMAKE_BUILD_TYPE="Release" -DSSF_SECURITY="STANDARD"</pre>
-                                            </li>
-                                            <li>Visual Studio 2015: 32 bits
-<pre>cmake .. -G "Visual Studio 14 2015" -DCMAKE_BUILD_TYPE="Release" -DSSF_SECURITY="STANDARD"</pre>
-                                            </li>
-                                            <li>Visual Studio 2015: 64 bits
-<pre>cmake .. -G "Visual Studio 14 2015 Win64" -DCMAKE_BUILD_TYPE="Release" -DSSF_SECURITY="STANDARD"</pre>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li>Build project
-<pre>cd PROJECT_PATH/build
-cmake --build . --config Release -- -MaxCpuCount</pre>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <h2>Known issues</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li><strong>Boost</strong> build system needs to be patched to comply with our project (extra flags for Win32 binaries). Follow instructions in <code>third_party/boost/README.md</code></li>
-                                    <li><strong>GTest</strong> archive content has changed since its repository is on Github. Follow instructions in <code>third_party/gtest/README.md</code> to fix the build system</li>
-                                    <li>If you are using <strong>openssl-1.0.2a</strong>, you need to fix the file <mark>crypto/x509v3/v3_scts.c</mark>. It contains an incorrect <code>#include</code> line.<br/>
-                                        Copy <a href="https://github.com/openssl/openssl/commit/77b1f87214224689a84db21d2eb54e9497186d93.diff">the diff from OpenSSL Github</a>
-                                        (ignore the 2 first lines) and put it in <code>PROJECT_PATH/third_party/openssl/patches</code>.<br/>
-                                        The build script will then patch the sources.
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- End how to build windows -->
-
-                    <!-- How to build linux -->
-                    <div role="tabpanel" id="how-to-build-linux" class="tab-pane fade">
-                        <h1>How to build on Linux</h1>
-
-                        <div class="col-md-12">
-                            <h2>Requirements</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Boost &gt;= 1.61.0</li>
-                                    <li>OpenSSL &gt;= 1.0.2</li>
-                                    <li>Google Test = 1.7.0</li>
-                                    <li>CMake &gt;= 2.8.11</li>
-                                    <li>Perl (OpenSSL build)</li>
-                                    <li>C++11 compiler (Clang, g++, etc.)</li>
-                                </ul>
-                            </div>
-
-                            <h2>SSF_SECURITY</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li><strong>STANDARD</strong>: the project will be build with standard security features</li>
-                                    <li><strong>FORCE_TCP_ONLY</strong>: the project will be built without security features to facilitate debugging</li>
-                                </ul>
-                            </div>
-
-                            <h2>Process</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Go in project directory
-                                        <pre>cd PROJECT_PATH</pre></li>
-                                    <li>Copy <a href="http://www.boost.org/users/download/">Boost archive</a> in <code>third_party/boost</code>
-                                        <pre>cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost</pre>
-                                    </li>
-                                    <li>Copy <a href="https://www.openssl.org/source/">OpenSSL archive</a> in <code>third_party/openssl</code>
-                                        <pre>cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl</pre>
-                                    </li>
-
-                                    <li>Copy <a href="https://github.com/google/googletest/archive/release-1.7.0.zip">GTest archive</a> in <code>third_party/gtest</code>
-                                        <pre>cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest</pre>
-                                    </li>
-                                    <li>Generate project
-<pre>git submodule update --init --recursive
-mkdir PROJECT_PATH/build
-cd PROJECT_PATH/build
-cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DSSF_SECURITY="STANDARD"</pre>
-                                    </li>
-                                    <li>Build project
-<pre>cd PROJECT_PATH/build
-cmake --build .</pre>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <h2>Known issues</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li><strong>GTest</strong> archive content has changed since its repository is on Github. Follow instructions in <code>third_party/gtest/README.md</code> to fix the build system</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- End how to build linux -->
-
-                    <!-- How to build macos x -->
-                    <div role="tabpanel" id="how-to-build-mac" class="tab-pane fade">
-                        <h1>How to build on Mac OS X</h1>
-
-                        <div class="col-md-12">
-                            <h2>Requirements</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Boost &gt;= 1.61.0</li>
-                                    <li>OpenSSL &gt;= 1.0.2</li>
-                                    <li>Google Test = 1.7.0</li>
-                                    <li>CMake &gt;= 2.8.11</li>
-                                    <li>Perl (OpenSSL build)</li>
-                                    <li>C++11 compiler (Clang, g++, etc.)</li>
-                                </ul>
-                            </div>
-
-                            <h2>SSF_SECURITY</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li><strong>STANDARD</strong>: the project will be build with standard security features</li>
-                                    <li><strong>FORCE_TCP_ONLY</strong>: the project will be built without security features to facilitate debugging</li>
-                                </ul>
-                            </div>
-
-                            <h2>Process</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Go in project directory
-                                        <pre>cd PROJECT_PATH</pre></li>
-                                    <li>Copy <a href="http://www.boost.org/users/download/">Boost archive</a> in <code>third_party/boost</code>
-                                        <pre>cp boost_1_XX_Y.tar.bz2 PROJECT_PATH/third_party/boost</pre>
-                                    </li>
-                                    <li>Copy <a href="https://www.openssl.org/source/">OpenSSL archive</a> in <code>third_party/openssl</code>
-                                        <pre>cp openssl-1.0.XY.tar.gz PROJECT_PATH/third_party/openssl</pre>
-                                    </li>
-
-                                    <li>Copy <a href="https://github.com/google/googletest/archive/release-1.7.0.zip">GTest archive</a> in <code>third_party/gtest</code>
-                                        <pre>cp gtest-1.X.Y.zip PROJECT_PATH/third_party/gtest</pre>
-                                    </li>
-                                    <li>Generate project
-
-<pre>git submodule update --init --recursive
-mkdir PROJECT_PATH/build
-cd PROJECT_PATH/build
-</pre>
-                                        <ul>
-                                            <li>Xcode project
-<pre>cmake .. -G "Xcode" -DCMAKE_BUILD_TYPE="Release" -DSSF_SECURITY="STANDARD"</pre>
-                                            </li>
-                                            <li>Makefiles
-<pre>cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DSSF_SECURITY="STANDARD"</pre>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li>Build project
-<pre>cd PROJECT_PATH/build
-</pre>
-                                        <ul>
-                                            <li>Xcode project
-<pre>cmake --build . --config Release</pre>
-                                            </li>
-                                            <li>Makefiles
-<pre>cmake --build .</pre>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <h2>Known issues</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li><strong>GTest</strong> archive content has changed since its repository is on Github. Follow instructions in <code>third_party/gtest/README.md</code> to fix the build system</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- End how to build mac -->
-
                     <!-- Download -->
                     <div role="tabpanel" id="download" class="tab-pane fade">
                         <h1>Download SSF</h1>
                         <div class="col-md-12">
                             <div class="col-md-4">
                                 <div class="list-group">
-                                    <a class="list-group-item" data-type="download" data-file="ssf-win-i386-2.2.0" href="download/2.2.0/ssf-win-i386-2.2.0.zip" title="Download SSF"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 32bits (2.2.0)</a>
-                                    <a class="list-group-item" data-type="download" data-file="ssf-win-x86_64-2.2.0" href="download/2.2.0/ssf-win-x86_64-2.2.0.zip" title="Download SSF"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 64bits (2.2.0)</a>
-                                    <a class="list-group-item" data-type="download" data-file="ssf-linux-i386-2.2.0" href="download/2.2.0/ssf-linux-i386-2.2.0.zip" title="Download SSF"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits (2.2.0)</a>
-                                    <a class="list-group-item" data-type="download" data-file="ssf-linux-x86_64-2.2.0" href="download/2.2.0/ssf-linux-x86_64-2.2.0.zip" title="Download SSF"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 64bits (2.2.0)</a>
-                                    <a class="list-group-item disabled" href="#" title="Not available"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits</a>
+                                    <a class="list-group-item" data-type="download" data-file="ssf-win-i386-3.0.0" href="https://github.com/securesocketfunneling/ssf/releases/download/3.0.0/ssf-win-i386-3.0.0.zip" title="Download SSF"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 32bits (3.0.0)</a>
+                                    <a class="list-group-item" data-type="download" data-file="ssf-win-x86_64-3.0.0" href="https://github.com/securesocketfunneling/ssf/releases/download/3.0.0/ssf-win-x86_64-3.0.0.zip" title="Download SSF"><i class="fa fa-windows fa-2x fa-fw"></i> Windows 64bits (3.0.0)</a>
+                                    <a class="list-group-item disabled" data-file="ssf-linux-i386-3.0.0" href="#" title="Not available"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 32bits (3.0.0)</a>
+                                    <a class="list-group-item" data-type="download" data-file="ssf-linux-x86_64-3.0.0" href="https://github.com/securesocketfunneling/ssf/releases/download/3.0.0/ssf-linux-x86_64-3.0.0.zip" title="Download SSF"><i class="fa fa-linux fa-2x fa-fw"></i> Linux 64bits (3.0.0)</a>
+                                    <a class="list-group-item" data-type="download" data-file="ssf-arm-linux-gnueabihf-3.0.0" href="https://github.com/securesocketfunneling/ssf/releases/download/3.0.0/ssf-arm-linux-gnueabihf-3.0.0.zip" title="Download SSF"><i class="fa fa-microchip fa-2x fa-fw"></i> Raspberry Pi 2/3</a>
                                     <!--<a class="list-group-item" data-type="download" data-file="ssf-macosx-x86_64-2.2.0" href="download/2.2.0/ssf-macosx-x86_64-2.2.0.zip"><i class="fa fa-apple fa-2x fa-fw"></i> Mac OS X 64bits (2.2.0)</a>-->
                                     <a class="list-group-item" data-type="download" data-file="sources" href="https://github.com/securesocketfunneling/ssf" title="Download sources"><i class="fa fa-cloud-download fa-2x fa-fw"></i> Sources</a>
                                 </div>
@@ -1344,130 +1155,15 @@ cd PROJECT_PATH/build
                         <h1>Archive content</h1>
                         <div class="col-md-12">
                             <ul>
-                                <li>Executables: <strong>ssfs</strong>, <strong>ssfc</strong>, <strong>ssfcp</strong></li>
-                                <li>UPXed executables: <strong>upx-ssfs</strong>, <strong>upx-ssfc</strong>, <strong>upx-ssfcp</strong></li>
+                                <li>Executables: <strong>ssfd</strong>, <strong>ssf</strong>, <strong>ssfcp</strong></li>
+                                <li>UPXed executables: <strong>upx-ssfd</strong>, <strong>upx-ssf</strong>, <strong>upx-ssfcp</strong></li>
                                 <li>Test certificates (<span class="text-danger"><i class="fa fa-warning"></i> testing purpose only</span>)</li>
                             </ul>
                         </div>
 
-                        <h1><a href="#changelog" title="Go to changelog">Version history</a></h1>
+                        <h1><a href="https://github.com/securesocketfunneling/ssf/releases" target="_blank">Version history</a></h1>
                     </div>
                     <!-- End download -->
-
-                    <!-- Changelog -->
-                    <div role="tabpanel" id="changelog" class="tab-pane fade">
-                        <h1>Version history</h1>
-                        <div class="col-md-12">
-                            <h2>2.2.0</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Features:
-                                        <ul>
-                                            <li>Introducing <a href="#how-to-configure">microservices</a>, base components for client features
-                                            <li>Enable/disable microservices in <a href="#how-to-configure">configuration file</a></li>
-                                            <li>
-                                                Gateway ports. Allow client to specify network listening interface on client features: <code>-g</code> command line option and <code>gateway_ports</code> microservice options
-                                                (<code>stream_listener</code> and <code>datagram_listener</code>)
-                                            </li>
-                                            <li>Server as relay only: <code>-R</code> command line option</li>
-                                        </ul>
-                                    </li>
-                                    <li>Fixed bugs:
-                                        <ul>
-                                            <li>Delegate server hostname resolution to proxy</li>
-                                            <li>Fix server DOS on bogus connection</li>
-                                            <li>Fix a hang when the client stops during the connection stage</li>
-                                        </ul>
-                                    </li>
-                                    <li><a href="#how-to-configure">Configuration file</a>:
-                                        <ul>
-                                            <li>
-                                                <code>http_proxy.credentials.reuse_ntlm</code> and <code>http_proxy.credentials.reuse_kerb</code>: boolean instead of string
-                                            </li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <h2>2.1.0</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Features:
-                                        <ul>
-                                            <li>TLS layer over circuit layer</li>
-                                            <li>HTTP proxy support (CONNECT method), cf. configuration file</li>
-                                            <li>HTTP proxy authentication support (Basic, Digest, NTLM [windows only], Negotiate), cf. configuration file</li>
-                                            <li><a href="#how-to-use-shell" title="Change default shell">Cross platform shell</a> through socket (-X and -Y options)<br/>
-                                                Default shell: <code>cmd.exe</code> on Windows, <code>/bin/bash</code> on Linux and OS X</li>
-                                            <li>Server network interface option</li>
-                                        </ul>
-                                    </li>
-                                    <li>Fixed bugs:
-                                        <ul>
-                                            <li>Linux static link to libstdc++</li>
-                                            <li>Linux dependency to GLIBC2.14 (memcpy)</li>
-                                            <li>Stop behavior (signal instead of user input)</li>
-                                            <li>Port forwarding listening side on localhost only</li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <h2>2.0.0</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li><i class="fa fa-warning"></i> BC break with version 1.*.*</li>
-                                    <li>Features:
-                                        <ul>
-                                            <li>New network layer based on SSF network framework</li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <h2>1.1.0</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Features:
-                                        <ul>
-                                            <li>ssfcp: file copy between client and server</li>
-                                            <li>Rename executables:
-                                                <ul>
-                                                    <li>SSF_Client <i class="fa fa-long-arrow-right"></i> ssfc</li>
-                                                    <li>SSF_Server <i class="fa fa-long-arrow-right"></i> ssfs</li>
-                                                </ul>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li>Fixed bugs:
-                                        <ul>
-                                            <li>Crash issue due to exception when resolving endpoint</li>
-                                            <li>Exception safety</li>
-                                            <li>Windows compilation warnings (64bits)
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <h2>1.0.0</h2>
-                            <div class="col-md-12">
-                                <ul>
-                                    <li>Features:
-                                        <ul>
-                                            <li>Local and remote TCP port forwarding (-L and -R options)</li>
-                                            <li>Local and remote UDP port forwarding (-U and -V options)</li>
-                                            <li>Local and remote SOCKS server (-D and -F options)</li>
-                                            <li>Native relay protocol (-b option)</li>
-                                            <li>Multi platform (Windows, Linux and OSX)</li>
-                                            <li>TLS connection with the strongest cipher-suites
-                                            <li>Standalone executables</li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Change log -->
 
                     <!-- FAQ -->
                     <div role="tabpanel" id="faq" class="tab-pane fade">
@@ -1647,15 +1343,14 @@ cat ca.crt >> certificate.crt
                             <h2>C++</h2>
                             <div class="col-md-12">
                                 <p>
-                                    SSF is implemented using C++11 to support a wider range of standard compilers (e.g. Visual Studio 2013, g++-4.8 for Ubuntu 14.04).
+                                    SSF is implemented using C++11 to support a wider range of standard compilers (e.g. Visual Studio 2015, g++-4.9 for Ubuntu 16.04).
                                     As soon as C++14, and later C++17 are easily accessible (native/default) on every build platforms, the code will be updated to evolve with these standards.
                                  </p>
 
                                 <p>
                                     SSF relies on the <strong>Boost</strong> libraries, especially <strong>Asio</strong>, and was designed to be extended.
                                     A special effort was made to <strong>ease the build process</strong>: <strong>CMake</strong> is used to generate any dev environment (ex: Visual Studio, XCode, Make...).
-                                    The building process for third party libraries (Boost, OpenSSL, GoogleTest) is made easy with custom CMake scripts which <strong>automatically extract and build all the needed dependencies from sources</strong>.
-                                    Just download and drop the latest third party source tarball in the project's <code>third_party</code> subdirectory, and you're ready to build.
+                                    The building process for third party libraries (Boost, OpenSSL, GoogleTest) is made easy with custom scripts.
                                     SSF also comes with a set of unit tests so that you can fork and tweak the code, and test your changes easily.
                                 </p>
                             </div>
