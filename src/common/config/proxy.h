@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <boost/property_tree/ptree.hpp>
+#include <json.hpp>
 
 #include "ssf/network/socks/socks.h"
 
@@ -12,13 +12,13 @@ namespace config {
 
 class HttpProxy {
  public:
-  using PTree = boost::property_tree::ptree;
+  using Json = nlohmann::json;
 
  public:
   HttpProxy();
 
  public:
-  void Update(const PTree& pt);
+  void Update(const Json& json);
 
   void Log() const;
 
@@ -61,14 +61,14 @@ class HttpProxy {
 
 class SocksProxy {
  public:
-  using PTree = boost::property_tree::ptree;
+  using Json = nlohmann::json;
   using Socks = ssf::network::Socks;
 
  public:
   SocksProxy();
 
  public:
-  void Update(const PTree& pt);
+  void Update(const Json& json);
 
   void Log() const;
 

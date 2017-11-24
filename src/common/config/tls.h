@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <boost/property_tree/ptree.hpp>
+#include <json.hpp>
 
 namespace ssf {
 namespace config {
@@ -26,13 +26,13 @@ class TlsParam {
 
 class Tls {
  public:
-  using PTree = boost::property_tree::ptree;
+  using Json = nlohmann::json;
 
  public:
   Tls();
 
  public:
-  void Update(const PTree& pt);
+  void Update(const Json& pt);
 
   void Log() const;
 

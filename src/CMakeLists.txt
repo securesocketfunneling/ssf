@@ -267,7 +267,7 @@ add_subdirectory(compat)
 add_library(ssf_framework STATIC "")
 target_sources(ssf_framework PRIVATE ${SSF_FRAMEWORK_FILES})
 target_include_directories(ssf_framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_LIBS} ssf_network cxxopts)
+target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_LIBS} ssf_network cxxopts json)
 set_property(TARGET ssf_framework PROPERTY FOLDER Libraries)
 source_group_by_folder(ssf_framework)
 

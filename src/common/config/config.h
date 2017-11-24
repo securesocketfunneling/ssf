@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
+#include <json.hpp>
 
 #include "common/config/circuit.h"
 #include "common/config/proxy.h"
@@ -18,7 +18,7 @@ namespace config {
 
 class Config {
  public:
-  using PTree = boost::property_tree::ptree;
+  using Json = nlohmann::json;
 
  public:
   Config();
@@ -125,13 +125,13 @@ class Config {
   std::vector<char*> GetArgv() const;
 
  private:
-  void UpdateFromPTree(const PTree& pt);
-  void UpdateTls(const PTree& pt);
-  void UpdateHttpProxy(const PTree& pt);
-  void UpdateSocksProxy(const PTree& pt);
-  void UpdateServices(const PTree& pt);
-  void UpdateCircuit(const PTree& pt);
-  void UpdateArguments(const PTree& pt);
+  void UpdateFromJson(const Json& json);
+  void UpdateTls(const Json& json);
+  void UpdateHttpProxy(const Json& json);
+  void UpdateSocksProxy(const Json& json);
+  void UpdateServices(const Json& json);
+  void UpdateCircuit(const Json& json);
+  void UpdateArguments(const Json& json);
 
  private:
   static const char* default_config_;

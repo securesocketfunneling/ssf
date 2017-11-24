@@ -4,7 +4,7 @@
 #include <list>
 #include <string>
 
-#include <boost/property_tree/ptree.hpp>
+#include <json.hpp>
 
 namespace ssf {
 namespace config {
@@ -29,13 +29,13 @@ using NodeList = std::list<CircuitNode>;
 
 class Circuit {
  public:
-  using PTree = boost::property_tree::ptree;
+  using Json = nlohmann::json;
 
  public:
   Circuit();
 
  public:
-  void Update(const PTree& pt);
+  void Update(const Json& json);
 
   void Log() const;
 

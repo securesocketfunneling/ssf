@@ -80,10 +80,6 @@ class basic_ProxyProtocol {
                                    io_service, parameters_it, id, ec));
     }
   }
-
-  static void add_params_from_property_tree(
-      query* p_query, const boost::property_tree::ptree& property_tree,
-      bool connect, boost::system::error_code& ec) {}
 };
 
 template <class NextLayer>

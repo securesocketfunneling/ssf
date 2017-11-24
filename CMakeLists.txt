@@ -126,6 +126,7 @@ message(STATUS "OpenSSL version: ${OPENSSL_VERSION}")
 add_subdirectory(third_party/http-parser)
 add_subdirectory(third_party/msgpack)
 add_subdirectory(third_party/spdlog)
+add_subdirectory(third_party/json)
 
 # --- cxxopts
 add_subdirectory(third_party/cxxopts EXCLUDE_FROM_ALL)

@@ -44,74 +44,65 @@ Tls::Tls()
       dh_(TlsParam::Type::kFile, "./certs/dh4096.pem"),
       cipher_alg_("DHE-RSA-AES256-GCM-SHA384") {}
 
-void Tls::Update(const PTree& tls_prop) {
+void Tls::Update(const Json& tls_prop) {
   // ca cert
-  auto ca_cert_path_optional = tls_prop.get_child_optional("ca_cert_path");
-  if (ca_cert_path_optional) {
-    std::string ca_cert_path(ca_cert_path_optional.get().data());
+  if (tls_prop.count("ca_cert_path") == 1) {
+    std::string ca_cert_path(tls_prop.at("ca_cert_path").get<std::string>());
     boost::trim(ca_cert_path);
     ca_cert_.Set(TlsParam::Type::kFile, ca_cert_path);
   }
-  auto ca_cert_buffer_optional = tls_prop.get_child_optional("ca_cert_buffer");
-  if (ca_cert_buffer_optional) {
-    std::string ca_cert_buffer(ca_cert_buffer_optional.get().data());
+  if (tls_prop.count("ca_cert_buffer") == 1) {
+    std::string ca_cert_buffer(
+        tls_prop.at("ca_cert_buffer").get<std::string>());
     boost::trim(ca_cert_buffer);
     ca_cert_.Set(TlsParam::Type::kBuffer, ca_cert_buffer);
   }
 
   // cert
-  auto cert_path_optional = tls_prop.get_child_optional("cert_path");
-  if (cert_path_optional) {
-    std::string cert_path(cert_path_optional.get().data());
+  if (tls_prop.count("cert_path") == 1) {
+    std::string cert_path(tls_prop.at("cert_path").get<std::string>());
     boost::trim(cert_path);
     cert_.Set(TlsParam::Type::kFile, cert_path);
   }
-  auto cert_buffer_optional = tls_prop.get_child_optional("cert_buffer");
-  if (cert_buffer_optional) {
-    std::string cert_buffer(cert_buffer_optional.get().data());
+  if (tls_prop.count("cert_buffer") == 1) {
+    std::string cert_buffer(tls_prop.at("cert_buffer").get<std::string>());
     boost::trim(cert_buffer);
     cert_.Set(TlsParam::Type::kBuffer, cert_buffer);
   }
 
   // cert key
-  auto key_path_optional = tls_prop.get_child_optional("key_path");
-  if (key_path_optional) {
-    std::string key_path(key_path_optional.get().data());
+  if (tls_prop.count("key_path") == 1) {
+    std::string key_path(tls_prop.at("key_path").get<std::string>());
     boost::trim(key_path);
     key_.Set(TlsParam::Type::kFile, key_path);
   }
-  auto key_buffer_optional = tls_prop.get_child_optional("key_buffer");
-  if (key_buffer_optional) {
-    std::string key_buffer(key_buffer_optional.get().data());
+  if (tls_prop.count("key_buffer") == 1) {
+    std::string key_buffer(tls_prop.at("key_buffer").get<std::string>());
     boost::trim(key_buffer);
     key_.Set(TlsParam::Type::kBuffer, key_buffer);
   }
 
   // key password
-  auto key_password_optional = tls_prop.get_child_optional("key_password");
-  if (key_password_optional) {
-    key_password_ = key_password_optional.get().data();
+  if (tls_prop.count("key_password") == 1) {
+    key_password_ = tls_prop.at("key_password").get<std::string>();
     boost::trim(key_password_);
   }
 
   // dh
-  auto dh_path_optional = tls_prop.get_child_optional("dh_path");
-  if (dh_path_optional) {
-    std::string dh_path(dh_path_optional.get().data());
+  if (tls_prop.count("dh_path") == 1) {
+    std::string dh_path(tls_prop.at("dh_path").get<std::string>());
     boost::trim(dh_path);
     dh_.Set(TlsParam::Type::kFile, dh_path);
   }
-  auto dh_buffer_optional = tls_prop.get_child_optional("dh_buffer");
-  if (dh_buffer_optional) {
-    std::string dh_buffer(dh_buffer_optional.get().data());
+  if (tls_prop.count("dh_buffer") == 1) {
+    std::string dh_buffer(tls_prop.at("dh_buffer").get<std::string>());
     boost::trim(dh_buffer);
     dh_.Set(TlsParam::Type::kBuffer, dh_buffer);
   }
 
   // cipher algorithms
-  auto cipher_alg_optional = tls_prop.get_child_optional("cipher_alg");
-  if (cipher_alg_optional) {
-    cipher_alg_ = cipher_alg_optional.get().data();
+  if (tls_prop.count("cipher_alg") == 1) {
+    cipher_alg_ = tls_prop.at("cipher_alg").get<std::string>();
     boost::trim(cipher_alg_);
   }
 }

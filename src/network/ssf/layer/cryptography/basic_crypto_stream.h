@@ -14,7 +14,6 @@
 #include <boost/asio/detail/op_queue.hpp>
 #include <boost/asio/handler_type.hpp>
 #include <boost/asio/io_service.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "ssf/error/error.h"
@@ -110,22 +109,6 @@ class basic_CryptoStreamProtocol {
         next_layer_protocol::make_endpoint(io_service, ++parameters_it, id, ec);
 
     return endpoint(std::move(endpoint_context), std::move(next_endpoint));
-  }
-
-  static void add_params_from_property_tree(
-      query* p_query, const boost::property_tree::ptree& property_tree,
-      bool connect, boost::system::error_code& ec) {
-    auto sublayer = property_tree.get_child_optional("sublayer");
-    if (!sublayer) {
-      ec.assign(ssf::error::missing_config_parameters,
-                ssf::error::get_ssf_category());
-      return;
-    }
-
-    CryptoProtocol::add_params_from_property_tree(p_query, property_tree,
-                                                  connect, ec);
-    next_layer_protocol::add_params_from_property_tree(p_query, *sublayer,
-                                                       connect, ec);
   }
 };
 

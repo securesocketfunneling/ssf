@@ -5,7 +5,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/detail/config.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <ssf/log/log.h>
@@ -49,17 +48,19 @@ void Config::UpdateFromFile(const std::string& filepath,
   SSF_LOG("config", info, "loading file <{}>", conf_file);
 
   try {
-    boost::property_tree::ptree pt;
-    boost::property_tree::read_json(conf_file, pt);
+    std::ifstream file(conf_file);
+    Json config;
+    file >> config;
 
     std::stringstream ss_loaded_config;
-    boost::property_tree::write_json(ss_loaded_config, pt);
-    SSF_LOG("config", debug, "custom configuration: {}", ss_loaded_config.str());
+    ss_loaded_config << std::setw(4) << config;
+    SSF_LOG("config", debug, "custom configuration: {}",
+            ss_loaded_config.str());
 
-    UpdateFromPTree(pt);
+    UpdateFromJson(config);
   } catch (const std::exception& e) {
     (void)(e);
-    SSF_LOG("config", error, "error parsing SSF config file: {}", e.what());
+    SSF_LOG("config", error, "error parsing config file: {}", e.what());
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
 }
@@ -70,10 +71,10 @@ void Config::UpdateFromString(const std::string& config_string,
   ss_config << config_string;
 
   try {
-    boost::property_tree::ptree pt;
-    boost::property_tree::read_json(ss_config, pt);
+    Json config;
+    ss_config >> config;
 
-    UpdateFromPTree(pt);
+    UpdateFromJson(config);
   } catch (const std::exception& e) {
     (void)(e);
     SSF_LOG("config", error, "error parsing config string: {}", e.what());
@@ -102,80 +103,78 @@ std::vector<char*> Config::GetArgv() const {
   return res_argv;
 }
 
-void Config::UpdateFromPTree(const PTree& pt) {
-  UpdateTls(pt);
-  UpdateHttpProxy(pt);
-  UpdateSocksProxy(pt);
-  UpdateServices(pt);
-  UpdateCircuit(pt);
-  UpdateArguments(pt);
+void Config::UpdateFromJson(const Json& json) {
+  if (json.count("ssf") == 0) {
+    return;
+  }
+  auto ssf_config = json.at("ssf");
+  UpdateTls(ssf_config);
+  UpdateHttpProxy(ssf_config);
+  UpdateSocksProxy(ssf_config);
+  UpdateServices(ssf_config);
+  UpdateCircuit(ssf_config);
+  UpdateArguments(ssf_config);
 }
 
-void Config::UpdateTls(const PTree& pt) {
-  auto tls_optional = pt.get_child_optional("ssf.tls");
-  if (!tls_optional) {
+void Config::UpdateTls(const Json& json) {
+  if (json.count("tls") == 0) {
     SSF_LOG("config", debug, "update TLS: configuration not found");
     return;
   }
 
-  tls_.Update(tls_optional.get());
+  tls_.Update(json.at("tls"));
 }
 
-void Config::UpdateHttpProxy(const PTree& pt) {
-  auto proxy_optional = pt.get_child_optional("ssf.http_proxy");
-  if (!proxy_optional) {
+void Config::UpdateHttpProxy(const Json& json) {
+  if (json.count("http_proxy") == 0) {
     SSF_LOG("config", debug, "update HTTP proxy: configuration not found");
     return;
   }
 
-  http_proxy_.Update(proxy_optional.get());
+  http_proxy_.Update(json.at("http_proxy"));
 }
 
-void Config::UpdateSocksProxy(const PTree& pt) {
-  auto proxy_optional = pt.get_child_optional("ssf.socks_proxy");
-  if (!proxy_optional) {
+void Config::UpdateSocksProxy(const Json& json) {
+  if (json.count("socks_proxy") == 0) {
     SSF_LOG("config", debug, "update SOCKS proxy: configuration not found");
     return;
   }
 
-  socks_proxy_.Update(proxy_optional.get());
+  socks_proxy_.Update(json.at("socks_proxy"));
 }
 
-void Config::UpdateServices(const PTree& pt) {
-  auto services_optional = pt.get_child_optional("ssf.services");
-  if (!services_optional) {
+void Config::UpdateServices(const Json& json) {
+  if (json.count("services") == 0) {
     SSF_LOG("config", debug, "update services: configuration not found");
     return;
   }
 
-  services_.Update(services_optional.get());
+  services_.Update(json.at("services"));
 }
 
-void Config::UpdateCircuit(const PTree& pt) {
-  auto circuit_optional = pt.get_child_optional("ssf.circuit");
-  if (!circuit_optional) {
+void Config::UpdateCircuit(const Json& json) {
+  if (json.count("circuit") == 0) {
     SSF_LOG("config", debug, "update circuit: configuration not found");
     return;
   }
 
-  circuit_.Update(circuit_optional.get());
+  circuit_.Update(json.at("circuit"));
 }
 
-void Config::UpdateArguments(const PTree& pt) {
-  auto arguments_optional = pt.get_child_optional("ssf.arguments");
-  if (!arguments_optional) {
+void Config::UpdateArguments(const Json& json) {
+  if (json.count("arguments") == 0) {
     SSF_LOG("config", debug, "update arguments: configuration not found");
     return;
   }
 
   // basic arguments parsing
-  std::string arguments(arguments_optional.get().data());
+  std::string arguments(json.at("arguments").get<std::string>());
   if (arguments.empty()) {
     return;
   }
   argv_.clear();
 
-  argv_.push_back("ssf");
+  argv_.push_back("bin");
   // quoted arg or arg between space
   std::regex argv_regex("(\"[^\"]+\"|[^\\s\"]+)");
   auto argv_it =

@@ -8,7 +8,6 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "ssf/layer/basic_empty_stream.h"
@@ -42,7 +41,6 @@ class tcp {
 
  private:
   using query = ParameterStack;
-  using ptree = boost::property_tree::ptree;
 
  public:
   operator boost::asio::ip::tcp() { return boost::asio::ip::tcp::v4(); }
@@ -62,30 +60,6 @@ class tcp {
 
   static unsigned short get_port(const endpoint& endpoint) {
     return endpoint.port();
-  }
-
-  static void add_params_from_property_tree(query* p_query,
-                                            const ptree& property_tree,
-                                            bool connect,
-                                            boost::system::error_code& ec) {
-    auto layer_name = property_tree.get_child_optional("layer");
-    if (!layer_name || layer_name.get().data() != NAME) {
-      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
-      return;
-    }
-
-    LayerParameters params;
-    auto layer_parameters = property_tree.get_child_optional("parameters");
-    if (!layer_parameters) {
-      ec.assign(ssf::error::missing_config_parameters,
-                ssf::error::get_ssf_category());
-      return;
-    }
-
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "port", &params);
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "addr", &params);
-
-    p_query->push_back(params);
   }
 };
 

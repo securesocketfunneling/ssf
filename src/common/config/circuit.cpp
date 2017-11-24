@@ -12,13 +12,11 @@ CircuitNode::CircuitNode(const std::string& addr, const std::string& port)
 
 Circuit::Circuit() : nodes_() {}
 
-void Circuit::Update(const PTree& pt) {
-  for (const auto& child : pt) {
-    auto opt_host = child.second.get_child_optional("host");
-    auto opt_port = child.second.get_child_optional("port");
-    if (opt_host && opt_port) {
-      std::string host(opt_host.get().data());
-      std::string port(opt_port.get().data());
+void Circuit::Update(const Json& json) {
+  for (const auto& child : json) {
+    if (child.count("host") == 1 && child.count("port") == 1) {
+      std::string host(child.at("host").get<std::string>());
+      std::string port(child.at("port").get<std::string>());
       boost::trim(host);
       boost::trim(port);
       nodes_.emplace_back(host, port);

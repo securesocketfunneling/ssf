@@ -8,9 +8,6 @@
 
 #include <boost/asio/io_service.hpp>
 
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-
 #include "ssf/system/system_interfaces.h"
 #include "ssf/system/system_routers.h"
 
