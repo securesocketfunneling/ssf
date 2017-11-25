@@ -46,18 +46,24 @@ UserServiceParameters Base::Parse(
 
   user_service_option_factory.InitOptions(opts);
 
-  opts.parse(argc, argv);
+  try {
+    opts.parse(argc, argv);
 
-  if (DisplayHelp(opts)) {
-    ec.assign(::error::operation_canceled, ::error::get_ssf_category());
+    if (DisplayHelp(opts)) {
+      ec.assign(::error::operation_canceled, ::error::get_ssf_category());
+      return {};
+    }
+
+    return DoParse(user_service_option_factory, opts, ec);
+  } catch (const std::exception& e) {
+    (void)(e);
+    SSF_LOG("cli", error, "cannot parse options: {}", e.what());
+    ec.assign(::error::invalid_argument, ::error::get_ssf_category());
     return {};
   }
-
-  return DoParse(user_service_option_factory, opts, ec);
 }
 
-void Base::ParseOptions(const Options& opts,
-                        boost::system::error_code& ec) {}
+void Base::ParseOptions(const Options& opts, boost::system::error_code& ec) {}
 
 bool Base::IsServerCli() { return false; }
 
@@ -96,14 +102,16 @@ void Base::ParseBasicOptions(const Options& opts,
     port_ = static_cast<uint16_t>(port);
     port_set_ = true;
   } else {
-    SSF_LOG("cli", error, "parsing failed: port option is not "
-           "between 1 - 65536");
+    SSF_LOG("cli", error,
+            "parsing failed: port option is not "
+            "between 1 - 65536");
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
 
   try {
     config_file_ = opts["config"].as<std::string>();
-  } catch (cxxopts::option_not_present_exception) { }
+  } catch (cxxopts::option_not_present_exception) {
+  }
 }
 
 UserServiceParameters Base::DoParse(
