@@ -109,6 +109,7 @@ class FileSender : public std::enable_shared_from_this<FileSender<Demux>> {
       auto context = GenerateFileContext(input_file, context_ec);
       NotifyFileCopied(context.get(), copy_ec);
     }
+    worker_.reset();
   }
 
   uint64_t input_files_count() { return input_files_count_; }

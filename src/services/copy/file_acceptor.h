@@ -99,6 +99,7 @@ class FileAcceptor : public std::enable_shared_from_this<FileAcceptor<Demux>> {
   void Close(boost::system::error_code& close_ec) {
     manager_.stop_all();
     fiber_acceptor_.close(close_ec);
+    worker_.reset();
   }
 
  private:

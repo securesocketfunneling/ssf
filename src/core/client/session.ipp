@@ -209,11 +209,11 @@ void Session<N, T>::DoFiberize(boost::system::error_code& ec) {
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
+  
+  UpdateStatus(Status::kRunning);
 
   // Start admin microservice
   p_service_manager_->start(p_admin_service, ec);
-
-  UpdateStatus(Status::kRunning);
 }
 
 template <class N, template <class> class T>

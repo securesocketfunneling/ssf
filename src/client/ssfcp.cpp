@@ -199,7 +199,9 @@ void Run(int argc, char** argv, boost::system::error_code& exit_ec) {
   client.WaitStop(stop_ec);
   stop_ec.clear();
 
-  copy_client.reset();
+  if (copy_client) {
+    copy_client->Stop();
+  }
 
   signal.cancel(stop_ec);
 
