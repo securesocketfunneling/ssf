@@ -40,8 +40,10 @@ class Admin : public BaseService<Demux> {
  public:
   using BaseUserServicePtr =
       typename ssf::services::BaseUserService<Demux>::BaseUserServicePtr;
-  using AdminCallbackType =
+  using OnUserService =
       std::function<void(BaseUserServicePtr, const boost::system::error_code&)>;
+  using OnInitialization =
+      std::function<void(const boost::system::error_code&)>;
 
  private:
   using LocalPortType = typename Demux::local_port_type;
@@ -88,7 +90,8 @@ class Admin : public BaseService<Demux> {
 
   void SetAsServer();
   void SetAsClient(std::vector<BaseUserServicePtr> user_services,
-                   AdminCallbackType callback);
+                   OnUserService on_user_service,
+                   OnInitialization on_initialization);
 
   template <typename Request, typename Handler>
   void Command(Request request, Handler handler) {
@@ -184,14 +187,25 @@ class Admin : public BaseService<Demux> {
     boost::asio::async_write(fiber_, command.const_buffers(), do_handler);
   }
 
-  void Notify(BaseUserServicePtr p_user_service,
-              const boost::system::error_code& ec) {
-    if (callback_) {
-      auto self = this->shared_from_this();
-      this->get_io_service().post([this, self, p_user_service, ec]() {
-        callback_(p_user_service, ec);
-      });
+  void NotifyUserService(BaseUserServicePtr p_user_service,
+                         const boost::system::error_code& ec) {
+    if (is_server_) {
+      return;
     }
+
+    auto self = this->shared_from_this();
+    this->get_io_service().post([this, self, p_user_service, ec]() {
+      on_user_service_(p_user_service, ec);
+    });
+  }
+
+  void NotifyInitialization(const boost::system::error_code& ec) {
+    if (is_server_) {
+      return;
+    }
+
+    auto self = this->shared_from_this();
+    this->get_io_service().post([this, self, ec]() { on_initialization_(ec); });
   }
 
  private:
@@ -243,7 +257,8 @@ class Admin : public BaseService<Demux> {
   std::recursive_mutex command_handlers_mutex_;
   IdToCommandHandlerMap command_handlers_;
 
-  AdminCallbackType callback_;
+  OnUserService on_user_service_;
+  OnInitialization on_initialization_;
 
   CommandFactory<Demux> cmd_factory_;
 };

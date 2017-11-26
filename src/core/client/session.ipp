@@ -183,9 +183,14 @@ void Session<N, T>::DoFiberize(boost::system::error_code& ec) {
     on_user_service_status_(p_service, ec);
   };
 
+  auto on_initialization = [this, self](const boost::system::error_code& ec) {
+    UpdateStatus(Status::kRunning);
+  };
+
   auto p_admin_service =
       services::admin::Admin<Demux>::Create(io_service_, fiber_demux_, {});
-  p_admin_service->SetAsClient(user_services_, on_user_service_status);
+  p_admin_service->SetAsClient(user_services_, on_user_service_status,
+                               on_initialization);
 
   // Register supported admin microservice commands
   if (!p_admin_service->template RegisterCommand<
@@ -209,11 +214,14 @@ void Session<N, T>::DoFiberize(boost::system::error_code& ec) {
     ec.assign(::error::service_not_started, ::error::get_ssf_category());
     return;
   }
-  
-  UpdateStatus(Status::kRunning);
 
   // Start admin microservice
   p_service_manager_->start(p_admin_service, ec);
+
+  if (ec) {
+    UpdateStatus(Status::kServerNotSupported);
+    return;
+  }
 }
 
 template <class N, template <class> class T>
