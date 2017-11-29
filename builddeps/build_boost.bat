@@ -2,7 +2,7 @@
 
 setlocal enabledelayedexpansion
 
-set BOOST_LIBRARIES=system,date_time,filesystem,regex,thread,chrono
+set BOOST_LIBRARIES=system,date_time,filesystem,thread,chrono
 
 if "%3"=="32" (
   set ARCH=32

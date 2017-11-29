@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 project("SSF")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -49,7 +49,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     list(APPEND PLATFORM_LIBS memcpy)
   endif()
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} -Og -ggdb")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+  set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -Os")
 endif()
 if(MSVC)
   if(USE_STATIC_RUNTIME)
@@ -82,22 +84,26 @@ if (MSVC)
 else()
   set(Boost_USE_STATIC_LIBS ${USE_STATIC_LIBS})
 endif()
+
 set(Boost_USE_STATIC_RUNTIME ${USE_STATIC_RUNTIME})
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED
              COMPONENTS system
-                        date_time
                         filesystem
-                        regex
                         chrono
-                        thread)
+                        thread
+                        date_time)
 add_library(boost INTERFACE)
 target_include_directories(boost INTERFACE ${Boost_INCLUDE_DIRS})
 target_link_libraries(boost INTERFACE ${Boost_LIBRARIES})
+target_compile_definitions(boost INTERFACE
+  BOOST_EXCEPTION_DISABLE
+  BOOST_ASIO_DISABLE_BOOST_REGEX
+  BOOST_ASIO_DISABLE_BOOST_DATE_TIME)
+
 if(UNIX)
   target_link_libraries(boost INTERFACE pthread)
 endif(UNIX)
-target_compile_definitions(boost INTERFACE BOOST_EXCEPTION_DISABLE)
 if (DISABLE_RTTI)
   target_compile_definitions(boost INTERFACE BOOST_NO_RTTI BOOST_NO_TYPEID)
 endif(DISABLE_RTTI)
