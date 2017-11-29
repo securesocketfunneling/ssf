@@ -113,7 +113,7 @@ class RemoteSocks : public BaseUserService<Demux> {
 
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local_service[socks]: start failed: {}", GetParseName(),
+              "[{}] microservice socks: start failed: {}", GetParseName(),
               ec.message());
     }
     return !ec;

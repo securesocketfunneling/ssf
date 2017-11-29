@@ -15,7 +15,6 @@
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/io_service.hpp>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <boost/system/error_code.hpp>

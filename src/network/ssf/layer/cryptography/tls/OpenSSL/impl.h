@@ -633,64 +633,6 @@ class basic_tls {
 
     return context;
   }
-
-  static void add_params_from_property_tree(
-      query* p_query, const boost::property_tree::ptree& property_tree,
-      bool connect, boost::system::error_code& ec) {
-    LayerParameters params;
-    auto layer_name = property_tree.get_child_optional("layer");
-    if (!layer_name || layer_name.get().data() != NAME) {
-      ec.assign(ssf::error::invalid_argument, ssf::error::get_ssf_category());
-      return;
-    }
-
-    auto layer_parameters = property_tree.get_child_optional("parameters");
-    if (!layer_parameters) {
-      ec.assign(ssf::error::missing_config_parameters,
-                ssf::error::get_ssf_category());
-      return;
-    }
-
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "ca_file", &params);
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "ca_buffer", &params);
-    if (params.count("ca_file") == 1) {
-      params["ca_src"] = "file";
-    }
-    if (params.count("ca_buffer") == 1) {
-      params["ca_src"] = "buffer";
-    }
-
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "crt_file", &params);
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "crt_buffer", &params);
-    if (params.count("crt_file") == 1) {
-      params["crt_src"] = "file";
-    }
-    if (params.count("crt_buffer") == 1) {
-      params["crt_src"] = "buffer";
-    }
-
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "key_file", &params);
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "key_buffer", &params);
-    if (params.count("key_file") == 1) {
-      params["key_src"] = "file";
-    }
-    if (params.count("key_buffer") == 1) {
-      params["key_src"] = "buffer";
-    }
-
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "dhparam_file",
-                                     &params);
-    ssf::layer::ptree_entry_to_query(*layer_parameters, "dhparam_buffer",
-                                     &params);
-    if (params.count("dhparam_file") == 1) {
-      params["dhparam_src"] = "file";
-    }
-    if (params.count("dhparam_buffer") == 1) {
-      params["dhparam_src"] = "buffer";
-    }
-
-    p_query->push_back(params);
-  }
 };
 
 template <class NextLayer, template <class> class TLSStreamSocket>

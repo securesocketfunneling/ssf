@@ -12,7 +12,6 @@
 #include <boost/asio/io_service.hpp>
 
 #include <boost/system/error_code.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include "ssf/io/handler_helpers.h"
 #include "ssf/error/error.h"

@@ -1,8 +1,8 @@
 #ifndef SSF_COMMON_CONFIG_SERVICES_H_
 #define SSF_COMMON_CONFIG_SERVICES_H_
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/system/error_code.hpp>
+#include <json.hpp>
 
 #include "services/copy/config.h"
 #include "services/datagrams_to_fibers/config.h"
@@ -17,7 +17,7 @@ namespace config {
 
 class Services {
  public:
-  using PTree = boost::property_tree::ptree;
+  using Json = nlohmann::json;
 
   using DatagramForwarderConfig = ssf::services::fibers_to_datagrams::Config;
   using DatagramListenerConfig = ssf::services::datagrams_to_fibers::Config;
@@ -73,7 +73,7 @@ class Services {
 
   StreamListenerConfig* mutable_stream_listener() { return &stream_listener_; }
 
-  void Update(const PTree& pt);
+  void Update(const Json& json);
 
   // Set gateway ports on listener microservices
   void SetGatewayPorts(bool gateway_ports);
@@ -83,15 +83,15 @@ class Services {
   void LogServiceStatus() const;
 
  private:
-  void UpdateDatagramForwarder(const PTree& pt);
-  void UpdateDatagramListener(const PTree& pt);
-  void UpdateCopy(const PTree& pt);
-  void UpdateShell(const PTree& pt);
-  void UpdateSocks(const PTree& pt);
-  void UpdateStreamForwarder(const PTree& pt);
-  void UpdateStreamListener(const PTree& pt);
+  void UpdateDatagramForwarder(const Json& json);
+  void UpdateDatagramListener(const Json& json);
+  void UpdateCopy(const Json& json);
+  void UpdateShell(const Json& json);
+  void UpdateSocks(const Json& json);
+  void UpdateStreamForwarder(const Json& json);
+  void UpdateStreamListener(const Json& json);
 
-  static bool IsServiceEnabled(const PTree& service, bool default_value);
+  static bool IsServiceEnabled(const Json& service, bool default_value);
 
  private:
   DatagramForwarderConfig datagram_forwarder_;

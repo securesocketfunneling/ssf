@@ -1,11 +1,9 @@
-#include <boost/property_tree/ptree.hpp>
+#include "common/config/proxy.h"
 
 #include <boost/algorithm/string.hpp>
 
 #include <ssf/log/log.h>
 #include <ssf/utils/enum.h>
-
-#include "common/config/proxy.h"
 
 namespace ssf {
 namespace config {
@@ -19,56 +17,47 @@ HttpProxy::HttpProxy()
       reuse_ntlm_(true),
       reuse_kerb_(true) {}
 
-void HttpProxy::Update(const PTree& proxy_prop) {
-  auto host_optional = proxy_prop.get_child_optional("host");
-  if (host_optional) {
-    host_ = host_optional.get().data();
+void HttpProxy::Update(const Json& proxy_prop) {
+  if (proxy_prop.count("host") == 1) {
+    host_ = proxy_prop.at("host").get<std::string>();
     boost::trim(host_);
   }
 
-  auto port_optional = proxy_prop.get_child_optional("port");
-  if (port_optional) {
-    port_ = port_optional.get().data();
+  if (proxy_prop.count("port") == 1) {
+    port_ = proxy_prop.at("port").get<std::string>();
     boost::trim(port_);
   }
 
-  auto user_agent_optional = proxy_prop.get_child_optional("user_agent");
-  if (user_agent_optional) {
-    user_agent_ = user_agent_optional.get().data();
+  if (proxy_prop.count("user_agent") == 1) {
+    user_agent_ = proxy_prop.at("user_agent").get<std::string>();
     boost::trim(user_agent_);
   }
 
-  auto cred_username_optional =
-      proxy_prop.get_child_optional("credentials.username");
-  if (cred_username_optional) {
-    username_ = cred_username_optional.get().data();
-    boost::trim(username_);
-  }
+  if (proxy_prop.count("credentials") == 1) {
+    auto credentials = proxy_prop.at("credentials");
 
-  auto cred_domain_optional =
-      proxy_prop.get_child_optional("credentials.domain");
-  if (cred_domain_optional) {
-    domain_ = cred_domain_optional.get().data();
-    boost::trim(domain_);
-  }
+    if (credentials.count("username") == 1) {
+      username_ = credentials.at("username").get<std::string>();
+      boost::trim(username_);
+    }
 
-  auto cred_password_optional =
-      proxy_prop.get_child_optional("credentials.password");
-  if (cred_password_optional) {
-    password_ = cred_password_optional.get().data();
-    boost::trim(password_);
-  }
+    if (credentials.count("domain") == 1) {
+      domain_ = credentials.at("domain").get<std::string>();
+      boost::trim(domain_);
+    }
 
-  auto cred_reuse_ntlm_optional =
-      proxy_prop.get_child_optional("credentials.reuse_ntlm");
-  if (cred_reuse_ntlm_optional) {
-    reuse_ntlm_ = cred_reuse_ntlm_optional.get().get_value<bool>();
-  }
+    if (credentials.count("password") == 1) {
+      password_ = credentials.at("password").get<std::string>();
+      boost::trim(password_);
+    }
 
-  auto cred_reuse_kerb_optional =
-      proxy_prop.get_child_optional("credentials.reuse_kerb");
-  if (cred_reuse_kerb_optional) {
-    reuse_kerb_ = cred_reuse_kerb_optional.get().get_value<bool>();
+    if (credentials.count("reuse_ntlm") == 1) {
+      reuse_ntlm_ = credentials.at("reuse_ntlm").get<bool>();
+    }
+
+    if (credentials.count("reuse_kerb") == 1) {
+      reuse_kerb_ = credentials.at("reuse_kerb").get<bool>();
+    }
   }
 }
 
@@ -90,10 +79,9 @@ void HttpProxy::Log() const {
 SocksProxy::SocksProxy()
     : version_(Socks::Version::kVUnknown), host_(""), port_("") {}
 
-void SocksProxy::Update(const PTree& proxy_prop) {
-  auto version_optional = proxy_prop.get_child_optional("version");
-  if (version_optional) {
-    int version = version_optional.get().get_value<int>();
+void SocksProxy::Update(const Json& proxy_prop) {
+  if (proxy_prop.count("version") == 1) {
+    int version = proxy_prop.at("version").get<int>();
     if (version == 4) {
       version_ = Socks::Version::kV4;
     }
@@ -102,15 +90,13 @@ void SocksProxy::Update(const PTree& proxy_prop) {
     }
   }
 
-  auto host_optional = proxy_prop.get_child_optional("host");
-  if (host_optional) {
-    host_ = host_optional.get().data();
+  if (proxy_prop.count("host") == 1) {
+    host_ = proxy_prop.at("host").get<std::string>();
     boost::trim(host_);
   }
 
-  auto port_optional = proxy_prop.get_child_optional("port");
-  if (port_optional) {
-    port_ = port_optional.get().data();
+  if (proxy_prop.count("port") == 1) {
+    port_ = proxy_prop.at("port").get<std::string>();
     boost::trim(port_);
   }
 }

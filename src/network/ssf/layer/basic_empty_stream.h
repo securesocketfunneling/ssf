@@ -13,7 +13,6 @@
 #include <boost/asio/io_service.hpp>
 
 #include <boost/system/error_code.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include "ssf/error/error.h"
 
@@ -79,13 +78,6 @@ class VirtualEmptyStreamProtocol {
 
   static unsigned short get_port(const endpoint& endpoint) {
     return endpoint.next_layer_endpoint().port();
-  }
-
-  static void add_params_from_property_tree(
-      query* p_query, const boost::property_tree::ptree& property_tree,
-      bool connect, boost::system::error_code& ec) {
-    next_layer_protocol::add_params_from_property_tree(p_query, property_tree,
-                                                       connect, ec);
   }
 };
 

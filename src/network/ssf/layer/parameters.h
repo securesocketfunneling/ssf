@@ -5,8 +5,6 @@
 #include <map>
 #include <string>
 
-#include <boost/property_tree/ptree.hpp>
-
 namespace ssf {
 namespace layer {
 
@@ -16,10 +14,6 @@ using ParameterStack = std::list<LayerParameters>;
 std::string serialize_parameter_stack(const ParameterStack& stack);
 
 ParameterStack unserialize_parameter_stack(const std::string& serialized_stack);
-
-void ptree_entry_to_query(const boost::property_tree::ptree& ptree,
-                          const std::string& entry_name,
-                          LayerParameters* p_params);
 
 }  // layer
 }  // ssf

@@ -118,7 +118,7 @@ class Shell : public BaseUserService<Demux> {
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local microservice[stream_listener]: start failed: {}",
+              "[{}] microservice stream_listener: start failed: {}",
               GetParseName(), ec.message());
     }
     return !ec;

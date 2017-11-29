@@ -132,7 +132,7 @@ class RemotePortForwarding : public BaseUserService<Demux> {
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local_service[fibers to sockets]: start failed: {}",
+              "[{}] microservice stream_forwarder: start failed: {}",
               GetParseName(), ec.message());
     }
     return !ec;

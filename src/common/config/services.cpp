@@ -25,15 +25,15 @@ Services::Services(const Services& services)
       stream_forwarder_(services.stream_forwarder_),
       stream_listener_(services.stream_listener_) {}
 
-void Services::Update(const PTree& pt) {
-  UpdateDatagramForwarder(pt);
-  UpdateDatagramListener(pt);
-  UpdateStreamForwarder(pt);
-  UpdateStreamListener(pt);
+void Services::Update(const Json& json) {
+  UpdateDatagramForwarder(json);
+  UpdateDatagramListener(json);
+  UpdateStreamForwarder(json);
+  UpdateStreamListener(json);
 
-  UpdateShell(pt);
-  UpdateSocks(pt);
-  UpdateCopy(pt);
+  UpdateShell(json);
+  UpdateSocks(json);
+  UpdateCopy(json);
 }
 
 void Services::SetGatewayPorts(bool gateway_ports) {
@@ -81,119 +81,107 @@ void Services::LogServiceStatus() const {
           (socks_.enabled() ? "On" : "Off"));
 }
 
-void Services::UpdateDatagramForwarder(const PTree& pt) {
-  auto optional = pt.get_child_optional("datagram_forwarder");
-  if (!optional) {
+void Services::UpdateDatagramForwarder(const Json& json) {
+  if (json.count("datagram_forwarder") == 0) {
     SSF_LOG("config", debug,
             "update datagram_forwarder service: configuration not found");
     return;
   }
 
-  datagram_forwarder_.set_enabled(
-      IsServiceEnabled(optional.get(), datagram_forwarder_.enabled()));
+  datagram_forwarder_.set_enabled(IsServiceEnabled(
+      json.at("datagram_forwarder"), datagram_forwarder_.enabled()));
 }
 
-void Services::UpdateDatagramListener(const PTree& pt) {
-  auto optional = pt.get_child_optional("datagram_listener");
-  if (!optional) {
+void Services::UpdateDatagramListener(const Json& json) {
+  if (json.count("datagram_listener") == 0) {
     SSF_LOG("config", debug,
             "update datagram_listener service: configuration not found");
     return;
   }
 
-  auto& datagram_listener_prop = optional.get();
+  auto& datagram_listener_prop = json.at("datagram_listener");
 
   datagram_listener_.set_enabled(
       IsServiceEnabled(datagram_listener_prop, datagram_listener_.enabled()));
 
-  auto gateway_ports =
-      datagram_listener_prop.get_child_optional("gateway_ports");
-  if (gateway_ports) {
-    datagram_listener_.set_gateway_ports(gateway_ports.get().get_value<bool>());
+  if (datagram_listener_prop.count("gateway_ports") == 1) {
+    datagram_listener_.set_gateway_ports(
+        datagram_listener_prop.at("gateway_ports").get<bool>());
   }
 }
 
-void Services::UpdateCopy(const PTree& pt) {
-  auto copy_optional = pt.get_child_optional("copy");
-  if (!copy_optional) {
+void Services::UpdateCopy(const Json& json) {
+  if (json.count("copy") == 0) {
     SSF_LOG("config", debug, "update copy service: configuration not found");
     return;
   }
 
-  copy_.set_enabled(IsServiceEnabled(copy_optional.get(), copy_.enabled()));
+  copy_.set_enabled(IsServiceEnabled(json.at("copy"), copy_.enabled()));
 }
 
-void Services::UpdateShell(const PTree& pt) {
-  auto shell_optional = pt.get_child_optional("shell");
-  if (!shell_optional) {
+void Services::UpdateShell(const Json& json) {
+  if (json.count("shell") == 0) {
     SSF_LOG("config", debug, "update shell service: configuration not found");
     return;
   }
 
-  auto& shell_prop = shell_optional.get();
+  auto& shell_prop = json.at("shell");
   shell_.set_enabled(IsServiceEnabled(shell_prop, shell_.enabled()));
 
-  auto opt_path = shell_prop.get_child_optional("path");
-  if (opt_path) {
-    std::string shell_path(opt_path.get().data());
+  if (shell_prop.count("path") == 1) {
+    std::string shell_path(shell_prop.at("path").get<std::string>());
     boost::trim(shell_path);
     shell_.set_path(shell_path);
   }
 
-  auto opt_args = shell_prop.get_child_optional("args");
-  if (opt_args) {
-    std::string shell_args(opt_args.get().data());
+  if (shell_prop.count("args") == 1) {
+    std::string shell_args(shell_prop.at("args").get<std::string>());
     boost::trim(shell_args);
     shell_.set_args(shell_args);
   }
 }
 
-void Services::UpdateSocks(const PTree& pt) {
-  auto socks_optional = pt.get_child_optional("socks");
-  if (!socks_optional) {
+void Services::UpdateSocks(const Json& json) {
+  if (json.count("socks") == 0) {
     SSF_LOG("config", debug, "update socks service: configuration not found");
     return;
   }
 
-  socks_.set_enabled(IsServiceEnabled(socks_optional.get(), socks_.enabled()));
+  socks_.set_enabled(IsServiceEnabled(json.at("socks"), socks_.enabled()));
 }
 
-void Services::UpdateStreamForwarder(const PTree& pt) {
-  auto optional = pt.get_child_optional("stream_forwarder");
-  if (!optional) {
+void Services::UpdateStreamForwarder(const Json& json) {
+  if (json.count("stream_forwarder") == 0) {
     SSF_LOG("config", debug,
             "update stream_forwarder service: configuration not found");
     return;
   }
 
-  stream_forwarder_.set_enabled(
-      IsServiceEnabled(optional.get(), stream_forwarder_.enabled()));
+  stream_forwarder_.set_enabled(IsServiceEnabled(json.at("stream_forwarder"),
+                                                 stream_forwarder_.enabled()));
 }
 
-void Services::UpdateStreamListener(const PTree& pt) {
-  auto optional = pt.get_child_optional("stream_listener");
-  if (!optional) {
+void Services::UpdateStreamListener(const Json& json) {
+  if (json.count("stream_listener") == 0) {
     SSF_LOG("config", debug,
             "update stream_listener service: configuration not found");
     return;
   }
 
-  auto& stream_listener_prop = optional.get();
+  auto& stream_listener_prop = json.at("stream_listener");
 
   stream_listener_.set_enabled(
       IsServiceEnabled(stream_listener_prop, stream_listener_.enabled()));
 
-  auto gateway_ports = stream_listener_prop.get_child_optional("gateway_ports");
-  if (gateway_ports) {
-    stream_listener_.set_gateway_ports(gateway_ports.get().get_value<bool>());
+  if (stream_listener_prop.count("gateway_ports") == 1) {
+    stream_listener_.set_gateway_ports(
+        stream_listener_prop.at("gateway_ports").get<bool>());
   }
 }
 
-bool Services::IsServiceEnabled(const PTree& service_ptree,
-                                bool default_value) {
-  auto enable_prop = service_ptree.get_child_optional("enable");
-  if (enable_prop) {
-    return enable_prop.get().get_value<bool>();
+bool Services::IsServiceEnabled(const Json& service_json, bool default_value) {
+  if (service_json.count("enable") == 1) {
+    return service_json.at("enable").get<bool>();
   } else {
     return default_value;
   }
