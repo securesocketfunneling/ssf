@@ -90,7 +90,7 @@ class StopServiceRequest {
   static std::string OnReply(const std::string& serialized_request,
                              Demux* p_demux,
                              const boost::system::error_code& ec,
-                             std::string serialized_result) {
+                             const std::string& serialized_result) {
     StopServiceRequest<Demux> request;
 
     try {

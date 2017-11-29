@@ -354,8 +354,9 @@ class basic_fiber_impl
       SSF_LOG("fiber_impl", debug,
               "fiber impl: new connection from remote port: {}", remote_port);
 
-      p_fib_demux->get_io_service().dispatch(std::bind(
-          &basic_fiber_impl::a_queues_handler, this->shared_from_this(), ec));
+      auto self = this->shared_from_this();
+      auto accept_queue_handler = [this, self]() { a_queues_handler(); };
+      p_fib_demux->get_io_service().dispatch(accept_queue_handler);
     }
   }
 
@@ -403,8 +404,10 @@ class basic_fiber_impl
         op->complete(boost::system::error_code(), copied);
       };
       p_fib_demux->get_io_service().post(do_complete);
-      p_fib_demux->get_io_service().dispatch(std::bind(
-          &basic_fiber_impl::r_queues_handler, this->shared_from_this(), ec));
+
+      auto self = this->shared_from_this();
+      auto read_queue_handler = [this, self]() { r_queues_handler(); };
+      p_fib_demux->get_io_service().dispatch(read_queue_handler);
     }
   }
 
@@ -466,9 +469,9 @@ class basic_fiber_impl
       };
       p_fib_demux->get_io_service().post(do_complete);
 
-      p_fib_demux->get_io_service().dispatch(
-          std::bind(&basic_fiber_impl::r_dgr_queues_handler,
-                    this->shared_from_this(), ec));
+      auto self = this->shared_from_this();
+      auto read_queue_handler = [this, self]() { r_dgr_queues_handler(); };
+      p_fib_demux->get_io_service().dispatch(read_queue_handler);
     }
   }
 

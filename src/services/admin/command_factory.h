@@ -15,12 +15,12 @@ namespace ssf {
 template <typename Demux>
 class CommandFactory {
  public:
-  using CommandExecuterType = std::function<std::string(
-      const std::string&, Demux*, boost::system::error_code&)>;
+  typedef std::string (*CommandExecuterType)(const std::string&, Demux*,
+                                             boost::system::error_code&);
 
-  using CommandReplierType =
-      std::function<std::string(const std::string&, Demux*,
-                                const boost::system::error_code&, std::string)>;
+  typedef std::string (*CommandReplierType)(const std::string&, Demux*,
+                                            const boost::system::error_code&,
+                                            const std::string&);
 
  private:
   using CommandExecuterMap = std::map<uint32_t, CommandExecuterType>;

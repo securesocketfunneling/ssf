@@ -64,12 +64,12 @@ echo [*] Configuring OpenSSL
 cd /D %OPENSSL_SOURCE%
 
 if "%ARCH%"=="64" (
-  perl Configure VC-WIN64A
+  perl Configure no-err VC-WIN64A
   call ms\do_win64a.bat
   perl -i.old -p -e "s#^(LFLAGS=.*$)#$1 /DYNAMICBASE#" ms\nt.mak
 )
 if "%ARCH%"=="32" (
-  perl Configure VC-WIN32
+  perl Configure no-err VC-WIN32 +OPENSSL_NO_ERR
   call ms\do_nasm.bat
   perl -i.old -p -e "s#^(ASM=.*$)#$1 -safeseh#;s#^(LFLAGS=.*$)#$1 /DYNAMICBASE /SAFESEH#" ms\nt.mak
 )

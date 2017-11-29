@@ -15,8 +15,8 @@
 namespace ssf {
 
 class UserServiceOptionFactory {
-  using OptionParser = std::function<UserServiceParameterBag(
-      const std::string&, boost::system::error_code&)>;
+  typedef UserServiceParameterBag (*OptionParser)(const std::string&,
+                                                  boost::system::error_code&);
 
   struct ServiceOption {
     std::string fullname;

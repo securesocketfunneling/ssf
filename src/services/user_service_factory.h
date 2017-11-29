@@ -21,9 +21,9 @@ class UserServiceFactory {
   using UserServicePtr = std::shared_ptr<UserService>;
 
  private:
-  using UserServiceGenerator =
-      std::function<std::shared_ptr<ssf::services::BaseUserService<Demux>>(
-          const UserServiceParameterBag&, boost::system::error_code&)>;
+  typedef std::shared_ptr<ssf::services::BaseUserService<Demux>> (
+      *UserServiceGenerator)(const UserServiceParameterBag&,
+                             boost::system::error_code&);
 
   using UserServiceGeneratorMap = std::map<std::string, UserServiceGenerator>;
 
@@ -32,11 +32,8 @@ class UserServiceFactory {
 
   template <class UserService>
   bool Register() {
-    auto creator = [](const UserServiceParameterBag& parameters,
-                      boost::system::error_code& ec) {
-      return UserService::CreateUserService(parameters, ec);
-    };
-    return RegisterUserService(UserService::GetParseName(), creator);
+    return RegisterUserService(UserService::GetParseName(),
+                               &UserService::CreateUserService);
   }
 
   bool RegisterUserService(const std::string& index,
