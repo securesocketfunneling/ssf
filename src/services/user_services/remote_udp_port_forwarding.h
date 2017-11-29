@@ -135,7 +135,7 @@ class RemoteUdpPortForwarding : public BaseUserService<Demux> {
 
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local_service[fibers to datagrams]: start failed: {}",
+              "[{}] microservice datagram_forwarder: start failed: {}",
               GetParseName(), ec.message());
     }
 

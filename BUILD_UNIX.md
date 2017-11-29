@@ -59,7 +59,8 @@ against libstdc++. This is set automatically to the same value as
 `USE_STATIC_LIBS`.
 * `BUILD_UNIT_TESTS`: `ON` or `OFF` to enable/disable building SSF unit tests.
 * `DISABLE_RTTI`: `ON` or `OFF` to disable/enable C++ Run-Time Type Information.
-RTTI is enabled by default. SSF does not currently build on Unix without RTTI.
+RTTI is enabled by default. Only disable RTTI if boost libraries have been built
+without RTTI.
 * `DISABLE_TLS`: `ON` or `OFF` to disable/enable TLS layer. Network traffic will
 use raw TCP and be left unsecured. Provided for testing purpose only.
 

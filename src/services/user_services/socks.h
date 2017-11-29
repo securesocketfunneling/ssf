@@ -111,7 +111,7 @@ class Socks : public BaseUserService<Demux> {
 
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local_service[sockets to fibers]: start failed: {}",
+              "[{}] microservice stream_listener: start failed: {}",
               GetParseName(), ec.message());
     }
     return !ec;

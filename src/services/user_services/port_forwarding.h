@@ -145,7 +145,7 @@ class PortForwarding : public BaseUserService<Demux> {
         l_forward.service_id(), l_forward.parameters(), ec);
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local_service[sockets to fibers]: start failed: ",
+              "[{}] microservice stream_listener: start failed: {}",
               GetParseName(), ec.message());
     }
     return !ec;

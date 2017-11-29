@@ -135,7 +135,7 @@ class UdpPortForwarding : public BaseUserService<Demux> {
 
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local_service[datagrams to fibers]: start failed: {}",
+              "[{}] microservice datagram_listener: start failed: {}",
               GetParseName(), ec.message());
     }
 

@@ -120,7 +120,7 @@ class RemoteShell : public BaseUserService<Demux> {
         l_process_server.service_id(), l_process_server.parameters(), ec);
     if (ec) {
       SSF_LOG("user_service", error,
-              "[{}] local microservice[process]: start failed: {}",
+              "[{}] microservice shell: start failed: {}",
               GetParseName(), ec.message());
     }
     return !ec;

@@ -12,13 +12,6 @@
 #include "common/config/config.h"
 #include "common/error/error.h"
 
-#if defined(BOOST_ASIO_WINDOWS)
-#define SSF_PROCESS_SERVICE_BINARY_PATH \
-  "\"C:\\\\windows\\\\system32\\\\cmd.exe\""
-#else
-#define SSF_PROCESS_SERVICE_BINARY_PATH "\"/bin/bash\""
-#endif
-
 namespace ssf {
 namespace config {
 
@@ -60,7 +53,7 @@ void Config::UpdateFromFile(const std::string& filepath,
     UpdateFromJson(config);
   } catch (const std::exception& e) {
     (void)(e);
-    SSF_LOG("config", error, "error parsing config file: {}", e.what());
+    SSF_LOG("config", error, "config file parsing error: {}", e.what());
     ec.assign(::error::invalid_argument, ::error::get_ssf_category());
   }
 }
@@ -77,7 +70,7 @@ void Config::UpdateFromString(const std::string& config_string,
     UpdateFromJson(config);
   } catch (const std::exception& e) {
     (void)(e);
-    SSF_LOG("config", error, "error parsing config string: {}", e.what());
+    SSF_LOG("config", error, "config string parsing error: {}", e.what());
   }
 }
 
@@ -107,6 +100,7 @@ void Config::UpdateFromJson(const Json& json) {
   if (json.count("ssf") == 0) {
     return;
   }
+
   auto ssf_config = json.at("ssf");
   UpdateTls(ssf_config);
   UpdateHttpProxy(ssf_config);
@@ -189,59 +183,6 @@ void Config::UpdateArguments(const Json& json) {
     ++argv_it;
   }
 }
-
-const char* Config::default_config_ = R"RAWSTRING(
-{
-  "ssf": {
-    "tls": {
-      "ca_cert_path": "./certs/trusted/ca.crt",
-      "cert_path": "./certs/certificate.crt",
-      "key_path": "./certs/private.key",
-      "key_password": "",
-      "dh_path": "./certs/dh4096.pem",
-      "cipher_alg": "DHE-RSA-AES256-GCM-SHA384"
-    },
-    "http_proxy": {
-      "host": "",
-      "port": "",
-      "user_agent": "",
-      "credentials": {
-        "username": "",
-        "password": "",
-        "domain": "",
-        "reuse_ntlm": true,
-        "reuse_nego": true
-      }
-    },
-    "socks_proxy": {
-      "version": 5,
-      "host": "",
-      "port": "1080"
-    },
-    "services": {
-      "datagram_forwarder": { "enable": true },
-      "datagram_listener": {
-        "enable": true,
-        "gateway_ports": false
-      },
-      "stream_forwarder": { "enable": true },
-      "stream_listener": {
-        "enable": true,
-        "gateway_ports": false
-      },
-      "copy": { "enable": false },
-      "shell": {
-        "enable": false,
-        "path": )RAWSTRING" SSF_PROCESS_SERVICE_BINARY_PATH R"RAWSTRING(,
-        "args": ""
-      },
-      "socks": { "enable": true }
-    },
-    "circuit": [],
-    "arguments": ""
-  }
-}
-)RAWSTRING";
 
 }  // config
 }  // ssf

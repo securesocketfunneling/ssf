@@ -36,6 +36,6 @@ B2_ARGS="--build-dir=${BOOST_BUILD_DIR} --stagedir=${BOOST_STAGE_DIR} -j ${cores
 for l in ${BOOST_LIBRARIES}; do
   B2_ARGS="${B2_ARGS} --with-${l}"
 done
-B2_ARGS="${B2_ARGS} toolset=gcc-${arch} link=static runtime-link=static variant=${variant}"
+B2_ARGS="${B2_ARGS} toolset=gcc-${arch} link=static runtime-link=static variant=${variant} cxxflags=-fno-rtti"
 
 (cd ${BOOST_SOURCE} && ./b2 ${B2_ARGS} --prefix=${DIST_DIR} stage install)

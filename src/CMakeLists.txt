@@ -242,6 +242,19 @@ set(SSF_FRAMEWORK_FILES
   core/server/server.ipp
 )
 
+set(SSF_FRAMEWORK_DEFINITIONS "")
+
+if (SSF_DEFAULT_CONFIG_FILE AND NOT SSF_DEFAULT_CONFIG_FILE STREQUAL "")
+  list(APPEND SSF_FRAMEWORK_FILES ${SSF_DEFAULT_CONFIG_FILE})
+else()
+  if (WIN32)
+    list(APPEND SSF_FRAMEWORK_FILES common/config/win_default_config.cpp)
+  endif()
+  if (UNIX)
+    list(APPEND SSF_FRAMEWORK_FILES common/config/unix_default_config.cpp)
+  endif()
+endif()
+
 # windows impl
 if (WIN32)
   list(APPEND SSF_FRAMEWORK_FILES
@@ -270,8 +283,6 @@ target_include_directories(ssf_framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ssf_framework PUBLIC boost ssl ${PLATFORM_LIBS} ssf_network cxxopts json)
 set_property(TARGET ssf_framework PROPERTY FOLDER Libraries)
 source_group_by_folder(ssf_framework)
-
-set(SSF_FRAMEWORK_DEFINITIONS "")
 
 if(DISABLE_TLS)
   list(APPEND SSF_FRAMEWORK_DEFINITIONS TCP_ONLY_LINK)
