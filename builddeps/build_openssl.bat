@@ -69,7 +69,7 @@ if "%ARCH%"=="64" (
   perl -i.old -p -e "s#^(LFLAGS=.*$)#$1 /DYNAMICBASE#" ms\nt.mak
 )
 if "%ARCH%"=="32" (
-  perl Configure no-err VC-WIN32 +OPENSSL_NO_ERR
+  perl Configure no-err VC-WIN32
   call ms\do_nasm.bat
   perl -i.old -p -e "s#^(ASM=.*$)#$1 -safeseh#;s#^(LFLAGS=.*$)#$1 /DYNAMICBASE /SAFESEH#" ms\nt.mak
 )
