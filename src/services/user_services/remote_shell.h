@@ -47,7 +47,7 @@ class RemoteShell : public BaseUserService<Demux> {
     return {{"addr", listener.addr}, {"port", std::to_string(listener.port)}};
   }
 
-  static std::shared_ptr<RemoteShell> CreateUserService(
+  static std::shared_ptr<BaseUserService<Demux>> CreateUserService(
       const UserServiceParameterBag& parameters,
       boost::system::error_code& ec) {
     if (parameters.count("addr") == 0 || parameters.count("port") == 0) {

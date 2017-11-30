@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BOOST_LIBRARIES="system date_time filesystem regex thread chrono"
+BOOST_LIBRARIES="system date_time filesystem thread chrono"
 
 if [ $# -lt 3 ]; then
   echo "Usage: $0 boost_archive boost_version destination_dir" 1>&2

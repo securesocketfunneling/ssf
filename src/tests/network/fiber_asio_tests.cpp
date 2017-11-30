@@ -738,7 +738,7 @@ TEST_F(FiberTest, ExchangePacketsFiveClients) {
 }
 
 //-----------------------------------------------------------------------------
-TEST_F(FiberTest, TooSmallReceiveBuffer) {
+TEST_F(FiberTest, TinyReceiverBuffer) {
   Wait();
 
   std::array<uint8_t, 5> buffer_client;
@@ -763,17 +763,13 @@ TEST_F(FiberTest, TooSmallReceiveBuffer) {
     received += s;
     ++count;
 
-    if (received == 5) {
+    if (count == 3) {
       server_closed.set_value(true);
     }
   };
 
   auto async_accept_h1 = [&, this](const boost::system::error_code& ec) {
     ASSERT_EQ(ec.value(), 0);
-    boost::asio::async_read(
-        fib_server, boost::asio::buffer(buffer_server),
-        std::bind(void_handler_receive, std::placeholders::_1,
-                  std::placeholders::_2));
     boost::asio::async_read(
         fib_server, boost::asio::buffer(buffer_server),
         std::bind(void_handler_receive, std::placeholders::_1,

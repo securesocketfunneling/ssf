@@ -82,7 +82,7 @@ class ShellFixtureTest : public ServiceFixtureTest<TServiceTested> {
     boost::asio::write(socket, boost::asio::buffer(command), ec);
     ASSERT_EQ(ec.value(), 0) << "Fail to write to socket";
 
-    timer.expires_from_now(std::chrono::seconds(1), ec);
+    timer.expires_from_now(std::chrono::seconds(5), ec);
     timer.wait(ec);
 
     std::cout << std::endl;

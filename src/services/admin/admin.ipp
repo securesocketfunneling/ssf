@@ -18,7 +18,7 @@ template <typename Demux>
 Admin<Demux>::Admin(boost::asio::io_service& io_service, Demux& fiber_demux)
     : ssf::BaseService<Demux>::BaseService(io_service, fiber_demux),
       admin_version_(1),
-      is_server_(false),
+      is_server_(true),
       fiber_acceptor_(io_service),
       fiber_(io_service),
       reserved_keep_alive_id_(0),
@@ -28,7 +28,8 @@ Admin<Demux>::Admin(boost::asio::io_service& io_service, Demux& fiber_demux)
       retries_(0),
       stopping_mutex_(),
       stopped_(false),
-      callback_() {}
+      on_user_service_(),
+      on_initialization_() {}
 
 template <typename Demux>
 void Admin<Demux>::SetAsServer() {
@@ -40,10 +41,12 @@ void Admin<Demux>::SetAsServer() {
 
 template <typename Demux>
 void Admin<Demux>::SetAsClient(std::vector<BaseUserServicePtr> user_services,
-                               AdminCallbackType callback) {
+                               OnUserService on_user_service,
+                               OnInitialization on_initialization) {
   is_server_ = false;
   user_services_ = std::move(user_services);
-  callback_ = std::move(callback);
+  on_user_service_ = std::move(on_user_service);
+  on_initialization_ = std::move(on_initialization);
 }
 
 template <typename Demux>
@@ -191,9 +194,9 @@ void Admin<Demux>::InitializeRemoteServices(
                 "[admin] could not start remote microservice for service[{}]",
                 user_services_[i_]->GetName());
 
-        Notify(user_services_[i_],
-               boost::system::error_code(::error::operation_canceled,
-                                         ::error::get_ssf_category()));
+        NotifyUserService(user_services_[i_], boost::system::error_code(
+                                                  ::error::operation_canceled,
+                                                  ::error::get_ssf_category()));
 
         // Get the remote micro services to stop
         stop_request_vector_ =
@@ -220,9 +223,9 @@ void Admin<Demux>::InitializeRemoteServices(
                 "[admin] could not start local microservice for service[{}]",
                 user_services_[i_]->GetName());
 
-        Notify(user_services_[i_],
-               boost::system::error_code(::error::operation_canceled,
-                                         ::error::get_ssf_category()));
+        NotifyUserService(user_services_[i_], boost::system::error_code(
+                                                  ::error::operation_canceled,
+                                                  ::error::get_ssf_category()));
 
         // Get the remote micro services to stop
         stop_request_vector_ =
@@ -241,10 +244,11 @@ void Admin<Demux>::InitializeRemoteServices(
         continue;
       }
 
-      Notify(user_services_[i_],
-             boost::system::error_code(::error::success,
-                                       ::error::get_ssf_category()));
+      NotifyUserService(user_services_[i_],
+                        boost::system::error_code(::error::success,
+                                                  ::error::get_ssf_category()));
     }
+    NotifyInitialization({::error::success, ::error::get_ssf_category()});
   }
 }
 #include <boost/asio/unyield.hpp>  // NOLINT
@@ -439,7 +443,9 @@ void Admin<Demux>::HandleStop() {
   fiber_acceptor_.close();
   fiber_.close();
 
-  callback_ = [](BaseUserServicePtr, const boost::system::error_code&) {};
+  on_user_service_ = [](BaseUserServicePtr, const boost::system::error_code&) {
+  };
+  on_initialization_ = [](const boost::system::error_code&) {};
 }
 
 }  // admin

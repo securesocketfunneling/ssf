@@ -31,8 +31,8 @@ class Copy : public BaseUserService<Demux> {
     return {};
   }
 
-  static CopyPtr CreateUserService(const UserServiceParameterBag& params,
-                                   boost::system::error_code& ec) {
+  static std::shared_ptr<BaseUserService<Demux>> CreateUserService(
+      const UserServiceParameterBag& params, boost::system::error_code& ec) {
     return CopyPtr(new Copy());
   }
 

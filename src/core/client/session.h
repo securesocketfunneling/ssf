@@ -7,8 +7,8 @@
 
 #include <boost/system/error_code.hpp>
 
-#include "common/boost/fiber/stream_fiber.hpp"
 #include "common/boost/fiber/basic_fiber_demux.hpp"
+#include "common/boost/fiber/stream_fiber.hpp"
 
 #include "core/client/status.h"
 #include "core/service_manager/service_manager.h"
@@ -54,9 +54,7 @@ class Session
 
   Demux& GetDemux() { return fiber_demux_; }
 
-  bool is_stopped() {
-    return stopped_;
-  }
+  bool is_stopped() { return stopped_; }
 
   boost::asio::io_service& get_io_service() { return io_service_; }
 

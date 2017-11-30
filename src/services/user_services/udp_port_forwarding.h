@@ -60,7 +60,7 @@ class UdpPortForwarding : public BaseUserService<Demux> {
             {"to_port", std::to_string(forward_options.to.port)}};
   }
 
-  static std::shared_ptr<UdpPortForwarding> CreateUserService(
+  static std::shared_ptr<BaseUserService<Demux>> CreateUserService(
       const UserServiceParameterBag& parameters,
       boost::system::error_code& ec) {
     if (parameters.count("from_addr") == 0 ||

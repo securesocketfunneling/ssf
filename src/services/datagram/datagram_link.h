@@ -32,16 +32,16 @@ struct DatagramLink : public std::enable_shared_from_this<
     typedef T value_type;
   };
 
-  typedef std::shared_ptr<DatagramLink> DatagramLinkPtr;
+  using DatagramLinkPtr = std::shared_ptr<DatagramLink>;
 
   /// Types for the DatagramLink manager
-  typedef DatagramLinkOperator<RemoteEndpointRight, RightEndSocket,
-                               RemoteEndpointLeft, LeftEndSocket>
-      DatagramLinkOperatorSpec;
-  typedef std::shared_ptr<DatagramLinkOperatorSpec> DatagramLinkOperatorSpecPtr;
+  using DatagramLinkOperatorSpec =
+      DatagramLinkOperator<RemoteEndpointRight, RightEndSocket,
+                           RemoteEndpointLeft, LeftEndSocket>;
+  using DatagramLinkOperatorSpecPtr = std::shared_ptr<DatagramLinkOperatorSpec>;
 
-  typedef std::vector<uint8_t> Datagram;
-  typedef typename make_queue<Datagram>::type DatagramQueue;
+  using Datagram = std::vector<uint8_t>;
+  using DatagramQueue = typename make_queue<Datagram>::type;
 
  public:
   static DatagramLinkPtr Create(RightEndSocket& right, LeftEndSocket left,
@@ -72,18 +72,20 @@ struct DatagramLink : public std::enable_shared_from_this<
   void ExternalFeed(
       const boost::system::error_code& ec = boost::system::error_code(),
       std::size_t n = 0) {
-    std::unique_lock<std::recursive_mutex> lock(datagram_queue_mutex_);
-
-    // Stop the loop if stopping the DatagramLink
-    if (stopping_) {
-      return;
+    {
+      std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+      if (stopping_) {
+        return;
+      }
     }
+
+    std::unique_lock<std::recursive_mutex> lock(datagram_queue_mutex_);
 
     reenter(coro_external_) {
       for (;;) {
-        // If no error occured but no data is available, we wait
+        // if no error occured but no data is available, we wait
         if (!ec && dgr_queue_.empty()) {
-          timer_.expires_from_now(std::chrono::seconds(120));
+          timer_.expires_from_now(std::chrono::seconds(30));
           yield timer_.async_wait(std::bind(&DatagramLink::ExternalFeed,
                                             this->shared_from_this(),
                                             std::placeholders::_1, 0));
@@ -91,25 +93,28 @@ struct DatagramLink : public std::enable_shared_from_this<
 
         // if no other error than a canceled timer has occured and that some
         // data is available, we send it, else we stop
-        if ((!ec || ec.value() == boost::asio::error::operation_aborted) &&
-            !dgr_queue_.empty()) {
-          if (l_.is_open()) {
-            yield l_.async_send_to(
-                boost::asio::buffer(dgr_queue_.front()), remote_endpoint_left_,
-                std::bind(&DatagramLink::ExternalFeed, this->shared_from_this(),
-                          std::placeholders::_1, std::placeholders::_2));
-            dgr_queue_.pop();
-            if (!auto_feeding_) {
-              auto_feeding_ = true;
-              AutoFeed();
-            }
-          } else {
-            Shutdown();
-            return;
-          }
-        } else {
+        if (ec && ec.value() != boost::asio::error::operation_aborted) {
           Shutdown();
           return;
+        }
+
+        if (dgr_queue_.empty()) {
+          continue;
+        }
+
+        if (!l_.is_open()) {
+          Shutdown();
+          return;
+        }
+
+        yield l_.async_send_to(
+            boost::asio::buffer(dgr_queue_.front()), remote_endpoint_left_,
+            std::bind(&DatagramLink::ExternalFeed, this->shared_from_this(),
+                      std::placeholders::_1, std::placeholders::_2));
+        dgr_queue_.pop();
+        if (!auto_feeding_) {
+          auto_feeding_ = true;
+          AutoFeed();
         }
       }
     }
@@ -121,40 +126,56 @@ struct DatagramLink : public std::enable_shared_from_this<
   void AutoFeed(
       const boost::system::error_code& ec = boost::system::error_code(),
       std::size_t n = 0) {
-    if (stopping_) {
+    {
+      std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+      if (stopping_) {
+        return;
+      }
+    }
+
+    if (ec || !r_.is_open() || !l_.is_open()) {
+      Shutdown();
       return;
     }
-    if (!ec && r_.is_open() && l_.is_open()) reenter(coro_auto_) {
-        for (;;) {
-          yield l_.async_receive_from(
-              boost::asio::buffer(array_buffer_), remote_endpoint_left_,
+
+    reenter(coro_auto_) {
+      for (;;) {
+        yield l_.async_receive_from(
+            boost::asio::buffer(array_buffer_), remote_endpoint_left_,
+            std::bind(&DatagramLink::AutoFeed, this->shared_from_this(),
+                      std::placeholders::_1, std::placeholders::_2));
+        bytes_to_transfer_ = n;
+        transferred_bytes_ = 0;
+        while (transferred_bytes_ < bytes_to_transfer_) {
+          yield r_.async_send_to(
+              boost::asio::buffer(array_buffer_,
+                                  bytes_to_transfer_ - transferred_bytes_),
+              remote_endpoint_right_,
               std::bind(&DatagramLink::AutoFeed, this->shared_from_this(),
                         std::placeholders::_1, std::placeholders::_2));
-          bytes_to_transfer_ = n;
-          transferred_bytes_ = 0;
-          while (transferred_bytes_ < bytes_to_transfer_) {
-            yield r_.async_send_to(
-                boost::asio::buffer(array_buffer_,
-                                    bytes_to_transfer_ - transferred_bytes_),
-                remote_endpoint_right_,
-                std::bind(&DatagramLink::AutoFeed, this->shared_from_this(),
-                          std::placeholders::_1, std::placeholders::_2));
 
-            transferred_bytes_ += n;
-          }
+          transferred_bytes_ += n;
         }
       }
-    else {
-      Shutdown();
     }
   }
 #include <boost/asio/unyield.hpp>  // NOLINT
 
   void Stop() {
+    {
+      std::unique_lock<std::recursive_mutex> lock(stopping_mutex_);
+      if (stopping_) {
+        return;
+      }
+      stopping_ = true;
+    }
+
     boost::system::error_code ec;
+    l_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    ec.clear();
     l_.close(ec);
+    ec.clear();
     timer_.cancel(ec);
-    stopping_ = true;
   }
 
  private:
@@ -177,14 +198,23 @@ struct DatagramLink : public std::enable_shared_from_this<
         auto_feeding_(false) {}
 
   void Shutdown() {
-    std::unique_lock<std::recursive_mutex> lock(p_operator_mutex_);
-    if (p_operator_ && !stopping_) {
-      p_operator_->Stop(this->shared_from_this());
-      p_operator_.reset();
+    {
+      std::unique_lock<std::recursive_mutex> lock_stop(stopping_mutex_);
+      if (stopping_) {
+        return;
+      }
     }
+
+    std::unique_lock<std::recursive_mutex> lock_operator(p_operator_mutex_);
+    if (!p_operator_) {
+      return;
+    }
+
+    p_operator_->Stop(this->shared_from_this());
+    p_operator_.reset();
   }
 
- public:
+ private:
   boost::asio::coroutine coro_auto_;
   boost::asio::coroutine coro_external_;
   RightEndSocket& r_;
@@ -198,6 +228,7 @@ struct DatagramLink : public std::enable_shared_from_this<
   RemoteEndpointLeft remote_endpoint_left_;
   std::recursive_mutex datagram_queue_mutex_;
   std::recursive_mutex p_operator_mutex_;
+  std::recursive_mutex stopping_mutex_;
   bool stopping_;
   DatagramLinkOperatorSpecPtr p_operator_;
   bool auto_feeding_;

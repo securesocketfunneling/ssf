@@ -23,9 +23,9 @@ class DatagramLinkOperator
                                RemoteEndpointLeft, LeftEndSocket>> {
  private:
   // Types for DatagramLinks
-  typedef DatagramLink<RemoteEndpointRight, RightEndSocket, RemoteEndpointLeft,
-                       LeftEndSocket> DatagramLinkSpec;
-  typedef std::shared_ptr<DatagramLinkSpec> DatagramLinkPtr;
+  using DatagramLinkSpec = DatagramLink<RemoteEndpointRight, RightEndSocket,
+                                        RemoteEndpointLeft, LeftEndSocket>;
+  using DatagramLinkPtr = std::shared_ptr<DatagramLinkSpec>;
 
  public:
   static std::shared_ptr<DatagramLinkOperator> Create(
@@ -55,7 +55,6 @@ class DatagramLinkOperator
                RemoteEndpointLeft left_endpoint,
                boost::asio::io_service& io_service) {
     std::unique_lock<std::recursive_mutex> lock(links_mutex_);
-    std::unique_lock<std::recursive_mutex> lock2(endpoints_mutex_);
 
     auto link = DatagramLinkSpec::Create(right_end_socket_, std::move(left),
                                          right_endpoint, left_endpoint,
@@ -67,37 +66,32 @@ class DatagramLinkOperator
 
   /// Function to stop a DataLink
   void Stop(DatagramLinkPtr link) {
-    link->Stop();
-
     std::unique_lock<std::recursive_mutex> lock(links_mutex_);
-    std::unique_lock<std::recursive_mutex> lock2(endpoints_mutex_);
     if (endpoints_.count(link)) {
       links_.erase(endpoints_[link]);
       endpoints_.erase(link);
+      link->Stop();
     }
   }
 
   /// Function to stop all DataLinks
   void StopAll() {
-    {
-      std::unique_lock<std::recursive_mutex> lock(links_mutex_);
-      for (auto& link : links_) {
-        link.second->Stop();
-      }
-      links_.clear();
+    std::unique_lock<std::recursive_mutex> lock(links_mutex_);
+    while (!links_.empty()) {
+      auto link_it = links_.begin();
+      auto link = link_it->second;
+      links_.erase(link_it->first);
+      endpoints_.erase(link);
+      link->Stop();
     }
-
-    std::unique_lock<std::recursive_mutex> lock2(endpoints_mutex_);
-    endpoints_.clear();
   }
 
  private:
   DatagramLinkOperator(RightEndSocket& right_end_socket)
       : right_end_socket_(right_end_socket) {}
-
-  std::recursive_mutex endpoints_mutex_;
-  std::map<DatagramLinkPtr, RemoteEndpointRight> endpoints_;
+  
   std::recursive_mutex links_mutex_;
+  std::map<DatagramLinkPtr, RemoteEndpointRight> endpoints_;
   std::map<RemoteEndpointRight, DatagramLinkPtr> links_;
   RightEndSocket& right_end_socket_;
 };

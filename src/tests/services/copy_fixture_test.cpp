@@ -43,7 +43,6 @@ void CopyFixtureTest::SetUp() {
 void CopyFixtureTest::TearDown() {
   if (copy_client_) {
     copy_client_->Stop();
-    copy_client_.reset();
   }
   StopClientThreads();
   StopServerThreads();

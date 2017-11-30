@@ -15,7 +15,7 @@ if [ ! -d ${OPENSSL_SOURCE} ]; then
   gzip -d ${OPENSSL_ARCHIVE} -c | tar xv
 fi
 
-CONFIG_ARGS="--prefix=${DIST_DIR} no-shared"
+CONFIG_ARGS="--prefix=${DIST_DIR} no-shared no-err -DOPENSSLDIR=\"\" -DENGINESDIR=\"\""
 
 if [ "${CROSS_PREFIX}" = "" ]; then
   (cd ${OPENSSL_SOURCE} && sh ./config ${CONFIG_ARGS})

@@ -35,6 +35,7 @@ Session<Demux>::Session(std::weak_ptr<ShellServer> server, Fiber client,
       proc_in_(INVALID_HANDLE_VALUE),
       proc_out_(INVALID_HANDLE_VALUE),
       proc_err_(INVALID_HANDLE_VALUE),
+      job_(INVALID_HANDLE_VALUE),
       h_out_(client_.get_io_service()),
       h_err_(client_.get_io_service()),
       h_in_(client_.get_io_service()) {
@@ -75,7 +76,16 @@ template <typename Demux>
 void Session<Demux>::stop(boost::system::error_code& ec) {
   SSF_LOG("microservice", debug, "[shell] session stop");
 
-  if (process_info_.hProcess != INVALID_HANDLE_VALUE) {
+  if (job_ != INVALID_HANDLE_VALUE) {
+    if (!::TerminateJobObject(job_, 0)) {
+      SSF_LOG("microservice", warn, "[shell] session stop: cannot terminate job");
+      if (process_info_.hProcess != INVALID_HANDLE_VALUE) {
+        ::TerminateProcess(process_info_.hProcess, 0);
+      }
+    }
+    ::CloseHandle(job_);
+    job_ = INVALID_HANDLE_VALUE;
+  } else if (process_info_.hProcess != INVALID_HANDLE_VALUE) {
     ::TerminateProcess(process_info_.hProcess, 0);
   }
 
@@ -191,10 +201,23 @@ void Session<Demux>::StartProcess(boost::system::error_code& ec) {
 
   std::string command_line = binary_path_ + " " + binary_args_;
 
-  if (!::CreateProcessA(NULL, const_cast<char*>(command_line.c_str()), NULL,
+  if (::CreateProcessA(NULL, const_cast<char*>(command_line.c_str()), NULL,
                         NULL, TRUE, CREATE_NEW_CONSOLE, NULL,
                         (home_dir_set ? home_dir : NULL), &startup_info,
                         &process_info_)) {
+    // try to create job object to kill process tree when session is stopped
+    job_ = ::CreateJobObjectA(NULL, NULL);
+    if (job_ != NULL) {
+      if (!::AssignProcessToJobObject(job_, process_info_.hProcess)) {
+        SSF_LOG("microservice", error,
+                "[shell] session cannot assign process to job");
+        ::CloseHandle(job_);
+        job_ = INVALID_HANDLE_VALUE;
+      }
+    } else {
+      SSF_LOG("microservice", error, "[shell] session job cannot be initialized");
+    }
+  } else {
     SSF_LOG("microservice", error, "[shell] session create process <{}> failed",
             command_line);
     ec.assign(::error::process_not_created, ::error::get_ssf_category());

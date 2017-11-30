@@ -50,17 +50,14 @@ class Session : public ssf::BaseSession {
   void stop(boost::system::error_code&) override {
     SSF_LOG("microservice", debug, "[stream_listener] session stop");
     boost::system::error_code ec;
-    if (inbound_.lowest_layer().is_open()) {
-      inbound_.lowest_layer().shutdown(boost::asio::socket_base::shutdown_both,
-                                       ec);
-      inbound_.lowest_layer().close(ec);
-    }
 
-    if (outbound_.lowest_layer().is_open()) {
-      outbound_.lowest_layer().shutdown(boost::asio::socket_base::shutdown_both,
-                                        ec);
-      outbound_.lowest_layer().close(ec);
-    }
+    inbound_.shutdown(boost::asio::socket_base::shutdown_both, ec);
+    inbound_.close(ec);
+
+    ec.clear();
+
+    outbound_.shutdown(boost::asio::socket_base::shutdown_both, ec);
+    outbound_.close(ec);
   }
 
  private:
@@ -88,16 +85,16 @@ class Session : public ssf::BaseSession {
 
   /// Start forwarding
   void DoForward() {
+    auto self = this->shared_from_this();
+    auto stop_handler = [this, self](const boost::system::error_code& ec,
+                                     std::size_t) { StopHandler(ec); };
+
     // Make two Half Duplex links to have a Full Duplex Link
     AsyncEstablishHDLink(ReadFrom(inbound_), WriteTo(outbound_),
-                         boost::asio::buffer(inwardBuffer_),
-                         std::bind(&Session::StopHandler, this->SelfFromThis(),
-                                   std::placeholders::_1));
+                         boost::asio::buffer(inwardBuffer_), stop_handler);
 
     AsyncEstablishHDLink(ReadFrom(outbound_), WriteTo(inbound_),
-                         boost::asio::buffer(forwardBuffer_),
-                         std::bind(&Session::StopHandler, this->SelfFromThis(),
-                                   std::placeholders::_1));
+                         boost::asio::buffer(forwardBuffer_), stop_handler);
   }
 
   /// Stop forwarding

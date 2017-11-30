@@ -82,6 +82,7 @@ class Session : public ssf::BaseSession {
   HANDLE proc_out_;
   HANDLE proc_err_;
   HANDLE proc_in_;
+  HANDLE job_;
 
   StreamHandle h_out_;
   StreamHandle h_err_;
