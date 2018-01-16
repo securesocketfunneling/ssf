@@ -135,3 +135,15 @@ Binaries are located in: `src\client\Release\ssf.exe`, `src\client\Release\ssfcp
 and `src\server\Release\ssfd.exe`.
 
 Replace `Release` with `Debug` for debug binaries.
+
+XP Compatibility
+----------------
+
+To build XP compatible binaries, the correct Visual Studio toolset needs to be
+passed to cmake when generating project files. Note that the toolset needs
+to be present in your Visual Studio installation. Here we use the `v141_xp`
+toolset:
+
+```
+C:\build> cmake -G "Visual Studio 15 2017" -T v141_xp C:\path_to_ssf_source
+```
