@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ $# -lt 3 ]; then
-  echo "Usage: $0 openssl_archive openssl_version destination_dir" 1>&2
+  echo "Usage: $0 openssl_archive openssl_version destination_dir [32]" 1>&2
   exit 1
 fi
 
@@ -18,7 +18,11 @@ fi
 CONFIG_ARGS="--prefix=${DIST_DIR} no-shared no-err -DOPENSSLDIR=\"\" -DENGINESDIR=\"\""
 
 if [ "${CROSS_PREFIX}" = "" ]; then
-  (cd ${OPENSSL_SOURCE} && sh ./config ${CONFIG_ARGS})
+  if [ "$4" = "32" ]; then
+    (cd ${OPENSSL_SOURCE} && perl Configure ${CONFIG_ARGS} -m32 linux-generic32)
+  else
+    (cd ${OPENSSL_SOURCE} && sh ./config ${CONFIG_ARGS})
+  fi
 else
   arch=$(${CROSS_PREFIX}g++ -dumpmachine | cut -d '-' -f 1)
   case "${arch}" in
