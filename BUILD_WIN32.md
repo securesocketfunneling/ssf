@@ -14,7 +14,7 @@ Obtain installers for the libraries and install them:
 * Boost 1.65.1:
 
 Install `boost_1_65_1-msvc-14.1-32.exe` (32-bit) or
-`boost_1_65_1-msvc-14.1-32.exe` (64-bit) from
+`boost_1_65_1-msvc-14.1-64.exe` (64-bit) from
 http://sourceforge.net/projects/boost/files/boost-binaries.
 Replace `msvc-14.1` with your version of Visual Studio.
 
