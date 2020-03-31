@@ -518,7 +518,7 @@ Trying to use a feature requiring a disabled microservice will result in an erro
 #### Generating Diffie-Hellman parameters
 
 ```bash
-openssl dhparam 4096 -outform PEM -out dh4096.pem
+openssl dhparam -outform PEM -out dh4096.pem 4096
 ```
 
 #### Generating a self-signed Certification Authority (CA)
