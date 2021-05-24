@@ -35,7 +35,7 @@ If you obtained the source for the git repository, make sure the submodules
 are checked out:
 
 ```
-$ git clone https://github.com/securesocketfunnelling/ssf.git
+$ git clone https://github.com/securesocketfunneling/ssf.git
 $ git submodule update --init
 ```
 
